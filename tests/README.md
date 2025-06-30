@@ -1,0 +1,1 @@
+Here, we will add automated (CI/CD) and manual tests to our project.
