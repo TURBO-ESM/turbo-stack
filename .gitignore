@@ -1,0 +1,14 @@
+# Build directory:
+bin/
+
+# experiment output files:
+CPU_stats
+examples/*/*.nc
+RESTART/
+available_diags.000000
+exitcode
+logfile.000000.out
+mom6_standalone.o*
+mom6_standalone.e*
+ocean.stats*
+time_stamp.out
