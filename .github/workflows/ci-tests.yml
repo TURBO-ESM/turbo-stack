@@ -18,4 +18,4 @@ jobs:
         run: |
           echo "Building turbo-stack..."
           # Add your build commands here, e.g., make or cmake
-          ./build.sh --compiler gnu
+          ./build.sh --machine ubuntu --compiler gnu
