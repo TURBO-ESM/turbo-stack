@@ -5,7 +5,7 @@ This repository brings together various components that make up the TURBO Stack,
 
  - [MOM6](https://github.com/TURBO-ESM/MOM6)
  - [FMS](https://github.com/TURBO-ESM/FMS)
- - [MARBL](https://github.com/ESCOMP/MARBL)
+ - [MARBL](https://github.com/marbl-ecosys/MARBL)
  - development and testing utilities
  - and future libraries and components that will be developed as part of the TURBO project.
 
@@ -42,10 +42,15 @@ To run one of the lightweight examples, such as `double_gyre`, you can execute t
 
 ```bash
 cd examples/double_gyre/
-../..//bin/intel/MOM6/MOM6
+../../bin/intel/MOM6/MOM6
 ```
 
 For computationally more expensive examples, such as `benchmark`, you need to run MOM6 in parallel.
+
+```bash
+mpirun ../../bin/intel/MOM6/MOM6
+```
+
 Example job submission scripts are provided in all of the example directories. Make sure to adjust 
 the project code and specify the COMPILER you used for the build in the script.
 
