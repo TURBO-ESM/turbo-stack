@@ -8,12 +8,27 @@ on:
   
 
 jobs:
-  test:
+  test-symmetric:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Install ubuntu dependencies
+        shell: bash
+        run: |
+          echo "Installing dependencies..."
+          sudo apt-get update
+          sudo apt-get install netcdf-bin
+          sudo apt-get install libnetcdf-dev
+          sudo apt-get install libnetcdff-dev
+          sudo apt-get install openmpi-bin
+          sudo apt-get install libopenmpi-dev
+          sudo apt-get install linux-tools-common
+          echo "::endgroup::"
+
       - name: Build turbo-stack (GNU)
         run: |
           echo "Building turbo-stack..."
