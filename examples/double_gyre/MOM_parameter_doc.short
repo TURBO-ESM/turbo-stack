@@ -12,10 +12,10 @@ DT = 1200.0                     !   [s]
                                 ! be an integer fraction of the forcing time-step (DT_FORCING in ocean-only mode
                                 ! or the coupling timestep in coupled mode.)
 DT_THERM = 2400.0               !   [s] default = 1200.0
-                                ! The thermodynamic and tracer advection time step. Ideally DT_THERM should be
-                                ! an integer multiple of DT and less than the forcing or coupling time-step,
-                                ! unless THERMO_SPANS_COUPLING is true, in which case DT_THERM can be an integer
-                                ! multiple of the coupling timestep.  By default DT_THERM is set to DT.
+                                ! The thermodynamic time step. Ideally DT_THERM should be an integer multiple of
+                                ! DT and of DT_TRACER_ADVECT and less than the forcing or coupling time-step.
+                                ! However, if THERMO_SPANS_COUPLING is true, DT_THERM can be an integer multiple
+                                ! of the coupling timestep. By default DT_THERM is set to DT.
 DTBT_RESET_PERIOD = -1.0        !   [s] default = 2400.0
                                 ! The period between recalculations of DTBT (if DTBT <= 0). If DTBT_RESET_PERIOD
                                 ! is negative, DTBT is set based only on information available at
@@ -45,11 +45,11 @@ GRID_CONFIG = "spherical"       !
                                 !     cartesian - use a (flat) Cartesian grid.
                                 !     spherical - use a simple spherical grid.
                                 !     mercator - use a Mercator spherical grid.
-SOUTHLAT = 30.0                 !   [degrees]
+SOUTHLAT = 30.0                 !   [degrees_N]
                                 ! The southern latitude of the domain.
-LENLAT = 20.0                   !   [degrees]
+LENLAT = 20.0                   !   [degrees_N]
                                 ! The latitudinal length of the domain.
-LENLON = 22.0                   !   [degrees]
+LENLON = 22.0                   !   [degrees_E]
                                 ! The longitudinal length of the domain.
 TOPO_CONFIG = "spoon"           !
                                 ! This specifies how bathymetry is specified:
@@ -144,11 +144,7 @@ KV = 1.0E-04                    !   [m2 s-1]
 
 ! === module MOM_thickness_diffuse ===
 
-! === module MOM_porous_barriers ===
-
 ! === module MOM_dynamics_split_RK2 ===
-
-! === module MOM_continuity ===
 
 ! === module MOM_continuity_PPM ===
 ETA_TOLERANCE = 1.0E-12         !   [m] default = 1.0E-10
@@ -168,6 +164,8 @@ BOUND_CORIOLIS = True           !   [Boolean] default = False
 ! === module MOM_PressureForce ===
 
 ! === module MOM_PressureForce_FV ===
+
+! === module MOM_Zanna_Bolton ===
 
 ! === module MOM_hor_visc ===
 LAPLACIAN = True                !   [Boolean] default = False
@@ -197,12 +195,6 @@ HARMONIC_VISC = True            !   [Boolean] default = False
 HMIX_FIXED = 20.0               !   [m]
                                 ! The prescribed depth over which the near-surface viscosity and diffusivity are
                                 ! elevated when the bulk mixed layer is not used.
-KV_ML_INVZ2 = 0.01              !   [m2 s-1] default = 0.0
-                                ! An extra kinematic viscosity in a mixed layer of thickness HMIX_FIXED, with
-                                ! the actual viscosity scaling as 1/(z*HMIX_FIXED)^2, where z is the distance
-                                ! from the surface, to allow for finite wind stresses to be transmitted through
-                                ! infinitesimally thin surface layers.  This is an older option for numerical
-                                ! convenience without a strong physical basis, and its use is now discouraged.
 MAXVEL = 6.0                    !   [m s-1] default = 3.0E+08
                                 ! The maximum velocity allowed before the velocity components are truncated.
 
@@ -263,8 +255,7 @@ VARIABLE_BUOYFORCE = False      !   [Boolean] default = True
 WIND_CONFIG = "2gyre"           ! default = "zero"
                                 ! The character string that indicates how wind forcing is specified.  Valid
                                 ! options include (file), (data_override), (2gyre), (1gyre), (gyres), (zero),
-                                ! (const), (Neverworld), (scurves), (ideal_hurr), (SCM_ideal_hurr),
-                                ! (SCM_CVmix_tests) and (USER).
+                                ! (const), (Neverworld), (scurves), (ideal_hurr), (SCM_CVmix_tests) and (USER).
 
 ! === module MOM_main (MOM_driver) ===
 DT_FORCING = 2400.0             !   [s] default = 1200.0

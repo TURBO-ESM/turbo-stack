@@ -1,20 +1,20 @@
 ! This file was written by the model and records the non-default parameters used at run-time.
 
 ! === module MOM ===
-THICKNESSDIFFUSE = True         !   [Boolean] default = False
-                                ! If true, isopycnal surfaces are diffused with a Laplacian coefficient of KHTH.
-THICKNESSDIFFUSE_FIRST = True   !   [Boolean] default = False
-                                ! If true, do thickness diffusion or interface height smoothing before dynamics.
-                                ! This is only used if THICKNESSDIFFUSE or APPLY_INTERFACE_FILTER is true.
 DT = 900.0                      !   [s]
                                 ! The (baroclinic) dynamics time step.  The time-step that is actually used will
                                 ! be an integer fraction of the forcing time-step (DT_FORCING in ocean-only mode
                                 ! or the coupling timestep in coupled mode.)
 DT_THERM = 3600.0               !   [s] default = 900.0
-                                ! The thermodynamic and tracer advection time step. Ideally DT_THERM should be
-                                ! an integer multiple of DT and less than the forcing or coupling time-step,
-                                ! unless THERMO_SPANS_COUPLING is true, in which case DT_THERM can be an integer
-                                ! multiple of the coupling timestep.  By default DT_THERM is set to DT.
+                                ! The thermodynamic time step. Ideally DT_THERM should be an integer multiple of
+                                ! DT and of DT_TRACER_ADVECT and less than the forcing or coupling time-step.
+                                ! However, if THERMO_SPANS_COUPLING is true, DT_THERM can be an integer multiple
+                                ! of the coupling timestep. By default DT_THERM is set to DT.
+THICKNESSDIFFUSE = True         !   [Boolean] default = False
+                                ! If true, isopycnal surfaces are diffused with a Laplacian coefficient of KHTH.
+THICKNESSDIFFUSE_FIRST = True   !   [Boolean] default = False
+                                ! If true, do thickness diffusion or interface height smoothing before dynamics.
+                                ! This is only used if THICKNESSDIFFUSE or APPLY_INTERFACE_FILTER is true.
 DTBT_RESET_PERIOD = 0.0         !   [s] default = 3600.0
                                 ! The period between recalculations of DTBT (if DTBT <= 0). If DTBT_RESET_PERIOD
                                 ! is negative, DTBT is set based only on information available at
@@ -54,11 +54,11 @@ GRID_CONFIG = "mercator"        !
                                 !     cartesian - use a (flat) Cartesian grid.
                                 !     spherical - use a simple spherical grid.
                                 !     mercator - use a Mercator spherical grid.
-SOUTHLAT = -41.0                !   [degrees]
+SOUTHLAT = -41.0                !   [degrees_N]
                                 ! The southern latitude of the domain.
-LENLAT = 41.0                   !   [degrees]
+LENLAT = 41.0                   !   [degrees_N]
                                 ! The latitudinal length of the domain.
-LENLON = 90.0                   !   [degrees]
+LENLON = 90.0                   !   [degrees_E]
                                 ! The longitudinal length of the domain.
 ISOTROPIC = True                !   [Boolean] default = False
                                 ! If true, an isotropic grid on a sphere (also known as a Mercator grid) is
@@ -148,12 +148,16 @@ THICKNESS_CONFIG = "benchmark"  ! default = "uniform"
                                 ! A string that determines how the initial layer thicknesses are specified for a
                                 ! new run:
                                 !     file - read interface heights from the file specified
+                                !       by (THICKNESS_FILE).
                                 !     thickness_file - read thicknesses from the file specified
                                 !       by (THICKNESS_FILE).
+                                !     mass_file - read thicknesses in units of mass per unit area from the file
+                                !       specified by (THICKNESS_FILE).
                                 !     coord - determined by ALE coordinate.
                                 !     uniform - uniform thickness layers evenly distributed
                                 !       between the surface and MAXIMUM_DEPTH.
                                 !     list - read a list of positive interface depths.
+                                !     param - use thicknesses from parameter THICKNESS_INIT_VALUES.
                                 !     DOME - use a slope and channel configuration for the
                                 !       DOME sill-overflow test case.
                                 !     ISOMIP - use a configuration for the
@@ -223,15 +227,14 @@ KHTR_SLOPE_CFF = 0.1            !   [nondim] default = 0.0
 VARMIX_KTOP = 6                 !   [nondim] default = 2
                                 ! The layer number at which to start vertical integration of S*N for purposes of
                                 ! finding the Eady growth rate.
-VISBECK_L_SCALE = 3.0E+04       !   [m] default = 0.0
-                                ! The fixed length scale in the Visbeck formula.
+VISBECK_L_SCALE = 3.0E+04       !   [m or nondim] default = 0.0
+                                ! The fixed length scale in the Visbeck formula, or if negative a nondimensional
+                                ! scaling factor relating this length scale squared to the cell areas.
 INTERNAL_WAVE_SPEED_BETTER_EST = False !   [Boolean] default = True
                                 ! If true, use a more robust estimate of the first mode wave speed as the
                                 ! starting point for iterations.
 
 ! === module MOM_set_visc ===
-PRANDTL_TURB = 0.0              !   [nondim] default = 1.0
-                                ! The turbulent Prandtl number applied to shear instability.
 DYNAMIC_VISCOUS_ML = True       !   [Boolean] default = False
                                 ! If true, use a bulk Richardson number criterion to determine the mixed layer
                                 ! thickness for viscosity.
@@ -267,11 +270,7 @@ KHTH = 1.0                      !   [m2 s-1] default = 0.0
 KHTH_MAX = 900.0                !   [m2 s-1] default = 0.0
                                 ! The maximum horizontal thickness diffusivity.
 
-! === module MOM_porous_barriers ===
-
 ! === module MOM_dynamics_split_RK2 ===
-
-! === module MOM_continuity ===
 
 ! === module MOM_continuity_PPM ===
 ETA_TOLERANCE = 1.0E-06         !   [m] default = 1.1E-09
@@ -294,6 +293,8 @@ BOUND_CORIOLIS = True           !   [Boolean] default = False
 ! === module MOM_PressureForce ===
 
 ! === module MOM_PressureForce_FV ===
+
+! === module MOM_Zanna_Bolton ===
 
 ! === module MOM_hor_visc ===
 AH_VEL_SCALE = 0.05             !   [m s-1] default = 0.0
@@ -337,13 +338,15 @@ MIXEDLAYER_RESTRAT = True       !   [Boolean] default = False
                                 ! If true, a density-gradient dependent re-stratifying flow is imposed in the
                                 ! mixed layer. Can be used in ALE mode without restriction but in layer mode can
                                 ! only be used if BULKMIXEDLAYER is true.
+MLE%
+%MLE
 FOX_KEMPER_ML_RESTRAT_COEF = 5.0 !   [nondim] default = 0.0
                                 ! A nondimensional coefficient that is proportional to the ratio of the
                                 ! deformation radius to the dominant lengthscale of the submesoscale mixed layer
                                 ! instabilities, times the minimum of the ratio of the mesoscale eddy kinetic
                                 ! energy to the large-scale geostrophic kinetic energy or 1 plus the square of
                                 ! the grid spacing over the deformation radius, as detailed by Fox-Kemper et al.
-                                ! (2010)
+                                ! (2011)
 
 ! === module MOM_diagnostics ===
 
@@ -370,9 +373,11 @@ KD = 2.0E-05                    !   [m2 s-1] default = 0.0
 USE_JACKSON_PARAM = True        !   [Boolean] default = False
                                 ! If true, use the Jackson-Hallberg-Legg (JPO 2008) shear mixing
                                 ! parameterization.
-MAX_RINO_IT = 25                ! default = 50
+MAX_RINO_IT = 25                !   [nondim] default = 50
                                 ! The maximum number of iterations that may be used to estimate the Richardson
                                 ! number driven mixing.
+PRANDTL_TURB = 0.0              !   [nondim] default = 1.0
+                                ! The turbulent Prandtl number applied to shear instability.
 
 ! === module MOM_diabatic_aux ===
 ! The following parameters are used for auxiliary diabatic processes.
@@ -447,8 +452,7 @@ BUOY_CONFIG = "linear"          ! default = "zero"
 WIND_CONFIG = "gyres"           ! default = "zero"
                                 ! The character string that indicates how wind forcing is specified.  Valid
                                 ! options include (file), (data_override), (2gyre), (1gyre), (gyres), (zero),
-                                ! (const), (Neverworld), (scurves), (ideal_hurr), (SCM_ideal_hurr),
-                                ! (SCM_CVmix_tests) and (USER).
+                                ! (const), (Neverworld), (scurves), (ideal_hurr), (SCM_CVmix_tests) and (USER).
 TAUX_SIN_AMP = 0.1              !   [Pa] default = 0.0
                                 ! With the gyres wind_config, the sine amplitude in the zonal wind stress
                                 ! profile:   B in taux = A + B*sin(n*pi*y/L) + C*cos(n*pi*y/L).
@@ -461,10 +465,10 @@ RESTOREBUOY = True              !   [Boolean] default = False
 FLUXCONST = 0.5                 !   [m day-1] default = 0.0
                                 ! The constant that relates the restoring surface fluxes to the relative surface
                                 ! anomalies (akin to a piston velocity).  Note the non-MKS units.
-SST_NORTH = 27.0                !   [deg C] default = 0.0
+SST_NORTH = 27.0                !   [degC] default = 0.0
                                 ! With buoy_config linear, the sea surface temperature at the northern end of
                                 ! the domain toward which to to restore.
-SST_SOUTH = 3.0                 !   [deg C] default = 0.0
+SST_SOUTH = 3.0                 !   [degC] default = 0.0
                                 ! With buoy_config linear, the sea surface temperature at the southern end of
                                 ! the domain toward which to to restore.
 GUST_CONST = 0.02               !   [Pa] default = 0.0
