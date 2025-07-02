@@ -1,0 +1,21 @@
+name: turbo-stack CI tests
+
+on:
+  push:
+    branches: ["main", "ci-tests"]
+  pull_request:
+    branches: ["main", "ci-tests"]
+  
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Build turbo-stack (GNU)
+        run: |
+          echo "Building turbo-stack..."
+          # Add your build commands here, e.g., make or cmake
+          ./build.sh --compiler gnu
