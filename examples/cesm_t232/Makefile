@@ -1,0 +1,2 @@
+clean:
+	git clean -fdx
