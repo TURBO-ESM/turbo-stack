@@ -21,6 +21,7 @@ jobs:
         run: |
           echo "Installing dependencies..."
           sudo apt-get update
+          sudo apt-get install csh
           sudo apt-get install netcdf-bin
           sudo apt-get install libnetcdf-dev
           sudo apt-get install libnetcdff-dev
