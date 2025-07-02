@@ -136,7 +136,8 @@ cd ${BLD_PATH}
 mkdir -p MOM6
 cd MOM6
 ${MKMF_ROOT}/list_paths -l ${MOM6_src_files} 
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p MOM6 -l '-L../FMS -lfms' -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
-make -j${JOBS} DEBUG=${DEBUG} MOM6
+cat > path_names << EOF
+# ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p MOM6 -l '-L../FMS -lfms' -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+# make -j${JOBS} DEBUG=${DEBUG} MOM6
 
 echo "Finished build at `date`"
