@@ -8,7 +8,7 @@ on:
   
 
 jobs:
-  test-symmetric:
+  build-symmetric:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,11 +21,10 @@ jobs:
         run: |
           echo "Installing dependencies..."
           sudo apt-get update
-          sudo apt-get install csh
           sudo apt-get install netcdf-bin
           sudo apt-get install libnetcdf-dev
           sudo apt-get install libnetcdff-dev
-          sudo apt-get install openmpi-bin
+          sudo apt-get install openmpi-bin:with
           sudo apt-get install libopenmpi-dev
           sudo apt-get install linux-tools-common
           echo "::endgroup::"
@@ -35,3 +34,29 @@ jobs:
           echo "Building turbo-stack..."
           # Add your build commands here, e.g., make or cmake
           ./build.sh --machine ubuntu --compiler gnu
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mom6-symmetric-artifact
+          path: ./bin/ubuntu/gnu/MOM6
+          retention-days: 1
+
+  run-double-gyre:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Download symmetric artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mom6-symmetric-artifact
+          path: ./bin/ubuntu/gnu/MOM6
+
+      - name: Run double gyre test
+        run: |
+          echo "Running double gyre test..."
+          cd ./tests/double-gyre
+          ./bin/ubuntu/gnu/MOM6 
