@@ -42,6 +42,7 @@ jobs:
           retention-days: 1
 
   run-double-gyre:
+    needs: build-symmetric
     runs-on: ubuntu-latest
 
     steps:
