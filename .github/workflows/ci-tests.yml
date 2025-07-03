@@ -79,5 +79,5 @@ jobs:
       - name: Run benchmark
         run: |
           echo "Running benchmark..."
-          cd ../benchmark
+          cd ./examples/benchmark
           mpirun -n 4 ../../bin/gnu/MOM6/MOM6
