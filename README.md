@@ -20,7 +20,7 @@ git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
 ```
 
 
-### Building the MOM6 executable
+### Building the MOM6 executable on derecho:
 Build the standalone MOM6 executable:
 
 ```bash 
@@ -37,6 +37,19 @@ Optionally, you can specify a compiler other than the default `intel`, e.g.,
 ```
 
 Once the build is complete, the executable will be at `bin/[COMPILER]/MOM6/MOM6`.
+
+
+### Building the MOM6 executable on other machines:
+
+To port this repository to a new machine, create a new makefile template in the `build-utils/makefile-templates/`
+directory, following the naming convention `[MACHINE_NAME]-[COMPILER].mk`. You can use the existing templates as a reference.
+
+Once the template is created, you can build the MOM6 executable using the `build.sh` script by 
+specifying the machine name and compiler, e.g., 
+
+```bash
+./build.sh --machine ubuntu --compiler gnu
+```
 
 ### Running example experiments
 
