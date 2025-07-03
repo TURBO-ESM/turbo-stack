@@ -60,4 +60,4 @@ jobs:
         run: |
           echo "Running double gyre test..."
           cd ./examples/double_gyre
-          ./bin/ubuntu/gnu/MOM6 
+          ./bin/gnu/MOM6/MOM6
