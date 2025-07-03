@@ -50,6 +50,19 @@ jobs:
         with:
           submodules: 'recursive'
 
+      - name: Install ubuntu dependencies
+        shell: bash
+        run: |
+          echo "Installing dependencies..."
+          sudo apt-get update
+          sudo apt-get install netcdf-bin
+          sudo apt-get install libnetcdf-dev
+          sudo apt-get install libnetcdff-dev
+          sudo apt-get install openmpi-bin
+          sudo apt-get install libopenmpi-dev
+          sudo apt-get install linux-tools-common
+          echo "::endgroup::"
+
       - name: Download symmetric artifact
         uses: actions/download-artifact@v4
         with:
