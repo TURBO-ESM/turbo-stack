@@ -1,3 +1,5 @@
+[![turbo-stack CI tests](https://github.com/TURBO-ESM/turbo-stack/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/TURBO-ESM/turbo-stack/actions/workflows/ci-tests.yml)
+
 # TURBO Stack
 
 Welcome to the *TURBO Stack* repository, the central software hub for the TURBO project.
