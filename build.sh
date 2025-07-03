@@ -118,7 +118,7 @@ if [ "$MACHINE" == "ncar" ]; then
 fi
 
 
-MOM6_src_files=${MOM_ROOT}/{config_src/infra/FMS2,config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/module,../MARBL/src,config_src/external,src/{*,*/*}}/
+MOM6_src_files=${MOM_ROOT}/{config_src/infra/FMS2,config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
 # 1) Build FMS
 cd ${BLD_PATH}
@@ -135,7 +135,8 @@ make -j${JOBS} DEBUG=${DEBUG} libfms.a
 cd ${BLD_PATH}
 mkdir -p MOM6
 cd MOM6
-${MKMF_ROOT}/list_paths -l ${MOM6_src_files} 
+expanded=$(eval echo ${MOM6_src_files})
+${MKMF_ROOT}/list_paths -l ${expanded}
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p MOM6 -l '-L../FMS -lfms' -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
 make -j${JOBS} DEBUG=${DEBUG} MOM6
 
