@@ -55,7 +55,13 @@ Example job submission scripts are provided in all of the example directories. M
 the project code and specify the COMPILER you used for the build in the script.
 
 Once the run is complete, the model output files will be in the example directory.
-To clean up an example directory, i.e., to remove all untracked output files, you can run:
+To *archive* the output files, you can run:
+
+```bash
+make archive
+```
+This will create a copy of the output files in the `archive/` directory, with a timestamp indicating when the archive was created.
+To clean up an example directory, i.e., to remove all untracked output files (except the archive), you can run:
 
 ```bash
 make clean

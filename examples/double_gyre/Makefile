@@ -1,2 +1,1 @@
-clean:
-	git clean -fdx
+../utils/Makefile

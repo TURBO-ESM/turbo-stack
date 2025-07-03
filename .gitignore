@@ -4,6 +4,7 @@ bin/
 # experiment output files:
 CPU_stats
 examples/*/*.nc
+examples/*/archive/
 RESTART/
 available_diags.000000
 exitcode
@@ -11,4 +12,5 @@ logfile.000000.out
 mom6_standalone.o*
 mom6_standalone.e*
 ocean.stats*
+ocean_solo.res
 time_stamp.out
