@@ -1,0 +1,76 @@
+"NeverWorld2"
+1 1 1 0 0 0
+"longmean%8dy",    100, "days", 1, "days", "time", 300, "days"
+"static",           -1, "days", 1, "days", "time",
+
+# Year long time averages:
+  "ocean_model", "u",           "u",           "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "v",           "v",           "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "h",           "h",           "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "e",           "e",           "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "uh",          "uh",          "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "vh",          "vh",          "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "cg1",         "cg1",         "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "Rd1",         "Rd1",         "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "Rd_dx",       "Rd_dx",       "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "KE",          "KE",          "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "dKE_dt",      "dKE_dt",      "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "PE_to_KE",    "PE_to_KE",    "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "KE_CorAdv",   "KE_CorAdv",   "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "KE_adv",      "KE_adv",      "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "KE_visc",     "KE_visc",     "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "KE_horvisc",  "KE_horvisc",  "longmean%8dy",  "all", "mean", "none", 2
+  "ocean_model", "KE_dia",      "KE_dia",      "longmean%8dy",  "all", "mean", "none", 2
+
+# Static variables:
+ "ocean_model", "geolon",      "geolon",      "static", "all", .false., "none", 1
+ "ocean_model", "geolat",      "geolat",      "static", "all", .false., "none", 1
+ "ocean_model", "geolon_c",    "geolon_c",    "static", "all", .false., "none", 2
+ "ocean_model", "geolat_c",    "geolat_c",    "static", "all", .false., "none", 2
+ "ocean_model", "geolon_u",    "geolon_u",    "static", "all", .false., "none", 2
+ "ocean_model", "geolat_u",    "geolat_u",    "static", "all", .false., "none", 2
+ "ocean_model", "geolon_v",    "geolon_v",    "static", "all", .false., "none", 2
+ "ocean_model", "geolat_v",    "geolat_v",    "static", "all", .false., "none", 2
+ "ocean_model", "area_t",      "area_t",      "static", "all", .false., "none", 1
+ "ocean_model", "area_u",      "area_u",      "static", "all", .false., "none", 1
+ "ocean_model", "area_v",      "area_v",      "static", "all", .false., "none", 1
+ "ocean_model", "dyCu",        "dyCu",        "static", "all", .false., "none", 1
+ "ocean_model", "dxCv",        "dxCv",        "static", "all", .false., "none", 1
+ "ocean_model", "dxCu",        "dxCu",        "static", "all", .false., "none", 1
+ "ocean_model", "dyCv",        "dyCv",        "static", "all", .false., "none", 1
+ "ocean_model", "depth_ocean", "depth_ocean", "static", "all", .false., "none", 2
+ "ocean_model", "wet",         "wet",         "static", "all", .false., "none", 1
+ "ocean_model", "wet_c",       "wet_c",       "static", "all", .false., "none", 2
+ "ocean_model", "wet_u",       "wet_u",       "static", "all", .false., "none", 2
+ "ocean_model", "wet_v",       "wet_v",       "static", "all", .false., "none", 2
+ "ocean_model", "Coriolis",    "Coriolis",    "static", "all", .false., "none", 2
+
+#  FORMATS FOR FILE ENTRIES (not all input values are used)
+#  ------------------------
+#
+#"file_name", output_freq, "output_units", format, "time_units", "time_long_name", ...
+#   (opt) new_file_frequecy, (opt) "new_file_freq_units", "new_file_start_date"
+#
+#
+#output_freq:  > 0  output frequency in "output_units"
+#              = 0  output frequency every time step
+#              =-1  output frequency at end of run
+#
+#output_units = units used for output frequency
+#               (years, months, days, minutes, hours, seconds)
+#
+#time_units   = units used to label the time axis
+#               (days, minutes, hours, seconds)
+#
+#
+#  FORMAT FOR FIELD ENTRIES (not all input values are used)
+#  ------------------------
+#
+#"module_name", "field_name", "output_name", "file_name" "time_sampling", time_avg, "other_opts", packing
+#
+#time_avg = .true. or .false.
+#
+#packing  = 1  double precision
+#         = 2  float
+#         = 4  packed 16-bit integers
+#         = 8  packed 1-byte (not tested?)
