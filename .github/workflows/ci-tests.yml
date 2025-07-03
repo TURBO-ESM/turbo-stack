@@ -38,7 +38,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: mom6-symmetric-artifact
-          path: ./bin/ubuntu/gnu/MOM6
+          path: ./bin/ubuntu/gnu/
           retention-days: 1
 
   run-double-gyre:
@@ -53,7 +53,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: mom6-symmetric-artifact
-          path: ./bin/ubuntu/gnu/MOM6
+          path: ./bin/ubuntu/gnu/
 
       - name: Run double gyre test
         run: |
