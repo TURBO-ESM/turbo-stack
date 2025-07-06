@@ -30,7 +30,7 @@ use strict;
 use File::Basename;
 use Getopt::Long qw(:config posix_default bundling no_ignore_case);
 use Config;                     # use to put in platform-specific stuff
-use vars qw( $opt_a $opt_b $opt_c $opt_d $opt_f $opt_g $opt_I $opt_l $opt_m $opt_o $opt_p $opt_t $opt_v $opt_x $opt_use_cpp); # declare these global to be shared with Getopt:Std
+use vars qw( $opt_a $opt_b $opt_c $opt_d $opt_f $opt_g $opt_I $opt_l $opt_m $opt_o $opt_p $opt_t $opt_v $opt_x $opt_use_cpp $opt_gen_ptree); # declare these global to be shared with Getopt:Std
 
 #subroutines
 sub ensureTrailingSlash {
@@ -56,6 +56,7 @@ GetOptions("abspath|a=s" => \$opt_a,
            "verbose|v" => \$opt_v,
            "execute|x" => \$opt_x,
            "use-cpp" => \$opt_use_cpp,
+           "gen-ptree" => \$opt_gen_ptree,
           ) or die "\aSyntax: $0 [-a abspath] [-b blddir] [-c cppdefs] [-d] [-f] [-g] [-I includes] [-m makefile] [-o otherflags] [-l linkflags] [-p program] [-t template] [-v] [-x] [--use-cpp] [targets]\n";
 $opt_v = 1 if $opt_d;   # debug flag turns on verbose flag also
 print "$0 $version\n" if $opt_v;
@@ -81,22 +82,43 @@ my @inc_suffixes = ( q/\.H/, q/\.fh/, q/\.h/, q/\.inc/, q/\.h90/ );
 # suffixes for the target (mkmf -p): if isn't on the list below it's a program
 my @tgt_suffixes = ( q/\.a/ );
 
-my %compile_cmd = ( # commands to create .o file from a given source file suffix
-      # Fix formed Fortran files
-      q/.F/   => q/$(FC) $(CPPDEFS) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
-      q/.f/   => q/$(FC) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
-      # Free formed Fortran files
-      q/.F90/ => q/$(FC) $(CPPDEFS) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
-      q/.f90/ => q/$(FC) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
-      # C files
-      q/.c/   => q/$(CC) $(CPPDEFS) $(CPPFLAGS) $(CFLAGS) $(OTHERFLAGS) $(OTHER_CFLAGS) -c/,
-      # C++ files
-      q/.C/   => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
-      q/.cc/  => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
-      q/.cpp/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
-      q/.cxx/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
-      q/.c++/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
-      );
+my %compile_cmd;
+if ( $opt_gen_ptree ) {
+   %compile_cmd = ( # commands to create .o file from a given source file suffix
+         # Fix formed Fortran files
+         q/.F/   => q/$(FC) $(CPPDEFS) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) /,
+         q/.f/   => q/$(FC) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) /,
+         # Free formed Fortran files
+         q/.F90/ => q/$(FC) $(CPPDEFS) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) /,
+         q/.f90/ => q/$(FC) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) /,
+         # C files
+         q/.c/   => q/$(CC) $(CPPDEFS) $(CPPFLAGS) $(CFLAGS) $(OTHERFLAGS) $(OTHER_CFLAGS) /,
+         # C++ files
+         q/.C/   => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) /,
+         q/.cc/  => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) /,
+         q/.cpp/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) /,
+         q/.cxx/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) /,
+         q/.c++/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) /,
+         );
+}
+else{
+   %compile_cmd = ( # commands to create .o file from a given source file suffix
+         # Fix formed Fortran files
+         q/.F/   => q/$(FC) $(CPPDEFS) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
+         q/.f/   => q/$(FC) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
+         # Free formed Fortran files
+         q/.F90/ => q/$(FC) $(CPPDEFS) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
+         q/.f90/ => q/$(FC) $(FPPFLAGS) $(FFLAGS) $(OTHERFLAGS) $(OTHER_FFLAGS) -c/,
+         # C files
+         q/.c/   => q/$(CC) $(CPPDEFS) $(CPPFLAGS) $(CFLAGS) $(OTHERFLAGS) $(OTHER_CFLAGS) -c/,
+         # C++ files
+         q/.C/   => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
+         q/.cc/  => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
+         q/.cpp/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
+         q/.cxx/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
+         q/.c++/ => q/$(CXX) $(CPPDEFS) $(CPPFLAGS) $(CXXFLAGS) $(OTHERFLAGS) $(OTHER_CXXFLAGS) -c/,
+         );
+}
 my %delim_match = ( q/'/ => q/'/,       # hash to find includefile delimiter pair
                     q/"/ => q/"/,
                     q/</ => q/>/ );
@@ -464,10 +486,16 @@ foreach $object ( sort @objects ) {
       print MAKEFILE "\n";
       &print_compile_cmd( $name, '.f90' );
       print MAKEFILE " -o \$@ \t\$(preproc)";
+      if ( $opt_gen_ptree ) {
+         print MAKEFILE " > ${object}_ptree";
+      }
    } else {
       &print_compile_cmd( $name, $suffix );
       &print_includes;
       print MAKEFILE "\t$source_of{$object}";
+      if ( $opt_gen_ptree ) {
+         print MAKEFILE " > ${object}_ptree";
+      }
    }
    print MAKEFILE "\n";
 
