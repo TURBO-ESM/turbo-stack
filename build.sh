@@ -12,13 +12,14 @@ SHR_ROOT=${ROOTDIR}/src/CESM_share
 COMPILER="intel"
 MACHINE="ncar"
 MEMORY_MODE="dynamic_symmetric"
-DEBUG=0 # False
+OFFLOAD=0 # Set to 1 to enable GPU offloading
+DEBUG=0
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --help)
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--offload] [--debug]"
             echo "Default values: compiler=$COMPILER, machine=$MACHINE, memory_mode=$MEMORY_MODE"
             exit 0 ;;
         --compiler) 
@@ -30,11 +31,15 @@ while [[ "$#" -gt 0 ]]; do
         --memory-mode)
             MEMORY_MODE="$2"
             shift ;;
+        --offload)
+            OFFLOAD=1
+            ;;
         --debug)
-            DEBUG=1 ;;
+            DEBUG=1
+            ;;
         *) 
             echo "Unknown parameter passed: $1"
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--offload] [--debug]"
             exit 1 ;;
     esac
     shift
@@ -44,7 +49,9 @@ echo "Starting build at `date`"
 echo "Compiler: $COMPILER"
 echo "Machine: $MACHINE"
 echo "Memory mode: $MEMORY_MODE"
+echo "Offloading: $OFFLOAD"
 echo "Debug mode: $DEBUG"
+echo ""
 
 TEMPLATE=${TEMPLATE_DIR}/${MACHINE}-${COMPILER}.mk
 
@@ -60,6 +67,12 @@ fi
 # Throw error if memory mode is not in [dynamic_symmetric, dynamic_nonsymmetric]
 if [[ "$MEMORY_MODE" != "dynamic_symmetric" && "$MEMORY_MODE" != "dynamic_nonsymmetric" ]]; then
   echo "ERROR: Invalid memory mode '$MEMORY_MODE'. Valid options are 'dynamic_symmetric' or 'dynamic_nonsymmetric'."
+  exit 1
+fi
+
+# Offloading can only be enabled on NCAR machines with NVHPC compiler
+if [[ "$OFFLOAD" == 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; then
+  echo "ERROR: Offloading can only be enabled on NCAR machines with NVHPC compiler."
   exit 1
 fi
 
@@ -108,7 +121,7 @@ if [ "$MACHINE" == "ncar" ]; then
         module load craype gcc/12.2.0 cray-libsci/23.02.1.1 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2-debug esmf/8.6.0-debug
         ;;
       "nvhpc" )
-        module load craype nvhpc/23.7 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2 esmf/8.6.0
+        module load craype nvhpc/23.7 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2 esmf/8.6.0 cuda/12.2.1
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
@@ -129,7 +142,7 @@ ${MKMF_ROOT}/list_paths ${FMS_ROOT}
 echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
 echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-make -j${JOBS} DEBUG=${DEBUG} libfms.a
+make -j${JOBS} DEBUG=${DEBUG} OFFLOAD=${OFFLOAD} libfms.a
 
 # 2) Build MOM6
 cd ${BLD_PATH}
@@ -138,6 +151,6 @@ cd MOM6
 expanded=$(eval echo ${MOM6_src_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p MOM6 -l '-L../FMS -lfms' -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
-make -j${JOBS} DEBUG=${DEBUG} MOM6
+make -j${JOBS} DEBUG=${DEBUG} OFFLOAD=${OFFLOAD} MOM6
 
 echo "Finished build at `date`"

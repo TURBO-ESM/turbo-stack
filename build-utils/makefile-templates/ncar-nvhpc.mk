@@ -13,6 +13,7 @@ LD = ftn $(MAIN_PROGRAM)
 #  flags   #
 ############
 
+OFFLOAD =
 DEBUG =
 MAKEFLAGS += --jobs=8
 LDFLAGS :=
@@ -21,7 +22,11 @@ FC_AUTO_R8 = -r8
 FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
 FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee
 FFLAGS_DEBUG = -O0 -g  # -Mbounds fails compilation and -KTrap=fp fails run! seems like there is a floating point exception in netcdf_io_mod
-FFLAGS_REPRO = -O2 -tp=zen3
+FFLAGS_REPRO = -O2 -tp=zen3 
+
+ifeq ($(OFFLOAD),1)
+  FFLAGS_REPRO += -mp=gpu -gpu=cc80
+endif
 
 CFLAGS = -gopt -time -Mnofma
 CFLAGS_REPRO = -O2
