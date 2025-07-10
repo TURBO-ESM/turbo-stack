@@ -24,9 +24,6 @@ FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -K
 FFLAGS_DEBUG = -O0 -g  # -Mbounds fails compilation and -KTrap=fp fails run! seems like there is a floating point exception in netcdf_io_mod
 FFLAGS_REPRO = -O2 -tp=zen3 
 
-ifeq ($(OFFLOAD),1)
-  FFLAGS_REPRO += -mp=gpu -gpu=cc80
-endif
 
 CFLAGS = -gopt -time -Mnofma
 CFLAGS_REPRO = -O2
@@ -54,6 +51,11 @@ endif
 # Linking Flags
 LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -llapack -lblas -time -Wl,--allow-multiple-definition
 
+ifeq ($(OFFLOAD),1)
+  FFLAGS += -mp=gpu -gpu=cc80 -Mnofma -fopenmp -Minfo=all
+  CFLAGS += -mp=gpu -gpu=cc80
+  LDFLAGS += -mp=gpu
+endif
 #---------------------------------------------------------------------------
 # you should never need to change any lines below.
 
