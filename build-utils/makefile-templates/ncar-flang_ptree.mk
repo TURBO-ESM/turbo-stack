@@ -19,7 +19,7 @@ MAKEFLAGS += --jobs=8
 LDFLAGS :=
 
 FPPFLAGS :=
-FFLAGS = -fc1 -fdebug-dump-parse-tree-no-sema -Duse_libMPI -Duse_netCDF -DSPMD
+FFLAGS = -fc1 -fdebug-dump-parse-tree-no-sema -Duse_libMPI -Duse_netCDF -DSPMD -Dflang
 CFLAGS = -Xclang -ast-dump -fsyntax-only -Duse_libMPI -Duse_netCDF -DSPMD
 
 # NetCDF Flags

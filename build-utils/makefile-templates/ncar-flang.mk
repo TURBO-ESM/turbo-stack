@@ -19,7 +19,7 @@ LDFLAGS :=
 
 FC_AUTO_R8 = -fdefault-real-8 -fdefault-double-8
 FPPFLAGS :=
-FFLAGS = $(FC_AUTO_R8)  -fconvert=big-endian
+FFLAGS = $(FC_AUTO_R8)  -fconvert=big-endian -Duse_libMPI -Duse_netCDF -DSPMD -Dflang
 FFLAGS_DEBUG = -O0 -g
 FFLAGS_REPRO = -O2
 
