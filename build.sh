@@ -75,8 +75,8 @@ case $MACHINE in
         JOBS=8
         ;;
     *)
-        echo "Invalid machine type for make -j option: $MACHINE"
-        exit 1
+	JOBS=4
+	echo "Unknown machine type for make -j option: ${MACHINE}; defaulting to JOBS=${JOBS}"
         ;;
 esac
 
