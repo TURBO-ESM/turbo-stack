@@ -1,21 +1,6 @@
 #!/bin/bash
 
 ###############################################################################
-# User Input
-###############################################################################
-
-# Set the where the build directory will be created. You can change this to any location you prefer.
-export BUILD_DIR=~/tripolar_grid_with_amrex_build
-
-# You can also set the DEBUG environment variable to 1 to enable debugging features.
-if [[ "${DEBUG:-0}" == "1" ]]; then
-    set -e  # Exit immediately if a command exits with a non-zero status
-    set -u  # Treat expanding empty variables as an error
-    set -x  # Print each command before executing it
-fi
-
-
-###############################################################################
 # Check Pre-requisites
 ###############################################################################
 
@@ -27,6 +12,21 @@ fi
 if ! command -v spack &> /dev/null; then
     echo "Error: spack command not found. Please load Spack before running this script." >&2
     exit 1
+fi
+
+
+###############################################################################
+# User Input
+###############################################################################
+
+# Set the where the build directory will be created. You can change this to any location you prefer.
+export BUILD_DIR=~/tripolar_grid_with_amrex_build
+
+# You can also set the DEBUG environment variable to 1 to enable debugging features.
+if [[ "${DEBUG:-0}" == "1" ]]; then
+    set -e  # Exit immediately if a command exits with a non-zero status
+    set -u  # Treat expanding empty variables as an error
+    set -x  # Print each command before executing it
 fi
 
 
@@ -55,6 +55,9 @@ cmake -S $TURBO_STACK_ROOT/src/development_tests/amrex/tripolar_grid -B $BUILD_D
 
 # Build the code. 
 cmake --build $BUILD_DIR
+
+# Test the code. 
+ctest --test-dir $BUILD_DIR
 
 # Run the code. 
 $BUILD_DIR/tripolar_grid
