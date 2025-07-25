@@ -27,11 +27,10 @@ ADIABATIC = True                !   [Boolean] default = False
                                 ! = KDML = 0.0 and that there is no buoyancy forcing, but makes the model faster
                                 ! by eliminating subroutine calls.
 
-#define DT 1200.0                                
-!DT = 1200.0                     !   [s]
-!                                ! The (baroclinic) dynamics time step.  The time-step that is actually used will
-!                                ! be an integer fraction of the forcing time-step (DT_FORCING in ocean-only mode
-!                                ! or the coupling timestep in coupled mode.)
+DT = 1200.0                     !   [s]
+                                ! The (baroclinic) dynamics time step.  The time-step that is actually used will
+                                ! be an integer fraction of the forcing time-step (DT_FORCING in ocean-only mode
+                                ! or the coupling timestep in coupled mode.)
 DT_THERM = 2400.0               !   [s] default = 1200.0
                                 ! The thermodynamic and tracer advection time step. Ideally DT_THERM should be
                                 ! an integer multiple of DT and less than the forcing or coupling time-step,
