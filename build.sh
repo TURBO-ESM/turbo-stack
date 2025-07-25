@@ -12,7 +12,7 @@ SHR_ROOT=${ROOTDIR}/src/CESM_share
 COMPILER="intel"
 MACHINE="ncar"
 MEMORY_MODE="dynamic_symmetric"
-DEBUG=0 # False
+DEBUG=1 # False
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
