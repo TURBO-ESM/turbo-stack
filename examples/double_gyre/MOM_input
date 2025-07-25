@@ -20,14 +20,13 @@ NJGLOBAL = 40                   !
                                 ! The processor layout that was actually used.
 
 ! === module MOM ===
+DT = 1200.0
 ENABLE_THERMODYNAMICS = False   !   [Boolean] default = True
                                 ! If true, Temperature and salinity are used as state variables.
 ADIABATIC = True                !   [Boolean] default = False
                                 ! There are no diapycnal mass fluxes if ADIABATIC is true. This assumes that KD
                                 ! = KDML = 0.0 and that there is no buoyancy forcing, but makes the model faster
                                 ! by eliminating subroutine calls.
-
-DT = 1200.0                     !   [s]
                                 ! The (baroclinic) dynamics time step.  The time-step that is actually used will
                                 ! be an integer fraction of the forcing time-step (DT_FORCING in ocean-only mode
                                 ! or the coupling timestep in coupled mode.)
