@@ -16,7 +16,20 @@ public:
     std::size_t NCellY() const noexcept { return n_cell_y_; }
     std::size_t NCellZ() const noexcept { return n_cell_z_; }
 
-    amrex::MultiFab cell_center_scalar;
+    amrex::MultiFab cell_scalar;
+    amrex::MultiFab cell_vector;
+
+    amrex::MultiFab x_face_scalar;
+    amrex::MultiFab x_face_vector;
+
+    amrex::MultiFab y_face_scalar;
+    amrex::MultiFab y_face_vector;
+
+    amrex::MultiFab z_face_scalar;
+    amrex::MultiFab z_face_vector;
+
+    amrex::MultiFab node_scalar;
+    amrex::MultiFab node_vector;
 
 private:
 

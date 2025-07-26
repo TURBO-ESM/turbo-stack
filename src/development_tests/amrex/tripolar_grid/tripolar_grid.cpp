@@ -8,28 +8,75 @@
 TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z)
     : n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
 {
-    // Initialize the MultiFab with the specified number of cells
+    // Initialize the MultiFabs
 
+    // number of ghost cells
+    const int N_ghost = 1; // Maybe we dont want ghost elements for some of the mutifabs, or only in certain directions, but I just setting it the same for all of them for now.
 
-    // lower and upper indices of domain
+    // number of components for each array
+    const int N_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
+    const int N_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
+
+    // Create MultiFabs for scalar and vector fields on the cell-centered grid
     {
         const amrex::IntVect cell_low_index(0,0,0);
         const amrex::IntVect cell_high_index(n_cell_x - 1, n_cell_y - 1, n_cell_z - 1);
-        amrex::Box cell_centered_box(cell_low_index, cell_high_index);
+        const amrex::Box cell_centered_box(cell_low_index, cell_high_index);
 
         amrex::BoxArray cell_box_array(cell_centered_box);
-        const int max_chunk_size = 32; // Define a maximum chunk size for the BoxArray
+        // Will break up boxarray "cell_box_array" into chunks no larger than "max_chunk_size" along a direction
+        const int max_chunk_size = 32; 
         cell_box_array.maxSize(max_chunk_size);
 
-        amrex::DistributionMapping distribution_mapping(cell_box_array);
+        const amrex::DistributionMapping distribution_mapping(cell_box_array);
 
         // number of components for each array
-        int Ncomp = 1;
+        cell_scalar.define(cell_box_array, distribution_mapping, N_comp_scalar, N_ghost);
+        cell_vector.define(cell_box_array, distribution_mapping, N_comp_vector, N_ghost);
+    }
 
-        // number of ghost cells
-        int Nghost = 1;
+    // Definging the multfabs on the nodes and faces assume these two are defined on cells. Confirm that.
+    AMREX_ASSERT(cell_scalar.is_cell_centered());
+    AMREX_ASSERT(cell_vector.is_cell_centered());
 
-        cell_center_scalar.define(cell_box_array, distribution_mapping, Ncomp, Nghost);
+    // Create MultiFabs for scalar and vector fields on the x-face-centered grid
+    {
+        // Convert the cell-centered box array to x-face-centered
+        const amrex::BoxArray x_face_box_array = amrex::convert(cell_scalar.boxArray(), amrex::IntVect(1,0,0));
+
+        // Define the MultiFab for x-face-centered scalar field
+        x_face_scalar.define(x_face_box_array, cell_scalar.DistributionMap(), N_comp_scalar, N_ghost);
+        x_face_vector.define(x_face_box_array, cell_scalar.DistributionMap(), N_comp_vector, N_ghost);
+    }
+
+    // Create MultiFabs for scalar and vector fields on the y-face-centered grid
+    {
+        // Convert the cell-centered box array to y-face-centered
+        const amrex::BoxArray y_face_box_array = amrex::convert(cell_scalar.boxArray(), amrex::IntVect(0,1,0));
+
+        // Define the MultiFab for x-face-centered scalar field
+        y_face_scalar.define(y_face_box_array, cell_scalar.DistributionMap(), N_comp_scalar, N_ghost);
+        y_face_vector.define(y_face_box_array, cell_scalar.DistributionMap(), N_comp_vector, N_ghost);
+    }
+
+    // Create MultiFabs for scalar and vector fields on the z-face-centered grid
+    {
+        // Convert the cell-centered box array to z-face-centered
+        const amrex::BoxArray z_face_box_array = amrex::convert(cell_scalar.boxArray(), amrex::IntVect(0,0,1));
+
+        // Define the MultiFab for z-face-centered scalar field
+        z_face_scalar.define(z_face_box_array, cell_scalar.DistributionMap(), N_comp_scalar, N_ghost);
+        z_face_vector.define(z_face_box_array, cell_scalar.DistributionMap(), N_comp_vector, N_ghost);
+    }
+
+    // Create MultiFabs for scalar and vector fields on the nodal grid
+    {
+        // Convert the cell-centered box array to nodal
+        const amrex::BoxArray nodal_box_array = amrex::convert(cell_scalar.boxArray(), amrex::IntVect(1,1,1));
+
+        // Define the MultiFab for nodal scalar field
+        node_scalar.define(nodal_box_array, cell_scalar.DistributionMap(), N_comp_scalar, N_ghost);
+        node_vector.define(nodal_box_array, cell_scalar.DistributionMap(), N_comp_vector, N_ghost);
     }
 
 }

@@ -45,13 +45,16 @@ spack env activate $spack_environment_name
 
 spack install
 
-
 ###############################################################################
-# Build and Run the Code
+# Build, Test, and Run the Code
 ###############################################################################
 
 # Generate the build directory. 
-cmake -S $TURBO_STACK_ROOT/src/development_tests/amrex/tripolar_grid -B $BUILD_DIR --fresh
+if [[ "${DEBUG:-0}" == "1" ]]; then
+    cmake -DCMAKE_BUILD_TYPE=Debug -S $TURBO_STACK_ROOT/src/development_tests/amrex/tripolar_grid -B $BUILD_DIR --fresh
+else
+    cmake -S $TURBO_STACK_ROOT/src/development_tests/amrex/tripolar_grid -B $BUILD_DIR
+fi
 
 # Build the code. 
 cmake --build $BUILD_DIR
