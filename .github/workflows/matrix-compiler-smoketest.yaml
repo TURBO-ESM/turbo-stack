@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ nvhpc ]
+        compiler: [ nvhpc, oneapi, gcc14, clang ]
         mpi:      [ openmpi, mpich ]
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
