@@ -81,11 +81,7 @@ case $MACHINE in
 esac
 
 
-if [ "${DEBUG}" == 1 ]; then
-  BLD_PATH=${ROOTDIR}/bin/${COMPILER}-debug
-else
-  BLD_PATH=${ROOTDIR}/bin/${COMPILER}
-fi
+BLD_PATH=${ROOTDIR}/bin/${COMPILER}
 
 # Create build directory if it does not exist
 if [ ! -d ${BLD_PATH} ]; then
