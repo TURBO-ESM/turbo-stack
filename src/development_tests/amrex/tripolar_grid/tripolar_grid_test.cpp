@@ -90,8 +90,13 @@ TEST(TripolarGrid, Constructor) {
     }
 
     for (const auto* mf : cell_multifabs) {
+
         EXPECT_TRUE(mf->is_cell_centered());
-        // TODO: Check that dimensions are correct (nx, ny, nz)
+
+        const amrex::Box& box = mf->boxArray().minimalBox();
+        EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x, n_cell_y, n_cell_z));
+        EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
+        EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x-1, n_cell_y-1, n_cell_z-1));
 
     }
 
@@ -99,7 +104,11 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_TRUE(mf->is_nodal(0));
         EXPECT_FALSE(mf->is_nodal(1));
         EXPECT_FALSE(mf->is_nodal(2));
-        // TODO: Check that dimensions are correct
+
+        const amrex::Box& box = mf->boxArray().minimalBox();
+        EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x+1, n_cell_y, n_cell_z));
+        EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
+        EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x, n_cell_y-1, n_cell_z-1));
 
     }
 
@@ -107,7 +116,11 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_FALSE(mf->is_nodal(0));
         EXPECT_TRUE(mf->is_nodal(1));
         EXPECT_FALSE(mf->is_nodal(2));
-        // TODO: Check that dimensions are correct
+
+        const amrex::Box& box = mf->boxArray().minimalBox();
+        EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x, n_cell_y+1, n_cell_z));
+        EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
+        EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x-1, n_cell_y, n_cell_z-1));
 
     }
 
@@ -115,12 +128,20 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_FALSE(mf->is_nodal(0));
         EXPECT_FALSE(mf->is_nodal(1));
         EXPECT_TRUE(mf->is_nodal(2));
-        // TODO: Check that dimensions are correct
+
+        const amrex::Box& box = mf->boxArray().minimalBox();
+        EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x, n_cell_y, n_cell_z+1));
+        EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
+        EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x-1, n_cell_y-1, n_cell_z));
     }
 
     for (const auto* mf : node_multifabs) {
         EXPECT_TRUE(mf->is_nodal());
-        // TODO: Check that dimensions are correct (nx+1, ny+1, nz+1)
+
+        const amrex::Box& box = mf->boxArray().minimalBox();
+        EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x+1, n_cell_y+1, n_cell_z+1));
+        EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
+        EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x, n_cell_y, n_cell_z));
     }
 
 
