@@ -128,46 +128,31 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         node_vector
     };
 
-    scalar_multifabs = {
-        cell_scalar,
-        x_face_scalar,
-        y_face_scalar,
-        z_face_scalar,
-        node_scalar,
-    };
+    for (const auto& mf : all_multifabs) {
 
-    vector_multifabs = {
-        cell_vector,
-        x_face_vector,
-        y_face_vector,
-        z_face_vector,
-        node_vector
-    };
+        if (mf->nComp() == N_comp_scalar) {
+            scalar_multifabs.push_back(mf);
+        } else if (mf->nComp() == N_comp_vector) {
+            vector_multifabs.push_back(mf);
+        } else {
+            amrex::Abort("MultiFab has an unexpected number of components.");
+        }
 
-    cell_multifabs = {
-        cell_scalar,
-        cell_vector
-    };
+        if (mf->is_cell_centered()) {
+            cell_multifabs.push_back(mf);
+        } else if (mf->is_nodal(0) == true  && mf->is_nodal(1) == false && mf->is_nodal(2) == false) {
+            x_face_multifabs.push_back(mf);
+        } else if (mf->is_nodal(0) == false && mf->is_nodal(1) == true  && mf->is_nodal(2) == false) {
+            y_face_multifabs.push_back(mf);
+        } else if (mf->is_nodal(0) == false && mf->is_nodal(1) == false && mf->is_nodal(2) == true) {
+            z_face_multifabs.push_back(mf);
+        } else if (mf->is_nodal()) {
+            node_multifabs.push_back(mf);
+        } else {
+            amrex::Abort("MultiFab has an unexpected topology.");
+        }
 
-    x_face_multifabs = {
-        x_face_scalar,
-        x_face_vector
-    };
-
-    y_face_multifabs = {
-        y_face_scalar,
-        y_face_vector
-    };
-
-    z_face_multifabs = {
-        z_face_scalar,
-        z_face_vector
-    };
-
-    node_multifabs = {
-        node_scalar,
-        node_vector
-    };
+    }
 
 }
 
