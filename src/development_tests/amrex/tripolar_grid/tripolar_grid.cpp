@@ -5,6 +5,11 @@
 
 #include "tripolar_grid.h"
 
+// Point operator+
+TripolarGrid::Point TripolarGrid::Point::operator+(const Point& other) const noexcept {
+    return {x + other.x, y + other.y, z + other.z};
+}
+
 TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z)
     : n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
 {
@@ -45,11 +50,14 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         cell_vector = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, N_comp_vector, N_ghost);
     }
 
-    // Definging the multfabs on the nodes and faces assume these two are defined on cells. Confirm that.
+    // Defining the MultiFab on the nodes and faces assume these two are defined on cells. Confirm that.
     AMREX_ASSERT(cell_scalar.is_cell_centered());
     AMREX_ASSERT(cell_vector.is_cell_centered());
 
+    // All subsequent MultiFabs will be defined based on the cell-centered multifabs distribution mapping. 
     const amrex::DistributionMapping distribution_mapping = cell_scalar->DistributionMap();
+
+    // All subsequent MultiFabs box arrays will be adjusted accordingly using convert and the box array from the cell-centered MultiFabs.
     const amrex::BoxArray& cell_box_array = cell_scalar->boxArray();
 
     // Create MultiFabs for scalar and vector fields on the x-face-centered grid
@@ -161,4 +169,36 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         node_vector
     };
 
+}
+
+std::size_t TripolarGrid::NCell() const noexcept  { return n_cell_x_ * n_cell_y_ * n_cell_z_; }
+std::size_t TripolarGrid::NCellX() const noexcept { return n_cell_x_; }
+std::size_t TripolarGrid::NCellY() const noexcept { return n_cell_y_; }
+std::size_t TripolarGrid::NCellZ() const noexcept { return n_cell_z_; }
+
+std::size_t TripolarGrid::NNode() const noexcept  { return NNodeX() * NNodeY() * NNodeZ(); }
+std::size_t TripolarGrid::NNodeX() const noexcept { return NCellX() + 1; }
+std::size_t TripolarGrid::NNodeY() const noexcept { return NCellY() + 1; }
+std::size_t TripolarGrid::NNodeZ() const noexcept { return NCellZ() + 1; }
+
+TripolarGrid::Point TripolarGrid::Node(amrex::IntVect node_index) const noexcept {
+    return {x_min_ + node_index[0] * dx_,
+            y_min_ + node_index[1] * dy_,
+            z_min_ + node_index[2] * dz_};
+}
+
+TripolarGrid::Point TripolarGrid::CellCenter(amrex::IntVect cell_index) const noexcept {
+    return Node(cell_index) + Point{dx_*0.5, dy_*0.5, dz_*0.5};
+}
+
+TripolarGrid::Point TripolarGrid::XFace(amrex::IntVect x_face_index) const noexcept {
+    return Node(x_face_index) + Point{0.0, dy_*0.5, dz_*0.5};
+}
+
+TripolarGrid::Point TripolarGrid::YFace(amrex::IntVect y_face_index) const noexcept {
+    return Node(y_face_index) + Point{dx_*0.5, 0.0, dz_*0.5};
+}
+
+TripolarGrid::Point TripolarGrid::ZFace(amrex::IntVect z_face_index) const noexcept {
+    return Node(z_face_index) + Point{dx_*0.5, dy_*0.5, 0.0};
 }
