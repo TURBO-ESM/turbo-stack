@@ -8,6 +8,11 @@
 TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z)
     : n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
 {
+    static_assert(
+        amrex::SpaceDim == 3,
+        "Only supports 3D grids."
+    );
+
     // Initialize the MultiFabs
 
     // number of ghost cells
@@ -19,8 +24,10 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
 
     // Create MultiFabs for scalar and vector fields on the cell-centered grid
     {
-        const amrex::IntVect cell_low_index(0,0,0);
-        const amrex::IntVect cell_high_index(n_cell_x - 1, n_cell_y - 1, n_cell_z - 1);
+        // We don't really need the AMREX_D_DECL here since we are enforcing 3D grids only, but it's fine to keep it for now to avoid potential issues if we decide to extend to 2D or 1D later.
+        // If or when we do that we will need to wrap all the change the other IntVect definitions accordingly.
+        const amrex::IntVect cell_low_index(AMREX_D_DECL(0,0,0));
+        const amrex::IntVect cell_high_index(AMREX_D_DECL(n_cell_x - 1, n_cell_y - 1, n_cell_z - 1));
         const amrex::Box cell_centered_box(cell_low_index, cell_high_index);
 
         amrex::BoxArray cell_box_array(cell_centered_box);

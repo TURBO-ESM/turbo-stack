@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 
 project(TURBO_AMREX_DEV_TESTS CXX C)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)        # Disable compiler-specific extensions
+
 ###################################################
 # Global CMake Setup
 ###################################################

@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <map>
+
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
@@ -142,6 +144,85 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x+1, n_cell_y+1, n_cell_z+1));
         EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
         EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x, n_cell_y, n_cell_z));
+    }
+
+    }
+    amrex::Finalize();
+}
+
+TEST(TripolarGrid, Geometry) {
+
+    // Fake main arguments argc and argv for AMReX initialization
+    int argc = 1;
+    char arg0[] = "test";
+    char* argv_array[] = { arg0, nullptr };
+    char** argv = argv_array; // pointer to the array
+    amrex::Initialize(argc,argv);
+    {
+
+    std::size_t n_cell_x = 2;
+    std::size_t n_cell_y = 2;
+    std::size_t n_cell_z = 2;
+
+    TripolarGrid grid(n_cell_x, n_cell_y, n_cell_z);
+
+    std::map<std::size_t, double> index_to_node = {
+        {0, 0.0},
+        {1, 0.5},
+        {2, 1.0}
+    };
+
+    for (std::size_t i = 0; i < grid.NNodeX(); ++i) {
+        for (std::size_t j = 0; j < grid.NNodeY(); ++j) {
+            for (std::size_t k = 0; k < grid.NNodeZ(); ++k) {
+                auto node = grid.Node(amrex::IntVect(i, j, k));
+                auto expected_node = TripolarGrid::Point({index_to_node[i], index_to_node[j], index_to_node[k]});
+                EXPECT_EQ(node.x, expected_node.x);
+                EXPECT_EQ(node.y, expected_node.y);
+                EXPECT_EQ(node.z, expected_node.z);
+            }
+        }
+    }
+
+    std::map<std::size_t, double> index_to_cell_center = {
+        {0, 0.25},
+        {1, 0.75},
+    };
+
+    for (std::size_t i = 0; i < grid.NCellX(); ++i) {
+        for (std::size_t j = 0; j < grid.NCellY(); ++j) {
+            for (std::size_t k = 0; k < grid.NCellZ(); ++k) {
+                auto cell_center = grid.CellCenter(amrex::IntVect(i, j, k));
+                auto expected_cell_center = TripolarGrid::Point({index_to_cell_center[i], index_to_cell_center[j], index_to_cell_center[k]});
+                EXPECT_EQ(cell_center.x, expected_cell_center.x);
+                EXPECT_EQ(cell_center.y, expected_cell_center.y);
+                EXPECT_EQ(cell_center.z, expected_cell_center.z);
+            }
+        }
+    }
+
+    for (std::size_t i = 0; i < grid.NCellX(); ++i) {
+        for (std::size_t j = 0; j < grid.NNodeY(); ++j) {
+            for (std::size_t k = 0; k < grid.NCellZ(); ++k) {
+                auto point = grid.YFace(amrex::IntVect(i, j, k));
+                auto expected_point = TripolarGrid::Point({index_to_cell_center[i], index_to_node[j], index_to_cell_center[k]});
+                EXPECT_EQ(point.x, expected_point.x);
+                EXPECT_EQ(point.y, expected_point.y);
+                EXPECT_EQ(point.z, expected_point.z);
+            }
+        }
+    }
+
+    for (std::size_t i = 0; i < grid.NCellX(); ++i) {
+        for (std::size_t j = 0; j < grid.NCellY(); ++j) {
+            for (std::size_t k = 0; k < grid.NNodeZ(); ++k) {
+                auto point = grid.ZFace(amrex::IntVect(i, j, k));
+                auto expected_point = TripolarGrid::Point({index_to_cell_center[i], index_to_cell_center[j], index_to_node[k]});
+                EXPECT_EQ(point.x, expected_point.x);
+                EXPECT_EQ(point.y, expected_point.y);
+                EXPECT_EQ(point.z, expected_point.z);
+            }
+        }
     }
 
 
