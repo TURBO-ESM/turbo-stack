@@ -28,81 +28,28 @@ TEST(TripolarGrid, Constructor) {
     EXPECT_EQ(grid.NCellY(), n_cell_y);
     EXPECT_EQ(grid.NCellZ(), n_cell_z);
 
-    // Make sure MultiFabs are initialized correctly
-    const amrex::MultiFab* const all_multifabs[] = {
-        &grid.cell_scalar,   &grid.cell_vector,
-        &grid.x_face_scalar, &grid.x_face_vector,
-        &grid.y_face_scalar, &grid.y_face_vector,
-        &grid.z_face_scalar, &grid.z_face_vector,
-        &grid.node_scalar,   &grid.node_vector
-    };
-
-    const amrex::MultiFab* const scalar_multifabs[] = {
-        &grid.cell_scalar,
-        &grid.x_face_scalar,
-        &grid.y_face_scalar,
-        &grid.z_face_scalar,
-        &grid.node_scalar
-    };
-
-    const amrex::MultiFab* const vector_multifabs[] = {
-        &grid.cell_vector,
-        &grid.x_face_vector,
-        &grid.y_face_vector,
-        &grid.z_face_vector,
-        &grid.node_vector
-    };
-
-    const amrex::MultiFab* const cell_multifabs[] = {
-        &grid.cell_scalar,
-        &grid.cell_vector
-    };
-
-    const amrex::MultiFab* const x_face_multifabs[] = {
-        &grid.x_face_scalar,
-        &grid.x_face_vector
-    };
-
-    const amrex::MultiFab* const y_face_multifabs[] = {
-        &grid.y_face_scalar,
-        &grid.y_face_vector
-    };
-
-    const amrex::MultiFab* const z_face_multifabs[] = {
-        &grid.z_face_scalar,
-        &grid.z_face_vector
-    };
-
-    const amrex::MultiFab* const node_multifabs[] = {
-        &grid.node_scalar,
-        &grid.node_vector
-    };
-
-
-    for (const auto* mf : all_multifabs) {
+    for (const auto& mf : grid.all_multifabs) {
         EXPECT_TRUE(mf->ok());
     }
 
-    for (const auto* mf : scalar_multifabs) {
+    for (const auto& mf : grid.scalar_multifabs) {
         EXPECT_EQ(mf->nComp(), 1);
     }
 
-    for (const auto* mf : vector_multifabs) {
+    for (const auto& mf : grid.vector_multifabs) {
         EXPECT_EQ(mf->nComp(), 3);
     }
 
-    for (const auto* mf : cell_multifabs) {
-
+    for (const auto& mf : grid.cell_multifabs) {
         EXPECT_TRUE(mf->is_cell_centered());
 
         const amrex::Box& box = mf->boxArray().minimalBox();
         EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x, n_cell_y, n_cell_z));
         EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
         EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x-1, n_cell_y-1, n_cell_z-1));
-
     }
 
-    for (const auto* mf : x_face_multifabs) {
+    for (const auto& mf : grid.x_face_multifabs) {
         EXPECT_TRUE(mf->is_nodal(0));
         EXPECT_FALSE(mf->is_nodal(1));
         EXPECT_FALSE(mf->is_nodal(2));
@@ -111,10 +58,9 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x+1, n_cell_y, n_cell_z));
         EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
         EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x, n_cell_y-1, n_cell_z-1));
-
     }
 
-    for (const auto* mf : y_face_multifabs) {
+    for (const auto& mf : grid.y_face_multifabs) {
         EXPECT_FALSE(mf->is_nodal(0));
         EXPECT_TRUE(mf->is_nodal(1));
         EXPECT_FALSE(mf->is_nodal(2));
@@ -123,10 +69,9 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_EQ(box.length(),   amrex::IntVect(n_cell_x, n_cell_y+1, n_cell_z));
         EXPECT_EQ(box.smallEnd(), amrex::IntVect(0, 0, 0));
         EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x-1, n_cell_y, n_cell_z-1));
-
     }
 
-    for (const auto* mf : z_face_multifabs) {
+    for (const auto& mf : grid.z_face_multifabs) {
         EXPECT_FALSE(mf->is_nodal(0));
         EXPECT_FALSE(mf->is_nodal(1));
         EXPECT_TRUE(mf->is_nodal(2));
@@ -137,7 +82,7 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x-1, n_cell_y-1, n_cell_z));
     }
 
-    for (const auto* mf : node_multifabs) {
+    for (const auto& mf : grid.node_multifabs) {
         EXPECT_TRUE(mf->is_nodal());
 
         const amrex::Box& box = mf->boxArray().minimalBox();

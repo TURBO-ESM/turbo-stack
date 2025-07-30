@@ -3,6 +3,8 @@
 #include <cstddef> // for std::size_t
 #include <functional> // for std::function
 #include <type_traits> // for std::is_invocable_r_v
+#include <memory> // for std::shared_ptr
+#include <vector>
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
@@ -67,8 +69,8 @@ public:
             "value_func must be callable as double(double, double, double)"
         );
 
-        for (amrex::MFIter mfi(cell_scalar); mfi.isValid(); ++mfi) {
-            auto& arr = cell_scalar.array(mfi);
+        for (amrex::MFIter mfi(*cell_scalar); mfi.isValid(); ++mfi) {
+            auto& arr = cell_scalar->array(mfi);
             const auto& box = mfi.validbox();
             amrex::ParallelFor(box, [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
                 value_t x = x_min_ + i * dx_;
@@ -81,22 +83,32 @@ public:
     }
 
     // A stand in for data saved at each location in the grid.
-    amrex::MultiFab cell_scalar;
-    amrex::MultiFab cell_vector;
+    std::shared_ptr<amrex::MultiFab> cell_scalar;
+    std::shared_ptr<amrex::MultiFab> cell_vector;
 
-    amrex::MultiFab x_face_scalar;
-    amrex::MultiFab x_face_vector;
+    std::shared_ptr<amrex::MultiFab> x_face_scalar;
+    std::shared_ptr<amrex::MultiFab> x_face_vector;
 
-    amrex::MultiFab y_face_scalar;
-    amrex::MultiFab y_face_vector;
+    std::shared_ptr<amrex::MultiFab> y_face_scalar;
+    std::shared_ptr<amrex::MultiFab> y_face_vector;
 
-    amrex::MultiFab z_face_scalar;
-    amrex::MultiFab z_face_vector;
+    std::shared_ptr<amrex::MultiFab> z_face_scalar;
+    std::shared_ptr<amrex::MultiFab> z_face_vector;
 
-    amrex::MultiFab node_scalar;
-    amrex::MultiFab node_vector;
+    std::shared_ptr<amrex::MultiFab> node_scalar;
+    std::shared_ptr<amrex::MultiFab> node_vector;
 
+    // Collections of MultiFabs for easier testing
+    std::vector<std::shared_ptr<amrex::MultiFab>> all_multifabs;
 
+    std::vector<std::shared_ptr<amrex::MultiFab>> scalar_multifabs;
+    std::vector<std::shared_ptr<amrex::MultiFab>> vector_multifabs;
+
+    std::vector<std::shared_ptr<amrex::MultiFab>> cell_multifabs;
+    std::vector<std::shared_ptr<amrex::MultiFab>> x_face_multifabs;
+    std::vector<std::shared_ptr<amrex::MultiFab>> y_face_multifabs;
+    std::vector<std::shared_ptr<amrex::MultiFab>> z_face_multifabs;
+    std::vector<std::shared_ptr<amrex::MultiFab>> node_multifabs;
 
 private:
 
