@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e  # Exit immediately if a command exits with a non-zero status
+set -u  # Treat expanding empty variables as an error
+
 ###############################################################################
 # Check Pre-requisites
 ###############################################################################
@@ -24,8 +27,6 @@ export BUILD_DIR=~/tripolar_grid_with_amrex_build
 
 # You can also set the DEBUG environment variable to 1 to enable debugging features.
 if [[ "${DEBUG:-0}" == "1" ]]; then
-    set -e  # Exit immediately if a command exits with a non-zero status
-    set -u  # Treat expanding empty variables as an error
     set -x  # Print each command before executing it
 fi
 

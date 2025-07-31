@@ -4,22 +4,30 @@
 #include <functional>
 #include <type_traits>
 #include <memory>
-#include <vector>
+#include <unordered_set>
+
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
 class TripolarGrid {
 
 public:
-    // Types
-    using value_t = double;
+    //-----------------------------------------------------------------------//
+    // Public Types
+    //-----------------------------------------------------------------------//
+    using ValueType = amrex::Real;
 
     struct Point {
-        value_t x, y, z;
+        ValueType x, y, z;
         bool operator==(const Point&) const = default;
         Point operator+(const Point& other) const noexcept;
     };
 
+    //-----------------------------------------------------------------------//
+    // Public Member Functions
+    //-----------------------------------------------------------------------//
+
+    // Constructors
     TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z);
 
     // Grid dimensions
@@ -40,10 +48,21 @@ public:
     Point YFace(amrex::IntVect y_face_index) const noexcept;
     Point ZFace(amrex::IntVect z_face_index) const noexcept;
 
-    template <typename Func>
-    void InitializeScalarMultifabs(Func value_func) noexcept;
+    // Function to get the location of a point in the grid for a given MultiFab and index
+    Point GetLocation(const std::shared_ptr<amrex::MultiFab>& mf, int i, int j, int k) const;
 
-    // Multi-fabs to save data at each location in the grid.
+    // Convenience functions to initialize all the scalar and vector MultiFabs given a function 
+    template <typename Func>
+    void InitializeScalarMultiFabs(Func initialization_function) noexcept;
+
+    template <typename Func>
+    void InitializeVectorMultiFabs(Func initialization_function) noexcept;
+
+    //-----------------------------------------------------------------------//
+    // Public Data Members
+    //-----------------------------------------------------------------------//
+
+    // A scalar and a vector MultiFab at each location in the grid.
     std::shared_ptr<amrex::MultiFab> cell_scalar;
     std::shared_ptr<amrex::MultiFab> cell_vector;
 
@@ -60,18 +79,22 @@ public:
     std::shared_ptr<amrex::MultiFab> node_vector;
 
     // Collections of MultiFabs for easier testing
-    std::vector<std::shared_ptr<amrex::MultiFab>> all_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> all_multifabs;
 
-    std::vector<std::shared_ptr<amrex::MultiFab>> scalar_multifabs;
-    std::vector<std::shared_ptr<amrex::MultiFab>> vector_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> scalar_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> vector_multifabs;
 
-    std::vector<std::shared_ptr<amrex::MultiFab>> cell_multifabs;
-    std::vector<std::shared_ptr<amrex::MultiFab>> x_face_multifabs;
-    std::vector<std::shared_ptr<amrex::MultiFab>> y_face_multifabs;
-    std::vector<std::shared_ptr<amrex::MultiFab>> z_face_multifabs;
-    std::vector<std::shared_ptr<amrex::MultiFab>> node_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> cell_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> x_face_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> y_face_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> z_face_multifabs;
+    std::unordered_set<std::shared_ptr<amrex::MultiFab>> node_multifabs;
 
 private:
+
+    //-----------------------------------------------------------------------//
+    // Private Data Members
+    //-----------------------------------------------------------------------//
     const std::size_t n_cell_x_;
     const std::size_t n_cell_y_;
     const std::size_t n_cell_z_;
@@ -95,19 +118,40 @@ private:
 
 // Template implementation must remain in the header
 template <typename Func>
-void TripolarGrid::InitializeScalarMultifabs(Func value_func) noexcept {
+void TripolarGrid::InitializeScalarMultiFabs(Func initializer_function) noexcept {
     static_assert(
         std::is_invocable_r_v<double, Func, double, double, double>,
-        "value_func must be callable as double(double, double, double)"
+        "initializer_function must be callable as double(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is the function evaluated at that point."
     );
 
-    for (amrex::MFIter mfi(*cell_scalar); mfi.isValid(); ++mfi) {
-        auto& arr = cell_scalar->array(mfi);
-        amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
-            const Point cell_center = CellCenter(amrex::IntVect(i,j,k));
-            arr(i, j, k) = value_func(cell_center.x, cell_center.y, cell_center.z);
-        });
+    for (const std::shared_ptr<amrex::MultiFab>& mf : scalar_multifabs) {
+        for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
+            const amrex::Array4<amrex::Real>& array = mf->array(mfi);
+            amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+                const Point location = GetLocation(mf, i, j, k);
+                array(i, j, k) = initializer_function(location.x, location.y, location.z);
+            });
+        }
     }
+}
 
-    // Repeat for x_face_scalar, y_face_scalar, z_face_scalar, node_scalar if needed
+template <typename Func>
+void TripolarGrid::InitializeVectorMultiFabs(Func initializer_function) noexcept {
+    static_assert(
+        std::is_invocable_r_v<std::array<double, 3>, Func, double, double, double>,
+        "initializer_function must be callable as std::array<double, 3>(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is an array of 3 doubles representing the vector function evaluated at that point."
+    );
+
+    for (const std::shared_ptr<amrex::MultiFab>& mf : vector_multifabs) {
+        for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
+            const amrex::Array4<amrex::Real>& array = mf->array(mfi);
+            amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+                const Point location = GetLocation(mf, i, j, k);
+                std::array<double, 3> initial_vector = initializer_function(location.x, location.y, location.z);
+                array(i, j, k, 0) = initial_vector[0];
+                array(i, j, k, 1) = initial_vector[1];
+                array(i, j, k, 2) = initial_vector[2];
+            });
+        }
+    }
 }

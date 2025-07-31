@@ -21,9 +21,9 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
     // Initialize the MultiFabs
 
     // number of ghost cells
-    const int N_ghost = 1; // Maybe we dont want ghost elements for some of the mutifabs, or only in certain directions, but I just setting it the same for all of them for now.
+    const int N_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
 
-    // number of components for each array
+    // number of components for each MultiFab
     const int N_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
     const int N_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
 
@@ -36,15 +36,11 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         const amrex::Box cell_centered_box(cell_low_index, cell_high_index);
 
         amrex::BoxArray cell_box_array(cell_centered_box);
-        // Will break up boxarray "cell_box_array" into chunks no larger than "max_chunk_size" along a direction
-        const int max_chunk_size = 32; 
+        // Break up boxarray "cell_box_array" into chunks no larger than "max_chunk_size" along a direction
+        const int max_chunk_size = 32; // Hardcoded for now, but could be a parameter for the user to set via the constructor arguments.
         cell_box_array.maxSize(max_chunk_size);
 
         const amrex::DistributionMapping distribution_mapping(cell_box_array);
-
-        // number of components for each array
-        //cell_scalar.define(cell_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        //cell_vector.define(cell_box_array, distribution_mapping, N_comp_vector, N_ghost);
 
         cell_scalar = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, N_comp_scalar, N_ghost);
         cell_vector = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, N_comp_vector, N_ghost);
@@ -54,7 +50,7 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
     AMREX_ASSERT(cell_scalar.is_cell_centered());
     AMREX_ASSERT(cell_vector.is_cell_centered());
 
-    // All subsequent MultiFabs will be defined based on the cell-centered multifabs distribution mapping. 
+    // All subsequent MultiFabs will be defined based on the cell-centered MultiFab distribution mapping. 
     const amrex::DistributionMapping distribution_mapping = cell_scalar->DistributionMap();
 
     // All subsequent MultiFabs box arrays will be adjusted accordingly using convert and the box array from the cell-centered MultiFabs.
@@ -66,9 +62,6 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         const amrex::BoxArray x_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(1,0,0));
 
         // Define the MultiFab for x-face-centered scalar field
-        //x_face_scalar.define(x_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        //x_face_vector.define(x_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
-
         x_face_scalar = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
         x_face_vector = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
     }
@@ -77,10 +70,6 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
     {
         // Convert the cell-centered box array to y-face-centered
         const amrex::BoxArray y_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(0,1,0));
-
-        // Define the MultiFab for x-face-centered scalar field
-        //y_face_scalar.define(y_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        //y_face_vector.define(y_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
 
         y_face_scalar = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
         y_face_vector = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
@@ -92,10 +81,6 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         // Convert the cell-centered box array to z-face-centered
         const amrex::BoxArray z_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(0,0,1));
 
-        // Define the MultiFab for z-face-centered scalar field
-        //z_face_scalar.define(z_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        //z_face_vector.define(z_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
-
         z_face_scalar = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
         z_face_vector = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
 
@@ -105,10 +90,6 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
     {
         // Convert the cell-centered box array to nodal
         const amrex::BoxArray nodal_box_array = amrex::convert(cell_box_array, amrex::IntVect(1,1,1));
-
-        // Define the MultiFab for nodal scalar field
-        //node_scalar.define(nodal_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        //node_vector.define(nodal_box_array, distribution_mapping, N_comp_vector, N_ghost);
 
         node_scalar = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, N_comp_scalar, N_ghost);
         node_vector = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, N_comp_vector, N_ghost);
@@ -128,26 +109,26 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         node_vector
     };
 
-    for (const auto& mf : all_multifabs) {
+    for (const std::shared_ptr<amrex::MultiFab>& mf : all_multifabs) {
 
         if (mf->nComp() == N_comp_scalar) {
-            scalar_multifabs.push_back(mf);
+            scalar_multifabs.insert(mf);
         } else if (mf->nComp() == N_comp_vector) {
-            vector_multifabs.push_back(mf);
+            vector_multifabs.insert(mf);
         } else {
             amrex::Abort("MultiFab has an unexpected number of components.");
         }
 
         if (mf->is_cell_centered()) {
-            cell_multifabs.push_back(mf);
+            cell_multifabs.insert(mf);
         } else if (mf->is_nodal(0) == true  && mf->is_nodal(1) == false && mf->is_nodal(2) == false) {
-            x_face_multifabs.push_back(mf);
+            x_face_multifabs.insert(mf);
         } else if (mf->is_nodal(0) == false && mf->is_nodal(1) == true  && mf->is_nodal(2) == false) {
-            y_face_multifabs.push_back(mf);
+            y_face_multifabs.insert(mf);
         } else if (mf->is_nodal(0) == false && mf->is_nodal(1) == false && mf->is_nodal(2) == true) {
-            z_face_multifabs.push_back(mf);
+            z_face_multifabs.insert(mf);
         } else if (mf->is_nodal()) {
-            node_multifabs.push_back(mf);
+            node_multifabs.insert(mf);
         } else {
             amrex::Abort("MultiFab has an unexpected topology.");
         }
@@ -186,4 +167,21 @@ TripolarGrid::Point TripolarGrid::YFace(amrex::IntVect y_face_index) const noexc
 
 TripolarGrid::Point TripolarGrid::ZFace(amrex::IntVect z_face_index) const noexcept {
     return Node(z_face_index) + Point{dx_*0.5, dy_*0.5, 0.0};
+}
+
+TripolarGrid::Point TripolarGrid::GetLocation(const std::shared_ptr<amrex::MultiFab>& mf, int i, int j, int k) const {
+    if (cell_multifabs.contains(mf)) {
+        return CellCenter(amrex::IntVect(i,j,k));
+    } else if (x_face_multifabs.contains(mf)) {
+        return XFace(amrex::IntVect(i,j,k));
+    } else if (y_face_multifabs.contains(mf)) {
+        return YFace(amrex::IntVect(i,j,k));
+    } else if (z_face_multifabs.contains(mf)) {
+        return ZFace(amrex::IntVect(i,j,k));
+    } else if (node_multifabs.contains(mf)) {
+        return Node(amrex::IntVect(i,j,k));
+    } else {
+        amrex::Abort("MultiFab was not found in any of the location sets.");
+        return {}; // Returned this line to silence the warning about control reaching end of non-void function. Will never be reached because we are calling abort in this case.
+    }
 }

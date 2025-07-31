@@ -170,6 +170,53 @@ TEST(TripolarGrid, Geometry) {
         }
     }
 
+    }
+    amrex::Finalize();
+}
+
+TEST(TripolarGrid, Initialize_Multifabs) {
+
+    // Fake main arguments argc and argv for AMReX initialization
+    int argc = 1;
+    char arg0[] = "test";
+    char* argv_array[] = { arg0, nullptr };
+    char** argv = argv_array; // pointer to the array
+    amrex::Initialize(argc,argv);
+    {
+
+    std::size_t n_cell_x = 2;
+    std::size_t n_cell_y = 2;
+    std::size_t n_cell_z = 2;
+
+    TripolarGrid grid(n_cell_x, n_cell_y, n_cell_z);
+
+    grid.InitializeScalarMultiFabs([](double x, double y, double z) {
+        return 1.0;
+    });
+
+    for (const std::shared_ptr<amrex::MultiFab>& mf : grid.scalar_multifabs) {
+        for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
+            auto arr = mf->array(mfi);
+            amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+                EXPECT_EQ(arr(i, j, k), 1.0);
+            });
+        }
+    }
+
+    grid.InitializeVectorMultiFabs([](double x, double y, double z) {
+        return std::array<double, 3>{1.0, 1.0, 1.0};
+    });
+
+    for (const std::shared_ptr<amrex::MultiFab>& mf : grid.vector_multifabs) {
+        for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
+            auto arr = mf->array(mfi);
+            amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+                EXPECT_EQ(arr(i, j, k, 0), 1.0);
+                EXPECT_EQ(arr(i, j, k, 1), 1.0);
+                EXPECT_EQ(arr(i, j, k, 2), 1.0);
+            });
+        }
+    }
 
     }
     amrex::Finalize();
