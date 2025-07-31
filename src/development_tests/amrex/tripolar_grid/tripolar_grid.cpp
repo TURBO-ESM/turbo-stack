@@ -197,13 +197,34 @@ void TripolarGrid::Write() const {
         const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
 
         if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
-            for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
-                const amrex::Array4<const amrex::Real>& array = mf->array(mfi);
-                amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
-                    //const Point location = GetLocation(mf, i, j, k);
-                    amrex::AllPrint() << "array(" << i << "," << j << "," << k << ") = " << array(i,j,k) << "\n";
-                });
-            }
+
+            //for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
+            //    const amrex::Array4<const amrex::Real>& array = mf->array(mfi);
+            //    amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+            //        //const Point location = GetLocation(mf, i, j, k);
+            //        amrex::AllPrint() << "array(" << i << "," << j << "," << k << ") = " << array(i,j,k) << "\n";
+            //    });
+            //}
+
+            AMREX_ASSERT(mf->boxArray().size() == 1);
+            amrex::Box bx = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
+
+            AMREX_ASSERT(mf->size() == 1);
+            const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
+
+            const auto lo = lbound(bx);
+            const auto hi = ubound(bx);
+            for (int n = 0; n < mf->nComp(); ++n) {
+              for     (int k = lo.z; k <= hi.z; ++k) {
+                for   (int j = lo.y; j <= hi.y; ++j) {
+                  for (int i = lo.x; i <= hi.x; ++i) {
+                    //amrex::AllPrint() << "array(" << i << "," << j << "," << k << ") = " << array(i,j,k) << "\n";
+                    amrex::AllPrint() << "array(" << i << "," << j << "," << k << "," << n << ") = " << array(i,j,k,n) << "\n";
+                  }
+                }
+              }
+            }          
+
         }
     }
 
