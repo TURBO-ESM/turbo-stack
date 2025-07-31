@@ -48,7 +48,7 @@ public:
     Point YFace(amrex::IntVect y_face_index) const noexcept;
     Point ZFace(amrex::IntVect z_face_index) const noexcept;
 
-    // Function to get the location of a point in the grid for a given MultiFab and index
+    // Function to get the location of a point in the grid for a given MultiFab and index i,j,k
     Point GetLocation(const std::shared_ptr<amrex::MultiFab>& mf, int i, int j, int k) const;
 
     // Convenience functions to initialize all the scalar and vector MultiFabs given a function 
@@ -57,6 +57,9 @@ public:
 
     template <typename Func>
     void InitializeVectorMultiFabs(Func initialization_function) noexcept;
+
+    // Output functions
+    void Write() const;
 
     //-----------------------------------------------------------------------//
     // Public Data Members
@@ -114,6 +117,15 @@ private:
     const double dx_=Lx_/n_cell_x_;
     const double dy_=Ly_/n_cell_y_;
     const double dz_=Lz_/n_cell_z_;
+
+    //-----------------------------------------------------------------------//
+    // Private Member Functions
+    //-----------------------------------------------------------------------//
+
+    // Utility to copy a MultiFab to a single rank 
+    // Returns a pointer to a new MultiFab that contains all the data from the original MultiFab but now on a single box and rank.
+    std::shared_ptr<amrex::MultiFab> CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& src_mf, int dest_rank = 0) const;
+
 };
 
 // Template implementation must remain in the header

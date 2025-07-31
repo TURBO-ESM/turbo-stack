@@ -7,15 +7,27 @@
 
 #include <tripolar_grid.h>
 
-TEST(TripolarGrid, Constructor) {
+///////////////////////////////////////////////////////////////////////////////
+// Define a global test environment for AMReX
+class AmrexEnvironment : public ::testing::Environment {
+public:
+    void SetUp() override {
+        int argc = 1;
+        char arg0[] = "test";
+        char* argv_array[] = { arg0, nullptr };
+        char** argv = argv_array;
+        amrex::Initialize(argc, argv);
+    }
+    void TearDown() override {
+        amrex::Finalize();
+    }
+};
 
-    // Fake main arguments argc and argv for AMReX initialization
-    int argc = 1;
-    char arg0[] = "test";
-    char* argv_array[] = { arg0, nullptr };
-    char** argv = argv_array; // pointer to the array
-    amrex::Initialize(argc,argv);
-    {
+::testing::Environment* const amrex_env = ::testing::AddGlobalTestEnvironment(new AmrexEnvironment());
+
+///////////////////////////////////////////////////////////////////////////////
+
+TEST(TripolarGrid, Constructor) {
 
     std::size_t n_cell_x = 10;
     std::size_t n_cell_y = 20;
@@ -91,19 +103,9 @@ TEST(TripolarGrid, Constructor) {
         EXPECT_EQ(box.bigEnd(),   amrex::IntVect(n_cell_x, n_cell_y, n_cell_z));
     }
 
-    }
-    amrex::Finalize();
 }
 
 TEST(TripolarGrid, Geometry) {
-
-    // Fake main arguments argc and argv for AMReX initialization
-    int argc = 1;
-    char arg0[] = "test";
-    char* argv_array[] = { arg0, nullptr };
-    char** argv = argv_array; // pointer to the array
-    amrex::Initialize(argc,argv);
-    {
 
     std::size_t n_cell_x = 2;
     std::size_t n_cell_y = 2;
@@ -170,19 +172,9 @@ TEST(TripolarGrid, Geometry) {
         }
     }
 
-    }
-    amrex::Finalize();
 }
 
 TEST(TripolarGrid, Initialize_Multifabs) {
-
-    // Fake main arguments argc and argv for AMReX initialization
-    int argc = 1;
-    char arg0[] = "test";
-    char* argv_array[] = { arg0, nullptr };
-    char** argv = argv_array; // pointer to the array
-    amrex::Initialize(argc,argv);
-    {
 
     std::size_t n_cell_x = 2;
     std::size_t n_cell_y = 2;
@@ -191,20 +183,20 @@ TEST(TripolarGrid, Initialize_Multifabs) {
     TripolarGrid grid(n_cell_x, n_cell_y, n_cell_z);
 
     grid.InitializeScalarMultiFabs([](double x, double y, double z) {
-        return 1.0;
+        return 1.23;
     });
 
     for (const std::shared_ptr<amrex::MultiFab>& mf : grid.scalar_multifabs) {
         for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
             auto arr = mf->array(mfi);
             amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
-                EXPECT_EQ(arr(i, j, k), 1.0);
+                EXPECT_EQ(arr(i, j, k), 1.23);
             });
         }
     }
 
     grid.InitializeVectorMultiFabs([](double x, double y, double z) {
-        return std::array<double, 3>{1.0, 1.0, 1.0};
+        return std::array<double, 3>{1.0, 2.0, 3.0};
     });
 
     for (const std::shared_ptr<amrex::MultiFab>& mf : grid.vector_multifabs) {
@@ -212,12 +204,33 @@ TEST(TripolarGrid, Initialize_Multifabs) {
             auto arr = mf->array(mfi);
             amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
                 EXPECT_EQ(arr(i, j, k, 0), 1.0);
-                EXPECT_EQ(arr(i, j, k, 1), 1.0);
-                EXPECT_EQ(arr(i, j, k, 2), 1.0);
+                EXPECT_EQ(arr(i, j, k, 1), 2.0);
+                EXPECT_EQ(arr(i, j, k, 2), 3.0);
             });
         }
     }
 
-    }
-    amrex::Finalize();
+}
+
+
+
+TEST(TripolarGrid, Write) {
+
+    const std::size_t n_cell_x = 2;
+    const std::size_t n_cell_y = 2;
+    const std::size_t n_cell_z = 2;
+
+    TripolarGrid grid(n_cell_x, n_cell_y, n_cell_z);
+
+    grid.InitializeScalarMultiFabs([](double x, double y, double z) {
+        return 2.0;
+    });
+
+    grid.InitializeVectorMultiFabs([](double x, double y, double z) {
+        return std::array<double, 3>{1.0, 2.0, 3.0};
+    });
+
+    amrex::Print() << "Initialized scalar and vector MultiFabs." << std::endl;
+    grid.Write();
+
 }

@@ -185,3 +185,47 @@ TripolarGrid::Point TripolarGrid::GetLocation(const std::shared_ptr<amrex::Multi
         return {}; // Returned this line to silence the warning about control reaching end of non-void function. Will never be reached because we are calling abort in this case.
     }
 }
+
+void TripolarGrid::Write() const {
+
+
+    //for (const std::shared_ptr<amrex::MultiFab>& mf : scalar_multifabs) {
+    for (const std::shared_ptr<amrex::MultiFab>& src_mf : {cell_scalar}) {
+
+        // Copy the MultiFab to a single rank
+        int dest_rank = 0; // We are copying to rank 0, but this could be a parameter in the future.
+        const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
+
+        if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
+            for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
+                const amrex::Array4<const amrex::Real>& array = mf->array(mfi);
+                amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+                    //const Point location = GetLocation(mf, i, j, k);
+                    amrex::AllPrint() << "array(" << i << "," << j << "," << k << ") = " << array(i,j,k) << "\n";
+                });
+            }
+        }
+    }
+
+}
+
+std::shared_ptr<amrex::MultiFab> TripolarGrid::CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf, int dest_rank) const {
+
+    // Create a temporary MultiFab to hold all the data on a single rank
+    const amrex::BoxArray box_array_with_one_box(source_mf->boxArray().minimalBox()); // BoxArray with a single box that covers the entire domain
+    const amrex::DistributionMapping distribution_mapping(amrex::Vector<int>{dest_rank}); // Distribution mapping that puts the single box in the box array to a single rank
+    const int n_comp = source_mf->nComp();
+    //const int n_ghost = source_mf->nGrow();
+    const amrex::IntVect n_ghost = source_mf->nGrowVect();
+    std::shared_ptr<amrex::MultiFab> dest_mf = std::make_shared<amrex::MultiFab>(box_array_with_one_box, distribution_mapping, n_comp, n_ghost);
+
+    // Copy the data from the source MultiFab to the destination MultiFab
+    const int comp_src_start = 0;
+    const int comp_dest_start = 0;
+    const int n_comp_copy = n_comp;
+    const amrex::IntVect src_n_ghost = n_ghost;
+    const amrex::IntVect dest_n_ghost = n_ghost;
+    dest_mf->ParallelCopy(*source_mf, comp_src_start, comp_dest_start, n_comp_copy, src_n_ghost, dest_n_ghost);
+
+    return dest_mf;
+}
