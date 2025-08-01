@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <memory>
 #include <unordered_set>
+#include <string>
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
@@ -59,7 +60,7 @@ public:
     void InitializeVectorMultiFabs(Func initialization_function) noexcept;
 
     // Output functions
-    void Write() const;
+    void WriteHDF5(const std::string& filename) const;
 
     //-----------------------------------------------------------------------//
     // Public Data Members

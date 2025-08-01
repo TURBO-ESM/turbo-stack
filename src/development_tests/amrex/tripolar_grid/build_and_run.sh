@@ -38,6 +38,12 @@ fi
 spack_environment_name="tripolar_grid_amrex"
 spack_environment_config_file=$TURBO_STACK_ROOT/src/development_tests/amrex/tripolar_grid/spack.yaml
 
+if [[ "${DEBUG:-0}" == "1" ]]; then
+    if spack env list | grep --word-regexp --quiet "$spack_environment_name"; then
+        spack env rm -f "$spack_environment_name" 
+    fi
+fi
+
 if ! spack env list | grep --word-regexp --quiet "$spack_environment_name"; then
     spack env create "$spack_environment_name" "$spack_environment_config_file"
 fi

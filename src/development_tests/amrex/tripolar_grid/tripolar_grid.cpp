@@ -1,4 +1,7 @@
 #include <cstddef> // for std::size_t
+#include <string>
+
+#include <hdf5.h>
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
@@ -186,31 +189,33 @@ TripolarGrid::Point TripolarGrid::GetLocation(const std::shared_ptr<amrex::Multi
     }
 }
 
-void TripolarGrid::Write() const {
+void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
+    const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     //for (const std::shared_ptr<amrex::MultiFab>& mf : scalar_multifabs) {
     for (const std::shared_ptr<amrex::MultiFab>& src_mf : {cell_scalar}) {
 
         // Copy the MultiFab to a single rank
-        int dest_rank = 0; // We are copying to rank 0, but this could be a parameter in the future.
+        int dest_rank = 0; // We are copying to rank 0
         const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
 
         if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
-
-            //for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
-            //    const amrex::Array4<const amrex::Real>& array = mf->array(mfi);
-            //    amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
-            //        //const Point location = GetLocation(mf, i, j, k);
-            //        amrex::AllPrint() << "array(" << i << "," << j << "," << k << ") = " << array(i,j,k) << "\n";
-            //    });
-            //}
 
             AMREX_ASSERT(mf->boxArray().size() == 1);
             amrex::Box bx = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
 
             AMREX_ASSERT(mf->size() == 1);
             const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
+
+            {
+              double test_value = 0.0; // Example test value, can be set to any value you want
+              const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+              const hid_t attr_id = H5Acreate(file_id, "test_value", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+              H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &test_value);
+              H5Aclose(attr_id);
+              H5Sclose(attr_space_id);
+            }
 
             const auto lo = lbound(bx);
             const auto hi = ubound(bx);
@@ -227,6 +232,8 @@ void TripolarGrid::Write() const {
 
         }
     }
+
+    H5Fclose(file_id);
 
 }
 

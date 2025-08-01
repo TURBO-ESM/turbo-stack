@@ -214,7 +214,7 @@ TEST(TripolarGrid, Initialize_Multifabs) {
 
 
 
-TEST(TripolarGrid, Write) {
+TEST(TripolarGrid, WriteHDF5) {
 
     const std::size_t n_cell_x = 2;
     const std::size_t n_cell_y = 2;
@@ -231,6 +231,6 @@ TEST(TripolarGrid, Write) {
     });
 
     amrex::Print() << "Initialized scalar and vector MultiFabs." << std::endl;
-    grid.Write();
+    grid.WriteHDF5("tripolar_grid.h5");
 
 }

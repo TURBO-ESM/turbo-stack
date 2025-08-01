@@ -9,6 +9,7 @@ spack:
   - amrex
   - mpi
   - googletest
+  - hdf5
   view: true
   concretizer:
     unify: true

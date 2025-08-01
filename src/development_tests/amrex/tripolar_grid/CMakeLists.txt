@@ -15,6 +15,8 @@ find_package(AMReX REQUIRED)
 find_package(GTest REQUIRED)
 enable_testing()
 
+find_package(HDF5 REQUIRED COMPONENTS C)
+
 ###############################################################################
 # Tripolar Grid Main Application
 ###############################################################################
@@ -49,3 +51,6 @@ target_link_libraries(tripolar_grid_test AMReX::amrex_3d)
 # Google Test setup
 target_link_libraries(tripolar_grid_test GTest::gtest_main)
 gtest_discover_tests(tripolar_grid_test)
+
+# Link against HDF5
+target_link_libraries(tripolar_grid_test HDF5::HDF5)
