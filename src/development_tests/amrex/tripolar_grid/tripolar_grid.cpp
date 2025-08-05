@@ -138,6 +138,19 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
 
     }
 
+    name_to_multifab = {
+        {"cell_scalar", cell_scalar},
+        {"cell_vector", cell_vector},
+        {"x_face_scalar", x_face_scalar},
+        {"x_face_vector", x_face_vector},
+        {"y_face_scalar", y_face_scalar},
+        {"y_face_vector", y_face_vector},
+        {"z_face_scalar", z_face_scalar},
+        {"z_face_vector", z_face_vector},
+        {"node_scalar", node_scalar},
+        {"node_vector", node_vector}
+    };
+
 }
 
 std::size_t TripolarGrid::NCell() const noexcept  { return n_cell_x_ * n_cell_y_ * n_cell_z_; }
@@ -193,44 +206,47 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
     const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-    //for (const std::shared_ptr<amrex::MultiFab>& mf : scalar_multifabs) {
-    for (const std::shared_ptr<amrex::MultiFab>& src_mf : {cell_scalar}) {
+    // Write the attributes from rank 0
+    if (amrex::ParallelDescriptor::MyProc() == 0) {
 
-        // Copy the MultiFab to a single rank
-        int dest_rank = 0; // We are copying to rank 0
-        const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
 
-        if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
-
-            AMREX_ASSERT(mf->boxArray().size() == 1);
-            amrex::Box bx = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
-
-            AMREX_ASSERT(mf->size() == 1);
-            const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
-
-            {
-              double test_value = 0.0; // Example test value, can be set to any value you want
-              const hid_t attr_space_id = H5Screate(H5S_SCALAR);
-              const hid_t attr_id = H5Acreate(file_id, "test_value", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
-              H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &test_value);
-              H5Aclose(attr_id);
-              H5Sclose(attr_space_id);
-            }
-
-            const auto lo = lbound(bx);
-            const auto hi = ubound(bx);
-            for (int n = 0; n < mf->nComp(); ++n) {
-              for     (int k = lo.z; k <= hi.z; ++k) {
-                for   (int j = lo.y; j <= hi.y; ++j) {
-                  for (int i = lo.x; i <= hi.x; ++i) {
-                    //amrex::AllPrint() << "array(" << i << "," << j << "," << k << ") = " << array(i,j,k) << "\n";
-                    amrex::AllPrint() << "array(" << i << "," << j << "," << k << "," << n << ") = " << array(i,j,k,n) << "\n";
-                  }
-                }
-              }
-            }          
-
+        // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
+        {
+            const char* layout = "row-major";
+            const hid_t str_type = H5Tcopy(H5T_C_S1);
+            H5Tset_size(str_type, strlen(layout) + 1); // +1 for the null terminator
+    
+            const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+            const hid_t attr_id = H5Acreate(file_id, "data_layout", str_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, str_type, layout);
+            H5Aclose(attr_id);
+            H5Sclose(attr_space_id);
+            H5Tclose(str_type);        
         }
+
+        {
+            double test_double_value = 1.0; // Example test double value, can be set to any value you want
+            const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+            const hid_t attr_id = H5Acreate(file_id, "double_test_value", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &test_double_value);
+            H5Aclose(attr_id);
+            H5Sclose(attr_space_id);
+        }
+
+        {
+            double test_int_value = 1; // Example test value, can be set to any value you want
+            const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+            const hid_t attr_id = H5Acreate(file_id, "int_test_value", H5T_NATIVE_INT, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, H5T_NATIVE_INT, &test_int_value);
+            H5Aclose(attr_id);
+            H5Sclose(attr_space_id);
+        }
+
+    }
+
+    // Write the MultiFabs
+    for (const auto& [name, mf] : name_to_multifab) {
+        WriteMultiFabToHDF5(mf, name, file_id);
     }
 
     H5Fclose(file_id);
@@ -243,7 +259,6 @@ std::shared_ptr<amrex::MultiFab> TripolarGrid::CopyMultiFabToSingleRank(const st
     const amrex::BoxArray box_array_with_one_box(source_mf->boxArray().minimalBox()); // BoxArray with a single box that covers the entire domain
     const amrex::DistributionMapping distribution_mapping(amrex::Vector<int>{dest_rank}); // Distribution mapping that puts the single box in the box array to a single rank
     const int n_comp = source_mf->nComp();
-    //const int n_ghost = source_mf->nGrow();
     const amrex::IntVect n_ghost = source_mf->nGrowVect();
     std::shared_ptr<amrex::MultiFab> dest_mf = std::make_shared<amrex::MultiFab>(box_array_with_one_box, distribution_mapping, n_comp, n_ghost);
 
@@ -256,4 +271,57 @@ std::shared_ptr<amrex::MultiFab> TripolarGrid::CopyMultiFabToSingleRank(const st
     dest_mf->ParallelCopy(*source_mf, comp_src_start, comp_dest_start, n_comp_copy, src_n_ghost, dest_n_ghost);
 
     return dest_mf;
+}
+
+
+void TripolarGrid::WriteMultiFabToHDF5(const std::shared_ptr<amrex::MultiFab>& src_mf, const std::string& multifab_name, hid_t file_id) const {
+
+    // Copy the MultiFab to a single rank
+    int dest_rank = 0; // We are copying to rank 0
+    const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
+
+    if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
+
+        AMREX_ASSERT(mf->boxArray().size() == 1);
+        amrex::Box box = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
+
+        AMREX_ASSERT(mf->size() == 1);
+        const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
+
+        const int nx = box.length(0); 
+        const int ny = box.length(1); 
+        const int nz = box.length(2);
+        const int n_component = mf->nComp();
+        std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz)}; 
+        if (n_component > 1) {
+            dims.push_back(static_cast<hsize_t>(n_component));
+        }
+
+        const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
+        const hid_t dataset_id = H5Dcreate(file_id, multifab_name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+        std::vector<double> data(nx * ny * nz * n_component); 
+
+        // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
+        const auto lo = amrex::lbound(box);
+        const auto hi = amrex::ubound(box);
+        for (int component_idx = 0; component_idx < n_component; ++component_idx) {
+            for (int k = lo.z; k <= hi.z; ++k) {
+                for (int j = lo.y; j <= hi.y; ++j) {
+                    for (int i = lo.x; i <= hi.x; ++i) {
+
+                        const int idx = (((k*ny) + j)*nx + i)*n_component + component_idx; // putting in row-major order instead of column-major order
+                        data[idx] = array(i, j, k, component_idx);
+
+                    }
+                }
+            }
+        }          
+
+        H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+
+        H5Dclose(dataset_id);
+        H5Sclose(dataspace_id);
+
+    }
 }

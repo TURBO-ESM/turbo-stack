@@ -7,6 +7,8 @@
 #include <unordered_set>
 #include <string>
 
+#include <hdf5.h>
+
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
@@ -94,6 +96,8 @@ public:
     std::unordered_set<std::shared_ptr<amrex::MultiFab>> z_face_multifabs;
     std::unordered_set<std::shared_ptr<amrex::MultiFab>> node_multifabs;
 
+    std::map<std::string, std::shared_ptr<amrex::MultiFab>> name_to_multifab;
+
 private:
 
     //-----------------------------------------------------------------------//
@@ -126,6 +130,9 @@ private:
     // Utility to copy a MultiFab to a single rank 
     // Returns a pointer to a new MultiFab that contains all the data from the original MultiFab but now on a single box and rank.
     std::shared_ptr<amrex::MultiFab> CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& src_mf, int dest_rank = 0) const;
+
+    // 
+    void WriteMultiFabToHDF5(const std::shared_ptr<amrex::MultiFab>& mf, const std::string& name, hid_t file_id) const;
 
 };
 
