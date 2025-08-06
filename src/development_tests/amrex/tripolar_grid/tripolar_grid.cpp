@@ -1,5 +1,6 @@
 #include <cstddef> // for std::size_t
 #include <string>
+#include <fstream>
 
 #include <hdf5.h>
 
@@ -24,11 +25,11 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
     // Initialize the MultiFabs
 
     // number of ghost cells
-    const int N_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
+    const int n_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
 
     // number of components for each MultiFab
-    const int N_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
-    const int N_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
+    const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
+    const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
 
     // Create MultiFabs for scalar and vector fields on the cell-centered grid
     {
@@ -45,8 +46,8 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
 
         const amrex::DistributionMapping distribution_mapping(cell_box_array);
 
-        cell_scalar = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        cell_vector = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, N_comp_vector, N_ghost);
+        cell_scalar = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, n_comp_scalar, n_ghost);
+        cell_vector = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, n_comp_vector, n_ghost);
     }
 
     // Defining the MultiFab on the nodes and faces assume these two are defined on cells. Confirm that.
@@ -65,8 +66,8 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         const amrex::BoxArray x_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(1,0,0));
 
         // Define the MultiFab for x-face-centered scalar field
-        x_face_scalar = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        x_face_vector = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
+        x_face_scalar = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, n_comp_scalar, n_ghost);
+        x_face_vector = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, n_comp_vector, n_ghost);
     }
 
     // Create MultiFabs for scalar and vector fields on the y-face-centered grid
@@ -74,8 +75,8 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         // Convert the cell-centered box array to y-face-centered
         const amrex::BoxArray y_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(0,1,0));
 
-        y_face_scalar = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        y_face_vector = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
+        y_face_scalar = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, n_comp_scalar, n_ghost);
+        y_face_vector = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, n_comp_vector, n_ghost);
 
     }
 
@@ -84,8 +85,8 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         // Convert the cell-centered box array to z-face-centered
         const amrex::BoxArray z_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(0,0,1));
 
-        z_face_scalar = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        z_face_vector = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, N_comp_vector, N_ghost);
+        z_face_scalar = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, n_comp_scalar, n_ghost);
+        z_face_vector = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, n_comp_vector, n_ghost);
 
     }
 
@@ -94,8 +95,8 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         // Convert the cell-centered box array to nodal
         const amrex::BoxArray nodal_box_array = amrex::convert(cell_box_array, amrex::IntVect(1,1,1));
 
-        node_scalar = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, N_comp_scalar, N_ghost);
-        node_vector = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, N_comp_vector, N_ghost);
+        node_scalar = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, n_comp_scalar, n_ghost);
+        node_vector = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, n_comp_vector, n_ghost);
     }
 
     // Collections of MultiFabs for easier looping and testing
@@ -114,9 +115,9 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
 
     for (const std::shared_ptr<amrex::MultiFab>& mf : all_multifabs) {
 
-        if (mf->nComp() == N_comp_scalar) {
+        if (mf->nComp() == n_comp_scalar) {
             scalar_multifabs.insert(mf);
-        } else if (mf->nComp() == N_comp_vector) {
+        } else if (mf->nComp() == n_comp_vector) {
             vector_multifabs.insert(mf);
         } else {
             amrex::Abort("MultiFab has an unexpected number of components.");
@@ -138,18 +139,6 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
 
     }
 
-    name_to_multifab = {
-        {"cell_scalar", cell_scalar},
-        {"cell_vector", cell_vector},
-        {"x_face_scalar", x_face_scalar},
-        {"x_face_vector", x_face_vector},
-        {"y_face_scalar", y_face_scalar},
-        {"y_face_vector", y_face_vector},
-        {"z_face_scalar", z_face_scalar},
-        {"z_face_vector", z_face_vector},
-        {"node_scalar", node_scalar},
-        {"node_vector", node_vector}
-    };
 
 }
 
@@ -244,10 +233,9 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
     }
 
-    // Write the MultiFabs
-    for (const auto& [name, mf] : name_to_multifab) {
-        WriteMultiFabToHDF5(mf, name, file_id);
-    }
+    WriteGeometryToHDF5(file_id);
+
+    WriteMultiFabsToHDF5(file_id);
 
     H5Fclose(file_id);
 
@@ -274,54 +262,124 @@ std::shared_ptr<amrex::MultiFab> TripolarGrid::CopyMultiFabToSingleRank(const st
 }
 
 
-void TripolarGrid::WriteMultiFabToHDF5(const std::shared_ptr<amrex::MultiFab>& src_mf, const std::string& multifab_name, hid_t file_id) const {
+void TripolarGrid::WriteMultiFabsToHDF5(const hid_t file_id) const {
 
-    // Copy the MultiFab to a single rank
-    int dest_rank = 0; // We are copying to rank 0
-    const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
+    const std::map<std::string, std::shared_ptr<amrex::MultiFab>> name_to_multifab = {
+        {"cell_scalar", cell_scalar},
+        {"cell_vector", cell_vector},
+        {"x_face_scalar", x_face_scalar},
+        {"x_face_vector", x_face_vector},
+        {"y_face_scalar", y_face_scalar},
+        {"y_face_vector", y_face_vector},
+        {"z_face_scalar", z_face_scalar},
+        {"z_face_vector", z_face_vector},
+        {"node_scalar", node_scalar},
+        {"node_vector", node_vector}
+    };
 
-    if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
+    for (const auto& [name, src_mf] : name_to_multifab) {
 
-        AMREX_ASSERT(mf->boxArray().size() == 1);
-        amrex::Box box = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
+        // Copy the MultiFab to a single rank
+        int dest_rank = 0; // We are copying to rank 0
+        const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
 
-        AMREX_ASSERT(mf->size() == 1);
-        const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
+        if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
 
-        const int nx = box.length(0); 
-        const int ny = box.length(1); 
-        const int nz = box.length(2);
-        const int n_component = mf->nComp();
-        std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz)}; 
-        if (n_component > 1) {
-            dims.push_back(static_cast<hsize_t>(n_component));
+            AMREX_ASSERT(mf->boxArray().size() == 1);
+            amrex::Box box = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
+
+            AMREX_ASSERT(mf->size() == 1);
+            const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
+
+            const int nx = box.length(0); 
+            const int ny = box.length(1); 
+            const int nz = box.length(2);
+            const int n_component = mf->nComp();
+            std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz)}; 
+            if (n_component > 1) {
+                dims.push_back(static_cast<hsize_t>(n_component));
+            }
+
+            const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
+            const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+            std::vector<double> data(nx * ny * nz * n_component); 
+
+            // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
+            const auto lo = amrex::lbound(box);
+            const auto hi = amrex::ubound(box);
+            for (int component_idx = 0; component_idx < n_component; ++component_idx) {
+                for (int k = lo.z; k <= hi.z; ++k) {
+                    for (int j = lo.y; j <= hi.y; ++j) {
+                        for (int i = lo.x; i <= hi.x; ++i) {
+
+                            const int idx = (((k*ny) + j)*nx + i)*n_component + component_idx; // putting in row-major order instead of column-major order
+                            data[idx] = array(i, j, k, component_idx);
+
+                        }
+                    }
+                }
+            }          
+
+            H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+
+            H5Dclose(dataset_id);
+            H5Sclose(dataspace_id);
+
         }
+    }
+}
 
-        const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
-        const hid_t dataset_id = H5Dcreate(file_id, multifab_name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
 
-        std::vector<double> data(nx * ny * nz * n_component); 
+    const std::map<std::string, std::shared_ptr<amrex::MultiFab>> geometry_name_to_a_multifab_at_that_location = {
+        {"cell_center", cell_scalar},
+        {"x_face", x_face_scalar},
+        {"y_face", y_face_scalar},
+        {"z_face", z_face_scalar},
+        {"node", node_scalar},
+    };
 
-        // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
-        const auto lo = amrex::lbound(box);
-        const auto hi = amrex::ubound(box);
-        for (int component_idx = 0; component_idx < n_component; ++component_idx) {
-            for (int k = lo.z; k <= hi.z; ++k) {
+    for (const auto& [name, mf] : geometry_name_to_a_multifab_at_that_location) {
+    
+        if (amrex::ParallelDescriptor::MyProc() == 0) {
+    
+            const amrex::Box box = mf->boxArray().minimalBox(); 
+    
+            const int nx = box.length(0); 
+            const int ny = box.length(1); 
+            const int nz = box.length(2);
+            const int n_component = 3;
+            std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz), static_cast<hsize_t>(n_component)}; 
+    
+            const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
+            const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
+            std::vector<double> data(nx * ny * nz * n_component); 
+    
+            // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
+            const auto lo = amrex::lbound(box);
+            const auto hi = amrex::ubound(box);
+            std::size_t idx = 0;
+            for (int i = lo.x; i <= hi.x; ++i) {
                 for (int j = lo.y; j <= hi.y; ++j) {
-                    for (int i = lo.x; i <= hi.x; ++i) {
+                    for (int k = lo.z; k <= hi.z; ++k) {
 
-                        const int idx = (((k*ny) + j)*nx + i)*n_component + component_idx; // putting in row-major order instead of column-major order
-                        data[idx] = array(i, j, k, component_idx);
+                        const Point location = GetLocation(mf, i, j, k);
+                        data[idx++] = location.x;
+                        data[idx++] = location.y;
+                        data[idx++] = location.z;
 
                     }
                 }
-            }
-        }          
-
-        H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
-
-        H5Dclose(dataset_id);
-        H5Sclose(dataspace_id);
-
+            }          
+    
+            H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+    
+            H5Dclose(dataset_id);
+            H5Sclose(dataspace_id);
+    
+        }
     }
+
 }
