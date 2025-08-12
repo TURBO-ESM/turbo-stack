@@ -1,5 +1,8 @@
 name: Build Inside NCAR HPC Development Containers
 
+# See the following link for more information on the NCAR HPC development containers:
+# https://hub.docker.com/u/ncarcisl
+
 on:
   workflow_dispatch:
   push:
@@ -27,9 +30,6 @@ jobs:
           # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
           - compiler: nvhpc
             mpi: openmpi
-          # skip gcc14/openmpi, which appears to no longer exist under ncarcisl
-          - compiler: gcc14
-            mpi: openmpi
 
 
     name: Build
@@ -39,7 +39,7 @@ jobs:
         shell: bash -elo pipefail {0}
 
     container:
-      image: ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}:devel
+      image: ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
 
     steps:
       - uses: actions/checkout@v4
