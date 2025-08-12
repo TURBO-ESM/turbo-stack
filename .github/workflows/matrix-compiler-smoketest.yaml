@@ -27,6 +27,9 @@ jobs:
           # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
           - compiler: nvhpc
             mpi: openmpi
+          # skip gcc14/openmpi, which appears to no longer exist under ncarcisl
+          - compiler: gcc14
+            mpi: openmpi
 
 
     name: Build
