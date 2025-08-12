@@ -34,7 +34,7 @@ cd "${CODECOV_DIR}" || {
 }
 
 # Find all .gcda files in the codecov directory
-find ./ -name "*.gcda" | while read -r gcda_file_path; do
+find ./ -name "*.gcda" -print0 | while IFS= read -r -d '' gcda_file_path; do
 echo "--------------------------------------"
     gcda_file_name=$(basename "${gcda_file_path}")
     gcda_file_default="${gcda_file_name//\#/\/}" # The default path of gcda if it were not in codecov/
