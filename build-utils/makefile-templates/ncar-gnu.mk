@@ -13,26 +13,27 @@ LD = mpif90 $(MAIN_PROGRAM)
 #  flags   #
 ############
 
-DEBUG =
+DEBUG = 0
+CODECOV = 0
 MAKEFLAGS += --jobs=$(shell grep '^processor' /proc/cpuinfo | wc -l)
 LDFLAGS :=
 
 FC_AUTO_R8 := -fdefault-real-8 -fdefault-double-8
 FPPFLAGS :=
 FFLAGS := $(FC_AUTO_R8) -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none -fallow-argument-mismatch  -fallow-invalid-boz -fcray-pointer
-FFLAGS_REPRO = -O
-FFLAGS_DEBUG = -g -Wall -Og -fbacktrace -ffpe-trap=zero,overflow -fcheck=bounds
-
 CFLAGS := -std=gnu99
-CFLAGS_REPRO = -O
-CFLAGS_DEBUG = -g -Wall -Og -fbacktrace -ffpe-trap=invalid,zero,overflow -fcheck=bounds
 
-ifeq ($(DEBUG),1)
-  FFLAGS += $(FFLAGS_DEBUG)
-  CFLAGS += $(CFLAGS_DEBUG)
-else
-  FFLAGS += $(FFLAGS_REPRO)
-  CFLAGS += $(CFLAGS_REPRO)
+# Compilation Mode-specific flags
+ifeq ($(CODECOV),1)
+	FFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
+	CFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
+	LDFLAGS += -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
+else ifeq ($(DEBUG),1)
+	FFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=zero,overflow -fcheck=bounds
+	CFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=invalid,zero,overflow -fcheck=bounds
+else # Production build
+	FFLAGS += -O2
+	CFLAGS += -O2
 endif
 
 # NetCDF Flags
