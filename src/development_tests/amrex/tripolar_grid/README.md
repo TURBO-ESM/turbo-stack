@@ -8,7 +8,7 @@ A minimal working example implementing the communication pattern needed for trip
 - [spack](https://spack.io/)
 
 ## Build and Run
-If you have spack installed on you system then the script build_and_run.sh should be all you need to get started. That scirpt:
+If you have spack installed on your system then the script build_and_run.sh should be all you need to get started. That script:
 - installs all other dependencies (cmake, amrex, etc...) in a spack environment 
 - activates that spack environmet
 - builds the tripolar grid amrex example using cmake
