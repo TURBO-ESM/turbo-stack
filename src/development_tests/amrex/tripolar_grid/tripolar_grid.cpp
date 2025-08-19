@@ -239,11 +239,13 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
     H5Fclose(file_id);
 
+    //WriteXDMF(filename, "test.xdmf");
+
 }
 
 std::shared_ptr<amrex::MultiFab> TripolarGrid::CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf, int dest_rank) const {
 
-    // Create a temporary MultiFab to hold all the data on a single rank
+    // Create a temporary MultiFab to hold all the data on a single ran
     const amrex::BoxArray box_array_with_one_box(source_mf->boxArray().minimalBox()); // BoxArray with a single box that covers the entire domain
     const amrex::DistributionMapping distribution_mapping(amrex::Vector<int>{dest_rank}); // Distribution mapping that puts the single box in the box array to a single rank
     const int n_comp = source_mf->nComp();
@@ -308,14 +310,12 @@ void TripolarGrid::WriteMultiFabsToHDF5(const hid_t file_id) const {
             // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
             const auto lo = amrex::lbound(box);
             const auto hi = amrex::ubound(box);
-            for (int component_idx = 0; component_idx < n_component; ++component_idx) {
-                for (int k = lo.z; k <= hi.z; ++k) {
-                    for (int j = lo.y; j <= hi.y; ++j) {
-                        for (int i = lo.x; i <= hi.x; ++i) {
-
-                            const int idx = (((k*ny) + j)*nx + i)*n_component + component_idx; // putting in row-major order instead of column-major order
-                            data[idx] = array(i, j, k, component_idx);
-
+            std::size_t idx = 0;
+            for (int i = lo.x; i <= hi.x; ++i) {
+                for (int j = lo.y; j <= hi.y; ++j) {
+                    for (int k = lo.z; k <= hi.z; ++k) {
+                        for (int component_idx = 0; component_idx < n_component; ++component_idx) {
+                            data[idx++] = array(i, j, k, component_idx);
                         }
                     }
                 }
@@ -383,3 +383,77 @@ void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
     }
 
 }
+
+//void TripolarGrid::WriteXDMF(const std::string& h5_filename,
+//                             const std::string& xdmf_filename) const {
+//
+//    if (amrex::ParallelDescriptor::MyProc() == 0) {
+//
+//        std::ofstream xdmf(xdmf_filename);
+//        xdmf << "<?xml version=\"1.0\" ?>\n";
+//        xdmf << "<Xdmf Version=\"3.0\">\n";
+//        xdmf << "  <Domain>\n";
+//
+//        struct GridInfo {
+//            std::string name;
+//            std::vector<int> dims;
+//            std::string geometry_dataset;
+//            std::string scalar_dataset;
+//            std::string vector_dataset;
+//            std::string scalar_name;
+//            std::string vector_name;
+//            std::string center;
+//        };
+//
+//        const int nx = NCellX();
+//        const int ny = NCellY();
+//        const int nz = NCellZ();
+//
+//        std::vector<GridInfo> grids = {
+//            {"cell_center", {nz, ny, nx}, "cell_center", "cell_scalar", "cell_vector", "Cell Scalar", "Cell Vector", "Cell"},
+//            {"node", {nz+1, ny+1, nx+1}, "node", "node_scalar", "node_vector", "Node Scalar", "Node Vector", "Node"},
+//            {"x_face", {nz, ny, nx+1}, "x_face", "x_face_scalar", "x_face_vector", "X-Face Scalar", "X-Face Vector", "Face"},
+//            {"y_face", {nz, ny+1, nx}, "y_face", "y_face_scalar", "y_face_vector", "Y-Face Scalar", "Y-Face Vector", "Face"},
+//            {"z_face", {nz+1, ny, nx}, "z_face", "z_face_scalar", "z_face_vector", "Z-Face Scalar", "Z-Face Vector", "Face"}
+//        };
+//
+//        auto WriteXDMFDataItem = [&xdmf, &h5_filename](const std::string& dataset,
+//                                     const std::vector<int>& dims,
+//                                     int n_comp) {
+//            xdmf << "        <DataItem Dimensions=\"";
+//            for (size_t i = 0; i < dims.size(); ++i) xdmf << dims[i] << " ";
+//            if (n_comp > 1) xdmf << n_comp;
+//            xdmf << "\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">\n";
+//            xdmf << "          " << h5_filename << ":/" << dataset << "\n";
+//            xdmf << "        </DataItem>\n";
+//        };
+//
+//        for (const auto& grid : grids) {
+//            xdmf << "    <Grid Name=\"" << grid.name << "\" GridType=\"Uniform\">\n";
+//
+//            xdmf << "      <Topology TopologyType=\"3DRectMesh\" Dimensions=\"";
+//            for (size_t i = 0; i < grid.dims.size(); ++i) xdmf << grid.dims[i] << " ";
+//            xdmf << "\"/>\n";
+//
+//            xdmf << "      <Geometry GeometryType=\"XYZ\">\n";
+//            WriteXDMFDataItem(grid.geometry_dataset, grid.dims, 3);
+//            xdmf << "      </Geometry>\n";
+//
+//            // Scalar field
+//            xdmf << "      <Attribute Name=\"" << grid.scalar_name << "\" AttributeType=\"Scalar\" Center=\"" << grid.center << "\">\n";
+//            WriteXDMFDataItem(grid.scalar_dataset, grid.dims, 1);
+//            xdmf << "      </Attribute>\n";
+//
+//            // Vector field
+//            xdmf << "      <Attribute Name=\"" << grid.vector_name << "\" AttributeType=\"Vector\" Center=\"" << grid.center << "\">\n";
+//            WriteXDMFDataItem(grid.vector_dataset, grid.dims, 3);
+//            xdmf << "      </Attribute>\n";
+//
+//            xdmf << "    </Grid>\n";
+//        }
+//
+//        xdmf << "  </Domain>\n";
+//        xdmf << "</Xdmf>\n";
+//        xdmf.close();
+//    }
+//}

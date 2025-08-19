@@ -130,9 +130,12 @@ private:
     // Returns a pointer to a new MultiFab that contains all the data from the original MultiFab but now on a single box and rank.
     std::shared_ptr<amrex::MultiFab> CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& src_mf, int dest_rank = 0) const;
 
-    // Write the MultiFabs
     void WriteMultiFabsToHDF5(const hid_t file_id) const;
+
     void WriteGeometryToHDF5(const hid_t file_id) const;
+
+    //void WriteXDMF(const std::string& h5_filename,
+    //               const std::string& xdmf_filename) const;
 
 };
 

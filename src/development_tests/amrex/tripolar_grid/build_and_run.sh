@@ -70,4 +70,5 @@ cmake --build $BUILD_DIR
 ctest --test-dir $BUILD_DIR
 
 # Run the code. 
-$BUILD_DIR/tripolar_grid
+cd $BUILD_DIR
+./tripolar_grid
