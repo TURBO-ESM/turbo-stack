@@ -80,5 +80,9 @@ cmake -S $TURBO_STACK_ROOT/src/development_tests/amrex/tripolar_grid -B $BUILD_D
 # Build the code. 
 cmake --build $BUILD_DIR
 
+# Test the code.
+ctest --test-dir $BUILD_DIR
+
 # Run the code. 
-$BUILD_DIR/tripolar_grid
+cd $BUILD_DIR
+./tripolar_grid

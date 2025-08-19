@@ -8,6 +8,8 @@ spack:
     - cmake
     - amrex ^cray-mpich
     - mpi
+    - googletest
+    - hdf5
   packages:
     all:
       compiler: [gcc]
