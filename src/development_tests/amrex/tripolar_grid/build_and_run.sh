@@ -72,3 +72,5 @@ ctest --test-dir $BUILD_DIR
 # Run the code. 
 cd $BUILD_DIR
 ./tripolar_grid
+
+#python plot_hdf5.py tripolar_grid.h5
