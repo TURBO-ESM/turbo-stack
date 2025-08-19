@@ -1,6 +1,6 @@
 # Tripolar Grid using AMReX Development Test
 
-A minimal working example implementing the communication pattern needed for tripolar girds in AMReX.
+A minimal working example implementing the communication pattern needed for tripolar grids in AMReX.
 
 ## Prerequisites
 
