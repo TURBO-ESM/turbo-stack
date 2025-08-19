@@ -51,7 +51,6 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
     }
 
     // Defining the MultiFab on the nodes and faces assume these two are defined on cells. Confirm that.
-    AMREX_ASSERT(cell_scalar.is_cell_centered());
     AMREX_ASSERT(cell_scalar->is_cell_centered());
     AMREX_ASSERT(cell_vector->is_cell_centered());
 
