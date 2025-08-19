@@ -224,7 +224,7 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
         }
 
         {
-            double test_int_value = 1; // Example test value, can be set to any value you want
+            int test_int_value = 1; // Example test value, can be set to any value you want
             const hid_t attr_space_id = H5Screate(H5S_SCALAR);
             const hid_t attr_id = H5Acreate(file_id, "int_test_value", H5T_NATIVE_INT, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
             H5Awrite(attr_id, H5T_NATIVE_INT, &test_int_value);
