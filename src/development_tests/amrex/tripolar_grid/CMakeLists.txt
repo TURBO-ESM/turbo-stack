@@ -18,57 +18,42 @@ enable_testing()
 find_package(HDF5 REQUIRED COMPONENTS C)
 
 ###############################################################################
-# Tripolar Grid Main Application
+# Example from AMReX Developers 
 ###############################################################################
 
-set(TRIPOLAR_GRID_SOURCES
+set(AMREX_EXAMPLE_SOURCES
     main.cpp
 )
 
-add_executable(amrex_example_main ${TRIPOLAR_GRID_SOURCES})
+add_executable(amrex_example_main ${AMREX_EXAMPLE_SOURCES})
 
-target_sources(amrex_example_main PRIVATE ${TRIPOLAR_GRID_SOURCES})
+target_sources(amrex_example_main PRIVATE ${AMREX_EXAMPLE_SOURCES})
 
 target_link_libraries(amrex_example_main PUBLIC AMReX::amrex_3d)
+
+###############################################################################
+# Tripolar Grid Library
+###############################################################################
+
+add_library(tripolar_grid_lib STATIC
+    tripolar_grid.cpp
+    tripolar_grid.h
+)
+
+target_include_directories(tripolar_grid_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tripolar_grid_lib PUBLIC AMReX::amrex_3d HDF5::HDF5)
 
 ###############################################################################
 # Tripolar Grid Tests
 ###############################################################################
 
-set(TRIPOLAR_GRID_TEST_SOURCES
-    tripolar_grid_test.cpp
-    tripolar_grid.cpp
-)
-
-add_executable(tripolar_grid_test ${TRIPOLAR_GRID_TEST_SOURCES})
-
-target_include_directories(tripolar_grid_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-# Link against the AMReX library
-target_sources(tripolar_grid_test PRIVATE ${TRIPOLAR_GRID_TEST_SOURCES})
-target_link_libraries(tripolar_grid_test AMReX::amrex_3d)
-
-# Google Test setup
-target_link_libraries(tripolar_grid_test GTest::gtest_main)
+add_executable(tripolar_grid_test tripolar_grid_test.cpp)
+target_link_libraries(tripolar_grid_test PRIVATE tripolar_grid_lib GTest::gtest_main)
 gtest_discover_tests(tripolar_grid_test)
-
-# Link against HDF5
-target_link_libraries(tripolar_grid_test HDF5::HDF5)
 
 ###############################################################################
 # Tripolar Grid Example
 ###############################################################################
 
-set(TRIPOLAR_GRID_SOURCES
-    example.cpp
-    tripolar_grid.cpp
-)
-
-add_executable(tripolar_grid ${TRIPOLAR_GRID_SOURCES})
-
-target_include_directories(tripolar_grid PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_sources(tripolar_grid PRIVATE ${TRIPOLAR_GRID_SOURCES})
-
-target_link_libraries(tripolar_grid PUBLIC AMReX::amrex_3d)
-target_link_libraries(tripolar_grid PUBLIC HDF5::HDF5)
+add_executable(tripolar_grid example.cpp)
+target_link_libraries(tripolar_grid PRIVATE tripolar_grid_lib)
