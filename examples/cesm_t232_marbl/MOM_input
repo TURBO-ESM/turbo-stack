@@ -167,9 +167,59 @@ CFC_BC_FILE = /glade/campaign/cesm/cesmdata/inputdata/ocn/mom/grid_indpt/cfc_atm
                                 ! "The file in which the CFC-11 and CFC-12 atm concentrations can be found (units
                                 ! must be parts per trillion)."
 
-USE_MARBL_TRACERS = False
+USE_MARBL_TRACERS = True
                                 ! "[Boolean] default = False
                                 ! If true, use the MARBL tracer package."
+
+MARBL_TRACERS_IC_FILE = ecosys_jan_IC_omip_latlon_1x1_180W_c231221.nc
+                                ! "Name of file containing initial conditions
+                                ! for the MARBL tracer package."
+
+MARBL_FESEDFLUX_FILE = fesedflux_total_reduce_oxic_tx2_3v2.c231205.nc
+                                ! "Name of file containing iron sediment flux
+                                !  forcing field for the MARBL tracer package."
+
+MARBL_FEVENTFLUX_FILE = feventflux_5gmol_tx2_3v2.c231205.nc
+                                ! "Name of file containing iron sediment flux
+                                !  forcing field for the MARBL tracer package."
+
+READ_RIV_FLUXES = True
+                                ! "Use river fluxes provided by RIV_FLUX_FILE."
+
+RIV_FLUX_FILE = riv_nut.gnews_gnm.rJRA025_to_tx2_3v2_nnsm_e333r100_230415.20240202.nc
+                                ! "Name of file containing river fluxes
+                                !  (added to surface tracer flux in tracer_vertdiff for MARBL tracers)."
+
+CHL_FROM_FILE = False
+                                ! "[Boolean] default = True
+                                !  If true, read chlorophyll from a file. Otherwise MARBL will provide it."
+
+ATM_CO2_OPT = "constant"
+                                ! "default comes from env_run.xml (OCN_CO2_TYPE)
+                                !  Source of atmospheric CO2 concentration for MARBL.
+                                !  valid values: constant, prognostic, diagnostic"
+
+ATM_CO2_CONST = 284.317
+                                ! "default comes from env_run.xml (CCSM_CO2_PPMV)
+                                !  Atmospheric CO2 concentration for MARBL [ppm]."
+
+ATM_ALT_CO2_OPT = "constant"
+                                ! "default comes from env_run.xml (OCN_CO2_TYPE)
+                                !  Source of atmospheric CO2 concentration for MARBL.
+                                !  valid values: constant, prognostic, diagnostic"
+
+ATM_ALT_CO2_CONST = 284.317
+                                ! "default comes from env_run.xml (CCSM_CO2_PPMV)
+                                !  Alternate atmospheric CO2 concentration for MARBL [ppm]."
+
+USE_ICE_CATEGORIES = True
+                                ! "[Boolean] default = False
+                                ! If true, send multiple ice categories from the coupler to MARBL."
+
+ICE_NCAT = 1
+                                ! "[Integer] default = value of ICE_NCAT in env_build.xml
+                                ! If USE_ICE_CATEGORIES is true, this is the number of categories
+                                ! to send from the coupler to MARBL."
 
 REMAP_UV_USING_OLD_ALG = False
                                 ! "[Boolean] default = True
