@@ -1,4 +1,4 @@
-name: Clang-Format-Dry-Run
+name: Clang Format Dry Run
 
 on:
   workflow_dispatch:
