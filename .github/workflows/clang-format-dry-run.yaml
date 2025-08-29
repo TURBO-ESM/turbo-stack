@@ -2,8 +2,9 @@ name: Clang Format Dry Run
 
 on:
   workflow_dispatch:
-  branches:
-   - mwaxmonsky/clang-format-workflow
+  push:
+    branches:
+     - clang-format-workflow
 
 jobs:
   format:
