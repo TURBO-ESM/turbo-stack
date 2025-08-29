@@ -2,6 +2,8 @@ name: Clang-Format
 
 on:
   workflow_dispatch:
+  branch:
+   - mwaxmonsky/clang-format-workflow
 
 jobs:
   format:
