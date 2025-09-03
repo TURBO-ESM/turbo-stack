@@ -64,7 +64,7 @@ jobs:
       - name: Assemble coverage site with index
         id: site
         run: |
-            python3 assemble_coverage.py --site ${{ steps.cov.outputs.dir }}
+            python3 .github/workflows/assemble_coverage.py --site ${{ steps.cov.outputs.dir }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
