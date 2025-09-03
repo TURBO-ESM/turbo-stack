@@ -64,35 +64,7 @@ jobs:
       - name: Assemble coverage site with index
         id: site
         run: |
-          set -e
-          site="coverage-site"
-          mkdir -p "$site/double_gyre"
-          cp -a "${{ steps.cov.outputs.dir }}/." "$site/double_gyre/"
-          # Disable Jekyll processing (some coverage assets may be ignored otherwise)
-          touch "$site/.nojekyll"
-          cat > "$site/index.html" << 'HTML'
-          <!doctype html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>MOM6 Coverage Reports</title>
-            <style>
-              body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
-              h1 { margin-bottom: 0.5rem; }
-              ul { line-height: 1.8; }
-            </style>
-          </head>
-          <body>
-            <h1>MOM6 Coverage Reports</h1>
-            <p>Select a report:</p>
-            <ul>
-              <li><a href="double_gyre/index.html">double_gyre</a></li>
-            </ul>
-          </body>
-          </html>
-          HTML
-          echo "path=$site" >> "$GITHUB_OUTPUT"
+            python3 assemble_coverage.py --site ${{ steps.cov.outputs.dir }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
