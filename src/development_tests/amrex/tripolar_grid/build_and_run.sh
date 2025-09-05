@@ -45,7 +45,10 @@ spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 
 ## Derecho Specific Environment Setup. TODO Make this more general.0
 host=$(hostname)
-if [[ "${host:0:7}" == "derecho" ]]; then
+#if [[ "${host:0:7}" == "derecho" ]]; then
+# Sound come up with a better way to detect derecho.
+if [[ "${host:0:7}" == "derecho" || "${host:0:3}" == "dec" ]]; then
+
     echo "Detected host: derecho. Running derecho-specific setup..."
     module purge
     #module load gcc cray-mpich # Works
