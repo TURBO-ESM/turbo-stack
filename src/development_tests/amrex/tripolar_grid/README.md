@@ -14,3 +14,13 @@ If you have spack installed on your system then the script build_and_run.sh shou
 - builds the tripolar grid amrex library and examples using cmake
 - tests the code
 - runs the tripolar grid example
+
+## Directory Structure
+- src 
+  - The source and header files that define the tripolar grid class.
+- examples 
+  - The source code for driver applications. These should produce executable programs.
+- postprocessing 
+  - Postprocessing scripts for data analysis and visualization. 
+- spack 
+  - Configuration files for spack environments.
