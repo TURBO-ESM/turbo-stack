@@ -43,11 +43,8 @@ fi
 spack_environment_name="tripolar_grid_amrex"
 spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 
-## Derecho Specific Environment Setup. TODO Make this more general.0
-host=$(hostname)
-#if [[ "${host:0:7}" == "derecho" ]]; then
-# Sound come up with a better way to detect derecho.
-if [[ "${host:0:7}" == "derecho" || "${host:0:3}" == "dec" ]]; then
+## Derecho Specific Environment Setup.
+if [[ -n "${NCAR_HOST:-}" && "${NCAR_HOST}" == "derecho" ]]; then
 
     echo "Detected host: derecho. Running derecho-specific setup..."
     module purge
@@ -97,8 +94,5 @@ else
     echo "Error: tripolar_grid binary not found or not executable in $build_dir/examples." >&2
     exit 1
 fi
-
-cd "$build_dir/examples"
-./tripolar_grid
 
 #python "$tripolar_dir/postprocessing/plot_hdf5.py" tripolar_grid.h5
