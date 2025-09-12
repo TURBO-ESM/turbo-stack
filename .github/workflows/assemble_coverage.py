@@ -7,6 +7,8 @@ from pathlib import Path
 import shutil
 import sys
 from typing import Dict
+from datetime import datetime
+import subprocess
 
 
 def parse_name_path(arg: str) -> (str, Path):
@@ -53,6 +55,18 @@ def write_index(site_dir: Path, title: str, reports: Dict[str, Path]) -> None:
         f'          <li><a href="{html.escape(name)}/index.html">{html.escape(name)}</a></li>'
         for name in sorted(reports.keys())
     )
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    commit_hash = os.environ.get("GITHUB_SHA")
+    if not commit_hash:
+        try:
+            commit_hash = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], text=True
+            ).strip()
+        except Exception:
+            commit_hash = "unknown"
+    
+    commit_hash = commit_hash[:7]  # Shorten to first 7 characters
+
     html_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -63,10 +77,13 @@ def write_index(site_dir: Path, title: str, reports: Dict[str, Path]) -> None:
     body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }}
     h1 {{ margin-bottom: 0.5rem; }}
     ul {{ line-height: 1.8; }}
+    .meta {{ font-size: 0.9rem; color: #555; }}
   </style>
 </head>
 <body>
   <h1>{html.escape(title)}</h1>
+  <p class="meta">Report generated at: {html.escape(generated_at)}<br>
+  Commit hash: {html.escape(commit_hash)}</p>
   <p>Select a report:</p>
   <ul>
 {links}

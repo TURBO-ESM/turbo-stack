@@ -34,13 +34,21 @@ jobs:
         run: |
           cd examples/double_gyre
           mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6/MOM6
-
-      - name: Generate coverage report
-        id: gencov
-        run: |
-          cd examples/double_gyre
           make coverage
           cd ../..
+      
+      - name: Run benchmark (instrumented build)
+        run: |
+          cd examples/benchmark
+          echo "#override DAYMAX = 0.1" >> MOM_override
+          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6/MOM6
+          make coverage
+          make coverage base=../double_gyre
+          cd ../..
+
+      - name: Assemble coverage reports
+        id: assemble
+        run: |
           dir=$(mktemp -d)
           python3 .github/workflows/assemble_coverage.py --site "$dir" --auto-from examples/
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
@@ -49,13 +57,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mom6-coverage-html
-          path: ${{ steps.gencov.outputs.dir }}
+          path: ${{ steps.assemble.outputs.dir }}
           if-no-files-found: error
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ steps.gencov.outputs.dir }}
+          path: ${{ steps.assemble.outputs.dir }}
 
   deploy-coverage:
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ci-tests') && github.event_name != 'pull_request'
