@@ -12,145 +12,78 @@ on:
 
 jobs:
 
-  coverage:
-    name: Code Coverage
+  run-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ nvhpc, oneapi, gcc14, clang ]
+        mpi:      [ openmpi, mpich ]
+        #gpu:      [ nogpu, cuda ]
+        gpu:      [ nogpu ]
+        arch:     [ x86_64 ]
+
+        include:
+          - mpi: openmpi
+            extra_mpiexec_args: '--allow-run-as-root'
+
+        exclude:
+          # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
+          - compiler: nvhpc
+            mpi: openmpi
+
+
+
+    name: Build
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -elo pipefail {0}
+
     container:
-      image: ncarcisl/cisldev-x86_64-almalinux9-gcc14-openmpi
+      image: ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
+
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
           fetch-depth: 0
 
-      - name: Build MOM6 with coverage instrumentation
+      - name: Interrogate Runtime Environment
         run: |
-          ./build.sh --machine container --compiler gcc --codecov
+          cat /container/config_env.sh
+          lscpu
+          echo && echo && echo
+          echo '----------------------------------------------------------------'
+          echo && echo && echo
+          echo "CC=${CC}"
+          echo "CXX=${CXX}"
+          echo "FC=${FC}"
+          echo "F77=${F77}"
+          echo
+          echo "CFLAGS=${CFLAGS}"
+          echo "CPPFLAGS=${CPPFLAGS}"
+          echo "CXXFLAGS=${CXXFLAGS}"
+          echo "FCFLAGS=${FCFLAGS}"
+          echo "F77FLAGS=${F77FLAGS}"
+          export CC CXX FC F77 CFLAGS CXXFLAGS FCFLAGS F77FLAGS CPPFLAGS
+          conda --version 2>/dev/null || echo " --> no conda in this container"
+          which mpicc
+          mpicc --version 2>/dev/null || true
 
-      - name: Run double gyre (instrumented build)
+      - name: MPI+OpenMP Hello World
         run: |
-          cd examples/double_gyre
-          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6/MOM6
-          make coverage
-          cd ../..
-      
-      - name: Run benchmark (instrumented build)
+          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
+          ldd ./hello_world_mpi
+          export OMP_NUM_THREADS=2
+          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
+
+      - name: Build turbo-stack
         run: |
-          cd examples/benchmark
-          echo "#override DAYMAX = 0.1" >> MOM_override
-          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6/MOM6
-          make coverage
-          make coverage base=../double_gyre
-          cd ../..
+          echo "Building turbo-stack..."
+          ./build.sh --machine container --compiler ${COMPILER_FAMILY}
 
-      - name: Assemble coverage reports
-        id: assemble
+      - name: Run double gyre test
         run: |
-          dir=$(mktemp -d)
-          python3 .github/workflows/assemble_coverage.py --site "$dir" --auto-from examples/
-          echo "dir=$dir" >> "$GITHUB_OUTPUT"
-
-      - name: Upload coverage HTML as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mom6-coverage-html
-          path: ${{ steps.assemble.outputs.dir }}
-          if-no-files-found: error
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ${{ steps.assemble.outputs.dir }}
-
-  deploy-coverage:
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ci-tests') && github.event_name != 'pull_request'
-    needs: coverage
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-
-  #run-matrix:
-  #  strategy:
-  #    fail-fast: false
-  #    matrix:
-  #      compiler: [ nvhpc, oneapi, gcc14, clang ]
-  #      mpi:      [ openmpi, mpich ]
-  #      #gpu:      [ nogpu, cuda ]
-  #      gpu:      [ nogpu ]
-  #      arch:     [ x86_64 ]
-
-  #      include:
-  #        - mpi: openmpi
-  #          extra_mpiexec_args: '--allow-run-as-root'
-
-  #      exclude:
-  #        # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
-  #        - compiler: nvhpc
-  #          mpi: openmpi
-
-
-
-  #  name: Build
-  #  runs-on: ubuntu-latest
-  #  defaults:
-  #    run:
-  #      shell: bash -elo pipefail {0}
-
-  #  container:
-  #    image: ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
-
-  #  steps:
-  #    - uses: actions/checkout@v4
-  #      with:
-  #        submodules: 'recursive'
-  #        fetch-depth: 0
-
-  #    - name: Interrogate Runtime Environment
-  #      run: |
-  #        cat /container/config_env.sh
-  #        lscpu
-  #        echo && echo && echo
-  #        echo '----------------------------------------------------------------'
-  #        echo && echo && echo
-  #        echo "CC=${CC}"
-  #        echo "CXX=${CXX}"
-  #        echo "FC=${FC}"
-  #        echo "F77=${F77}"
-  #        echo
-  #        echo "CFLAGS=${CFLAGS}"
-  #        echo "CPPFLAGS=${CPPFLAGS}"
-  #        echo "CXXFLAGS=${CXXFLAGS}"
-  #        echo "FCFLAGS=${FCFLAGS}"
-  #        echo "F77FLAGS=${F77FLAGS}"
-  #        export CC CXX FC F77 CFLAGS CXXFLAGS FCFLAGS F77FLAGS CPPFLAGS
-  #        conda --version 2>/dev/null || echo " --> no conda in this container"
-  #        which mpicc
-  #        mpicc --version 2>/dev/null || true
-
-  #    - name: MPI+OpenMP Hello World
-  #      run: |
-  #        mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
-  #        ldd ./hello_world_mpi
-  #        export OMP_NUM_THREADS=2
-  #        mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
-
-  #    - name: Build turbo-stack
-  #      run: |
-  #        echo "Building turbo-stack..."
-  #        ./build.sh --machine container --compiler ${COMPILER_FAMILY}
-
-  #    - name: Run double gyre test
-  #      run: |
-  #        echo "Running double gyre test..."
-  #        cd ./examples/double_gyre
-  #        mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+          echo "Running double gyre test..."
+          cd ./examples/double_gyre
+          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
