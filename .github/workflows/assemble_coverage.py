@@ -24,14 +24,27 @@ def parse_name_path(arg: str) -> (str, Path):
     return name, p
 
 
-def discover_reports(root: Path, require_index: bool = True) -> Dict[str, Path]:
-    reports = {}
-    for child in root.iterdir():
-        if not child.is_dir():
+def discover_reports(root: Path) -> Dict[str, Path]:
+    """
+    Recursively discover report directories under root.
+
+    A report directory is any directory (except root itself) that contains an
+    index.html file (unless require_index=False). The mapping key is the
+    POSIX-style relative path from root (e.g. "modelA/part1").
+    """
+    reports: Dict[str, Path] = {}
+    root = root.resolve()
+
+    for dirpath, dirnames, filenames in os.walk(root):
+        print(f"Checking {dirpath}")
+        current = Path(dirpath)
+        if current == root:
+            continue  # skip the root itself
+        has_index = "index.html" in filenames
+        if not has_index:
             continue
-        if require_index and not (child / "index.html").exists():
-            continue
-        reports[child.name] = child.resolve()
+        rel = current.relative_to(root).as_posix()
+        reports[rel] = current
     return reports
 
 
@@ -118,6 +131,7 @@ def main(argv=None) -> int:
         p.error("No reports provided. Use --auto-from or NAME=PATH mappings.")
 
     site_dir = Path(args.site).expanduser().resolve()
+    print(f"Assembling {len(reports)} reports into site: {site_dir}")
     assemble_site(site_dir, reports, args.title, args.clean)
     return 0
 
