@@ -7,15 +7,17 @@
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
+#include "grid.h"
 #include "tripolar_grid.h"
 
-// Point operator+
-TripolarGrid::Point TripolarGrid::Point::operator+(const Point& other) const noexcept {
-    return {x + other.x, y + other.y, z + other.z};
-}
+namespace turbo {
 
-TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z)
-    : n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
+//TripolarGrid::TripolarGrid(const std::size_t n_cell_x, const std::size_t n_cell_y, const std::size_t n_cell_z)
+//{
+
+TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
+    : grid_(grid)
+
 {
     static_assert(
         amrex::SpaceDim == 3,
@@ -36,7 +38,8 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
         // We don't really need the AMREX_D_DECL here since we are enforcing 3D grids only, but it's fine to keep it for now to avoid potential issues if we decide to extend to 2D or 1D later.
         // If or when we do that we will need to wrap all the change the other IntVect definitions accordingly.
         const amrex::IntVect cell_low_index(AMREX_D_DECL(0,0,0));
-        const amrex::IntVect cell_high_index(AMREX_D_DECL(n_cell_x - 1, n_cell_y - 1, n_cell_z - 1));
+        //const amrex::IntVect cell_high_index(AMREX_D_DECL(n_cell_x - 1, n_cell_y - 1, n_cell_z - 1));
+        const amrex::IntVect cell_high_index(AMREX_D_DECL(grid_->NCellI() - 1, grid_->NCellJ() - 1, grid_->NCellK() - 1));
         const amrex::Box cell_centered_box(cell_low_index, cell_high_index);
 
         amrex::BoxArray cell_box_array(cell_centered_box);
@@ -123,15 +126,15 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
             amrex::Abort("MultiFab has an unexpected number of components.");
         }
 
-        if (mf->is_cell_centered()) {
+        if (IsCellCentered(mf)) {
             cell_multifabs.insert(mf);
-        } else if (mf->is_nodal(0) == true  && mf->is_nodal(1) == false && mf->is_nodal(2) == false) {
+        } else if (IsXFaceCentered(mf)) {
             x_face_multifabs.insert(mf);
-        } else if (mf->is_nodal(0) == false && mf->is_nodal(1) == true  && mf->is_nodal(2) == false) {
+        } else if (IsYFaceCentered(mf)) {
             y_face_multifabs.insert(mf);
-        } else if (mf->is_nodal(0) == false && mf->is_nodal(1) == false && mf->is_nodal(2) == true) {
+        } else if (IsZFaceCentered(mf)) {
             z_face_multifabs.insert(mf);
-        } else if (mf->is_nodal()) {
+        } else if (IsNodal(mf)) {
             node_multifabs.insert(mf);
         } else {
             amrex::Abort("MultiFab has an unexpected topology.");
@@ -142,49 +145,17 @@ TripolarGrid::TripolarGrid(std::size_t n_cell_x, std::size_t n_cell_y, std::size
 
 }
 
-std::size_t TripolarGrid::NCell() const noexcept  { return n_cell_x_ * n_cell_y_ * n_cell_z_; }
-std::size_t TripolarGrid::NCellX() const noexcept { return n_cell_x_; }
-std::size_t TripolarGrid::NCellY() const noexcept { return n_cell_y_; }
-std::size_t TripolarGrid::NCellZ() const noexcept { return n_cell_z_; }
-
-std::size_t TripolarGrid::NNode() const noexcept  { return NNodeX() * NNodeY() * NNodeZ(); }
-std::size_t TripolarGrid::NNodeX() const noexcept { return NCellX() + 1; }
-std::size_t TripolarGrid::NNodeY() const noexcept { return NCellY() + 1; }
-std::size_t TripolarGrid::NNodeZ() const noexcept { return NCellZ() + 1; }
-
-TripolarGrid::Point TripolarGrid::Node(amrex::IntVect node_index) const noexcept {
-    return {x_min_ + node_index[0] * dx_,
-            y_min_ + node_index[1] * dy_,
-            z_min_ + node_index[2] * dz_};
-}
-
-TripolarGrid::Point TripolarGrid::CellCenter(amrex::IntVect cell_index) const noexcept {
-    return Node(cell_index) + Point{dx_*0.5, dy_*0.5, dz_*0.5};
-}
-
-TripolarGrid::Point TripolarGrid::XFace(amrex::IntVect x_face_index) const noexcept {
-    return Node(x_face_index) + Point{0.0, dy_*0.5, dz_*0.5};
-}
-
-TripolarGrid::Point TripolarGrid::YFace(amrex::IntVect y_face_index) const noexcept {
-    return Node(y_face_index) + Point{dx_*0.5, 0.0, dz_*0.5};
-}
-
-TripolarGrid::Point TripolarGrid::ZFace(amrex::IntVect z_face_index) const noexcept {
-    return Node(z_face_index) + Point{dx_*0.5, dy_*0.5, 0.0};
-}
-
-TripolarGrid::Point TripolarGrid::GetLocation(const std::shared_ptr<amrex::MultiFab>& mf, int i, int j, int k) const {
-    if (cell_multifabs.contains(mf)) {
-        return CellCenter(amrex::IntVect(i,j,k));
-    } else if (x_face_multifabs.contains(mf)) {
-        return XFace(amrex::IntVect(i,j,k));
-    } else if (y_face_multifabs.contains(mf)) {
-        return YFace(amrex::IntVect(i,j,k));
-    } else if (z_face_multifabs.contains(mf)) {
-        return ZFace(amrex::IntVect(i,j,k));
-    } else if (node_multifabs.contains(mf)) {
-        return Node(amrex::IntVect(i,j,k));
+Grid::Point TripolarGrid::GetLocation(const std::shared_ptr<amrex::MultiFab>& mf, int i, int j, int k) const {
+    if (IsCellCentered(mf)) {
+        return grid_->CellCenter(i,j,k);
+    } else if (IsXFaceCentered(mf)) {
+        return grid_->IFace(i,j,k);
+    } else if (IsYFaceCentered(mf)) {
+        return grid_->JFace(i,j,k);
+    } else if (IsZFaceCentered(mf)) {
+        return grid_->KFace(i,j,k);
+    } else if (IsNodal(mf)) {
+        return grid_->Node(i,j,k);
     } else {
         amrex::Abort("MultiFab was not found in any of the location sets.");
         return {}; // Returned this line to silence the warning about control reaching end of non-void function. Will never be reached because we are calling abort in this case.
@@ -365,7 +336,7 @@ void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
                 for (int j = lo.y; j <= hi.y; ++j) {
                     for (int k = lo.z; k <= hi.z; ++k) {
 
-                        const Point location = GetLocation(mf, i, j, k);
+                        const Grid::Point location = GetLocation(mf, i, j, k);
                         data[idx++] = location.x;
                         data[idx++] = location.y;
                         data[idx++] = location.z;
@@ -457,3 +428,5 @@ void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
 //        xdmf.close();
 //    }
 //}
+
+} // namespace turbo
