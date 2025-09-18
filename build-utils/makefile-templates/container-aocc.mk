@@ -1,50 +1,40 @@
-# Template for the PGI Compilers
+# Template for the AMD/AOCC Compilers
 
 ############
 # commands #
 ############
 
-FC = ftn
-CC = cc
-CXX = cc
-LD = ftn $(MAIN_PROGRAM)
+FC = mpif90
+CC = mpicc
+CXX = mpicxx
+LD = mpif90 $(MAIN_PROGRAM)
 
 ############
 #  flags   #
 ############
 
-OFFLOAD =
 DEBUG =
-MAKEFLAGS += --jobs=8
+MAKEFLAGS += --jobs=4
 LDFLAGS :=
 
-FC_AUTO_R8 = -r8
-FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
+FC_AUTO_R8 = -fdefault-real-8
+FPPFLAGS :=
+FFLAGS = $(FC_AUTO_R8) -Mbyteswapio -Duse_libMPI -Duse_netCDF -DSPMD -Dflang
+FFLAGS_DEBUG = -O0 -g
+FFLAGS_REPRO = -O2
 
-
-CFLAGS = -gopt -time -Mnofma
+CFLAGS = -std=gnu99
+CFLAGS_REPRO = -O2
+CFLAGS_DEBUG =
 CPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
 
 # Get compile flags based on target macros.
-
 ifeq ($(DEBUG),1)
-  FFLAGS += -O0 -g
-  CFLAGS += -O0 -g
+  FFLAGS += $(FFLAGS_DEBUG)
+  CFLAGS += $(CFLAGS_DEBUG)
 else
-  ifeq ($(OFFLOAD),1)
-    FFLAGS += -O0
-    CFLAGS += -O0
-  else
-    FFLAGS += -O2
-    CFLAGS += -O2
-  endif
-endif
-
-ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -Mnofma -fopenmp -Minfo=all
-  CFLAGS += -mp=gpu -gpu=cc80
-  LDFLAGS += -mp=gpu
+  FFLAGS += $(FFLAGS_REPRO)
+  CFLAGS += $(CFLAGS_REPRO)
 endif
 
 # NetCDF Flags
@@ -57,7 +47,7 @@ ifneq ($(findstring -Duse_netCDF,$(CPPDEFS)),)
 endif
 
 # Linking Flags
-LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -llapack -lblas -time -Wl,--allow-multiple-definition
+LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -Wl,--allow-multiple-definition
 
 #---------------------------------------------------------------------------
 # you should never need to change any lines below.

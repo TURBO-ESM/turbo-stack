@@ -1,63 +1,52 @@
-# Template for the PGI Compilers
+# template for Intel oneapi compilers
 
 ############
 # commands #
 ############
 
-FC = ftn
-CC = cc
-CXX = cc
-LD = ftn $(MAIN_PROGRAM)
+FC = mpif90
+CC = mpicc
+CXX = icpx
+LD = mpif90
 
 ############
 #  flags   #
 ############
 
-OFFLOAD =
 DEBUG =
-MAKEFLAGS += --jobs=8
+MAKEFLAGS += --jobs=4
 LDFLAGS :=
 
-FC_AUTO_R8 = -r8
-FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
+FC_AUTO_R8 := -r8
+FPPFLAGS := -fpp -Wp,-w
+FFLAGS := $(FC_AUTO_R8) -qno-opt-dynamic-align  -convert big_endian -assume byterecl -ftz -traceback -assume realloc_lhs -fp-model source  -no-fma  -qopt-report -march=core-avx2
+FFLAGS_DEBUG = -O0 -g -check uninit -check bounds -check nopointer -fpe0 -check noarg_temp_created # CESM uses -check pointers, that throws an error, changed to nopointer
+FFLAGS_REPRO = -O2 -debug minimal
 
-
-CFLAGS = -gopt -time -Mnofma
-CPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-
-# Get compile flags based on target macros.
+CFLAGS := -qno-opt-dynamic-align -fp-model precise -std=gnu99  -no-fma -qopt-report -march=core-avx2
+CFLAGS_REPRO= -O2 -debug minimal
+CFLAGS_DEBUG = -O0 -g
 
 ifeq ($(DEBUG),1)
-  FFLAGS += -O0 -g
-  CFLAGS += -O0 -g
+  FFLAGS += $(FFLAGS_DEBUG)
+  CFLAGS += $(CFLAGS_DEBUG)
 else
-  ifeq ($(OFFLOAD),1)
-    FFLAGS += -O0
-    CFLAGS += -O0
-  else
-    FFLAGS += -O2
-    CFLAGS += -O2
-  endif
-endif
-
-ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -Mnofma -fopenmp -Minfo=all
-  CFLAGS += -mp=gpu -gpu=cc80
-  LDFLAGS += -mp=gpu
+  FFLAGS += $(FFLAGS_REPRO)
+  CFLAGS += $(CFLAGS_REPRO)
 endif
 
 # NetCDF Flags
-FFLAGS += $(shell nf-config --fflags)
-CFLAGS += $(shell nc-config --cflags)
+FFLAGS += -I$(shell nf-config --includedir)
+CFLAGS += -I$(NETCDF_PATH)/include
 
 ifneq ($(findstring -Duse_netCDF,$(CPPDEFS)),)
   # add the use_LARGEFILE cppdef
   CPPDEFS += -Duse_LARGEFILE
 endif
+CPPDEFS += -D__IFC
 
 # Linking Flags
-LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -llapack -lblas -time -Wl,--allow-multiple-definition
+LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs)
 
 #---------------------------------------------------------------------------
 # you should never need to change any lines below.
@@ -79,6 +68,7 @@ LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -llapack -lblas 
 # The macro TMPFILES is provided to slate files like the above for removal.
 
 RM = rm -f
+SHELL = /bin/bash
 TMPFILES = .*.m *.B *.L *.i *.i90 *.l *.s *.mod *.opt
 
 .SUFFIXES: .F .F90 .H .L .T .f .f90 .h .i .i90 .l .o .s .opt .x

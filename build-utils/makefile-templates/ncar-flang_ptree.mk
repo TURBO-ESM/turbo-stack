@@ -4,60 +4,27 @@
 # commands #
 ############
 
-FC = ftn
-CC = cc
-CXX = cc
-LD = ftn $(MAIN_PROGRAM)
+FC = flang
+CC = mpicc
+CXX = mpicxx
+LD = echo flang # no linking, just parsing
+AR = echo ar rv # no archiving, just parsing
 
 ############
 #  flags   #
 ############
 
-OFFLOAD =
 DEBUG =
 MAKEFLAGS += --jobs=8
 LDFLAGS :=
 
-FC_AUTO_R8 = -r8
-FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
-
-
-CFLAGS = -gopt -time -Mnofma
-CPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-
-# Get compile flags based on target macros.
-
-ifeq ($(DEBUG),1)
-  FFLAGS += -O0 -g
-  CFLAGS += -O0 -g
-else
-  ifeq ($(OFFLOAD),1)
-    FFLAGS += -O0
-    CFLAGS += -O0
-  else
-    FFLAGS += -O2
-    CFLAGS += -O2
-  endif
-endif
-
-ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -Mnofma -fopenmp -Minfo=all
-  CFLAGS += -mp=gpu -gpu=cc80
-  LDFLAGS += -mp=gpu
-endif
+FPPFLAGS :=
+FFLAGS = -fc1 -fdebug-dump-parse-tree-no-sema -Duse_libMPI -Duse_netCDF -DSPMD -Dflang
+CFLAGS = -Xclang -ast-dump -fsyntax-only -Duse_libMPI -Duse_netCDF -DSPMD
 
 # NetCDF Flags
 FFLAGS += $(shell nf-config --fflags)
 CFLAGS += $(shell nc-config --cflags)
-
-ifneq ($(findstring -Duse_netCDF,$(CPPDEFS)),)
-  # add the use_LARGEFILE cppdef
-  CPPDEFS += -Duse_LARGEFILE
-endif
-
-# Linking Flags
-LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -llapack -lblas -time -Wl,--allow-multiple-definition
 
 #---------------------------------------------------------------------------
 # you should never need to change any lines below.

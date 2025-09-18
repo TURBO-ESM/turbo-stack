@@ -6,6 +6,7 @@ CPU_stats
 examples/*/*.nc
 examples/*/archive/
 RESTART/
+codecov/
 available_diags.000000
 exitcode
 logfile.000000.out
@@ -14,3 +15,7 @@ mom6_standalone.e*
 ocean.stats*
 ocean_solo.res
 time_stamp.out
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: TURBO Project Documentation
+    url: https://github.com/TURBO-ESM/turbo-stack/blob/main/README.md
+    about: Please check the README for general information about the TURBO Stack
+  - name: MOM6 Documentation
+    url: https://mom6.readthedocs.io/
+    about: For MOM6-specific questions, please refer to the official documentation
+  - name: Discussions
+    url: https://github.com/TURBO-ESM/turbo-stack/discussions
+    about: For general questions and discussions about the TURBO Stack

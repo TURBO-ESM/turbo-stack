@@ -1,63 +1,52 @@
-# Template for the PGI Compilers
-
+# template for Containerized GCC compilers
 ############
 # commands #
 ############
+FC = mpif90
+CC = mpicc
+CXX = g++
+LD = mpif90 $(MAIN_PROGRAM)
 
-FC = ftn
-CC = cc
-CXX = cc
-LD = ftn $(MAIN_PROGRAM)
-
-############
-#  flags   #
-############
-
-OFFLOAD =
+#########
+# flags #
+#########
 DEBUG =
-MAKEFLAGS += --jobs=8
+
+
+MAKEFLAGS += --jobs=4
+
+FPPFLAGS :=
+
+FFLAGS := -fcray-pointer -fdefault-double-8 -fdefault-real-8 -Waliasing -ffree-line-length-none -fno-range-check
+FFLAGS_REPRO = -O2 -fbounds-check
+FFLAGS_DEBUG = -O0 -g -W -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow
+
+
+CFLAGS := -D__IFC
+CFLAGS_REPRO= -O2
+CFLAGS_DEBUG = -O0 -g
+
 LDFLAGS :=
 
-FC_AUTO_R8 = -r8
-FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
-
-
-CFLAGS = -gopt -time -Mnofma
-CPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-
-# Get compile flags based on target macros.
-
 ifeq ($(DEBUG),1)
-  FFLAGS += -O0 -g
-  CFLAGS += -O0 -g
+CFLAGS += $(CFLAGS_DEBUG)
+FFLAGS += $(FFLAGS_DEBUG)
 else
-  ifeq ($(OFFLOAD),1)
-    FFLAGS += -O0
-    CFLAGS += -O0
-  else
-    FFLAGS += -O2
-    CFLAGS += -O2
-  endif
+CFLAGS += $(CFLAGS_REPRO)
+FFLAGS += $(FFLAGS_REPRO)
 endif
 
-ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -Mnofma -fopenmp -Minfo=all
-  CFLAGS += -mp=gpu -gpu=cc80
-  LDFLAGS += -mp=gpu
-endif
+# NetCDF Things
+FFLAGS += -I$(shell nf-config --includedir)
+CFLAGS += -I$(shell nc-config --includedir)
 
-# NetCDF Flags
-FFLAGS += $(shell nf-config --fflags)
-CFLAGS += $(shell nc-config --cflags)
-
+# add the use_LARGEFILE cppdef
 ifneq ($(findstring -Duse_netCDF,$(CPPDEFS)),)
-  # add the use_LARGEFILE cppdef
   CPPDEFS += -Duse_LARGEFILE
 endif
 
-# Linking Flags
-LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -llapack -lblas -time -Wl,--allow-multiple-definition
+LIBS := $(shell nc-config --libs) $(shell nf-config --flibs)
+LDFLAGS += $(LIBS)
 
 #---------------------------------------------------------------------------
 # you should never need to change any lines below.
@@ -79,6 +68,7 @@ LDFLAGS += $(shell nc-config --libs) $(shell nf-config --flibs) -llapack -lblas 
 # The macro TMPFILES is provided to slate files like the above for removal.
 
 RM = rm -f
+SHELL = /bin/bash
 TMPFILES = .*.m *.B *.L *.i *.i90 *.l *.s *.mod *.opt
 
 .SUFFIXES: .F .F90 .H .L .T .f .f90 .h .i .i90 .l .o .s .opt .x
