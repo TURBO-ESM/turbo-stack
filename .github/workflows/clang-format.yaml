@@ -22,7 +22,7 @@ jobs:
 
       - name: Format code
         run: |
-          find ./src/ -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.cpp' \) -exec clang-format -i --style=Google --verbose {} +
+          find ./src/ -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.cpp' \) -exec clang-format --verbose -i {} +
 
       - name: Check for changes
         id: check-changes
