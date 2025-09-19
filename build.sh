@@ -108,7 +108,7 @@ if [[ $CODECOV -eq 1 && $DEBUG -eq 1 ]]; then
   exit 1
 fi
 
-if [[ "$OFFLOAD" == 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; then
+if [[ $OFFLOAD -eq 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; then
   echo "ERROR: Offloading can only be enabled on NCAR machines with NVHPC compiler."
   exit 1
 fi
