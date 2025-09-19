@@ -10,3 +10,6 @@
 [submodule "src/MARBL"]
 	path = submodules/MARBL
 	url = https://github.com/marbl-ecosys/MARBL
+[submodule "dev-utils/gcovlens"]
+	path = dev-utils/gcovlens
+	url = https://github.com/alperaltuntas/gcovlens.git

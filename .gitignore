@@ -6,6 +6,7 @@ CPU_stats
 examples/*/*.nc
 examples/*/archive/
 RESTART/
+codecov/
 available_diags.000000
 exitcode
 logfile.000000.out

@@ -1,0 +1,28 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+
+spack:
+  specs:
+    - cmake
+    - amrex ^cray-mpich
+    - mpi
+    - googletest
+    - hdf5
+  packages:
+    all:
+      compiler: [gcc]
+      providers:
+          mpi: [cray-mpich]
+    mpi:
+      buildable: false
+#    cmake:
+#      buildable: false
+#      externals:
+#        - spec: cmake@3.26.6
+#          modules: 
+#          - cmake/3.26.6
+  view: true
+  concretizer:
+    unify: true
