@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N mom6_standalone
-#PBS -A P93300606
+#PBS -A <PROJECT_CODE>
 #PBS -j oe
 #PBS -k eod
 #PBS -q main
