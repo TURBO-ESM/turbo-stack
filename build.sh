@@ -88,8 +88,8 @@ fi
 # Throw error if code coverage is enabled but compiler is not gnu or gcc
 # This check can be relaxed if and when CODECOV is taken into account in other makefile templates.
 # See ncar-gnu.mk as an example.
-if [[ $CODECOV -eq 1 && ( "$COMPILER" != "gnu" && "$COMPILER" != "gcc" && "$COMPILER" != "intel" ) ]]; then
-  echo "ERROR: Code coverage can only be enabled with the GNU/GCC or Intel compiler."
+if [[ $CODECOV -eq 1 && ( "$COMPILER" != "gnu" && "$COMPILER" != "gcc" ) ]]; then
+  echo "ERROR: Code coverage can only be enabled with the GNU/GCC compiler."
   exit 1
 fi
 
