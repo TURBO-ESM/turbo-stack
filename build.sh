@@ -96,7 +96,7 @@ fi
 # Throw error if code coverage is enabled but machine is not ncar or container
 # This check can be relaxed if and when CODECOV is taken into account in other makefile templates.
 # See ncar-gnu.mk as an example.
-if [[ "$MACHINE" != "ncar" && "$MACHINE" != "container" ]]; then
+if [[ $CODECOV -eq 1 && ( "$MACHINE" != "ncar" && "$MACHINE" != "container" ) ]]; then
   echo "ERROR: Code coverage can only be enabled on the NCAR or container machine."
   exit 1
 fi
