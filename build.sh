@@ -53,7 +53,7 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         *) 
             echo "Unknown parameter passed: $1"
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
             exit 1 ;;
     esac
     shift
