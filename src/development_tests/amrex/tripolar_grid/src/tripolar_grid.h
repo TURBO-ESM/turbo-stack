@@ -13,6 +13,7 @@
 #include <AMReX_MultiFab.H>
 
 #include "grid.h"
+#include "field.h"
 
 namespace turbo {
 
@@ -83,6 +84,7 @@ private:
     // Private Data Members
     //-----------------------------------------------------------------------//
     const std::shared_ptr<Grid> grid_;
+    const std::shared_ptr<FieldContainer> field_container_;
 
     //-----------------------------------------------------------------------//
     // Private Member Functions

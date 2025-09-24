@@ -70,7 +70,7 @@ public:
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
-    CartesianGrid(const CartesianGeometry& geometry, 
+    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, 
                   const std::size_t n_cell_x, const std::size_t n_cell_y, const std::size_t n_cell_z)
         : geometry_(geometry),
           dx_(0.0), dy_(0.0), dz_(0.0),
@@ -80,9 +80,9 @@ public:
             throw std::invalid_argument("Number of cells in each direction must be greater than zero.");
         }
         // Make sure to do the division as double to avoid integer division... return value of LX() is promoted to double if it is not already. 
-        dx_ = static_cast<double>(geometry_.LX()) / n_cell_x_;
-        dy_ = static_cast<double>(geometry_.LY()) / n_cell_y_;
-        dz_ = static_cast<double>(geometry_.LZ()) / n_cell_z_;
+        dx_ = static_cast<double>(geometry_->LX()) / n_cell_x_;
+        dy_ = static_cast<double>(geometry_->LY()) / n_cell_y_;
+        dz_ = static_cast<double>(geometry_->LZ()) / n_cell_z_;
     }
 
     std::size_t NCell(void) const noexcept override { return NCellX() * NCellY() * NCellZ(); }
@@ -101,9 +101,9 @@ public:
             throw std::out_of_range("Node index out of bounds");
         }
 
-        return Point({geometry_.XMin() + i * dx_,
-                      geometry_.YMin() + j * dy_,
-                      geometry_.ZMin() + k * dz_});
+        return Point({geometry_->XMin() + i * dx_,
+                      geometry_->YMin() + j * dy_,
+                      geometry_->ZMin() + k * dz_});
     };
 
     Point CellCenter(const Index i, const Index j, const Index k) const override {
@@ -147,7 +147,7 @@ private:
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
-    CartesianGeometry geometry_;
+    const std::shared_ptr<CartesianGeometry> geometry_;
     double dx_, dy_, dz_;
     const std::size_t n_cell_x_, n_cell_y_, n_cell_z_;
 

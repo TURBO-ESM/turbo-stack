@@ -54,4 +54,9 @@ TEST(CartesianGeometry, DomainLengths) {
     EXPECT_DOUBLE_EQ(geom.LY(), y_max - y_min);
     EXPECT_DOUBLE_EQ(geom.LZ(), z_max - z_min);
 
+    // Lengths should always be positive
+    EXPECT_GT(geom.LX(), 0.0);
+    EXPECT_GT(geom.LY(), 0.0);
+    EXPECT_GT(geom.LZ(), 0.0);
+
 }

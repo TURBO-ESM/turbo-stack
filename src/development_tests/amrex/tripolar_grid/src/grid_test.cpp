@@ -14,7 +14,7 @@ TEST(CartesianGrid, Constructor) {
     const double y_max = 1.0;
     const double z_min = 0.0;
     const double z_max = 1.0;
-    CartesianGeometry geom(x_min, x_max, y_min, y_max, z_min, z_max);
+    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
 
     // Construct with 2 cells in each direction
     const std::size_t n_cell_x = 2;
@@ -51,13 +51,13 @@ TEST(CartesianGrid, Constructor) {
 
 }
 
-TEST(CartesianGrid, Node) {
+TEST(CartesianGrid, Grid_Locations) {
 
     // Simple unit cube geometry
     const double x_min = 0.0, x_max = 1.0;
     const double y_min = 0.0, y_max = 1.0;
     const double z_min = 0.0, z_max = 1.0;
-    CartesianGeometry geom(x_min, x_max, y_min, y_max, z_min, z_max);
+    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
 
     // Grid with 2 cells in each direction
     const std::size_t n_cell_x = 2;

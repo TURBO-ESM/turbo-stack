@@ -16,7 +16,7 @@ namespace turbo {
 //{
 
 TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
-    : grid_(grid)
+    : grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
 
 {
     static_assert(
@@ -24,83 +24,28 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
         "Only supports 3D grids."
     );
 
-    // Initialize the MultiFabs
+    if (!grid_) {
+        throw std::invalid_argument("TripolarGrid constructor: grid pointer is null");
+    }
 
     // number of ghost cells
     const int n_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
 
-    // number of components for each MultiFab
+    // number of components for each type of MultiFab
     const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
     const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
 
     // Create MultiFabs for scalar and vector fields on the cell-centered grid
-    {
-        // We don't really need the AMREX_D_DECL here since we are enforcing 3D grids only, but it's fine to keep it for now to avoid potential issues if we decide to extend to 2D or 1D later.
-        // If or when we do that we will need to wrap all the change the other IntVect definitions accordingly.
-        const amrex::IntVect cell_low_index(AMREX_D_DECL(0,0,0));
-        //const amrex::IntVect cell_high_index(AMREX_D_DECL(n_cell_x - 1, n_cell_y - 1, n_cell_z - 1));
-        const amrex::IntVect cell_high_index(AMREX_D_DECL(grid_->NCellI() - 1, grid_->NCellJ() - 1, grid_->NCellK() - 1));
-        const amrex::Box cell_centered_box(cell_low_index, cell_high_index);
-
-        amrex::BoxArray cell_box_array(cell_centered_box);
-        // Break up boxarray "cell_box_array" into chunks no larger than "max_chunk_size" along a direction
-        const int max_chunk_size = 32; // Hardcoded for now, but could be a parameter for the user to set via the constructor arguments.
-        cell_box_array.maxSize(max_chunk_size);
-
-        const amrex::DistributionMapping distribution_mapping(cell_box_array);
-
-        cell_scalar = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, n_comp_scalar, n_ghost);
-        cell_vector = std::make_shared<amrex::MultiFab>(cell_box_array, distribution_mapping, n_comp_vector, n_ghost);
-    }
-
-    // Defining the MultiFab on the nodes and faces assume these two are defined on cells. Confirm that.
-    AMREX_ASSERT(cell_scalar->is_cell_centered());
-    AMREX_ASSERT(cell_vector->is_cell_centered());
-
-    // All subsequent MultiFabs will be defined based on the cell-centered MultiFab distribution mapping. 
-    const amrex::DistributionMapping distribution_mapping = cell_scalar->DistributionMap();
-
-    // All subsequent MultiFabs box arrays will be adjusted accordingly using convert and the box array from the cell-centered MultiFabs.
-    const amrex::BoxArray& cell_box_array = cell_scalar->boxArray();
-
-    // Create MultiFabs for scalar and vector fields on the x-face-centered grid
-    {
-        // Convert the cell-centered box array to x-face-centered
-        const amrex::BoxArray x_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(1,0,0));
-
-        // Define the MultiFab for x-face-centered scalar field
-        x_face_scalar = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, n_comp_scalar, n_ghost);
-        x_face_vector = std::make_shared<amrex::MultiFab>(x_face_box_array, distribution_mapping, n_comp_vector, n_ghost);
-    }
-
-    // Create MultiFabs for scalar and vector fields on the y-face-centered grid
-    {
-        // Convert the cell-centered box array to y-face-centered
-        const amrex::BoxArray y_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(0,1,0));
-
-        y_face_scalar = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, n_comp_scalar, n_ghost);
-        y_face_vector = std::make_shared<amrex::MultiFab>(y_face_box_array, distribution_mapping, n_comp_vector, n_ghost);
-
-    }
-
-    // Create MultiFabs for scalar and vector fields on the z-face-centered grid
-    {
-        // Convert the cell-centered box array to z-face-centered
-        const amrex::BoxArray z_face_box_array = amrex::convert(cell_box_array, amrex::IntVect(0,0,1));
-
-        z_face_scalar = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, n_comp_scalar, n_ghost);
-        z_face_vector = std::make_shared<amrex::MultiFab>(z_face_box_array, distribution_mapping, n_comp_vector, n_ghost);
-
-    }
-
-    // Create MultiFabs for scalar and vector fields on the nodal grid
-    {
-        // Convert the cell-centered box array to nodal
-        const amrex::BoxArray nodal_box_array = amrex::convert(cell_box_array, amrex::IntVect(1,1,1));
-
-        node_scalar = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, n_comp_scalar, n_ghost);
-        node_vector = std::make_shared<amrex::MultiFab>(nodal_box_array, distribution_mapping, n_comp_vector, n_ghost);
-    }
+    cell_scalar   = field_container_->AddField("cell_scalar",   FieldLocation::CellCentered, n_comp_scalar, n_ghost);
+    cell_vector   = field_container_->AddField("cell_vector",   FieldLocation::CellCentered, n_comp_vector, n_ghost);
+    node_scalar   = field_container_->AddField("node_scalar",   FieldLocation::Nodal,        n_comp_scalar, n_ghost);
+    node_vector   = field_container_->AddField("node_vector",   FieldLocation::Nodal,        n_comp_vector, n_ghost);  
+    x_face_scalar = field_container_->AddField("x_face_scalar", FieldLocation::IFace,        n_comp_scalar, n_ghost);
+    x_face_vector = field_container_->AddField("x_face_vector", FieldLocation::IFace,        n_comp_vector, n_ghost);
+    y_face_scalar = field_container_->AddField("y_face_scalar", FieldLocation::JFace,        n_comp_scalar, n_ghost);
+    y_face_vector = field_container_->AddField("y_face_vector", FieldLocation::JFace,        n_comp_vector, n_ghost);
+    z_face_scalar = field_container_->AddField("z_face_scalar", FieldLocation::KFace,        n_comp_scalar, n_ghost);
+    z_face_vector = field_container_->AddField("z_face_vector", FieldLocation::KFace,        n_comp_vector, n_ghost);
 
     // Collections of MultiFabs for easier looping and testing
     all_multifabs = {
