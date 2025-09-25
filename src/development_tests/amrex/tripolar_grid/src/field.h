@@ -26,6 +26,18 @@ enum class FieldGridStagger {
     KFace          
 };
 
+// Helper function to convert FieldGridStagger to string. Convenient for error messages and generating field names on the fly.
+inline std::string FieldGridStaggerToString(FieldGridStagger field_grid_stagger) {
+    switch (field_grid_stagger) {
+        case FieldGridStagger::Nodal:        return "Nodal";
+        case FieldGridStagger::CellCentered: return "CellCentered";
+        case FieldGridStagger::IFace:        return "IFace";
+        case FieldGridStagger::JFace:        return "JFace";
+        case FieldGridStagger::KFace:        return "KFace";
+        default: throw std::invalid_argument("FieldGridStaggerToString Invalid FieldGridStagger specified.");
+    }
+}
+
 class Field {
 
 public:
@@ -88,6 +100,45 @@ public:
         multifab = std::make_shared<amrex::MultiFab>(box_array, distribution_mapping, n_component, n_ghost);
 
     }
+
+    bool IsCellCentered() const noexcept{
+        return (field_grid_stagger == FieldGridStagger::CellCentered);
+    }
+
+    bool IsXFaceCentered() const noexcept {
+        return (field_grid_stagger == FieldGridStagger::IFace);
+    }
+
+    bool IsYFaceCentered() const noexcept{
+        return (field_grid_stagger == FieldGridStagger::JFace);
+    }
+
+    bool IsZFaceCentered() const noexcept {
+        return (field_grid_stagger == FieldGridStagger::KFace);
+    }
+
+    bool IsNodal() const noexcept {
+        return (field_grid_stagger == FieldGridStagger::Nodal);
+    }
+
+    // This is where the coupling between the Field and Grid classes happens
+    Grid::Point GetGridPoint(int i, int j, int k) const {
+        switch(field_grid_stagger) {
+            case FieldGridStagger::CellCentered:
+                return grid->CellCenter(i, j, k);
+            case FieldGridStagger::IFace:
+                return grid->IFace(i, j, k);
+            case FieldGridStagger::JFace:
+                return grid->JFace(i, j, k);
+            case FieldGridStagger::KFace:
+                return grid->KFace(i, j, k);
+            case FieldGridStagger::Nodal:
+                return grid->Node(i, j, k);
+            default:
+                throw std::invalid_argument("Field:: GetGridPoint: Invalid FieldGridStagger specified.");
+        }
+    }
+
 
     void WriteHDF5(const hid_t file_id) const {
     
