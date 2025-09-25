@@ -69,24 +69,15 @@ TEST_F(FieldTest, Constructor) {
 
   Field field(name, grid, stagger, n_component, n_ghost);
 
-  // One off helper function to convert FieldGridStagger to string for naming fields in the following loop
-  auto FieldGridStaggerToString = [](FieldGridStagger field_grid_stagger) -> std::string {
-    switch (field_grid_stagger) {
-      case FieldGridStagger::Nodal:        return "Nodal";
-      case FieldGridStagger::CellCentered: return "CellCentered";
-      case FieldGridStagger::IFace:        return "IFace";
-      case FieldGridStagger::JFace:        return "JFace";
-      case FieldGridStagger::KFace:        return "KFace";
-      default: throw std::invalid_argument("FieldGridStaggerToString Invalid FieldGridStagger specified.");
-    }
-  };
-
   for (std::size_t n_component : {1,3}) {
     for (std::size_t n_ghost : {0,1,2}) {
       for (const FieldGridStagger field_stagger : {FieldGridStagger::Nodal, FieldGridStagger::CellCentered, FieldGridStagger::IFace, FieldGridStagger::JFace, FieldGridStagger::KFace}) {
 
         std::string field_name = "field_" + FieldGridStaggerToString(field_stagger) + "_ncomp_" + std::to_string(n_component) + "_nghost_" + std::to_string(n_ghost);
         Field field(field_name, grid, field_stagger, n_component, n_ghost);
+
+        EXPECT_EQ(field.name, field_name);
+        EXPECT_EQ(field.field_grid_stagger, field_stagger);
 
         std::shared_ptr<amrex::MultiFab> mf = field.multifab;
 
@@ -145,13 +136,166 @@ TEST_F(FieldTest, Constructor) {
               throw std::invalid_argument("FieldContainer:: Invalid FieldGridStagger specified.");
         }
 
-        // Test adding a field with a duplicate name
-  //EXPECT_THROW(fields.Insert(field_name, FieldGridStagger::Nodal, n_component, n_ghost), std::invalid_argument);
       }
     }
   }
 
 }
+
+TEST_F(FieldTest, StaggerChecks) {
+
+  std::size_t n_component = 1;
+  std::size_t n_ghost = 0;
+
+  // The field location checks should report grid location correctly for all grid staggers
+  {
+    std::string name = "nodal_field";
+    FieldGridStagger stagger = FieldGridStagger::Nodal;
+    Field field(name, grid, stagger, n_component, n_ghost);
+
+    EXPECT_TRUE(field.IsNodal());
+    EXPECT_FALSE(field.IsCellCentered());
+    EXPECT_FALSE(field.IsXFaceCentered());
+    EXPECT_FALSE(field.IsYFaceCentered());
+    EXPECT_FALSE(field.IsZFaceCentered());
+  }
+
+  {
+    std::string name = "cell_centered_field";
+    FieldGridStagger stagger = FieldGridStagger::CellCentered;
+    Field field(name, grid, stagger, n_component, n_ghost);
+
+    EXPECT_FALSE(field.IsNodal());
+    EXPECT_TRUE(field.IsCellCentered());
+    EXPECT_FALSE(field.IsXFaceCentered());
+    EXPECT_FALSE(field.IsYFaceCentered());
+    EXPECT_FALSE(field.IsZFaceCentered());
+  }
+
+  {
+    std::string name = "x_face_centered_field";
+    FieldGridStagger stagger = FieldGridStagger::IFace;
+    Field field(name, grid, stagger, n_component, n_ghost);
+
+    EXPECT_FALSE(field.IsNodal());
+    EXPECT_FALSE(field.IsCellCentered());
+    EXPECT_TRUE(field.IsXFaceCentered());
+    EXPECT_FALSE(field.IsYFaceCentered());
+    EXPECT_FALSE(field.IsZFaceCentered());
+  }
+
+  {
+    std::string name = "y_face_centered_field";
+    FieldGridStagger stagger = FieldGridStagger::JFace;
+    Field field(name, grid, stagger, n_component, n_ghost);
+
+    EXPECT_FALSE(field.IsNodal());
+    EXPECT_FALSE(field.IsCellCentered());
+    EXPECT_FALSE(field.IsXFaceCentered());
+    EXPECT_TRUE(field.IsYFaceCentered());
+    EXPECT_FALSE(field.IsZFaceCentered());
+  }
+
+  {
+    std::string name = "z_face_centered_field";
+    FieldGridStagger stagger = FieldGridStagger::KFace;
+    Field field(name, grid, stagger, n_component, n_ghost);
+
+    EXPECT_FALSE(field.IsNodal());
+    EXPECT_FALSE(field.IsCellCentered());
+    EXPECT_FALSE(field.IsXFaceCentered());
+    EXPECT_FALSE(field.IsYFaceCentered());
+    EXPECT_TRUE(field.IsZFaceCentered());
+  }
+
+}
+
+TEST_F(FieldTest, GetGridPoint) {
+
+  // Helper function to convert FieldGridStagger to the upper loop bounds in each direction for the grid based on the stagger
+  auto GridSizeHelper = [this](FieldGridStagger field_grid_stagger) -> std::tuple<std::size_t, std::size_t, std::size_t> {
+    switch (field_grid_stagger) {
+      case FieldGridStagger::Nodal:        return std::make_tuple(this->grid->NNodeI(), this->grid->NNodeJ(), this->grid->NNodeK());
+      case FieldGridStagger::CellCentered: return std::make_tuple(this->grid->NCellI(), this->grid->NCellJ(), this->grid->NCellK());
+      case FieldGridStagger::IFace:        return std::make_tuple(this->grid->NNodeI(), this->grid->NCellJ(), this->grid->NCellK());
+      case FieldGridStagger::JFace:        return std::make_tuple(this->grid->NCellI(), this->grid->NNodeJ(), this->grid->NCellK());
+      case FieldGridStagger::KFace:        return std::make_tuple(this->grid->NCellI(), this->grid->NCellJ(), this->grid->NNodeK());
+      default: throw std::invalid_argument("GridUpperLoopBoundsHelper invalid FieldGridStagger specified.");
+    }
+  };
+
+  // Helper function to convert FieldGridStagger to the the correct grid location function
+    auto GridLocationHelper = [this](FieldGridStagger field_grid_stagger, std::size_t i, std::size_t j, std::size_t k) -> Grid::Point {
+    switch (field_grid_stagger) {
+      case FieldGridStagger::Nodal:        return this->grid->Node(i,j,k);
+      case FieldGridStagger::CellCentered: return this->grid->CellCenter(i,j,k);
+      case FieldGridStagger::IFace:        return this->grid->IFace(i,j,k);
+      case FieldGridStagger::JFace:        return this->grid->JFace(i,j,k);
+      case FieldGridStagger::KFace:        return this->grid->KFace(i,j,k);
+      default: throw std::invalid_argument("GridLocationHelper invalid FieldGridStagger specified.");
+    }
+  };
+
+  // Use the same n_component and n_ghost for all the fields in this test. Should not really matter for this test.
+  std::size_t n_component = 1;
+  std::size_t n_ghost = 0;
+
+  for (const FieldGridStagger field_grid_stagger : {FieldGridStagger::Nodal, FieldGridStagger::CellCentered, FieldGridStagger::IFace, FieldGridStagger::JFace, FieldGridStagger::KFace}) {
+
+    std::string field_name = "field_at_" + FieldGridStaggerToString(field_grid_stagger);
+    Field field(field_name, grid, field_grid_stagger, n_component, n_ghost);
+
+    auto [i_size, j_size, k_size] = GridSizeHelper(field_grid_stagger);
+
+  // Loop over grid, for this stagger, and and compare with the location of each grid point with the location from field.GetGridPoint. They should match.
+    for (std::size_t i=0; i<i_size; ++i) {
+      for (std::size_t j=0; j<j_size; ++j) {
+        for (std::size_t k=0; k<k_size; ++k) {
+            Grid::Point grid_location  = GridLocationHelper(field_grid_stagger, i, j, k);
+            Grid::Point field_location = field.GetGridPoint(i,j,k);
+            EXPECT_EQ(grid_location, field_location) << "Field location does not match expected location for field stagger " << FieldGridStaggerToString(field_grid_stagger) << " at indices (" << i << "," << j << "," << k << ")";
+        }
+      }
+    }
+
+    // Loop over the multi-fab associated with the field, find the location of the field and compare with the corresponding location in the grid. They should match.
+    // Basically checking the same thing as the previous loop but this one is using the amrex indexing accessed thought the underlying multifab. This could also be run in parallel or on a GPU.
+    // I could see users wanting to loop over the field or the multifab directly and get the location of the field at those indices. So testing both ways here.
+    for (amrex::MFIter mfi(*field.multifab); mfi.isValid(); ++mfi) {
+        amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+            Grid::Point grid_location = GridLocationHelper(field_grid_stagger, i, j, k);
+            Grid::Point field_location = field.GetGridPoint(i,j,k);
+            EXPECT_EQ(grid_location, field_location);
+        });
+    }
+
+  }
+
+  // Test for for locations specific to a nodal Nodal field. I generalized and moved all this into the loop above that covers all possible field grid staggering. So this is redundant now. Probably should just get rid of this.
+  //{
+  //  std::string name = "nodal_field";
+  //  FieldGridStagger stagger = FieldGridStagger::Nodal;
+  //  Field field(name, grid, stagger, n_component, n_ghost);
+
+  //  // Loop over grid, for this stagger, and and compare with the location for each grid point returned from the field.GetGridPoint. They should match.
+  //  for (std::size_t i=0; i<grid->NNodeI(); ++i) {
+  //    for (std::size_t j=0; j<grid->NNodeJ(); ++j) {
+  //      for (std::size_t k=0; k<grid->NNodeK(); ++k) {
+  //        EXPECT_EQ(grid->Node(i,j,k), field.GetGridPoint(i,j,k));
+  //      }
+  //    }
+  //  }
+
+  //  // Loop over the multi-fab associated with the field and compare with the corresponding location in the grid. They should also match.
+  //  for (amrex::MFIter mfi(*field.multifab); mfi.isValid(); ++mfi) {
+  //      amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
+  //          EXPECT_EQ(field.GetGridPoint(i,j,k), grid->Node(i,j,k));
+  //      });
+  //  }
+  //}
+
+}
+
 
 TEST_F(FieldTest, WriteHDF5) {
 
