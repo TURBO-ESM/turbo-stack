@@ -4,9 +4,9 @@
 ROOTDIR=`pwd -P`
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
-MOM_ROOT=${ROOTDIR}/src/MOM6
-FMS_ROOT=${ROOTDIR}/src/FMS
-SHR_ROOT=${ROOTDIR}/src/CESM_share
+MOM_ROOT=${ROOTDIR}/submodules/MOM6
+FMS_ROOT=${ROOTDIR}/submodules/FMS
+SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 
 # Default values for CLI arguments
 COMPILER="intel"

@@ -1,14 +1,14 @@
 [submodule "src/MOM6"]
-	path = src/MOM6
+	path = submodules/MOM6
 	url = https://github.com/TURBO-ESM/MOM6
 [submodule "src/FMS"]
-	path = src/FMS
+	path = submodules/FMS
 	url = https://github.com/TURBO-ESM/FMS
 [submodule "src/CESM_share"]
-	path = src/CESM_share
+	path = submodules/CESM_share
 	url = https://github.com/ESCOMP/CESM_share
 [submodule "src/MARBL"]
-	path = src/MARBL
+	path = submodules/MARBL
 	url = https://github.com/marbl-ecosys/MARBL
 [submodule "dev-utils/gcovlens"]
 	path = dev-utils/gcovlens
