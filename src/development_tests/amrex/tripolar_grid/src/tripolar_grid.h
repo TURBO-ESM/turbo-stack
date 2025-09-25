@@ -30,7 +30,6 @@ public:
     //-----------------------------------------------------------------------//
 
     // Constructors
-    //TripolarGrid(const std::size_t n_cell_x, const std::size_t n_cell_y, const std::size_t n_cell_z);
     TripolarGrid(const std::shared_ptr<Grid>& grid);
 
     // Function to get the location of a point in the grid for a given MultiFab and index i,j,k

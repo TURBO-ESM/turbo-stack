@@ -95,4 +95,11 @@ else
     exit 1
 fi
 
+if [[ -x "./mini_app" ]]; then
+    ./mini_app
+else
+    echo "Error: mini_app binary not found or not executable in $build_dir/examples." >&2
+    exit 1
+fi
+
 #python "$tripolar_dir/postprocessing/plot_hdf5.py" tripolar_grid.h5

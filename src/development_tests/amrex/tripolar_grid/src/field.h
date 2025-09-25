@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <set>
 //#include <functional>
 //#include <type_traits>
 //#include <unordered_set>
@@ -16,7 +17,8 @@
 
 namespace turbo {
 
-enum class FieldLocation {
+// Enum to specify the location of the field on the grid
+enum class FieldGridStagger {
     Nodal,         
     CellCentered,  
     IFace,         
@@ -24,7 +26,7 @@ enum class FieldLocation {
     KFace          
 };
 
-class FieldContainer {
+class Field {
 
 public:
     //-----------------------------------------------------------------------//
@@ -32,49 +34,149 @@ public:
     //-----------------------------------------------------------------------//
     using ValueType = amrex::Real;
 
-
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
 
     // Constructors
-    FieldContainer(const std::shared_ptr<Grid>& grid);
+    Field(const std::string& name, const std::shared_ptr<Grid> grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost)
+        : name(name), grid(grid), field_grid_stagger(field_grid_stagger) {
 
-    std::shared_ptr<amrex::MultiFab> AddField(const std::string& name, const FieldLocation stagger, const std::size_t n_component = 1, const std::size_t n_ghost = 0);
+        if (n_component <= 0) {
+            throw std::invalid_argument("Field constructor: Number of components must be greater than zero.");
+        }
 
-    void WriteHDF5(const hid_t file_id) const;
+        if (n_ghost < 0) {
+            throw std::invalid_argument("Field constructor: Number of ghost cells cannot be negative.");
+        }
+
+        const amrex::IntVect lower_index(AMREX_D_DECL(0,0,0));
+
+        amrex::IntVect upper_index;
+        switch (field_grid_stagger) {
+            case FieldGridStagger::CellCentered:
+                upper_index = amrex::IntVect(AMREX_D_DECL(grid->NCellI() - 1, grid->NCellJ() - 1, grid->NCellK() - 1));
+                break;
+            case FieldGridStagger::IFace:
+                upper_index = amrex::IntVect(AMREX_D_DECL(grid->NNodeI() - 1, grid->NCellJ() - 1, grid->NCellK() - 1));
+                break;
+            case FieldGridStagger::JFace:
+                upper_index = amrex::IntVect(AMREX_D_DECL(grid->NCellI() - 1, grid->NNodeJ() - 1, grid->NCellK() - 1));
+                break;
+            case FieldGridStagger::KFace:
+                upper_index = amrex::IntVect(AMREX_D_DECL(grid->NCellI() - 1, grid->NCellJ() - 1, grid->NNodeK() - 1));
+                break;
+            case FieldGridStagger::Nodal:
+                upper_index = amrex::IntVect(AMREX_D_DECL(grid->NNodeI() - 1, grid->NNodeJ() - 1, grid->NNodeK() - 1));
+                break;
+            default:
+                throw std::invalid_argument("Field: Invalid FieldGridStagger specified.");
+        }
+
+        const amrex::IndexType index_type(FieldGridStaggerToAMReXIndexType(field_grid_stagger));
+
+        const amrex::Box box(lower_index, upper_index, index_type);
+
+        amrex::BoxArray box_array(box);
+
+        // Break up boxarray "cell_box_array" into chunks no larger than "max_chunk_size" along a direction
+        const int max_chunk_size = 32; // Hardcoded for now, but could be a parameter for the user to set via the constructor arguments.
+        box_array.maxSize(max_chunk_size);
+
+        const amrex::DistributionMapping distribution_mapping(box_array);
+
+        multifab = std::make_shared<amrex::MultiFab>(box_array, distribution_mapping, n_component, n_ghost);
+
+    }
+
+    void WriteHDF5(const hid_t file_id) const {
+    
+        // Copy the MultiFab to a single rank
+        int dest_rank = 0; // We are copying to rank 0
+        const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(multifab, dest_rank);
+    
+        if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
+    
+            AMREX_ASSERT(mf->boxArray().size() == 1);
+            amrex::Box box = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
+    
+            AMREX_ASSERT(mf->size() == 1);
+            const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
+    
+            const int nx = box.length(0); 
+            const int ny = box.length(1); 
+            const int nz = box.length(2);
+            const int n_component = mf->nComp();
+            std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz)}; 
+            if (n_component > 1) {
+                dims.push_back(static_cast<hsize_t>(n_component));
+            }
+    
+            const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
+            const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
+            std::vector<double> data(nx * ny * nz * n_component); 
+    
+            // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
+            const auto lo = amrex::lbound(box);
+            const auto hi = amrex::ubound(box);
+            std::size_t idx = 0;
+            for (int i = lo.x; i <= hi.x; ++i) {
+                for (int j = lo.y; j <= hi.y; ++j) {
+                    for (int k = lo.z; k <= hi.z; ++k) {
+                        for (int component_idx = 0; component_idx < n_component; ++component_idx) {
+                            data[idx++] = array(i, j, k, component_idx);
+                        }
+                    }
+                }
+            }          
+    
+            H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+    
+            H5Dclose(dataset_id);
+            H5Sclose(dataspace_id);
+    
+        }
+    }
+
+    // Helpful because it automatically generates all six relational operators (<, <=, >, >=, ==, !=) based on member-wise comparison.
+    // But note that comparing the data member grid ( ...which is has a type shared_ptr<Grid> ) the operators compares the pointer addresses, not the contents of the Grid objects.
+    // In general don't think it would make sense to compare two fields built on different grids with the less than or greater than operators (<, >). But doing so with pointer address does work to supply a strict weak ordering, even if it is an arbitrary one, which lets us store Field in a standard ordered containers like std::set or std::map.
+    auto operator<=>(const Field& other) const = default;
+
+    //-----------------------------------------------------------------------//
+    // Public Data Members
+    //-----------------------------------------------------------------------//
+    const std::shared_ptr<Grid> grid;
+    const std::string name;
+    const FieldGridStagger field_grid_stagger;
+    std::shared_ptr<amrex::MultiFab> multifab;
 
 private:
-
-    //-----------------------------------------------------------------------//
-    // Private Data Members
-    //-----------------------------------------------------------------------//
-    const std::shared_ptr<Grid> grid_;
-    std::map<std::string, std::shared_ptr<amrex::MultiFab>> name_to_multifab;
 
     //-----------------------------------------------------------------------//
     // Private Member Functions
     //-----------------------------------------------------------------------//    
 
-    std::string FieldLocationToString(const FieldLocation field_location) const {
+    std::string FieldGridStaggerToString(const FieldGridStagger field_location) const {
         switch (field_location) {
-            case FieldLocation::Nodal:        return "Nodal";
-            case FieldLocation::CellCentered: return "CellCentered";
-            case FieldLocation::IFace:        return "IFace";
-            case FieldLocation::JFace:        return "JFace";
-            case FieldLocation::KFace:        return "KFace";
-            default:                          throw std::invalid_argument("FieldContainer:: Invalid FieldLocation specified.");
+            case FieldGridStagger::Nodal:        return "Nodal";
+            case FieldGridStagger::CellCentered: return "CellCentered";
+            case FieldGridStagger::IFace:        return "IFace";
+            case FieldGridStagger::JFace:        return "JFace";
+            case FieldGridStagger::KFace:        return "KFace";
+            default:                          throw std::invalid_argument("Field Invalid FieldGridStagger specified.");
         }
     }
 
-    amrex::IndexType FieldLocationToAMReXIndexType(const FieldLocation field_location) const {
+    amrex::IndexType FieldGridStaggerToAMReXIndexType(const FieldGridStagger field_location) const {
         switch (field_location) {
-            case FieldLocation::Nodal:        return amrex::IndexType({AMREX_D_DECL(1,1,1)});
-            case FieldLocation::CellCentered: return amrex::IndexType({AMREX_D_DECL(0,0,0)});
-            case FieldLocation::IFace:        return amrex::IndexType({AMREX_D_DECL(1,0,0)});
-            case FieldLocation::JFace:        return amrex::IndexType({AMREX_D_DECL(0,1,0)});
-            case FieldLocation::KFace:        return amrex::IndexType({AMREX_D_DECL(0,0,1)});
-            default:                          throw std::invalid_argument("FieldContainer:: Invalid FieldLocation specified.");
+            case FieldGridStagger::Nodal:        return amrex::IndexType({AMREX_D_DECL(1,1,1)});
+            case FieldGridStagger::CellCentered: return amrex::IndexType({AMREX_D_DECL(0,0,0)});
+            case FieldGridStagger::IFace:        return amrex::IndexType({AMREX_D_DECL(1,0,0)});
+            case FieldGridStagger::JFace:        return amrex::IndexType({AMREX_D_DECL(0,1,0)});
+            case FieldGridStagger::KFace:        return amrex::IndexType({AMREX_D_DECL(0,0,1)});
+            default:                          throw std::invalid_argument("Field:: Invalid FieldGridStagger specified.");
         }
     }
 
@@ -96,6 +198,48 @@ private:
 
         return dest_mf;
     }
+
+};
+
+
+
+class FieldContainer {
+public:
+
+    //-----------------------------------------------------------------------//
+    // Public Member Types
+    //-----------------------------------------------------------------------//
+    // Const iterator types for external iteration
+    using const_iterator = std::set<std::shared_ptr<Field>>::const_iterator;
+
+    //-----------------------------------------------------------------------//
+    // Public Member Functions
+    //-----------------------------------------------------------------------//
+
+    // Constructors
+    FieldContainer(const std::shared_ptr<Grid>& grid);
+
+    std::shared_ptr<Field> Insert(const std::string& name, const FieldGridStagger stagger, const std::size_t n_component = 1, const std::size_t n_ghost = 0);
+
+    // Probably just going to get rid of this and just call the WriteHDF5 function on the fields directly in the application code since it is so simple to do with a range based for loop.
+    void WriteHDF5(const hid_t file_id) const;
+
+    // Const-only iteration support
+    const_iterator begin() const { return fields_.begin(); }
+    const_iterator end() const { return fields_.end(); }
+
+private:
+
+    //-----------------------------------------------------------------------//
+    // Private Data Members
+    //-----------------------------------------------------------------------//
+    const std::shared_ptr<Grid> grid_;
+    std::set<std::shared_ptr<Field>> fields_;
+
+    //-----------------------------------------------------------------------//
+    // Private Member Functions
+    //-----------------------------------------------------------------------//    
+
 
 };
 

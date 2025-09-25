@@ -1,4 +1,16 @@
 ###############################################################################
+# Field Library (FieldContainer only)
+###############################################################################
+
+add_library(field_lib STATIC
+    field.cpp
+    field.h
+    grid.h
+)
+
+target_include_directories(field_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(field_lib PUBLIC AMReX::amrex_3d HDF5::HDF5)
+###############################################################################
 # Geometry Tests
 ###############################################################################
 

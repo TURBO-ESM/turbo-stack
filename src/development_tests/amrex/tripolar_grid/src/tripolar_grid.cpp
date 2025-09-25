@@ -36,30 +36,21 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
     const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
 
     // Create MultiFabs for scalar and vector fields on the cell-centered grid
-    cell_scalar   = field_container_->AddField("cell_scalar",   FieldLocation::CellCentered, n_comp_scalar, n_ghost);
-    cell_vector   = field_container_->AddField("cell_vector",   FieldLocation::CellCentered, n_comp_vector, n_ghost);
-    node_scalar   = field_container_->AddField("node_scalar",   FieldLocation::Nodal,        n_comp_scalar, n_ghost);
-    node_vector   = field_container_->AddField("node_vector",   FieldLocation::Nodal,        n_comp_vector, n_ghost);  
-    x_face_scalar = field_container_->AddField("x_face_scalar", FieldLocation::IFace,        n_comp_scalar, n_ghost);
-    x_face_vector = field_container_->AddField("x_face_vector", FieldLocation::IFace,        n_comp_vector, n_ghost);
-    y_face_scalar = field_container_->AddField("y_face_scalar", FieldLocation::JFace,        n_comp_scalar, n_ghost);
-    y_face_vector = field_container_->AddField("y_face_vector", FieldLocation::JFace,        n_comp_vector, n_ghost);
-    z_face_scalar = field_container_->AddField("z_face_scalar", FieldLocation::KFace,        n_comp_scalar, n_ghost);
-    z_face_vector = field_container_->AddField("z_face_vector", FieldLocation::KFace,        n_comp_vector, n_ghost);
+    cell_scalar   = field_container_->Insert("cell_scalar",   FieldGridStagger::CellCentered, n_comp_scalar, n_ghost)->multifab;
+    cell_vector   = field_container_->Insert("cell_vector",   FieldGridStagger::CellCentered, n_comp_vector, n_ghost)->multifab;
+    node_scalar   = field_container_->Insert("node_scalar",   FieldGridStagger::Nodal,        n_comp_scalar, n_ghost)->multifab;
+    node_vector   = field_container_->Insert("node_vector",   FieldGridStagger::Nodal,        n_comp_vector, n_ghost)->multifab;  
+    x_face_scalar = field_container_->Insert("x_face_scalar", FieldGridStagger::IFace,        n_comp_scalar, n_ghost)->multifab;
+    x_face_vector = field_container_->Insert("x_face_vector", FieldGridStagger::IFace,        n_comp_vector, n_ghost)->multifab;
+    y_face_scalar = field_container_->Insert("y_face_scalar", FieldGridStagger::JFace,        n_comp_scalar, n_ghost)->multifab;
+    y_face_vector = field_container_->Insert("y_face_vector", FieldGridStagger::JFace,        n_comp_vector, n_ghost)->multifab;
+    z_face_scalar = field_container_->Insert("z_face_scalar", FieldGridStagger::KFace,        n_comp_scalar, n_ghost)->multifab;
+    z_face_vector = field_container_->Insert("z_face_vector", FieldGridStagger::KFace,        n_comp_vector, n_ghost)->multifab;
 
     // Collections of MultiFabs for easier looping and testing
-    all_multifabs = {
-        cell_scalar,
-        cell_vector,
-        x_face_scalar,
-        x_face_vector,
-        y_face_scalar,
-        y_face_vector,
-        z_face_scalar,
-        z_face_vector,
-        node_scalar,
-        node_vector
-    };
+    for (auto field : *field_container_) {
+        all_multifabs.insert(field->multifab);
+    }
 
     for (const std::shared_ptr<amrex::MultiFab>& mf : all_multifabs) {
 
@@ -86,7 +77,6 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
         }
 
     }
-
 
 }
 
