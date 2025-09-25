@@ -12,6 +12,7 @@ SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 COMPILER="intel"
 MACHINE="ncar"
 MEMORY_MODE="dynamic_symmetric"
+OFFLOAD=0 # False
 DEBUG=0 # False
 CODECOV=0 # False
 OVERRIDE=0 # False
@@ -20,7 +21,7 @@ OVERRIDE=0 # False
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --help)
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov] [--offload] [--debug] [--override]"
             echo "Build script for MOM6 with FMS."
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
@@ -44,13 +45,15 @@ while [[ "$#" -gt 0 ]]; do
             shift ;;
         --codecov)
             CODECOV=1 ;;
+        --offload)
+            OFFLOAD=1 ;;
         --debug)
             DEBUG=1 ;;
         --override)
             OVERRIDE=1 ;;
         *) 
             echo "Unknown parameter passed: $1"
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
             exit 1 ;;
     esac
     shift
@@ -61,6 +64,7 @@ echo "Compiler: $COMPILER"
 echo "Machine: $MACHINE"
 echo "Memory mode: $MEMORY_MODE"
 echo "Code coverage enabled?: $CODECOV"
+echo "Offloading: $OFFLOAD"
 echo "Debug mode: $DEBUG"
 echo "Override existing build?: $OVERRIDE"
 
@@ -81,11 +85,19 @@ if [[ "$MEMORY_MODE" != "dynamic_symmetric" && "$MEMORY_MODE" != "dynamic_nonsym
   exit 1
 fi
 
-# Throw error if code coverage is enabled but compiler is not gnu or flang
+# Throw error if code coverage is enabled but compiler is not gnu or gcc
 # This check can be relaxed if and when CODECOV is taken into account in other makefile templates.
 # See ncar-gnu.mk as an example.
-if [[ $CODECOV -eq 1 && ( "$COMPILER" != "gnu" || "$MACHINE" != "ncar" ) ]]; then
-  echo "ERROR: Code coverage can only be enabled with the GNU compiler on the NCAR machine."
+if [[ $CODECOV -eq 1 && ( "$COMPILER" != "gnu" && "$COMPILER" != "gcc" ) ]]; then
+  echo "ERROR: Code coverage can only be enabled with the GNU/GCC compiler."
+  exit 1
+fi
+
+# Throw error if code coverage is enabled but machine is not ncar or container
+# This check can be relaxed if and when CODECOV is taken into account in other makefile templates.
+# See ncar-gnu.mk as an example.
+if [[ $CODECOV -eq 1 && ( "$MACHINE" != "ncar" && "$MACHINE" != "container" ) ]]; then
+  echo "ERROR: Code coverage can only be enabled on the NCAR or container machine."
   exit 1
 fi
 
@@ -93,6 +105,11 @@ fi
 if [[ $CODECOV -eq 1 && $DEBUG -eq 1 ]]; then
   echo "ERROR: Cannot specify --codecov with --debug."
   echo "Please choose one of the two options."
+  exit 1
+fi
+
+if [[ $OFFLOAD -eq 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; then
+  echo "ERROR: Offloading can only be enabled on NCAR machines with NVHPC compiler."
   exit 1
 fi
 
@@ -145,7 +162,11 @@ if [ "$MACHINE" == "ncar" ]; then
         module load craype gcc/12.2.0 cray-libsci/23.02.1.1 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2-debug esmf/8.6.0-debug
         ;;
       "nvhpc" )
-        module load craype nvhpc/23.7 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2 esmf/8.6.0
+        if [ $OFFLOAD -eq 1 ]; then
+          module load craype nvhpc/24.9 ncarcompilers/1.0.0 cmake cray-mpich/8.1.29 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 cuda/12.2.1
+        else
+          module load craype nvhpc/23.7 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3
+        fi
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
@@ -166,7 +187,7 @@ ${MKMF_ROOT}/list_paths ${FMS_ROOT}
 echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
 echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} libfms.a
+make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
 
 # 2) Build MOM6
 cd ${BLD_PATH}
@@ -175,6 +196,6 @@ cd MOM6
 expanded=$(eval echo ${MOM6_src_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p MOM6 -l '-L../FMS -lfms' -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
-make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} MOM6
+make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 
 echo "Finished build at `date`"

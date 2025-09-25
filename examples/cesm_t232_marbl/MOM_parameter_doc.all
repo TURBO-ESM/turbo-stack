@@ -425,7 +425,7 @@ USE_RGC_TRACER = False          !   [Boolean] default = False
                                 ! If true, use the RGC_tracer tracer package.
 USE_IDEAL_AGE_TRACER = True     !   [Boolean] default = False
                                 ! If true, use the ideal_age_example tracer package.
-USE_MARBL_TRACERS = False       !   [Boolean] default = False
+USE_MARBL_TRACERS = True        !   [Boolean] default = False
                                 ! If true, use the MARBL tracer package.
 USE_REGIONAL_DYES = False       !   [Boolean] default = False
                                 ! If true, use the regional_dyes tracer package.
@@ -476,6 +476,54 @@ TRACERS_MAY_REINIT = False      !   [Boolean] default = False
                                 ! If true, tracers may go through the initialization code if they are not found
                                 ! in the restart files.  Otherwise it is a fatal error if the tracers are not
                                 ! found in the restart files of a restarted run.
+
+! === module MARBL_tracers ===
+MARBL_IC_MIN_VAL = 0.0          !   [tracer units] default = 0.0
+                                ! Minimum value of tracer initial conditions (set to 1e-100 for dim scaling
+                                ! tests)
+MARBL_SETTINGS_FILE = "marbl_in" ! default = "marbl_in"
+                                ! The name of a file from which to read the run-time settings for MARBL.
+BOT_FLUX_MIX_THICKNESS = 1.0    !   [m] default = 1.0
+                                ! Bottom fluxes are uniformly mixed over layer of this thickness
+USE_ICE_CATEGORIES = False      !   [Boolean] default = False
+                                ! If true, allocate memory for shortwave and ice fraction split by ice thickness
+                                ! category.
+ICE_NCAT = 1                    ! default = 0
+                                ! Number of ice thickness categories in shortwave and ice fraction forcings.
+CHL_FROM_FILE = False           !   [Boolean] default = True
+                                ! If true, chl_a is read from a file.
+
+! === module MARBL_tracers ===
+MARBL_TRACERS_IC_FILE = "ecosys_jan_IC_omip_latlon_1x1_180W_c231221.nc" ! default = "ecosys_jan_IC_omip_latlon_1x1_180W_c230331.nc"
+                                ! The file in which the MARBL tracers initial values can be found.
+MARBL_TRACERS_MAY_REINIT = False !   [Boolean] default = False
+                                ! If true, tracers may go through the initialization code if they are not found
+                                ! in the restart files. Otherwise it is a fatal error if tracers are not found
+                                ! in the restart files of a restarted run.
+MARBL_TRACERS_INIT_VERTICAL_REMAP_ONLY = False !   [Boolean] default = False
+                                ! If true, initial conditions are on the model horizontal grid. Extrapolation
+                                ! over missing ocean values is done using an ICE-9 procedure with vertical ALE
+                                ! remapping .
+MARBL_FESEDFLUX_FILE = "fesedflux_total_reduce_oxic_tx2_3v2.c231205.nc" ! default = "fesedflux_total_reduce_oxic_tx0.66v1.c230817.nc"
+                                ! The file in which the iron sediment flux forcing field can be found.
+MARBL_FEVENTFLUX_FILE = "feventflux_5gmol_tx2_3v2.c231205.nc" ! default = "feventflux_5gmol_tx0.66v1.c230817.nc"
+                                ! The file in which the iron vent flux forcing field can be found.
+MARBL_FESEDFLUX_SCALE_FACTOR = 1.157407407407407E-08 !   [umol m-2 d-1 -> mmol m-2 s-1] default = 1.157407407407407E-08
+                                ! Conversion factor between FESEDFLUX file units and MARBL units
+READ_RIV_FLUXES = True          !   [Boolean] default = True
+                                ! If true, use river fluxes supplied from an input file
+RIV_FLUX_FILE = "riv_nut.gnews_gnm.rJRA025_to_tx2_3v2_nnsm_e333r100_230415.20240202.nc" ! default = "riv_nut.gnews_gnm.JRA025m_to_tx0.66v1_nnsm_e333r100_190910.20210405.nc"
+                                ! The file in which the river fluxes can be found
+RIV_FLUX_L_TIME_VARYING = False !   [Boolean] default = False
+                                ! .true. for time-varying forcing, .false. for static forcing
+RIV_FLUX_FORCING_YEAR = 1900    ! default = 1900
+                                ! Year from RIV_FLUX_FILE to use for forcing
+DIC_SALT_RATIO = 64.0           !   [conc ppt-1] default = 64.0
+                                ! Ratio to convert salt surface flux to DIC surface flux
+ALK_SALT_RATIO = 70.0           !   [conc ppt-1] default = 70.0
+                                ! Ratio to convert salt surface flux to ALK surface flux
+MARBL_TRACER_RESTORING_SOURCE = "none" ! default = "none"
+                                ! Source of data for restoring MARBL tracers
 
 ! === module MOM_hor_index ===
 ! Sets the horizontal array index types.
@@ -2291,13 +2339,6 @@ DO_BRINE_PLUME = False          !   [Boolean] default = False
 VAR_PEN_SW = True               !   [Boolean] default = False
                                 ! If true, use one of the CHL_A schemes specified by OPACITY_SCHEME to determine
                                 ! the e-folding depth of incoming short wave radiation.
-CHL_FROM_FILE = True            !   [Boolean] default = True
-                                ! If true, chl_a is read from a file.
-CHL_FILE = "seawifs-clim-1997-2010-tx2_3v2.230416.nc" !
-                                ! CHL_FILE is the file containing chl_a concentrations in the variable CHL_A. It
-                                ! is used when VAR_PEN_SW and CHL_FROM_FILE are true.
-CHL_VARNAME = "CHL_A"           ! default = "CHL_A"
-                                ! Name of CHL_A variable in CHL_FILE.
 
 ! === module MOM_regularize_layers ===
 REGULARIZE_SURFACE_LAYERS = False !   [Boolean] default = False
@@ -2634,6 +2675,34 @@ USTAR_GUSTLESS_BUG = False      !   [Boolean] default = False
                                 ! velocity
 READ_GUST_2D = False            !   [Boolean] default = False
                                 ! If true, use a 2-dimensional gustiness supplied from an input file
+DUST_RATIO_THRES = 69.00594     !   [1] default = 69.00594
+                                ! coarse/fine dust ratio threshold
+DUST_RATIO_TO_FE_BIOAVAIL_FRAC = 0.0027298983931818 !   [1] default = 0.0027298983931818
+                                ! ratio of dust to iron bioavailability fraction
+FE_BIOAVAIL_FRAC_OFFSET = 0.0146756 !   [1] default = 0.0146756
+                                ! offset for iron bioavailability fraction
+ATM_FE_TO_BC_RATIO = 1.0        !   [1] default = 1.0
+                                ! atmospheric iron to black carbon ratio
+ATM_BC_FE_BIOAVAIL_FRAC = 0.06  !   [1] default = 0.06
+                                ! atmospheric black carbon to iron bioavailablity fraction ratio
+SEAICE_FE_TO_BC_RATIO = 1.0     !   [1] default = 1.0
+                                ! sea-ice iron to black carbon ratio
+SEAICE_BC_FE_BIOAVAIL_FRAC = 0.06 !   [1] default = 0.06
+                                ! sea-ice black carbon to iron bioavailablity fraction ratio
+IRON_FRAC_IN_ATM_FINE_DUST = 0.035 !   [1] default = 0.035
+                                ! Fraction of fine dust from the atmosphere that is iron
+IRON_FRAC_IN_ATM_COARSE_DUST = 0.035 !   [1] default = 0.035
+                                ! Fraction of coarse dust from the atmosphere that is iron
+IRON_FRAC_IN_SEAICE_DUST = 0.035 !   [1] default = 0.035
+                                ! Fraction of dust from sea ice that is iron
+ATM_CO2_OPT = "constant"        ! default = "constant"
+                                ! Source of atmospheric CO2 [constant, diagnostic, or prognostic]
+ATM_CO2_CONST = 284.317         !   [ppm] default = 284.317
+                                ! Value to send to MARBL as xco2
+ATM_ALT_CO2_OPT = "constant"    ! default = "constant"
+                                ! Source of alternate atmospheric CO2 [constant, diagnostic, or prognostic]
+ATM_ALT_CO2_CONST = 284.317     !   [ppm] default = 284.317
+                                ! Value to send to MARBL as xco2_alt_co2
 
 ! === module MOM_restart ===
 USE_WAVES = False               !   [Boolean] default = False

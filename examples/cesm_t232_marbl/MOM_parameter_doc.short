@@ -148,8 +148,26 @@ DTFREEZE_DP = -7.75E-08         !   [degC Pa-1] default = 0.0
 ! === module MOM_tracer_flow_control ===
 USE_IDEAL_AGE_TRACER = True     !   [Boolean] default = False
                                 ! If true, use the ideal_age_example tracer package.
+USE_MARBL_TRACERS = True        !   [Boolean] default = False
+                                ! If true, use the MARBL tracer package.
 
 ! === module ideal_age_example ===
+
+! === module MARBL_tracers ===
+ICE_NCAT = 1                    ! default = 0
+                                ! Number of ice thickness categories in shortwave and ice fraction forcings.
+CHL_FROM_FILE = False           !   [Boolean] default = True
+                                ! If true, chl_a is read from a file.
+
+! === module MARBL_tracers ===
+MARBL_TRACERS_IC_FILE = "ecosys_jan_IC_omip_latlon_1x1_180W_c231221.nc" ! default = "ecosys_jan_IC_omip_latlon_1x1_180W_c230331.nc"
+                                ! The file in which the MARBL tracers initial values can be found.
+MARBL_FESEDFLUX_FILE = "fesedflux_total_reduce_oxic_tx2_3v2.c231205.nc" ! default = "fesedflux_total_reduce_oxic_tx0.66v1.c230817.nc"
+                                ! The file in which the iron sediment flux forcing field can be found.
+MARBL_FEVENTFLUX_FILE = "feventflux_5gmol_tx2_3v2.c231205.nc" ! default = "feventflux_5gmol_tx0.66v1.c230817.nc"
+                                ! The file in which the iron vent flux forcing field can be found.
+RIV_FLUX_FILE = "riv_nut.gnews_gnm.rJRA025_to_tx2_3v2_nnsm_e333r100_230415.20240202.nc" ! default = "riv_nut.gnews_gnm.JRA025m_to_tx0.66v1_nnsm_e333r100_190910.20210405.nc"
+                                ! The file in which the river fluxes can be found
 
 ! === module MOM_fixed_initialization ===
 
@@ -705,9 +723,6 @@ PRESSURE_DEPENDENT_FRAZIL = True !   [Boolean] default = False
 VAR_PEN_SW = True               !   [Boolean] default = False
                                 ! If true, use one of the CHL_A schemes specified by OPACITY_SCHEME to determine
                                 ! the e-folding depth of incoming short wave radiation.
-CHL_FILE = "seawifs-clim-1997-2010-tx2_3v2.230416.nc" !
-                                ! CHL_FILE is the file containing chl_a concentrations in the variable CHL_A. It
-                                ! is used when VAR_PEN_SW and CHL_FROM_FILE are true.
 
 ! === module MOM_opacity ===
 OPACITY_SCHEME = "OHLMANN_03"   ! default = "MANIZZA_05"
