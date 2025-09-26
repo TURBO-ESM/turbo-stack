@@ -12,9 +12,6 @@
 
 namespace turbo {
 
-//TripolarGrid::TripolarGrid(const std::size_t n_cell_x, const std::size_t n_cell_y, const std::size_t n_cell_z)
-//{
-
 TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
     : grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
 
@@ -35,66 +32,59 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
     const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
     const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
 
-    // Create MultiFabs for scalar and vector fields on the cell-centered grid
-    cell_scalar   = field_container_->Insert("cell_scalar",   FieldGridStagger::CellCentered, n_comp_scalar, n_ghost)->multifab;
-    cell_vector   = field_container_->Insert("cell_vector",   FieldGridStagger::CellCentered, n_comp_vector, n_ghost)->multifab;
-    node_scalar   = field_container_->Insert("node_scalar",   FieldGridStagger::Nodal,        n_comp_scalar, n_ghost)->multifab;
-    node_vector   = field_container_->Insert("node_vector",   FieldGridStagger::Nodal,        n_comp_vector, n_ghost)->multifab;  
-    x_face_scalar = field_container_->Insert("x_face_scalar", FieldGridStagger::IFace,        n_comp_scalar, n_ghost)->multifab;
-    x_face_vector = field_container_->Insert("x_face_vector", FieldGridStagger::IFace,        n_comp_vector, n_ghost)->multifab;
-    y_face_scalar = field_container_->Insert("y_face_scalar", FieldGridStagger::JFace,        n_comp_scalar, n_ghost)->multifab;
-    y_face_vector = field_container_->Insert("y_face_vector", FieldGridStagger::JFace,        n_comp_vector, n_ghost)->multifab;
-    z_face_scalar = field_container_->Insert("z_face_scalar", FieldGridStagger::KFace,        n_comp_scalar, n_ghost)->multifab;
-    z_face_vector = field_container_->Insert("z_face_vector", FieldGridStagger::KFace,        n_comp_vector, n_ghost)->multifab;
+    // Create scalar and vector fields at all locations in the grid
+    field_container_->Insert("cell_scalar",   FieldGridStagger::CellCentered, n_comp_scalar, n_ghost);
+    field_container_->Insert("cell_vector",   FieldGridStagger::CellCentered, n_comp_vector, n_ghost);
+    field_container_->Insert("node_scalar",   FieldGridStagger::Nodal,        n_comp_scalar, n_ghost);
+    field_container_->Insert("node_vector",   FieldGridStagger::Nodal,        n_comp_vector, n_ghost);  
+    field_container_->Insert("x_face_scalar", FieldGridStagger::IFace,        n_comp_scalar, n_ghost);
+    field_container_->Insert("x_face_vector", FieldGridStagger::IFace,        n_comp_vector, n_ghost);
+    field_container_->Insert("y_face_scalar", FieldGridStagger::JFace,        n_comp_scalar, n_ghost);
+    field_container_->Insert("y_face_vector", FieldGridStagger::JFace,        n_comp_vector, n_ghost);
+    field_container_->Insert("z_face_scalar", FieldGridStagger::KFace,        n_comp_scalar, n_ghost);
+    field_container_->Insert("z_face_vector", FieldGridStagger::KFace,        n_comp_vector, n_ghost);
+
+    // Setup the pointers to the MultiFabs for easier access outside this class
+    cell_scalar   = field_container_->Get("cell_scalar")->multifab;
+    cell_vector   = field_container_->Get("cell_vector")->multifab;
+    node_scalar   = field_container_->Get("node_scalar")->multifab;
+    node_vector   = field_container_->Get("node_vector")->multifab;
+    x_face_scalar = field_container_->Get("x_face_scalar")->multifab;
+    x_face_vector = field_container_->Get("x_face_vector")->multifab;
+    y_face_scalar = field_container_->Get("y_face_scalar")->multifab;
+    y_face_vector = field_container_->Get("y_face_vector")->multifab;
+    z_face_scalar = field_container_->Get("z_face_scalar")->multifab;
+    z_face_vector = field_container_->Get("z_face_vector")->multifab;
+
 
     // Collections of MultiFabs for easier looping and testing
     for (auto field : *field_container_) {
+
         all_multifabs.insert(field->multifab);
-    }
 
-    for (const std::shared_ptr<amrex::MultiFab>& mf : all_multifabs) {
-
-        if (mf->nComp() == n_comp_scalar) {
-            scalar_multifabs.insert(mf);
-        } else if (mf->nComp() == n_comp_vector) {
-            vector_multifabs.insert(mf);
+        if (field->multifab->nComp() == n_comp_scalar) {
+            scalar_multifabs.insert(field->multifab);
+        } else if (field->multifab->nComp() == n_comp_vector) {
+            vector_multifabs.insert(field->multifab);
         } else {
             amrex::Abort("MultiFab has an unexpected number of components.");
         }
 
-        if (IsCellCentered(mf)) {
-            cell_multifabs.insert(mf);
-        } else if (IsXFaceCentered(mf)) {
-            x_face_multifabs.insert(mf);
-        } else if (IsYFaceCentered(mf)) {
-            y_face_multifabs.insert(mf);
-        } else if (IsZFaceCentered(mf)) {
-            z_face_multifabs.insert(mf);
-        } else if (IsNodal(mf)) {
-            node_multifabs.insert(mf);
+        if (field->IsCellCentered()) {
+            cell_multifabs.insert(field->multifab);
+        } else if (field->IsXFaceCentered()) {
+            x_face_multifabs.insert(field->multifab);
+        } else if (field->IsYFaceCentered()) {
+            y_face_multifabs.insert(field->multifab);
+        } else if (field->IsZFaceCentered()) {
+            z_face_multifabs.insert(field->multifab);
+        } else if (field->IsNodal()) {
+            node_multifabs.insert(field->multifab);
         } else {
             amrex::Abort("MultiFab has an unexpected topology.");
         }
-
     }
 
-}
-
-Grid::Point TripolarGrid::GetLocation(const std::shared_ptr<amrex::MultiFab>& mf, int i, int j, int k) const {
-    if (IsCellCentered(mf)) {
-        return grid_->CellCenter(i,j,k);
-    } else if (IsXFaceCentered(mf)) {
-        return grid_->IFace(i,j,k);
-    } else if (IsYFaceCentered(mf)) {
-        return grid_->JFace(i,j,k);
-    } else if (IsZFaceCentered(mf)) {
-        return grid_->KFace(i,j,k);
-    } else if (IsNodal(mf)) {
-        return grid_->Node(i,j,k);
-    } else {
-        amrex::Abort("MultiFab was not found in any of the location sets.");
-        return {}; // Returned this line to silence the warning about control reaching end of non-void function. Will never be reached because we are calling abort in this case.
-    }
 }
 
 void TripolarGrid::WriteHDF5(const std::string& filename) const {
@@ -141,99 +131,12 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
     WriteGeometryToHDF5(file_id);
 
-    WriteMultiFabsToHDF5(file_id);
+    field_container_->WriteHDF5(file_id);
 
     H5Fclose(file_id);
 
     //WriteXDMF(filename, "test.xdmf");
 
-}
-
-std::shared_ptr<amrex::MultiFab> TripolarGrid::CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf, int dest_rank) const {
-
-    // Create a temporary MultiFab to hold all the data on a single ran
-    const amrex::BoxArray box_array_with_one_box(source_mf->boxArray().minimalBox()); // BoxArray with a single box that covers the entire domain
-    const amrex::DistributionMapping distribution_mapping(amrex::Vector<int>{dest_rank}); // Distribution mapping that puts the single box in the box array to a single rank
-    const int n_comp = source_mf->nComp();
-    const amrex::IntVect n_ghost = source_mf->nGrowVect();
-    std::shared_ptr<amrex::MultiFab> dest_mf = std::make_shared<amrex::MultiFab>(box_array_with_one_box, distribution_mapping, n_comp, n_ghost);
-
-    // Copy the data from the source MultiFab to the destination MultiFab
-    const int comp_src_start = 0;
-    const int comp_dest_start = 0;
-    const int n_comp_copy = n_comp;
-    const amrex::IntVect src_n_ghost = n_ghost;
-    const amrex::IntVect dest_n_ghost = n_ghost;
-    dest_mf->ParallelCopy(*source_mf, comp_src_start, comp_dest_start, n_comp_copy, src_n_ghost, dest_n_ghost);
-
-    return dest_mf;
-}
-
-
-void TripolarGrid::WriteMultiFabsToHDF5(const hid_t file_id) const {
-
-    const std::map<std::string, std::shared_ptr<amrex::MultiFab>> name_to_multifab = {
-        {"cell_scalar", cell_scalar},
-        {"cell_vector", cell_vector},
-        {"x_face_scalar", x_face_scalar},
-        {"x_face_vector", x_face_vector},
-        {"y_face_scalar", y_face_scalar},
-        {"y_face_vector", y_face_vector},
-        {"z_face_scalar", z_face_scalar},
-        {"z_face_vector", z_face_vector},
-        {"node_scalar", node_scalar},
-        {"node_vector", node_vector}
-    };
-
-    for (const auto& [name, src_mf] : name_to_multifab) {
-
-        // Copy the MultiFab to a single rank
-        int dest_rank = 0; // We are copying to rank 0
-        const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(src_mf, dest_rank);
-
-        if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
-
-            AMREX_ASSERT(mf->boxArray().size() == 1);
-            amrex::Box box = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
-
-            AMREX_ASSERT(mf->size() == 1);
-            const amrex::Array4<const amrex::Real>& array = mf->const_array(0); // Assuming there is only one FAB in the MultiFab
-
-            const int nx = box.length(0); 
-            const int ny = box.length(1); 
-            const int nz = box.length(2);
-            const int n_component = mf->nComp();
-            std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz)}; 
-            if (n_component > 1) {
-                dims.push_back(static_cast<hsize_t>(n_component));
-            }
-
-            const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
-            const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-            std::vector<double> data(nx * ny * nz * n_component); 
-
-            // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
-            const auto lo = amrex::lbound(box);
-            const auto hi = amrex::ubound(box);
-            std::size_t idx = 0;
-            for (int i = lo.x; i <= hi.x; ++i) {
-                for (int j = lo.y; j <= hi.y; ++j) {
-                    for (int k = lo.z; k <= hi.z; ++k) {
-                        for (int component_idx = 0; component_idx < n_component; ++component_idx) {
-                            data[idx++] = array(i, j, k, component_idx);
-                        }
-                    }
-                }
-            }          
-
-            H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
-
-            H5Dclose(dataset_id);
-            H5Sclose(dataspace_id);
-
-        }
-    }
 }
 
 void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
@@ -246,8 +149,20 @@ void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
         {"node", node_scalar},
     };
 
-    for (const auto& [name, mf] : geometry_name_to_a_multifab_at_that_location) {
-    
+    // Create a dedicated FieldContainer for the grid geometry locations
+    FieldContainer grid_geometry_container(grid_);
+    grid_geometry_container.Insert("cell_center", FieldGridStagger::CellCentered, 3, 0);
+    grid_geometry_container.Insert("x_face",      FieldGridStagger::IFace,        3, 0);
+    grid_geometry_container.Insert("y_face",      FieldGridStagger::JFace,        3, 0);
+    grid_geometry_container.Insert("z_face",      FieldGridStagger::KFace,        3, 0);
+    grid_geometry_container.Insert("node",        FieldGridStagger::Nodal,        3, 0);
+
+    //for (const auto& [name, mf] : geometry_name_to_a_multifab_at_that_location) {
+    for (const auto& field : grid_geometry_container) {
+
+        const std::string name = field->name;
+        const std::shared_ptr<amrex::MultiFab> mf = field->multifab;
+
         if (amrex::ParallelDescriptor::MyProc() == 0) {
     
             const amrex::Box box = mf->boxArray().minimalBox(); 
@@ -271,7 +186,7 @@ void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
                 for (int j = lo.y; j <= hi.y; ++j) {
                     for (int k = lo.z; k <= hi.z; ++k) {
 
-                        const Grid::Point location = GetLocation(mf, i, j, k);
+                        const Grid::Point location = field->GetGridPoint(i, j, k);
                         data[idx++] = location.x;
                         data[idx++] = location.y;
                         data[idx++] = location.z;

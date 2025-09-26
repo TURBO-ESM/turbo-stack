@@ -305,10 +305,19 @@ TEST_F(FieldTest, WriteHDF5) {
   std::size_t n_ghost = 0;
   Field field(name, grid, stagger, n_component, n_ghost);
 
-  const std::string filename = "Test_Output_Field_WriteHDF5.h5";
-  const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-  field.WriteHDF5(file_id);
-  H5Fclose(file_id);
+  // Test the version that takes a file_id of an already opened HDF5 file
+  {
+    const std::string filename = "Test_Output_Field_WriteHDF5_via_file_id.h5";
+    const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    field.WriteHDF5(file_id);
+    H5Fclose(file_id);
+  }
+
+  // Test the version that takes a filename. This will override the previous file.
+  {
+    const std::string filename = "Test_Output_Field_WriteHDF5_via_filename.h5";
+    field.WriteHDF5(filename);
+  }
 
 }
 
@@ -404,13 +413,22 @@ TEST_F(FieldContainerTest, Get) {
 TEST_F(FieldContainerTest, WriteHDF5) {
 
   FieldContainer fields(grid);
+  auto scalar_mf = fields.Insert("test_cell_centered_scalar_field", FieldGridStagger::CellCentered, 1, 1);
+  auto vector_mf = fields.Insert("test_cell_centered_vector_field", FieldGridStagger::CellCentered, 3, 1);
 
-  auto scalar_mf = fields.Insert("cell_scalar_field", FieldGridStagger::CellCentered, 1, 1);
-  auto vector_mf = fields.Insert("cell_vector_field", FieldGridStagger::CellCentered, 3, 1);
+  // Test the version that takes a file_id of an already opened HDF5 file
+  {
+    const std::string filename = "Test_Output_FieldContainer_WriteHDF5_via_id.h5";
+    const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    fields.WriteHDF5(file_id);
+    H5Fclose(file_id);
+  }
 
-  const std::string filename = "Test_Output_FieldContainer_WriteHDF5.h5";
-  const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-  fields.WriteHDF5(file_id);
-  H5Fclose(file_id);
+  //// Test the version that takes a filename. This will override the previous file.
+  //{
+  //  const std::string filename = "Test_Output_FieldContainer_WriteHDF5_via_filename.h5";
+  //  fields.WriteHDF5(filename);
+  //}
+
 
 }

@@ -139,8 +139,22 @@ public:
         }
     }
 
+    // Write the field data to an HDF5 file. This will overwrite the file if it already exists.
+    void WriteHDF5(const std::string filename) const {
+        const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        if (file_id < 0) {
+            throw std::runtime_error("Failed to create HDF5 file: " + filename);
+        }
+        WriteHDF5(file_id);
+        H5Fclose(file_id);
+    }
 
+    // Write the field data to an already open HDF5 file that you already have open.
     void WriteHDF5(const hid_t file_id) const {
+
+        if (file_id < 0) {
+            throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
+        }
     
         // Copy the MultiFab to a single rank
         int dest_rank = 0; // We are copying to rank 0
@@ -167,7 +181,7 @@ public:
             const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     
             std::vector<double> data(nx * ny * nz * n_component); 
-    
+
             // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
             const auto lo = amrex::lbound(box);
             const auto hi = amrex::ubound(box);
@@ -180,13 +194,26 @@ public:
                         }
                     }
                 }
-            }          
-    
+            }
+
+            {
+                // Add string attribute to this dataset for field_grid_stagger
+                std::string stagger_str = FieldGridStaggerToString(field_grid_stagger);
+                hid_t attr_type = H5Tcopy(H5T_C_S1);
+                H5Tset_size(attr_type, stagger_str.size());
+                hid_t attr_space = H5Screate(H5S_SCALAR);
+                hid_t attr_id = H5Acreate2(dataset_id, "field_grid_stagger", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+                H5Awrite(attr_id, attr_type, stagger_str.c_str());
+                H5Aclose(attr_id);
+                H5Sclose(attr_space);
+                H5Tclose(attr_type);
+            }
+
             H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
-    
+
             H5Dclose(dataset_id);
             H5Sclose(dataspace_id);
-    
+
         }
     }
 
@@ -208,17 +235,6 @@ private:
     //-----------------------------------------------------------------------//
     // Private Member Functions
     //-----------------------------------------------------------------------//    
-
-    std::string FieldGridStaggerToString(const FieldGridStagger field_location) const {
-        switch (field_location) {
-            case FieldGridStagger::Nodal:        return "Nodal";
-            case FieldGridStagger::CellCentered: return "CellCentered";
-            case FieldGridStagger::IFace:        return "IFace";
-            case FieldGridStagger::JFace:        return "JFace";
-            case FieldGridStagger::KFace:        return "KFace";
-            default:                          throw std::invalid_argument("Field Invalid FieldGridStagger specified.");
-        }
-    }
 
     amrex::IndexType FieldGridStaggerToAMReXIndexType(const FieldGridStagger field_location) const {
         switch (field_location) {
