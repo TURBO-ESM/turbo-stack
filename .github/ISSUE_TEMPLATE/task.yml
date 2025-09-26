@@ -6,87 +6,28 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Task Description
-      description: Please provide a clear description of the task to be completed
-      placeholder: Describe the task and its context...
+      label: What needs to be done?
+      description: Describe the task and its purpose
+      placeholder: Describe the task and why it's needed...
     validations:
       required: true
-  
-  - type: textarea
-    id: background
-    attributes:
-      label: Background
-      description: Provide any necessary background information or context
-      placeholder: |
-        Why is this task needed?
-        What is the current state?
-        Any relevant history or decisions...
-    validations:
-      required: false
   
   - type: textarea
     id: acceptance-criteria
     attributes:
-      label: Acceptance Criteria
-      description: What needs to be accomplished to consider this task complete?
+      label: How do we know it's done?
+      description: What are the completion criteria?
       placeholder: |
         - [ ] Specific deliverable 1
         - [ ] Specific deliverable 2
-        - [ ] Documentation updated
-        - [ ] Team notified of completion
     validations:
       required: true
   
   - type: textarea
-    id: ideas
+    id: additional-info
     attributes:
-      label: Ideas
-      description: Any initial thoughts on approaches or considerations for this task?
-      placeholder: Implementation approaches, tools to use, people to consult, etc.
-    validations:
-      required: false
-  
-  - type: dropdown
-    id: task-type
-    attributes:
-      label: Task Type
-      description: What category does this task fall into?
-      options:
-        - Documentation
-        - CI/CD and Testing
-        - Code Maintenance
-        - Research and Investigation
-        - Project Management
-        - Other
-    validations:
-      required: false
-  
-  - type: textarea
-    id: dependencies
-    attributes:
-      label: Dependencies
-      description: Are there any dependencies or prerequisites for this task?
-      placeholder: |
-        - Depends on completion of issue #X
-        - Requires input from team member Y
-        - Needs access to resource Z
-    validations:
-      required: false
-  
-  - type: textarea
-    id: timeline
-    attributes:
-      label: Timeline
-      description: Any timeline considerations or deadlines for this task?
-      placeholder: Target completion date, milestone dependencies, etc.
-    validations:
-      required: false
-  
-  - type: textarea
-    id: additional-context
-    attributes:
-      label: Additional Context
-      description: Add any other relevant information
-      placeholder: Links, references, related issues, etc.
+      label: Additional info
+      description: Dependencies, timeline, implementation ideas, or other details
+      placeholder: Dependencies, deadlines, approach ideas, etc.
     validations:
       required: false
