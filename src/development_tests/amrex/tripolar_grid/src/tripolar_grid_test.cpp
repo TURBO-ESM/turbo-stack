@@ -107,23 +107,34 @@ TEST(TripolarGrid, Initialize_Multifabs) {
 }
 
 
-//TEST(TripolarGrid, WriteHDF5) {
-//
-//    const std::size_t n_cell_x = 2;
-//    const std::size_t n_cell_y = 2;
-//    const std::size_t n_cell_z = 2;
-//
-//    TripolarGrid grid(n_cell_x, n_cell_y, n_cell_z);
-//
-//    grid.InitializeScalarMultiFabs([](double x, double y, double z) {
-//        return 2.0;
-//    });
-//
-//    grid.InitializeVectorMultiFabs([](double x, double y, double z) {
-//        return std::array<double, 3>{1.0, 2.0, 3.0};
-//    });
-//
-//    amrex::Print() << "Initialized scalar and vector MultiFabs." << std::endl;
-//    grid.WriteHDF5("test.h5");
-//
-//}
+TEST(TripolarGrid, WriteHDF5) {
+
+    // Simple unit cube geometry
+    const double x_min = 0.0;
+    const double x_max = 1.0;
+    const double y_min = 0.0;
+    const double y_max = 1.0;
+    const double z_min = 0.0;
+    const double z_max = 1.0;
+    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
+
+    // Construct with grid with user specified number of cells in each direction
+    const std::size_t n_cell_x = 2;
+    const std::size_t n_cell_y = 2;
+    const std::size_t n_cell_z = 2;
+    std::shared_ptr<CartesianGrid> grid = std::make_shared<CartesianGrid>(geom, n_cell_x, n_cell_y, n_cell_z);
+
+    // Construct tripolar grid based on the Cartesian grid
+    TripolarGrid tripolar_grid(grid);
+
+    tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) {
+        return x;
+    });
+
+    tripolar_grid.InitializeVectorMultiFabs([](double x, double y, double z) {
+        return std::array<double, 3>{x, y, z};
+    });
+
+    tripolar_grid.WriteHDF5("Test_Output_TripolarGrid_WriteHDF5.h5");
+
+}

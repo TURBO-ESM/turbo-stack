@@ -299,9 +299,6 @@ public:
 
     std::shared_ptr<Field> Get(const std::string& name) const;
 
-    // Probably just going to get rid of this and just call the WriteHDF5 function on the fields directly in the application code since it is so simple to do with a range based for loop.
-    void WriteHDF5(const hid_t file_id) const;
-
     // Const-only iteration support
     const_iterator begin() const { return fields_.begin(); }
     const_iterator end() const { return fields_.end(); }

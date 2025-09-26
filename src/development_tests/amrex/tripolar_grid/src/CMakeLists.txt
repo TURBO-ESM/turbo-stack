@@ -1,5 +1,31 @@
 ###############################################################################
-# Field Library (FieldContainer only)
+# Geometry Tests
+###############################################################################
+
+add_executable(geometry_test geometry_test.cpp geometry.h)
+target_link_libraries(geometry_test GTest::gtest_main)
+
+gtest_discover_tests(geometry_test)
+
+###############################################################################
+# Grid Library
+###############################################################################
+
+add_library(grid_lib INTERFACE)
+target_include_directories(grid_lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(grid_lib INTERFACE HDF5::HDF5)
+
+###############################################################################
+# Grid Tests
+###############################################################################
+add_executable(grid_test grid_test.cpp geometry.h grid.h)
+target_link_libraries(grid_test PRIVATE grid_lib GTest::gtest_main)
+
+gtest_discover_tests(grid_test)
+
+###############################################################################
+# Field Library
 ###############################################################################
 
 add_library(field_lib STATIC
@@ -10,24 +36,6 @@ add_library(field_lib STATIC
 
 target_include_directories(field_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(field_lib PUBLIC AMReX::amrex_3d HDF5::HDF5)
-###############################################################################
-# Geometry Tests
-###############################################################################
-
-add_executable(geometry_test geometry_test.cpp geometry.h)
-target_link_libraries(geometry_test GTest::gtest_main)
-
-gtest_discover_tests(geometry_test)
-
-
-###############################################################################
-# Grid Tests
-###############################################################################
-
-add_executable(grid_test grid_test.cpp grid.h)
-target_link_libraries(grid_test PRIVATE GTest::gtest_main)
-
-gtest_discover_tests(grid_test)
 
 ###############################################################################
 # Field Tests

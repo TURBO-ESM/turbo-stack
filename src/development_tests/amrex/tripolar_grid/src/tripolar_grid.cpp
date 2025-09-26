@@ -91,7 +91,11 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
     const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-    // Write the attributes from rank 0
+    if (file_id < 0) {
+        throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
+    }
+
+    // Write the attributes and grid from rank 0
     if (amrex::ParallelDescriptor::MyProc() == 0) {
 
 
@@ -127,81 +131,16 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
             H5Sclose(attr_space_id);
         }
 
+        grid_->WriteHDF5(file_id);
     }
 
-    WriteGeometryToHDF5(file_id);
-
-    field_container_->WriteHDF5(file_id);
+    for (const auto& field : *field_container_) {
+        field->WriteHDF5(file_id);
+    }
 
     H5Fclose(file_id);
 
     //WriteXDMF(filename, "test.xdmf");
-
-}
-
-void TripolarGrid::WriteGeometryToHDF5(const hid_t file_id) const {
-
-    const std::map<std::string, std::shared_ptr<amrex::MultiFab>> geometry_name_to_a_multifab_at_that_location = {
-        {"cell_center", cell_scalar},
-        {"x_face", x_face_scalar},
-        {"y_face", y_face_scalar},
-        {"z_face", z_face_scalar},
-        {"node", node_scalar},
-    };
-
-    // Create a dedicated FieldContainer for the grid geometry locations
-    FieldContainer grid_geometry_container(grid_);
-    grid_geometry_container.Insert("cell_center", FieldGridStagger::CellCentered, 3, 0);
-    grid_geometry_container.Insert("x_face",      FieldGridStagger::IFace,        3, 0);
-    grid_geometry_container.Insert("y_face",      FieldGridStagger::JFace,        3, 0);
-    grid_geometry_container.Insert("z_face",      FieldGridStagger::KFace,        3, 0);
-    grid_geometry_container.Insert("node",        FieldGridStagger::Nodal,        3, 0);
-
-    //for (const auto& [name, mf] : geometry_name_to_a_multifab_at_that_location) {
-    for (const auto& field : grid_geometry_container) {
-
-        const std::string name = field->name;
-        const std::shared_ptr<amrex::MultiFab> mf = field->multifab;
-
-        if (amrex::ParallelDescriptor::MyProc() == 0) {
-    
-            const amrex::Box box = mf->boxArray().minimalBox(); 
-    
-            const int nx = box.length(0); 
-            const int ny = box.length(1); 
-            const int nz = box.length(2);
-            const int n_component = 3;
-            std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz), static_cast<hsize_t>(n_component)}; 
-    
-            const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
-            const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    
-            std::vector<double> data(nx * ny * nz * n_component); 
-    
-            // Iterate over the components of the MultiFab and fill the data vector... putting in row-major order instead of column-major order
-            const auto lo = amrex::lbound(box);
-            const auto hi = amrex::ubound(box);
-            std::size_t idx = 0;
-            for (int i = lo.x; i <= hi.x; ++i) {
-                for (int j = lo.y; j <= hi.y; ++j) {
-                    for (int k = lo.z; k <= hi.z; ++k) {
-
-                        const Grid::Point location = field->GetGridPoint(i, j, k);
-                        data[idx++] = location.x;
-                        data[idx++] = location.y;
-                        data[idx++] = location.z;
-
-                    }
-                }
-            }          
-    
-            H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
-    
-            H5Dclose(dataset_id);
-            H5Sclose(dataspace_id);
-    
-        }
-    }
 
 }
 

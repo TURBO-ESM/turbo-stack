@@ -29,10 +29,12 @@ int main(int argc, char* argv[])
         // Construct tripolar grid based on the Cartesian grid
         TripolarGrid tripolar_grid(grid);
 
+        // Initialize all the scalar MultiFabs to a linear function of x
         tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) {
             return x;
         });
 
+        // Initialize all the vector MultiFabs to their x, y, z coordinates
         tripolar_grid.InitializeVectorMultiFabs([](double x, double y, double z) {
             return std::array<double, 3>{x, y, z};
         });

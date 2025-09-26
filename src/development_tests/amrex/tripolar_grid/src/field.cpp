@@ -55,11 +55,4 @@ std::shared_ptr<Field> FieldContainer::Get(const std::string& name) const {
     throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' does not exist.");
 }
 
-void FieldContainer::WriteHDF5(const hid_t file_id) const {
-    for (const auto& field : fields_) {
-        field->WriteHDF5(file_id);
-    }
-}
-
-
 } // namespace turbo

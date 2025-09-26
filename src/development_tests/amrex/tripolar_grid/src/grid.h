@@ -2,6 +2,8 @@
 
 #include <array>
 
+#include <hdf5.h>
+
 #include "geometry.h"
 
 namespace turbo {
@@ -51,6 +53,8 @@ public:
     virtual Point IFace(const Index i, const Index j, const Index k) const = 0;
     virtual Point JFace(const Index i, const Index j, const Index k) const = 0;
     virtual Point KFace(const Index i, const Index j, const Index k) const = 0;
+
+    virtual void WriteHDF5(const hid_t file_id) const = 0;
 
     protected:
     //-----------------------------------------------------------------------//
@@ -137,6 +141,53 @@ public:
     Point XFace(const Index i, const Index j, const Index k) const { return IFace(i,j,k); };
     Point YFace(const Index i, const Index j, const Index k) const { return JFace(i,j,k); };
     Point ZFace(const Index i, const Index j, const Index k) const { return KFace(i,j,k); };
+
+    // Write the the grid data to a new HDF5 file with the given filename. Note this overwrites the file if it exists.
+    void WriteHDF5(const std::string& filename) const {
+        hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT); 
+        if (file_id < 0) {
+            throw std::runtime_error("Failed to open HDF5 file");
+        }
+        WriteHDF5(file_id);
+        H5Fclose(file_id);
+    }
+
+    // Write the field data to an already open HDF5 file that you already have open.
+    void WriteHDF5(const hid_t file_id) const {
+        if (file_id < 0) {
+            throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
+        }
+
+        // Helper lambda for writing a 3D point dataset
+        auto write_grid_point_dataset = [file_id](const std::string& name, int nx, int ny, int nz, auto&& location_func) {
+            const int n_component = 3;
+            std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz), static_cast<hsize_t>(n_component)};
+            const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
+            const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            std::vector<double> data(nx * ny * nz * n_component);
+            std::size_t idx = 0;
+            for (int i = 0; i < nx; ++i) {
+                for (int j = 0; j < ny; ++j) {
+                    for (int k = 0; k < nz; ++k) {
+                        const Grid::Point location = location_func(i, j, k);
+                        data[idx++] = location.x;
+                        data[idx++] = location.y;
+                        data[idx++] = location.z;
+                    }
+                }
+            }
+            H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+            H5Dclose(dataset_id);
+            H5Sclose(dataspace_id);
+        };
+
+        // Example usage for cell centers
+        write_grid_point_dataset("cell_center", NCellX(), NCellY(), NCellZ(), [this](const Index i, const Index j, const Index k) { return this->CellCenter(i,j,k); });
+        write_grid_point_dataset("node",        NNodeX(), NNodeY(), NNodeZ(), [this](const Index i, const Index j, const Index k) { return this->Node(i,j,k); });
+        write_grid_point_dataset("x_face",      NNodeX(), NCellY(), NCellZ(), [this](const Index i, const Index j, const Index k) { return this->XFace(i,j,k); });
+        write_grid_point_dataset("y_face",      NCellX(), NNodeY(), NCellZ(), [this](const Index i, const Index j, const Index k) { return this->YFace(i,j,k); });
+        write_grid_point_dataset("z_face",      NCellX(), NCellY(), NNodeZ(), [this](const Index i, const Index j, const Index k) { return this->ZFace(i,j,k); });
+    }
 
     //-----------------------------------------------------------------------//
     // Public Data Members

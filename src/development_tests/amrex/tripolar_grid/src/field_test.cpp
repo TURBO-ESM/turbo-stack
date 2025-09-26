@@ -409,26 +409,3 @@ TEST_F(FieldContainerTest, Get) {
   EXPECT_EQ(field_returned_from_insert, field_returned_from_get);
 
 }
-
-TEST_F(FieldContainerTest, WriteHDF5) {
-
-  FieldContainer fields(grid);
-  auto scalar_mf = fields.Insert("test_cell_centered_scalar_field", FieldGridStagger::CellCentered, 1, 1);
-  auto vector_mf = fields.Insert("test_cell_centered_vector_field", FieldGridStagger::CellCentered, 3, 1);
-
-  // Test the version that takes a file_id of an already opened HDF5 file
-  {
-    const std::string filename = "Test_Output_FieldContainer_WriteHDF5_via_id.h5";
-    const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    fields.WriteHDF5(file_id);
-    H5Fclose(file_id);
-  }
-
-  //// Test the version that takes a filename. This will override the previous file.
-  //{
-  //  const std::string filename = "Test_Output_FieldContainer_WriteHDF5_via_filename.h5";
-  //  fields.WriteHDF5(filename);
-  //}
-
-
-}

@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <hdf5.h>
+
 #include "grid.h"
 #include "geometry.h"
 
@@ -141,4 +143,31 @@ TEST(CartesianGrid, Grid_Locations) {
         }
     }
 
+}
+
+TEST(CartesianGrid, WriteHDF5) {
+
+    // Simple unit cube geometry
+    const double x_min = 0.0, x_max = 1.0;
+    const double y_min = 0.0, y_max = 1.0;
+    const double z_min = 0.0, z_max = 1.0;
+    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
+
+    // Grid with 2 cells in each direction
+    const std::size_t n_cell_x = 2;
+    const std::size_t n_cell_y = 2;
+    const std::size_t n_cell_z = 2;
+    CartesianGrid grid(geom, n_cell_x, n_cell_y, n_cell_z);
+
+    // Write to HDF5 file
+    {
+        const std::string filename = "Test_Output_CartesianGrid_WriteHDF5_via_file_id.h5";
+        const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        grid.WriteHDF5(file_id);
+        H5Fclose(file_id);
+    }
+    {
+        const std::string filename = "Test_Output_CartesianGrid_WriteHDF5_via_filename.h5";
+        grid.WriteHDF5(filename);
+    }
 }
