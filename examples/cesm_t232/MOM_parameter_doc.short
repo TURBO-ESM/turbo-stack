@@ -109,6 +109,8 @@ TOPO_CONFIG = "file"            !
                                 !     USER - call a user modified routine.
 TOPO_FILE = "ocean_topo_tx2_3v2_240501.nc" ! default = "topog.nc"
                                 ! The file from which the bathymetry is read.
+TOPO_EDITS_FILE = "topo_edits_tx2_3v2_250107.nc" ! default = ""
+                                ! The file from which to read a list of i,j,z topography overrides.
 MINIMUM_DEPTH = 9.5             !   [m] default = 0.0
                                 ! If MASKING_DEPTH is unspecified, then anything shallower than MINIMUM_DEPTH is
                                 ! assumed to be land and all fluxes are masked out. If MASKING_DEPTH is
@@ -130,7 +132,7 @@ CHANNEL_CONFIG = "list"         ! default = "none"
                                 !       test case.
                                 !     file - Read open face widths everywhere from a
                                 !       NetCDF file on the model grid.
-CHANNEL_LIST_FILE = "MOM_channels_global_tx2_3v2_240501" ! default = "MOM_channel_list"
+CHANNEL_LIST_FILE = "channels_tx2_3v2_250107.txt" ! default = "MOM_channel_list"
                                 ! The file from which the list of narrowed channels is read.
 
 ! === module MOM_verticalGrid ===
@@ -245,6 +247,15 @@ REMAPPING_SCHEME = "PPM_CW"     ! default = "PLM"
                                 ! WENO_HYBGEN (3rd-order accurate)
                                 ! PQM_IH4IH3  (4th-order accurate)
                                 ! PQM_IH6IH5  (5th-order accurate)
+REMAPPING_USE_OM4_SUBCELLS = False !   [Boolean] default = True
+                                ! This selects the remapping algorithm used in OM4 that does not use the full
+                                ! reconstruction for the top- and lower-most sub-layers, but instead assumes
+                                ! they are always vanished (untrue) and so just uses their edge values. We
+                                ! recommend setting this option to false.
+REMAP_VEL_CONSERVE_KE = True    !   [Boolean] default = False
+                                ! If true, a correction is applied to the baroclinic component of velocity after
+                                ! remapping so that total KE is conserved. KE may not be conserved when
+                                ! (CS%BBL_h_vel_mask > 0.0) .and. (CS%h_vel_mask > 0.0)
 
 ! === module MOM_state_initialization ===
 INIT_LAYERS_FROM_Z_FILE = True  !   [Boolean] default = False
@@ -300,6 +311,9 @@ MEKE_CB = 100.0                 !   [nondim] default = 25.0
                                 ! and mean column energy (see Jansen et al. 2015).
 MEKE_MIN_GAMMA2 = 1.0E-05       !   [nondim] default = 1.0E-04
                                 ! The minimum allowed value of gamma_b^2.
+MEKE_CT = 0.0                   !   [nondim] default = 50.0
+                                ! A coefficient in the expression for the ratio of barotropic eddy energy and
+                                ! mean column energy (see Jansen et al. 2015).
 MEKE_GMCOEFF = 1.0              !   [nondim] default = -1.0
                                 ! The efficiency of the conversion of potential energy into MEKE by the
                                 ! thickness mixing parameterization. If MEKE_GMCOEFF is negative, this
@@ -329,20 +343,8 @@ MEKE_KHMEKE_FAC = 0.75          !   [nondim] default = 0.0
 MEKE_MIN_LSCALE = True          !   [Boolean] default = False
                                 ! If true, use a strict minimum of provided length scales rather than harmonic
                                 ! mean.
-MEKE_ALPHA_DEFORM = 1.0         !   [nondim] default = 0.0
-                                ! If positive, is a coefficient weighting the deformation scale in the
-                                ! expression for mixing length used in MEKE-derived diffusivity.
-MEKE_ALPHA_RHINES = 1.0         !   [nondim] default = 0.0
-                                ! If positive, is a coefficient weighting the Rhines scale in the expression for
-                                ! mixing length used in MEKE-derived diffusivity.
 MEKE_ALPHA_EADY = 1.0           !   [nondim] default = 0.0
                                 ! If positive, is a coefficient weighting the Eady length scale in the
-                                ! expression for mixing length used in MEKE-derived diffusivity.
-MEKE_ALPHA_FRICT = 1.0          !   [nondim] default = 0.0
-                                ! If positive, is a coefficient weighting the frictional arrest scale in the
-                                ! expression for mixing length used in MEKE-derived diffusivity.
-MEKE_ALPHA_GRID = 1.0           !   [nondim] default = 0.0
-                                ! If positive, is a coefficient weighting the grid-spacing as a scale in the
                                 ! expression for mixing length used in MEKE-derived diffusivity.
 MEKE_ADVECTION_FACTOR = 1.0     !   [nondim] default = 0.0
                                 ! A scale factor in front of advection of eddy energy. Zero turns advection off.
@@ -423,7 +425,7 @@ BBL_THICK_MIN = 0.1             !   [m] default = 0.0
                                 ! The minimum bottom boundary layer thickness that can be used with
                                 ! BOTTOMDRAGLAW. This might be Kv/(cdrag*drag_bg_vel) to give Kv as the minimum
                                 ! near-bottom viscosity.
-KV = 0.0                        !   [m2 s-1]
+KV = 1.0E-06                    !   [m2 s-1]
                                 ! The background kinematic viscosity in the interior. The molecular value, ~1e-6
                                 ! m2 s-1, may be used.
 
@@ -450,6 +452,11 @@ STANLEY_COEFF = 0.5             !   [nondim] default = -1.0
                                 ! Coefficient correlating the temperature gradient and SGS T variance.
 
 ! === module MOM_dynamics_split_RK2 ===
+VISC_REM_BUG = False            !   [Boolean] default = True
+                                ! If true, visc_rem_[uv] in split mode is incorrectly calculated or accounted
+                                ! for in two places. This parameter controls the defaults of two individual
+                                ! flags, VISC_REM_TIMESTEP_BUG in MOM_dynamics_split_RK2(b) and
+                                ! VISC_REM_BT_WEIGHT_BUG in MOM_barotropic.
 
 ! === module MOM_continuity_PPM ===
 ETA_TOLERANCE = 1.0E-06         !   [m] default = 3.75E-09
@@ -482,11 +489,18 @@ LAPLACIAN = True                !   [Boolean] default = False
                                 ! If true, use a Laplacian horizontal viscosity.
 AH = 1.0E+12                    !   [m4 s-1] default = 0.0
                                 ! The background biharmonic horizontal viscosity.
-LEITH_AH = True                 !   [Boolean] default = False
-                                ! If true, use a biharmonic Leith nonlinear eddy viscosity.
-LEITH_BI_CONST = 128.0          !   [nondim] default = 0.0
+USE_LEITHY = True               !   [Boolean] default = False
+                                ! If true, use a biharmonic Leith nonlinear eddy viscosity together with a
+                                ! harmonic backscatter.
+LEITH_BI_CONST = 75.0           !   [nondim] default = 0.0
                                 ! The nondimensional biharmonic Leith constant, typical values are thus far
                                 ! undetermined.
+FRICTWORK_BUG = False           !   [Boolean] default = True
+                                ! If true, retain an answer-changing bug in calculating the FrictWork, which
+                                ! cancels the h in thickness flux and the h at velocity point. This isnot
+                                ! recommended.
+LEITHY_CK = 0.0                 !   [nondim] default = 1.0
+                                ! Fraction of biharmonic dissipation that gets backscattered, in Leith+E.
 
 ! === module MOM_vert_friction ===
 HMIX_FIXED = 0.5                !   [m]
@@ -527,26 +541,42 @@ MIXEDLAYER_RESTRAT = True       !   [Boolean] default = False
                                 ! mixed layer. Can be used in ALE mode without restriction but in layer mode can
                                 ! only be used if BULKMIXEDLAYER is true.
 MLE%
+USE_BODNER23 = True             !   [Boolean] default = False
+                                ! If true, use the Bodner et al., 2023, formulation of the re-stratifying
+                                ! mixed-layer restratification parameterization. This only works in ALE mode.
+BLD_GROWING_TFILTER = 300.0     !   [s] default = 0.0
+                                ! The time-scale for a running-mean filter applied to the boundary layer depth
+                                ! (BLD) when the BLD is deeper than the running mean. A value of 0
+                                ! instantaneously sets the running mean to the current value of BLD.
+BLD_DECAYING_TFILTER = 8.64E+04 !   [s] default = 0.0
+                                ! The time-scale for a running-mean filter applied to the boundary layer depth
+                                ! (BLD) when the BLD is shallower than the running mean. A value of 0
+                                ! instantaneously sets the running mean to the current value of BLD.
+MLD_GROWING_TFILTER = 3600.0    !   [s] default = 0.0
+                                ! The time-scale for a running-mean filter applied to the time-filtered BLD,
+                                ! when the latter is deeper than the running mean. A value of 0 instantaneously
+                                ! sets the running mean to the current value filtered BLD.
+MLD_DECAYING_TFILTER = 2.592E+06 !   [s] default = 0.0
+                                ! The time-scale for a running-mean filter applied to the time-filtered BLD,
+                                ! when the latter is shallower than the running mean. A value of 0
+                                ! instantaneously sets the running mean to the current value filtered BLD.
+MIN_WSTAR2 = 1.0E-09            !   [m2 s-2] default = 1.0E-24
+                                ! The minimum lower bound to apply to the vertical momentum flux, w'u', in the
+                                ! Bodner et al., restratification parameterization. This avoids a
+                                ! division-by-zero in the limit when u* and the buoyancy flux are zero.  The
+                                ! default is less than the molecular viscosity of water times the Coriolis
+                                ! parameter a micron away from the equator.
+USE_CR_GRID = True              !   [Boolean] default = False
+                                ! If true, read in a spatially varying Cr field.
+CR_FILE = "mle-cr-tx2_3v2-v10_20250426.nc" ! default = ""
+                                ! The path to the file containing the Cr fields.
 %MLE
-FOX_KEMPER_ML_RESTRAT_COEF = 1.0 !   [nondim] default = 0.0
-                                ! A nondimensional coefficient that is proportional to the ratio of the
-                                ! deformation radius to the dominant lengthscale of the submesoscale mixed layer
-                                ! instabilities, times the minimum of the ratio of the mesoscale eddy kinetic
-                                ! energy to the large-scale geostrophic kinetic energy or 1 plus the square of
-                                ! the grid spacing over the deformation radius, as detailed by Fox-Kemper et al.
-                                ! (2011)
-USE_STANLEY_ML = True           !   [Boolean] default = False
-                                ! If true, turn on Stanley SGS T variance parameterization in ML restrat code.
-MLE_FRONT_LENGTH = 1000.0       !   [m] default = 0.0
-                                ! If non-zero, is the frontal-length scale used to calculate the upscaling of
-                                ! buoyancy gradients that is otherwise represented by the parameter
-                                ! FOX_KEMPER_ML_RESTRAT_COEF. If MLE_FRONT_LENGTH is non-zero, it is recommended
-                                ! to set FOX_KEMPER_ML_RESTRAT_COEF=1.0.
-MLE_MLD_DECAY_TIME = 3.456E+05  !   [s] default = 0.0
-                                ! The time-scale for a running-mean filter applied to the mixed-layer depth used
-                                ! in the MLE restratification parameterization. When the MLD deepens below the
-                                ! current running-mean the running-mean is instantaneously set to the current
-                                ! MLD.
+BODNER_DETECT_MLD = True        !   [Boolean] default = False
+                                ! If true, the Bodner parameterization will use the mixed-layer depth detected
+                                ! via the density difference criterion MLE_DENSITY_DIFF.
+MLE_DENSITY_DIFF = 0.02         !   [kg/m3] default = 0.03
+                                ! Density difference used to detect the mixed-layer depth used for the
+                                ! mixed-layer eddy parameterization by Fox-Kemper et al. (2010)
 
 ! === module MOM_diagnostics ===
 
@@ -568,6 +598,11 @@ USE_KPP = True                  !   [Boolean] default = False
 KPP%
 N_SMOOTH = 3                    ! default = 0
                                 ! The number of times the 1-1-4-1-1 Laplacian filter is applied on OBL depth.
+COMPUTE_MONIN_OBUKHOV = True    !   [Boolean] default = False
+                                ! If True, limit the OBL depth to be no deeper than Monin-Obukhov depth.
+MINIMUM_OBL_DEPTH = 5.0         !   [m] default = 0.0
+                                ! If non-zero, a minimum depth to use for KPP OBL depth. Independent of this
+                                ! parameter, the OBL depth is always at least as deep as the first layer.
 MATCH_TECHNIQUE = "MatchGradient" ! default = "SimpleShapes"
                                 ! CVMix method to set profile function for diffusivity and NLT, as well as
                                 ! matching across OBL base. Allowed values are:
@@ -579,6 +614,8 @@ MATCH_TECHNIQUE = "MatchGradient" ! default = "SimpleShapes"
 KPP_IS_ADDITIVE = False         !   [Boolean] default = True
                                 ! If true, adds KPP diffusivity to diffusivity from other schemes.
                                 ! If false, KPP is the only diffusivity wherever KPP is non-zero.
+KPP_CVt2 = 1.0                  !   [nondim] default = 1.6
+                                ! Parameter for Stokes MOST convection entrainment
 %KPP
 
 ! === module MOM_CVMix_conv ===
@@ -626,12 +663,15 @@ SIMPLE_TKE_TO_KD = True         !   [Boolean] default = False
 
 ! === module MOM_bkgnd_mixing ===
 ! Adding static vertical background mixing coefficients
-KD_MIN = 2.0E-07                !   [m2 s-1] default = 0.0
+KD = 1.0E-07                    !   [m2 s-1] default = 0.0
+                                ! The background diapycnal diffusivity of density in the interior. Zero or the
+                                ! molecular value, ~1e-7 m2 s-1, may be used.
+KD_MIN = 1.0E-07                !   [m2 s-1] default = 1.0E-09
                                 ! The minimum diapycnal diffusivity.
 HORIZ_VARYING_BACKGROUND = True !   [Boolean] default = False
                                 ! If true, apply vertically uniform, latitude-dependent background diffusivity,
                                 ! as described in Danabasoglu et al., 2012
-PRANDTL_BKGND = 5.0             !   [nondim] default = 1.0
+PRANDTL_BKGND = 10.0            !   [nondim] default = 1.0
                                 ! Turbulent Prandtl number used to convert vertical background diffusivities
                                 ! into viscosities.
 KD_MAX = 0.1                    !   [m2 s-1] default = -1.0
@@ -776,7 +816,7 @@ WINDSTRESS_X_VAR = "taux"       ! default = "STRESS_X"
                                 ! The name of the x-wind stress variable in WIND_FILE.
 WINDSTRESS_Y_VAR = "tauy"       ! default = "STRESS_Y"
                                 ! The name of the y-wind stress variable in WIND_FILE.
-GUST_CONST = 0.02               !   [Pa] default = 0.0
+GUST_CONST = 4.0E-04            !   [Pa] default = 0.0
                                 ! The background gustiness in the winds.
 
 ! === module MOM_main (MOM_driver) ===
