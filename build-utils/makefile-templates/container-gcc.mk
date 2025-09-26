@@ -10,30 +10,29 @@ LD = mpif90 $(MAIN_PROGRAM)
 #########
 # flags #
 #########
-DEBUG =
-
+DEBUG = 0
+CODECOV = 0
 
 MAKEFLAGS += --jobs=4
 
 FPPFLAGS :=
 
 FFLAGS := -fcray-pointer -fdefault-double-8 -fdefault-real-8 -Waliasing -ffree-line-length-none -fno-range-check
-FFLAGS_REPRO = -O2 -fbounds-check
-FFLAGS_DEBUG = -O0 -g -W -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow
-
 
 CFLAGS := -D__IFC
-CFLAGS_REPRO= -O2
-CFLAGS_DEBUG = -O0 -g
 
 LDFLAGS :=
 
-ifeq ($(DEBUG),1)
-CFLAGS += $(CFLAGS_DEBUG)
-FFLAGS += $(FFLAGS_DEBUG)
-else
-CFLAGS += $(CFLAGS_REPRO)
-FFLAGS += $(FFLAGS_REPRO)
+ifeq ($(CODECOV),1)
+	FFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
+	CFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
+	LDFLAGS += -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
+else ifeq ($(DEBUG),1)
+	FFLAGS += -O0 -g -W -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow
+	CFLAGS += -O0 -g
+else # Production build
+	FFLAGS += -O2 -fbounds-check
+	CFLAGS += -O2
 endif
 
 # NetCDF Things
