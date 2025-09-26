@@ -45,6 +45,16 @@ std::shared_ptr<Field> FieldContainer::Insert(const std::string& name, const Fie
     return field;
 }
 
+std::shared_ptr<Field> FieldContainer::Get(const std::string& name) const {
+    for (const std::shared_ptr<Field>& field : fields_) {
+        if (field->name == name) {
+            return field;
+        }
+    }
+    // Maybe we want to do something else instead of throwing an exception here? T
+    throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' does not exist.");
+}
+
 void FieldContainer::WriteHDF5(const hid_t file_id) const {
     for (const auto& field : fields_) {
         field->WriteHDF5(file_id);

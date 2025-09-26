@@ -270,7 +270,18 @@ public:
     // Constructors
     FieldContainer(const std::shared_ptr<Grid>& grid);
 
-    std::shared_ptr<Field> Insert(const std::string& name, const FieldGridStagger stagger, const std::size_t n_component = 1, const std::size_t n_ghost = 0);
+    std::shared_ptr<Field> Insert(const std::string& name, const FieldGridStagger stagger, const std::size_t n_component, const std::size_t n_ghost);
+
+    bool Contains(const std::string& name) const noexcept {
+        for (const std::shared_ptr<Field>& field : fields_) {
+            if (field->name == name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    std::shared_ptr<Field> Get(const std::string& name) const;
 
     // Probably just going to get rid of this and just call the WriteHDF5 function on the fields directly in the application code since it is so simple to do with a range based for loop.
     void WriteHDF5(const hid_t file_id) const;

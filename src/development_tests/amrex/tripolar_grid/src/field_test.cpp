@@ -371,6 +371,36 @@ TEST_F(FieldContainerTest, Insert) {
 
 }
 
+TEST_F(FieldContainerTest, Contains) {
+
+  FieldContainer fields(grid);
+
+  std::string name = "test_nodal_field";
+  FieldGridStagger stagger = FieldGridStagger::Nodal;
+  const std::size_t n_component = 1;
+  const std::size_t n_ghost = 0;
+
+  EXPECT_FALSE(fields.Contains(name));
+  std::shared_ptr<Field> field1 = fields.Insert(name, stagger, n_component, n_ghost);
+  EXPECT_TRUE(fields.Contains(name));
+
+}
+
+TEST_F(FieldContainerTest, Get) {
+
+  FieldContainer fields(grid);
+
+  std::string name = "test_nodal_field";
+  FieldGridStagger stagger = FieldGridStagger::Nodal;
+  const std::size_t n_component = 1;
+  const std::size_t n_ghost = 0;
+
+  std::shared_ptr<Field> field_returned_from_insert = fields.Insert(name, stagger, n_component, n_ghost);
+  std::shared_ptr<Field> field_returned_from_get    = fields.Get(name);
+  EXPECT_EQ(field_returned_from_insert, field_returned_from_get);
+
+}
+
 TEST_F(FieldContainerTest, WriteHDF5) {
 
   FieldContainer fields(grid);
