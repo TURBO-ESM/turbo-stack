@@ -88,10 +88,11 @@ ctest --test-dir "$build_dir"
 
 # Run the code. 
 cd "$build_dir/examples"
-if [[ -x "./tripolar_grid" ]]; then
-    ./tripolar_grid
+
+if [[ -x "./tripolar_grid_helper" ]]; then
+    ./tripolar_grid_helper
 else
-    echo "Error: tripolar_grid binary not found or not executable in $build_dir/examples." >&2
+    echo "Error: tripolar_grid_helper binary not found or not executable in $build_dir/examples." >&2
     exit 1
 fi
 

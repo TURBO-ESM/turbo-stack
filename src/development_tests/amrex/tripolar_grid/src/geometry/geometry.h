@@ -58,17 +58,17 @@ public:
     }
 
     // Get the domain extents
-    double XMin() const { return x_min_; }
-    double XMax() const { return x_max_; }
-    double YMin() const { return y_min_; }
-    double YMax() const { return y_max_; }
-    double ZMin() const { return z_min_; }
-    double ZMax() const { return z_max_; }
+    double XMin() const noexcept { return x_min_; }
+    double XMax() const noexcept { return x_max_; }
+    double YMin() const noexcept { return y_min_; }
+    double YMax() const noexcept { return y_max_; }
+    double ZMin() const noexcept { return z_min_; }
+    double ZMax() const noexcept { return z_max_; }
 
     // Get the domain length in each direction
-    double LX() const { return x_max_-x_min_; }
-    double LY() const { return y_max_-y_min_; }
-    double LZ() const { return z_max_-z_min_; }
+    double LX() const noexcept { return x_max_-x_min_; }
+    double LY() const noexcept { return y_max_-y_min_; }
+    double LZ() const noexcept { return z_max_-z_min_; }
 
     //-----------------------------------------------------------------------//
     // Public Data Members
