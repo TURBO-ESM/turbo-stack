@@ -50,6 +50,18 @@ public:
     Point YFace(const Index i, const Index j, const Index k) const;
     Point ZFace(const Index i, const Index j, const Index k) const;
 
+    // Check if the given indices are valid for the grid
+    bool ValidNode(const Index i, const Index j, const Index k) const noexcept override;
+    bool ValidCell(const Index i, const Index j, const Index k) const noexcept override;
+    bool ValidIFace(const Index i, const Index j, const Index k) const noexcept override;
+    bool ValidJFace(const Index i, const Index j, const Index k) const noexcept override;
+    bool ValidKFace(const Index i, const Index j, const Index k) const noexcept override;
+
+    // Convenience functions for the common X,Y,Z notation
+    bool ValidXFace(const Index i, const Index j, const Index k) const noexcept;
+    bool ValidYFace(const Index i, const Index j, const Index k) const noexcept;
+    bool ValidZFace(const Index i, const Index j, const Index k) const noexcept;
+
     //-----------------------------------------------------------------------//
     // Public Data Members
     //-----------------------------------------------------------------------//
@@ -67,17 +79,6 @@ private:
     // Private Member Functions
     //-----------------------------------------------------------------------//
 
-    // Check if the given indices are valid for the grid
-    bool ValidNode(const Index i, const Index j, const Index k) const noexcept override;
-    bool ValidCell(const Index i, const Index j, const Index k) const noexcept override;
-    bool ValidIFace(const Index i, const Index j, const Index k) const noexcept override;
-    bool ValidJFace(const Index i, const Index j, const Index k) const noexcept override;
-    bool ValidKFace(const Index i, const Index j, const Index k) const noexcept override;
-
-    // Convenience functions for the common X,Y,Z notation
-    bool ValidXFace(const Index i, const Index j, const Index k) const noexcept;
-    bool ValidYFace(const Index i, const Index j, const Index k) const noexcept;
-    bool ValidZFace(const Index i, const Index j, const Index k) const noexcept;
 };
 
 } // namespace turbo

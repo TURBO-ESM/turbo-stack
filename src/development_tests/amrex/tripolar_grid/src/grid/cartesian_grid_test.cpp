@@ -56,6 +56,82 @@ TEST(CartesianGrid, Constructor) {
 
 }
 
+TEST(CartesianGrid, Valid_Indices) {
+
+    // Simple unit cube geometry
+    const double x_min = 0.0, x_max = 1.0;
+    const double y_min = 0.0, y_max = 1.0;
+    const double z_min = 0.0, z_max = 1.0;
+    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
+
+    // Grid with 2 cells in each direction
+    const std::size_t n_cell_x = 2;
+    const std::size_t n_cell_y = 2;
+    const std::size_t n_cell_z = 2;
+    CartesianGrid grid(geom, n_cell_x, n_cell_y, n_cell_z);
+
+    // Check valid node indices
+    for (std::size_t i = 0; i < grid.NNodeX(); ++i) {
+        for (std::size_t j = 0; j < grid.NNodeY(); ++j) {
+            for (std::size_t k = 0; k < grid.NNodeZ(); ++k) {
+                EXPECT_TRUE(grid.ValidNode(i,j,k));
+            }
+        }
+    }
+    EXPECT_FALSE(grid.ValidNode(grid.NNodeX(), 0, 0));
+    EXPECT_FALSE(grid.ValidNode(0, grid.NNodeY(), 0));
+    EXPECT_FALSE(grid.ValidNode(0, 0, grid.NNodeZ()));
+
+    // Check valid cell indices
+    for (std::size_t i = 0; i < grid.NCellX(); ++i) {
+        for (std::size_t j = 0; j < grid.NCellY(); ++j) {
+            for (std::size_t k = 0; k < grid.NCellZ(); ++k) {
+                EXPECT_TRUE(grid.ValidCell(i,j,k));
+            }
+        }
+    }
+    EXPECT_FALSE(grid.ValidCell(grid.NCellX(), 0, 0));
+    EXPECT_FALSE(grid.ValidCell(0, grid.NCellY(), 0));
+    EXPECT_FALSE(grid.ValidCell(0, 0, grid.NCellZ()));
+
+    // Check valid IFace indices
+    for (std::size_t i = 0; i < grid.NNodeX(); ++i) {
+        for (std::size_t j = 0; j < grid.NCellY(); ++j) {
+            for (std::size_t k = 0; k < grid.NCellZ(); ++k) {
+                EXPECT_TRUE(grid.ValidIFace(i,j,k));
+            }
+        }
+    }
+    EXPECT_FALSE(grid.ValidIFace(grid.NNodeX(), 0, 0));
+    EXPECT_FALSE(grid.ValidIFace(0, grid.NCellY(), 0));
+    EXPECT_FALSE(grid.ValidIFace(0, 0, grid.NCellZ())); 
+
+    // Check valid JFace indices
+    for (std::size_t i = 0; i < grid.NCellX(); ++i) {
+        for (std::size_t j = 0; j < grid.NNodeY(); ++j) {
+            for (std::size_t k = 0; k < grid.NCellZ(); ++k) {
+                EXPECT_TRUE(grid.ValidJFace(i,j,k));
+            }
+        }
+    }
+    EXPECT_FALSE(grid.ValidJFace(grid.NCellX(), 0, 0));
+    EXPECT_FALSE(grid.ValidJFace(0, grid.NNodeY(), 0));
+    EXPECT_FALSE(grid.ValidJFace(0, 0, grid.NCellZ()));
+
+    // Check valid KFace indices
+    for (std::size_t i = 0; i < grid.NCellX(); ++i) {
+        for (std::size_t j = 0; j < grid.NCellY(); ++j) {
+            for (std::size_t k = 0; k < grid.NNodeZ(); ++k) {
+                EXPECT_TRUE(grid.ValidKFace(i,j,k));
+            }
+        }
+    }
+    EXPECT_FALSE(grid.ValidKFace(grid.NCellX(), 0, 0));
+    EXPECT_FALSE(grid.ValidKFace(0, grid.NCellY(), 0));
+    EXPECT_FALSE(grid.ValidKFace(0, 0, grid.NNodeZ())); 
+
+}
+
 TEST(CartesianGrid, Grid_Locations) {
 
     // Simple unit cube geometry

@@ -50,6 +50,13 @@ public:
     virtual Point JFace(const Index i, const Index j, const Index k) const = 0;
     virtual Point KFace(const Index i, const Index j, const Index k) const = 0;
 
+    // Functions to check if the given indices are valid for the grid for a given type of location
+    virtual bool ValidNode(const Index i, const Index j, const Index k) const noexcept = 0;
+    virtual bool ValidCell(const Index i, const Index j, const Index k) const noexcept = 0;
+    virtual bool ValidIFace(const Index i, const Index j, const Index k) const noexcept = 0;
+    virtual bool ValidJFace(const Index i, const Index j, const Index k) const noexcept = 0;
+    virtual bool ValidKFace(const Index i, const Index j, const Index k) const noexcept = 0;
+
     virtual void WriteHDF5(const std::string& filename) const = 0;
     virtual void WriteHDF5(const hid_t file_id) const = 0;
 
@@ -57,12 +64,7 @@ protected:
     //-----------------------------------------------------------------------//
     // Protected Member Functions
     //-----------------------------------------------------------------------//
-    // Functions to check if the given indices are valid for the grid for a given type of location
-    virtual bool ValidNode(const Index i, const Index j, const Index k) const noexcept = 0;
-    virtual bool ValidCell(const Index i, const Index j, const Index k) const noexcept = 0;
-    virtual bool ValidIFace(const Index i, const Index j, const Index k) const noexcept = 0;
-    virtual bool ValidJFace(const Index i, const Index j, const Index k) const noexcept = 0;
-    virtual bool ValidKFace(const Index i, const Index j, const Index k) const noexcept = 0;
+
 };
 
 } // namespace turbo
