@@ -19,14 +19,14 @@ public:
                   std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z);
 
     std::size_t NCell(void) const noexcept override;
-    std::size_t NCellI() const noexcept;
-    std::size_t NCellJ() const noexcept;
-    std::size_t NCellK() const noexcept;
+    std::size_t NCellI() const noexcept override;
+    std::size_t NCellJ() const noexcept override;
+    std::size_t NCellK() const noexcept override;
 
     std::size_t NNode(void) const noexcept override;
-    std::size_t NNodeI() const noexcept;
-    std::size_t NNodeJ() const noexcept;
-    std::size_t NNodeK() const noexcept;
+    std::size_t NNodeI() const noexcept override;
+    std::size_t NNodeJ() const noexcept override;
+    std::size_t NNodeK() const noexcept override;
 
     Point Node(const Index i, const Index j, const Index k) const override;
     Point CellCenter(const Index i, const Index j, const Index k) const override;

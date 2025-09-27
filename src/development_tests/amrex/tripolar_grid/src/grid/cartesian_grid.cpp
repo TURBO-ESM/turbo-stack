@@ -12,6 +12,10 @@ CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry,
                   std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z)
     : geometry_(geometry), dx_(0.0), dy_(0.0), dz_(0.0), n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z) {
 
+    if (!geometry_) {
+        throw std::invalid_argument("Null geometry pointer passed to CartesianGrid constructor.");
+    }
+
     if (n_cell_x == 0 || n_cell_y == 0 || n_cell_z == 0) {
         throw std::invalid_argument("Number of cells in each direction must be greater than zero.");
     }
@@ -92,7 +96,7 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const {
 
     // Helper lambda for writing the grid points for a given location (cell center, node, face, etc)
     auto write_grid_point_dataset = [file_id](const std::string& name, int nx, int ny, int nz, auto&& location_func) {
-        const int n_component = 3;
+        const int n_component = 3; // Assuming here grid points will always have three components: x,y,z
         std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz), static_cast<hsize_t>(n_component)};
         const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
         const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -113,7 +117,7 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const {
         H5Sclose(dataspace_id);
     };
 
-    // Write datasets for cell centers, nodes, and faces
+    // Write datasets for all the grid stagger locations
     write_grid_point_dataset("cell_center", NCellX(), NCellY(), NCellZ(), [this](const Index i, const Index j, const Index k) { return this->CellCenter(i,j,k); });
     write_grid_point_dataset("node",        NNodeX(), NNodeY(), NNodeZ(), [this](const Index i, const Index j, const Index k) { return this->Node(i,j,k); });
     write_grid_point_dataset("x_face",      NNodeX(), NCellY(), NCellZ(), [this](const Index i, const Index j, const Index k) { return this->XFace(i,j,k); });
