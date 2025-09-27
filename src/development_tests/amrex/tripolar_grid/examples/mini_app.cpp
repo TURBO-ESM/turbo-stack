@@ -5,7 +5,7 @@
 #include <AMReX_MultiFab.H>
 
 #include "geometry.h"
-#include "grid.h"
+#include "cartesian_grid.h"
 #include "field.h"
 
 using namespace turbo;

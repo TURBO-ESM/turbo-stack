@@ -6,7 +6,7 @@
 #include <AMReX_MultiFab.H>
 
 #include <geometry.h>
-#include <grid.h>
+#include <cartesian_grid.h>
 #include <tripolar_grid.h>
 
 using namespace turbo;
