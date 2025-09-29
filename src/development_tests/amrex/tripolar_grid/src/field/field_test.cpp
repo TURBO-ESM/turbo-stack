@@ -7,29 +7,11 @@
 #include "cartesian_grid.h"
 #include "field.h"
 
+#include "amrex_test_environment.h"
+
 using namespace turbo;
 
-//---------------------------------------------------------------------------//
-// Define a global test environment for AMReX
-//---------------------------------------------------------------------------//
-class AmrexEnvironment : public ::testing::Environment {
-public:
-    void SetUp() override {
-        int argc = 1;
-        char arg0[] = "test";
-        char* argv_array[] = { arg0, nullptr };
-        char** argv = argv_array;
-        amrex::Initialize(argc, argv);
-        std::cout << "AmrexEnvironment SetUp called\n";
-    }
-    void TearDown() override {
-        amrex::Finalize();
-        std::cout << "AmrexEnvironment TearDown called\n";
-    }
-};
-
 ::testing::Environment* const amrex_env = ::testing::AddGlobalTestEnvironment(new AmrexEnvironment());
-
 
 //---------------------------------------------------------------------------//
 // Define a test fixture for field tests
@@ -133,7 +115,7 @@ TEST_F(FieldTest, Constructor) {
             EXPECT_EQ(box.bigEnd(),   amrex::IntVect(grid->NCellI()-1, grid->NCellJ()-1, grid->NNodeK()-1));
             break;
           default:
-              throw std::invalid_argument("FieldContainer:: Invalid FieldGridStagger specified.");
+              throw std::invalid_argument("FieldTest Constructor:: Invalid FieldGridStagger specified.");
         }
 
       }
@@ -271,29 +253,6 @@ TEST_F(FieldTest, GetGridPoint) {
 
   }
 
-  // Test for for locations specific to a nodal Nodal field. I generalized and moved all this into the loop above that covers all possible field grid staggering. So this is redundant now. Probably should just get rid of this.
-  //{
-  //  std::string name = "nodal_field";
-  //  FieldGridStagger stagger = FieldGridStagger::Nodal;
-  //  Field field(name, grid, stagger, n_component, n_ghost);
-
-  //  // Loop over grid, for this stagger, and and compare with the location for each grid point returned from the field.GetGridPoint. They should match.
-  //  for (std::size_t i=0; i<grid->NNodeI(); ++i) {
-  //    for (std::size_t j=0; j<grid->NNodeJ(); ++j) {
-  //      for (std::size_t k=0; k<grid->NNodeK(); ++k) {
-  //        EXPECT_EQ(grid->Node(i,j,k), field.GetGridPoint(i,j,k));
-  //      }
-  //    }
-  //  }
-
-  //  // Loop over the multi-fab associated with the field and compare with the corresponding location in the grid. They should also match.
-  //  for (amrex::MFIter mfi(*field.multifab); mfi.isValid(); ++mfi) {
-  //      amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
-  //          EXPECT_EQ(field.GetGridPoint(i,j,k), grid->Node(i,j,k));
-  //      });
-  //  }
-  //}
-
 }
 
 
@@ -318,94 +277,5 @@ TEST_F(FieldTest, WriteHDF5) {
     const std::string filename = "Test_Output_Field_WriteHDF5_via_filename.h5";
     field.WriteHDF5(filename);
   }
-
-}
-
-//---------------------------------------------------------------------------//
-// FieldContainer Tests
-//---------------------------------------------------------------------------//
-// Should just move this to another file later
-
-class FieldContainerTest : public ::testing::Test {
-protected:
-  void SetUp() override {
-    double x_min = 0.0;
-    double x_max = 1.0;
-    double y_min = 0.0;
-    double y_max = 1.0;
-    double z_min = 0.0;
-    double z_max = 1.0;
-    geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
-
-    std::size_t n_cell_x = 2;
-    std::size_t n_cell_y = 3;
-    std::size_t n_cell_z = 4;
-    grid = std::make_shared<CartesianGrid>(geom, n_cell_x, n_cell_y, n_cell_z);
-  }
-
-  std::shared_ptr<CartesianGeometry> geom;
-  std::shared_ptr<CartesianGrid> grid;
-};
-
-TEST_F(FieldContainerTest, Constructor) {
-  FieldContainer fields(grid);
-
-  {
-    std::shared_ptr<Grid> grid_null_ptr = nullptr;
-    EXPECT_THROW(FieldContainer field(grid_null_ptr), std::invalid_argument);
-  }
-
-}
-
-TEST_F(FieldContainerTest, Insert) {
-
-  FieldContainer fields(grid);
-
-  {
-    std::string name = "first_field";
-    FieldGridStagger stagger = FieldGridStagger::Nodal;
-    const std::size_t n_component = 1;
-    const std::size_t n_ghost = 0;
-    std::shared_ptr<Field> field1 = fields.Insert(name, stagger, n_component, n_ghost);
-    EXPECT_THROW(fields.Insert(name, stagger, n_component, n_ghost), std::invalid_argument);
-  }
-
-  {
-    std::string name = "second_field";
-    FieldGridStagger stagger = FieldGridStagger::CellCentered;
-    const std::size_t n_component = 3;
-    const std::size_t n_ghost = 3;
-    std::shared_ptr<Field> field1 = fields.Insert(name, stagger, n_component, n_ghost);
-  }
-
-}
-
-TEST_F(FieldContainerTest, Contains) {
-
-  FieldContainer fields(grid);
-
-  std::string name = "test_nodal_field";
-  FieldGridStagger stagger = FieldGridStagger::Nodal;
-  const std::size_t n_component = 1;
-  const std::size_t n_ghost = 0;
-
-  EXPECT_FALSE(fields.Contains(name));
-  std::shared_ptr<Field> field1 = fields.Insert(name, stagger, n_component, n_ghost);
-  EXPECT_TRUE(fields.Contains(name));
-
-}
-
-TEST_F(FieldContainerTest, Get) {
-
-  FieldContainer fields(grid);
-
-  std::string name = "test_nodal_field";
-  FieldGridStagger stagger = FieldGridStagger::Nodal;
-  const std::size_t n_component = 1;
-  const std::size_t n_ghost = 0;
-
-  std::shared_ptr<Field> field_returned_from_insert = fields.Insert(name, stagger, n_component, n_ghost);
-  std::shared_ptr<Field> field_returned_from_get    = fields.Get(name);
-  EXPECT_EQ(field_returned_from_insert, field_returned_from_get);
 
 }

@@ -7,6 +7,7 @@
 #include "geometry.h"
 #include "cartesian_grid.h"
 #include "field.h"
+#include "field_container.h"
 
 using namespace turbo;
 

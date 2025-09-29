@@ -8,6 +8,8 @@
 #include <AMReX_MultiFab.H>
 
 #include "grid.h"
+#include "field.h"
+#include "field_container.h"
 #include "tripolar_grid.h"
 
 namespace turbo {

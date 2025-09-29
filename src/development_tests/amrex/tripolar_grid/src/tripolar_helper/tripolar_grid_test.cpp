@@ -9,24 +9,9 @@
 #include <cartesian_grid.h>
 #include <tripolar_grid.h>
 
-using namespace turbo;
+#include "amrex_test_environment.h"
 
-//---------------------------------------------------------------------------//
-// Define a global test environment for AMReX
-//---------------------------------------------------------------------------//
-class AmrexEnvironment : public ::testing::Environment {
-public:
-    void SetUp() override {
-        int argc = 1;
-        char arg0[] = "test";
-        char* argv_array[] = { arg0, nullptr };
-        char** argv = argv_array;
-        amrex::Initialize(argc, argv);
-    }
-    void TearDown() override {
-        amrex::Finalize();
-    }
-};
+using namespace turbo;
 
 ::testing::Environment* const amrex_env = ::testing::AddGlobalTestEnvironment(new AmrexEnvironment());
 
