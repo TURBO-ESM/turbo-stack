@@ -15,50 +15,37 @@ using namespace turbo;
 
 ::testing::Environment* const amrex_env = ::testing::AddGlobalTestEnvironment(new AmrexEnvironment());
 
-//---------------------------------------------------------------------------//
-// Define a global test environment for AMReX
-//---------------------------------------------------------------------------//
-TEST(TripolarGrid, Constructor) {
-    // Simple unit cube geometry
-    const double x_min = 0.0;
-    const double x_max = 1.0;
-    const double y_min = 0.0;
-    const double y_max = 1.0;
-    const double z_min = 0.0;
-    const double z_max = 1.0;
-    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
 
-    // Construct with grid with user specified number of cells in each direction
-    const std::size_t n_cell_x = 10;
-    const std::size_t n_cell_y = 20;
-    const std::size_t n_cell_z = 30;
-    std::shared_ptr<CartesianGrid> grid = std::make_shared<CartesianGrid>(geom, n_cell_x, n_cell_y, n_cell_z);
+class TripolarGridTest : public ::testing::Test {
+protected:
+    std::shared_ptr<CartesianGeometry> geom;
+    std::shared_ptr<CartesianGrid> grid;
+    void SetUp() override {
+        const double x_min = 0.0;
+        const double x_max = 1.0;
+        const double y_min = 0.0;
+        const double y_max = 1.0;
+        const double z_min = 0.0;
+        const double z_max = 1.0;
+        geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
 
-    // Construct tripolar grid based on the Cartesian grid
+        // Default grid size for most tests
+        std::size_t n_cell_x = 8;
+        std::size_t n_cell_y = 16;
+        std::size_t n_cell_z = 4;
+        grid = std::make_shared<CartesianGrid>(geom, n_cell_x, n_cell_y, n_cell_z);
+    }
+};
+
+TEST_F(TripolarGridTest, Constructor) {
+
     TripolarGrid tripolar_grid(grid);
 
-    // Check exceptions for invalid constructor arguments
     EXPECT_THROW(TripolarGrid tripolar_grid(nullptr), std::invalid_argument);
-
 }
 
-TEST(TripolarGrid, Initialize_Multifabs) {
-    // Simple unit cube geometry
-    const double x_min = 0.0;
-    const double x_max = 1.0;
-    const double y_min = 0.0;
-    const double y_max = 1.0;
-    const double z_min = 0.0;
-    const double z_max = 1.0;
-    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
+TEST_F(TripolarGridTest, Initialize_Multifabs) {
 
-    // Construct with grid with user specified number of cells in each direction
-    const std::size_t n_cell_x = 10;
-    const std::size_t n_cell_y = 20;
-    const std::size_t n_cell_z = 30;
-    std::shared_ptr<CartesianGrid> grid = std::make_shared<CartesianGrid>(geom, n_cell_x, n_cell_y, n_cell_z);
-
-    // Construct tripolar grid based on the Cartesian grid
     TripolarGrid tripolar_grid(grid);
 
     tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) {
@@ -88,28 +75,12 @@ TEST(TripolarGrid, Initialize_Multifabs) {
             });
         }
     }
-
 }
 
 
-TEST(TripolarGrid, WriteHDF5) {
-
-    // Simple unit cube geometry
-    const double x_min = 0.0;
-    const double x_max = 1.0;
-    const double y_min = 0.0;
-    const double y_max = 1.0;
-    const double z_min = 0.0;
-    const double z_max = 1.0;
-    std::shared_ptr<CartesianGeometry> geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
-
-    // Construct with grid with user specified number of cells in each direction
-    const std::size_t n_cell_x = 2;
-    const std::size_t n_cell_y = 2;
-    const std::size_t n_cell_z = 2;
-    std::shared_ptr<CartesianGrid> grid = std::make_shared<CartesianGrid>(geom, n_cell_x, n_cell_y, n_cell_z);
-
-    // Construct tripolar grid based on the Cartesian grid
+TEST_F(TripolarGridTest, WriteHDF5) {
+    // For this test, use a smaller grid for faster I/O
+    grid = std::make_shared<CartesianGrid>(geom, 2, 2, 2);
     TripolarGrid tripolar_grid(grid);
 
     tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) {
@@ -121,5 +92,4 @@ TEST(TripolarGrid, WriteHDF5) {
     });
 
     tripolar_grid.WriteHDF5("Test_Output_TripolarGrid_WriteHDF5.h5");
-
 }
