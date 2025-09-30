@@ -1,0 +1,2 @@
+add_library(testing_utils INTERFACE)
+target_include_directories(testing_utils INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
