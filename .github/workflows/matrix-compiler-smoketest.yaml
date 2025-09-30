@@ -86,3 +86,7 @@ jobs:
           echo "Running double gyre test..."
           cd ./examples/double_gyre
           mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+
+      - name: Build and run amrex mini-app
+        run: |
+          echo "Building amrex..."
