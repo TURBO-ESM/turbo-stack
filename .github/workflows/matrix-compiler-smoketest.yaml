@@ -98,4 +98,6 @@ jobs:
           spack compiler find
           spack compiler list
 
-          echo "Building amrex..."
+          echo "Building spack environment for turbo mini-app..."
+          export TRUBO_STACK_ROOT=$(pwd)
+          ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
