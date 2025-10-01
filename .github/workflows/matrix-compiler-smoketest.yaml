@@ -62,10 +62,10 @@ jobs:
 
       - name: MPI+OpenMP Hello World
         run: |
-          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
+          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.cxx -fopenmp
           ldd ./hello_world_mpi
           export OMP_NUM_THREADS=2
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
+          mpiexec -n 2 ./hello_world_mpi
 
       - name: Build turbo-stack
         run: |
@@ -76,4 +76,4 @@ jobs:
         run: |
           echo "Running double gyre test..."
           cd ./examples/double_gyre
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+          mpiexec -n 2 ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
