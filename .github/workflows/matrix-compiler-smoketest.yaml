@@ -10,6 +10,10 @@ on:
   pull_request:
     branches: ["main", "ci-tests", "container-ci"]
 
+# concurrency:
+#   group: ${{ github.ref }}-${{ github.workflow }}
+#   cancel-in-progress: true
+
 jobs:
 
   run-matrix:
