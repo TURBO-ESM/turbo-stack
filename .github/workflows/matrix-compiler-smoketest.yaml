@@ -74,6 +74,8 @@ jobs:
 
       - name: Run double gyre test
         run: |
-          echo "Running double gyre test..."
           cd ./examples/double_gyre
+          echo "Inspecting shared library dependencies:"
+          ldd ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+          echo "Running double gyre test..."
           mpiexec -n 2 ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
