@@ -89,10 +89,13 @@ jobs:
 #          echo "Running double gyre test..."
 #          cd ./examples/double_gyre
 #          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
-
+      - name: Install patch utility for use by spack
+        run: sudo apt-get update && sudo apt-get install -y patch
       - name: Build and run amrex mini-app
         run: |
           echo "Building spack:"
+
+
           git clone --depth=2 https://github.com/spack/spack.git
           . spack/share/spack/setup-env.sh
           spack compiler find
