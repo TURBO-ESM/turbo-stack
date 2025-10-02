@@ -2,6 +2,7 @@
 
 #include <set>
 #include <string>
+#include <stdexcept>
 
 namespace turbo {
 
@@ -37,7 +38,7 @@ public:
      * @brief Get the set of boundaries for the geometry.
      * @return Set of boundary names.
      */
-    virtual std::set<Boundary> Boundaries(void) const = 0;
+    virtual std::set<Boundary> Boundaries() const = 0;
 
 protected:
     //-----------------------------------------------------------------------//
@@ -91,7 +92,7 @@ public:
      * @brief Get the boundaries of the domain.
      * @return Set of boundary names.
      */
-    std::set<std::string> Boundaries(void) const override {
+    std::set<std::string> Boundaries() const override {
         return boundaries_;
     }
 
