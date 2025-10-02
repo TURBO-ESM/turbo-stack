@@ -90,9 +90,10 @@ jobs:
 #          cd ./examples/double_gyre
 #          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
 
-#      - name: Install patch utility for use by spack
-#        #run: apt-get update && apt-get install -y patch
-#        run: sudo dnf search patch
+      - name: Install patch utility for use by spack
+        #run: apt-get update && apt-get install -y patch
+        #run: sudo dnf search patch
+        run: dnf install epel-release
 
       - name: Build and run amrex mini-app
         run: |
