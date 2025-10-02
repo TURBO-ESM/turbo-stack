@@ -107,9 +107,8 @@ jobs:
           . spack/share/spack/setup-env.sh
           spack compiler find
           spack compiler list
-          spack install hdf5
 
           echo "Building spack environment for turbo mini-app..."
           export TURBO_STACK_ROOT=$(pwd)
           echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
-#          ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
+          ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
