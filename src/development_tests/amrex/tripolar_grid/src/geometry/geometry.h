@@ -136,19 +136,19 @@ public:
      * @brief Get the domain length in the x direction.
      * @return Length in x.
      */
-    double LX() const noexcept { return x_max_-x_min_; }
+    double LX() const noexcept { return x_max_ - x_min_; }
 
     /**
      * @brief Get the domain length in the y direction.
      * @return Length in y.
      */
-    double LY() const noexcept { return y_max_-y_min_; }
+    double LY() const noexcept { return y_max_ - y_min_; }
 
     /**
      * @brief Get the domain length in the z direction.
      * @return Length in z.
      */
-    double LZ() const noexcept { return z_max_-z_min_; }
+    double LZ() const noexcept { return z_max_ - z_min_; }
 
 private:
     //-----------------------------------------------------------------------//
