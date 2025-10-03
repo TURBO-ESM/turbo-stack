@@ -92,7 +92,7 @@ public:
      * @brief Get the boundaries of the domain.
      * @return Set of boundary names.
      */
-    std::set<std::string> Boundaries() const override {
+    std::set<Boundary> Boundaries() const override {
         return boundaries_;
     }
 
