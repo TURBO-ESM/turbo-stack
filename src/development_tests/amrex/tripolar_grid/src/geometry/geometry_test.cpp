@@ -16,12 +16,10 @@ TEST(CartesianGeometry, Constructor) {
     const double z_min = 4.0;
     const double z_max = 5.5;
 
-    {
-        // Invalid domain extents should throw
-        EXPECT_THROW(CartesianGeometry geom_invalid(x_max, x_min, y_min, y_max, z_min, z_max), std::invalid_argument);
-        EXPECT_THROW(CartesianGeometry geom_invalid(x_min, x_max, y_max, y_min, z_min, z_max), std::invalid_argument);
-        EXPECT_THROW(CartesianGeometry geom_invalid(x_min, x_max, y_min, y_max, z_max, z_min), std::invalid_argument);
-    }
+    // Invalid domain extents should throw
+    EXPECT_THROW(CartesianGeometry geom_invalid(x_max, x_min, y_min, y_max, z_min, z_max), std::invalid_argument);
+    EXPECT_THROW(CartesianGeometry geom_invalid(x_min, x_max, y_max, y_min, z_min, z_max), std::invalid_argument);
+    EXPECT_THROW(CartesianGeometry geom_invalid(x_min, x_max, y_min, y_max, z_max, z_min), std::invalid_argument);
 
     CartesianGeometry geom(x_min, x_max, y_min, y_max, z_min, z_max);
 
