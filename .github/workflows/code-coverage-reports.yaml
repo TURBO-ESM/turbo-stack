@@ -1,0 +1,80 @@
+name: Build Inside NCAR HPC Development Containers
+
+# See the following link for more information on the NCAR HPC development containers:
+# https://hub.docker.com/u/ncarcisl
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "ci-tests", "container-ci"]
+  pull_request:
+    branches: ["main", "ci-tests", "container-ci"]
+
+jobs:
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -elo pipefail {0}
+    container:
+      image: ncarcisl/cisldev-x86_64-almalinux9-gcc14-openmpi
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Build MOM6 with coverage instrumentation
+        run: |
+          ./build.sh --machine container --compiler gcc --codecov
+
+      - name: Run double gyre (instrumented build)
+        run: |
+          cd examples/double_gyre
+          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6/MOM6
+          make coverage
+          cd ../..
+      
+      - name: Run benchmark (instrumented build)
+        run: |
+          cd examples/benchmark
+          echo "#override DAYMAX = 0.1" >> MOM_override
+          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6/MOM6
+          make coverage
+          make coverage base=../double_gyre
+          cd ../..
+
+      - name: Assemble coverage reports
+        id: assemble
+        run: |
+          dir=$(mktemp -d)
+          python3 .github/workflows/assemble_coverage.py --site "$dir" --auto-from examples/
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      - name: Upload coverage HTML as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom6-coverage-html
+          path: ${{ steps.assemble.outputs.dir }}
+          if-no-files-found: error
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.assemble.outputs.dir }}
+
+  deploy-coverage:
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ci-tests') && github.event_name != 'pull_request'
+    needs: coverage
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
