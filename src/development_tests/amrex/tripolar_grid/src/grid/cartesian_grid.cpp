@@ -25,12 +25,12 @@ CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry,
     dz_ = static_cast<double>(geometry_->LZ()) / n_cell_z_;
 }
 
-std::size_t CartesianGrid::NCell(void) const noexcept { return NCellX() * NCellY() * NCellZ(); }
+std::size_t CartesianGrid::NCell() const noexcept { return NCellX() * NCellY() * NCellZ(); }
 std::size_t CartesianGrid::NCellI() const noexcept { return n_cell_x_; }
 std::size_t CartesianGrid::NCellJ() const noexcept { return n_cell_y_; }
 std::size_t CartesianGrid::NCellK() const noexcept { return n_cell_z_; }
 
-std::size_t CartesianGrid::NNode(void) const noexcept { return NNodeX() * NNodeY() * NNodeZ(); }
+std::size_t CartesianGrid::NNode() const noexcept { return NNodeX() * NNodeY() * NNodeZ(); }
 std::size_t CartesianGrid::NNodeI() const noexcept { return n_cell_x_ + 1; }
 std::size_t CartesianGrid::NNodeJ() const noexcept { return n_cell_y_ + 1; }
 std::size_t CartesianGrid::NNodeK() const noexcept { return n_cell_z_ + 1; }
@@ -70,9 +70,9 @@ CartesianGrid::Point CartesianGrid::KFace(const Index i, const Index j, const In
     return Node(i,j,k) + Point{dx_*0.5, dy_*0.5, 0.0};
 }
 
-std::size_t CartesianGrid::NNodeX(void) const noexcept { return NNodeI(); }
-std::size_t CartesianGrid::NNodeY(void) const noexcept { return NNodeJ(); }
-std::size_t CartesianGrid::NNodeZ(void) const noexcept { return NNodeK(); }
+std::size_t CartesianGrid::NNodeX() const noexcept { return NNodeI(); }
+std::size_t CartesianGrid::NNodeY() const noexcept { return NNodeJ(); }
+std::size_t CartesianGrid::NNodeZ() const noexcept { return NNodeK(); }
 std::size_t CartesianGrid::NCellX() const noexcept { return NCellI(); }
 std::size_t CartesianGrid::NCellY() const noexcept { return NCellJ(); }
 std::size_t CartesianGrid::NCellZ() const noexcept { return NCellK(); }
