@@ -1,4 +1,5 @@
 add_subdirectory(geometry)
+add_subdirectory(grid)
 
 ###############################################################################
 # Tripolar Grid Library
