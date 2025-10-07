@@ -168,6 +168,7 @@ TEST_F(CartesianGridTest, Grid_Locations) {
             for (std::size_t k = 0; k < grid.NCellZ(); ++k) {
                 auto cell_center = grid.CellCenter(i, j, k);
                 auto expected_cell_center = Grid::Point({index_to_cell_center.at(i), index_to_cell_center.at(j), index_to_cell_center.at(k)});
+                EXPECT_EQ(cell_center, expected_cell_center);
             }
         }
     }
