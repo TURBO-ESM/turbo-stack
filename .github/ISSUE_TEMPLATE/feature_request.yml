@@ -6,71 +6,26 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Feature Description
-      description: Please provide a clear and concise description of the feature you'd like to see
-      placeholder: Describe the feature and why it would be valuable...
+      label: What feature would you like?
+      description: Describe the feature and why it would be valuable
+      placeholder: Describe the feature and its benefits...
     validations:
       required: true
   
   - type: textarea
     id: use-case
     attributes:
-      label: Use Case
-      description: Describe the specific use case or scenario where this feature would be helpful
-      placeholder: |
-        This feature would help with...
-        The specific scenario is...
+      label: Use case
+      description: When/how would you use this feature?
+      placeholder: Describe the scenario where this feature would help...
     validations:
       required: true
   
   - type: textarea
-    id: acceptance-criteria
+    id: additional-info
     attributes:
-      label: Acceptance Criteria
-      description: What needs to be accomplished to consider this feature complete?
-      placeholder: |
-        - [ ] Feature is implemented and functional
-        - [ ] Documentation is updated
-        - [ ] Tests are added for new functionality
-        - [ ] Performance impact is evaluated
-    validations:
-      required: true
-  
-  - type: textarea
-    id: ideas
-    attributes:
-      label: Ideas
-      description: Any initial thoughts on implementation approaches or design considerations?
-      placeholder: Implementation ideas, design considerations, or examples from other projects...
-    validations:
-      required: false
-  
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives Considered
-      description: Describe any alternative solutions or features you've considered
-      placeholder: Other approaches or workarounds that could address this need...
-    validations:
-      required: false
-  
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Priority
-      description: How important is this feature to your work?
-      options:
-        - High - Critical for ongoing work
-        - Medium - Would significantly improve workflow
-        - Low - Nice to have
-    validations:
-      required: false
-  
-  - type: textarea
-    id: additional-context
-    attributes:
-      label: Additional Context
-      description: Add any other context, mockups, or relevant information
-      placeholder: References, related issues, mockups, etc.
+      label: Additional info
+      description: Implementation ideas, alternatives, or other relevant details
+      placeholder: Any other thoughts, alternatives, or references...
     validations:
       required: false
