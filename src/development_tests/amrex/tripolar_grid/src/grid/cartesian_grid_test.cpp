@@ -231,7 +231,7 @@ TEST_F(CartesianGridTest, WriteHDF5) {
     const std::size_t n_cell_z = 2;
     CartesianGrid grid(geom, n_cell_x, n_cell_y, n_cell_z);
 
-    // Write to HDF5 file that is already open
+    // Write to HDF5 file via file id
     {
         const std::string filename = "Test_Output_CartesianGrid_WriteHDF5_via_file_id.h5";
         const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -239,7 +239,7 @@ TEST_F(CartesianGridTest, WriteHDF5) {
         H5Fclose(file_id);
     }
 
-    // Write to HDF5 file that is already open
+    // Write to HDF5 file via filename
     {
         const std::string filename = "Test_Output_CartesianGrid_WriteHDF5_via_filename.h5";
         grid.WriteHDF5(filename);

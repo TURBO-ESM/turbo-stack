@@ -95,11 +95,22 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const {
     }
 
     // Helper lambda for writing the grid points for a given location (cell center, node, face, etc)
-    auto write_grid_point_dataset = [file_id](const std::string& name, int nx, int ny, int nz, auto&& location_func) {
+    auto write_grid_point_dataset = [file_id](const std::string& name, std::size_t nx, std::size_t ny, std::size_t nz, auto&& location_func) {
+
         const int n_component = 3; // Assuming here grid points will always have three components: x,y,z
         std::vector<hsize_t> dims = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny), static_cast<hsize_t>(nz), static_cast<hsize_t>(n_component)};
+
         const hid_t dataspace_id = H5Screate_simple(dims.size(), dims.data(), NULL);
+        if (dataspace_id < 0) {
+            throw std::runtime_error("Failed to create HDF5 dataspace for dataset '" + name + "'.");
+        }
+
         const hid_t dataset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        if (dataset_id < 0) {
+            H5Sclose(dataspace_id);
+            throw std::runtime_error("Failed to create HDF5 dataset '" + name + "'.");
+        }
+
         std::vector<double> data(nx * ny * nz * n_component);
         std::size_t idx = 0;
         for (int i = 0; i < nx; ++i) {
@@ -112,9 +123,23 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const {
                 }
             }
         }
-        H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
-        H5Dclose(dataset_id);
-        H5Sclose(dataspace_id);
+
+        herr_t status = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+        if (status < 0) {
+            H5Dclose(dataset_id);
+            H5Sclose(dataspace_id);
+            throw std::runtime_error("Failed to write data to HDF5 dataset '" + name + "'.");
+        }
+
+        if (H5Dclose(dataset_id) < 0) {
+            H5Sclose(dataspace_id);
+            throw std::runtime_error("Failed to close HDF5 dataset '" + name + "'.");
+        }
+
+        if (H5Sclose(dataspace_id) < 0) {
+            throw std::runtime_error("Failed to close HDF5 dataspace for dataset '" + name + "'.");
+        }
+
     };
 
     // Write datasets for all the grid stagger locations
