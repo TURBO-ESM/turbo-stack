@@ -115,9 +115,9 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const {
 
         std::vector<double> data(nx * ny * nz * n_component);
         std::size_t idx = 0;
-        for (int i = 0; i < nx; ++i) {
-            for (int j = 0; j < ny; ++j) {
-                for (int k = 0; k < nz; ++k) {
+        for (std::size_t i = 0; i < nx; ++i) {
+            for (std::size_t j = 0; j < ny; ++j) {
+                for (std::size_t k = 0; k < nz; ++k) {
                     const Grid::Point location = location_func(i, j, k);
                     data[idx++] = location.x;
                     data[idx++] = location.y;
