@@ -22,7 +22,7 @@ public:
     /**
      * @brief Type alias for grid indices.
      *
-     * Note: We may want to change this types alias later to support negative 
+     * Note: We may want to change this type alias later to support negative 
      * indices for ghost cells or periodic boundaries in some implementations.
      */
     using Index = std::size_t;
