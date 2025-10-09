@@ -69,6 +69,11 @@ spack env activate $spack_environment_name
 
 spack install
 
+#export NETCDF_CXX4_DIR=$(spack location --install-dir netcdf-cxx4)
+#export CMAKE_PREFIX_PATH=$(spack location --install-dir netcdf-cxx4)/lib/cmake/netCDFCxx:$CMAKE_PREFIX_PATH
+
+export SPACK_ENV_VIEW_DIR=$(spack location --env)/.spack-env/view
+
 ###############################################################################
 # Build, Test, and Run the Code
 ###############################################################################
