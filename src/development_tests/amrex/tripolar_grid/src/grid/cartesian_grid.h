@@ -55,6 +55,8 @@ public:
     void WriteHDF5(const std::string& filename) const override;
     void WriteHDF5(const hid_t file_id) const override;
 
+    void WriteNetCDF(const std::string& filename) const; // add override when Grid has this method
+
     /**
      * @brief Get the number of nodes in the X direction.
      * @return Number of nodes in X direction

@@ -6,6 +6,8 @@
 #include "cartesian_grid.h"
 #include "geometry.h"
 
+#include <netcdf>
+
 namespace turbo {
 
 CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, 
@@ -148,6 +150,10 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const {
     write_grid_point_dataset("x_face",      NNodeX(), NCellY(), NCellZ(), [this](const Index i, const Index j, const Index k) { return this->XFace(i,j,k); });
     write_grid_point_dataset("y_face",      NCellX(), NNodeY(), NCellZ(), [this](const Index i, const Index j, const Index k) { return this->YFace(i,j,k); });
     write_grid_point_dataset("z_face",      NCellX(), NCellY(), NNodeZ(), [this](const Index i, const Index j, const Index k) { return this->ZFace(i,j,k); });
+}
+
+void CartesianGrid::WriteNetCDF(const std::string& filename) const {
+    using namespace netCDF;
 }
 
 bool CartesianGrid::ValidNode(const Index i, const Index j, const Index k) const noexcept {
