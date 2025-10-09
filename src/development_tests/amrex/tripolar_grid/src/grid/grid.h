@@ -27,7 +27,7 @@ public:
      */
     using Index = std::size_t;
     // Thinking ahead to AMReX IntVect actually uses int internally for this type of indexing. 
-    // Because a index can be negative for ghost cells on the boundaries of the domain, etc.
+    // Because an index can be negative for ghost cells on the boundaries of the domain, etc.
     // For now this class is using std::size_t and assuming we do the checks/conversions when needed for potential negative indices for wrapping around the domain boundaries (e.g., for periodic boundary conditions or ghost cells).
 
     struct Point {
