@@ -1,10 +1,11 @@
 #pragma once
 
 #include <set>
-#include <string>
 #include <stdexcept>
+#include <string>
 
-namespace turbo {
+namespace turbo
+{
 
 /**
  * @brief Abstract base class for geometry objects.
@@ -13,8 +14,9 @@ namespace turbo {
  * There is an implied assumption that geometry objects are immutable after construction.
  * This can be changed later if needed, but member function names should be updated to reflect getters, setters, etc.
  */
-class Geometry {
-public:
+class Geometry
+{
+   public:
     //-----------------------------------------------------------------------//
     // Public Types
     //-----------------------------------------------------------------------//
@@ -23,7 +25,6 @@ public:
      * @brief Type alias for boundary representation.
      */
     using Boundary = std::string;
-
 
     //-----------------------------------------------------------------------//
     // Public Member Functions
@@ -40,7 +41,7 @@ public:
      */
     virtual std::set<Boundary> Boundaries() const = 0;
 
-protected:
+   protected:
     //-----------------------------------------------------------------------//
     // Protected Member Data
     //-----------------------------------------------------------------------//
@@ -57,9 +58,9 @@ protected:
  * Provides cartesian-specific member functions, primarily getters for domain extents and lengths
  * associated with Cartesian coordinates x, y, z.
  */
-class CartesianGeometry : public Geometry {
-public:
-
+class CartesianGeometry : public Geometry
+{
+   public:
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
@@ -74,27 +75,23 @@ public:
      * @param z_max Maximum z-coordinate
      * @throws std::invalid_argument if any coordinate minimum >= maximum
      */
-    CartesianGeometry(double x_min, double x_max, 
-                      double y_min, double y_max, 
-                      double z_min, double z_max)
-        : x_min_(x_min), x_max_(x_max), y_min_(y_min), y_max_(y_max), z_min_(z_min), z_max_(z_max) {
-
+    CartesianGeometry(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
+        : x_min_(x_min), x_max_(x_max), y_min_(y_min), y_max_(y_max), z_min_(z_min), z_max_(z_max)
+    {
         // Error checking that x_min < x_max, etc.
-        if (x_min_ >= x_max_ || y_min_ >= y_max_ || z_min_ >= z_max_) {
+        if (x_min_ >= x_max_ || y_min_ >= y_max_ || z_min_ >= z_max_)
+        {
             throw std::invalid_argument("Invalid domain extents. Minimum must be less than maximum.");
         }
 
         boundaries_ = {"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"};
-
     }
 
     /**
      * @brief Get the boundaries of the domain.
      * @return Set of boundary names.
      */
-    std::set<Boundary> Boundaries() const override {
-        return boundaries_;
-    }
+    std::set<Boundary> Boundaries() const override { return boundaries_; }
 
     /**
      * @brief Get the minimum x-coordinate of the domain.
@@ -150,7 +147,7 @@ public:
      */
     double LZ() const noexcept { return z_max_ - z_min_; }
 
-private:
+   private:
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
@@ -158,7 +155,6 @@ private:
      * @brief Domain extents for x, y, z coordinates.
      */
     const double x_min_, x_max_, y_min_, y_max_, z_min_, z_max_;
-
 };
 
-} // namespace turbo
+}  // namespace turbo
