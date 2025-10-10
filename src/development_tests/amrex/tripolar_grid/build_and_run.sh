@@ -35,24 +35,40 @@ if [[ ! -d "$tripolar_dir" ]]; then
     exit 1
 fi
 
+if [[ -n "${NCAR_HOST:-}" && "${NCAR_HOST}" == "derecho" ]]; then
+    echo "Running on derecho."
+    machine="derecho"
+elif [[ -f /.dockerenv ]]; then
+    echo "Running inside a Docker container."
+    machine="ci_container"
+else
+    echo "Not running inside a Docker container or on derecho. Using generic settings."
+    machine="generic"
+fi
+
+###############################################################################
+# Environment Setup
+###############################################################################
+
+## Derecho Specific Environment Setup.
+if [[ "$machine" == "derecho" ]]; then
+    echo "Detected host: derecho. Running derecho-specific setup..."
+    module purge
+    module load gcc cmake cray-mpich # Works
+    #module load gcc ncarcompilers cmake cray-mpich # Does not work
+    module list
+fi
 
 ###############################################################################
 # Spack Environment Setup
 ###############################################################################
 
 spack_environment_name="tripolar_grid_amrex"
-spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 
-## Derecho Specific Environment Setup.
-if [[ -n "${NCAR_HOST:-}" && "${NCAR_HOST}" == "derecho" ]]; then
-
-    echo "Detected host: derecho. Running derecho-specific setup..."
-    module purge
-    #module load gcc cray-mpich # Works
-    module load gcc cmake cray-mpich # Works
-    #module load gcc ncarcompilers cmake cray-mpich # Does not work
-    module list
+if [[ "$machine" == "derecho" ]]; then
     spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
+else
+    spack_environment_config_file="$tripolar_dir/spack/generic_spack.yaml"
 fi
 
 if [[ "${DEBUG:-0}" == "1" ]]; then
