@@ -35,24 +35,95 @@ if [[ ! -d "$tripolar_dir" ]]; then
     exit 1
 fi
 
+if [[ -n "${NCAR_HOST:-}" && "${NCAR_HOST}" == "derecho" ]]; then
+    echo "Running on derecho."
+    machine="derecho"
+elif grep -qE '(docker|containerd|kubepods)' /proc/1/cgroup 2>/dev/null || \
+   [[ -f /.dockerenv ]] || \
+   [[ -f /run/.containerenv ]]; then
+    echo "Detected running inside of a container environment. Assuming this is a CI run and using container-specific settings."
+    machine="ci_container"
+else
+    echo "Not running on Derecho or inside a CI container. Using generic settings."
+    machine="generic"
+fi
+
+###############################################################################
+# Environment Setup
+###############################################################################
+
+## Derecho Specific Environment Setup.
+if [[ "$machine" == "derecho" ]]; then
+    module purge
+    module load gcc cmake cray-mpich # Works
+    #module load gcc ncarcompilers cmake cray-mpich # Does not work
+    module list
+elif [[ "$machine" == "ci_container" ]]; then
+    # GCC compilers
+    export COMPILER_FAMILY=gcc
+    export GCC_VERSION=14.3.0
+    export gcc_root=/container/gcc/14.3.0
+    #export gcc_bin_dir=/container/gcc/14.3.0/bin
+    #export gcc_lib_dir=/container/gcc/14.3.0/lib64
+    #export gcc_lib64_dir=/container/gcc/14.3.0/lib
+    #export gcc_CC=/container/gcc/14.3.0/bin/gcc && export CC=${gcc_CC}
+    #export gcc_CXX=/container/gcc/14.3.0/bin/g++ && export CXX=${gcc_CXX}
+    #export gcc_F77=/container/gcc/14.3.0/bin/gfortran && export F77=${gcc_F77}
+    #export gcc_FC=/container/gcc/14.3.0/bin/gfortran && export FC=${gcc_FC}
+    echo "COMPILER_FAMILY=${COMPILER_FAMILY}"
+    echo "GCC_VERSION=${GCC_VERSION}"
+    echo "gcc_root=${gcc_root}"
+
+    # OPENMPI 5.0.8
+    #export MPI_FAMILY=openmpi
+    #export MPI_ROOT=/container/openmpi/5.0.8
+    #export OPENMPI_VERSION=5.0.8
+    #export PATH=/container/openmpi/5.0.8/bin:${PATH}
+    #export PRTE_ALLOW_RUN_AS_ROOT=1
+    #export PRTE_ALLOW_RUN_AS_ROOT_CONFIRM=1
+    #export CXX=/container/openmpi/5.0.8/bin/mpicxx
+    #export CC=/container/openmpi/5.0.8/bin/mpicc
+    #export FC=/container/openmpi/5.0.8/bin/mpifort
+    #export F77=/container/openmpi/5.0.8/bin/mpif77
+    #export MPICXX=/container/openmpi/5.0.8/bin/mpicxx
+    #export MPICC=/container/openmpi/5.0.8/bin/mpicc
+    #export MPIFC=/container/openmpi/5.0.8/bin/mpifort
+    #export MPIF77=/container/openmpi/5.0.8/bin/mpif77
+    echo "MPI_FAMILY=${MPI_FAMILY}"
+    echo "OPENMPI_VERSION=${OPENMPI_VERSION}"
+    echo "MPI_ROOT=${MPI_ROOT}"
+
+    # HDF5 1.14.6
+    #export HDF5_VERSION=1.14.6
+    #export PATH=/container/hdf5/1.14.6/bin:${PATH}
+    #export CPATH=/container/hdf5/1.14.6/include:${CPATH}
+    #export LIBRARY_PATH=/container/hdf5/1.14.6/lib:${LIBRARY_PATH}
+    echo "HDF5_VERSION=${HDF5_VERSION}"
+
+    # NETCDF libraries
+    #export NETCDF=/container/netcdf
+    #export NETCDF_C_VERSION=4.9.3
+    #export NETCDF_FORTRAN_VERSION=4.6.2
+    #export PATH=/container/netcdf/bin:${PATH}
+    #export CPATH=/container/netcdf/include:${CPATH}
+    #export LIBRARY_PATH=/container/netcdf/lib:/container/netcdf/lib/plugins${LIBRARY_PATH}
+    #export HDF5_PLUGIN_PATH=/container/netcdf/lib/plugins
+    echo "NETCDF=${NETCDF}"
+    echo "NETCDF_C_VERSION=${NETCDF_C_VERSION}"
+    echo "NETCDF_FORTRAN_VERSION=${NETCDF_FORTRAN_VERSION}"
+
+fi
 
 ###############################################################################
 # Spack Environment Setup
 ###############################################################################
 
 spack_environment_name="tripolar_grid_amrex"
-spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 
-## Derecho Specific Environment Setup.
-if [[ -n "${NCAR_HOST:-}" && "${NCAR_HOST}" == "derecho" ]]; then
-
-    echo "Detected host: derecho. Running derecho-specific setup..."
-    module purge
-    #module load gcc cray-mpich # Works
-    module load gcc cmake cray-mpich # Works
-    #module load gcc ncarcompilers cmake cray-mpich # Does not work
-    module list
+if [[ "$machine" == "derecho" ]]; then
     spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
+else
+    spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 fi
 
 if [[ "${DEBUG:-0}" == "1" ]]; then
