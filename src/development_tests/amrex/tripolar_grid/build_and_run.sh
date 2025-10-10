@@ -38,9 +38,10 @@ fi
 if [[ -n "${NCAR_HOST:-}" && "${NCAR_HOST}" == "derecho" ]]; then
     echo "Running on derecho."
     machine="derecho"
-#elif [[ -f /.dockerenv ]]; then
-elif grep -qE '(docker|containerd|kubepods)' /proc/1/cgroup 2>/dev/null || [[ -f /.dockerenv ]]; then
-    echo "Running inside a Docker container."
+elif grep -qE '(docker|containerd|kubepods)' /proc/1/cgroup 2>/dev/null || \
+   [[ -f /.dockerenv ]] || \
+   [[ -f /run/.containerenv ]]; then
+    echo "Detected Docker or Podman container environment."
     machine="ci_container"
 else
     echo "Not running inside a Docker container or on derecho. Using generic settings."
