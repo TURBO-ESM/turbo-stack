@@ -106,7 +106,11 @@ jobs:
 
       - name: Build and run amrex mini-app
         run: |
+
+          # get spack command in path
+          . spack/share/spack/setup-env.sh
+
           echo "Building spack environment for turbo mini-app..."
           export TURBO_STACK_ROOT=$(pwd)
           echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
-          ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
+          DEBUG=1 ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
