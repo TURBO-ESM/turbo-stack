@@ -92,6 +92,26 @@ elif [[ "$machine" == "ci_container" ]]; then
     echo "MPI_FAMILY=${MPI_FAMILY}"
     echo "OPENMPI_VERSION=${OPENMPI_VERSION}"
     echo "MPI_ROOT=${MPI_ROOT}"
+
+    # HDF5 1.14.6
+    #export HDF5_VERSION=1.14.6
+    #export PATH=/container/hdf5/1.14.6/bin:${PATH}
+    #export CPATH=/container/hdf5/1.14.6/include:${CPATH}
+    #export LIBRARY_PATH=/container/hdf5/1.14.6/lib:${LIBRARY_PATH}
+    echo "HDF5_VERSION=${HDF5_VERSION}"
+
+    # NETCDF libraries
+    #export NETCDF=/container/netcdf
+    #export NETCDF_C_VERSION=4.9.3
+    #export NETCDF_FORTRAN_VERSION=4.6.2
+    #export PATH=/container/netcdf/bin:${PATH}
+    #export CPATH=/container/netcdf/include:${CPATH}
+    #export LIBRARY_PATH=/container/netcdf/lib:/container/netcdf/lib/plugins${LIBRARY_PATH}
+    #export HDF5_PLUGIN_PATH=/container/netcdf/lib/plugins
+    echo "NETCDF=${NETCDF}"
+    echo "NETCDF_C_VERSION=${NETCDF_C_VERSION}"
+    echo "NETCDF_FORTRAN_VERSION=${NETCDF_FORTRAN_VERSION}"
+
 fi
 
 ###############################################################################
