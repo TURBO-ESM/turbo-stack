@@ -38,7 +38,8 @@ fi
 if [[ -n "${NCAR_HOST:-}" && "${NCAR_HOST}" == "derecho" ]]; then
     echo "Running on derecho."
     machine="derecho"
-elif [[ -f /.dockerenv ]]; then
+#elif [[ -f /.dockerenv ]]; then
+elif grep -qE '(docker|containerd|kubepods)' /proc/1/cgroup 2>/dev/null || [[ -f /.dockerenv ]]; then
     echo "Running inside a Docker container."
     machine="ci_container"
 else
@@ -68,7 +69,7 @@ spack_environment_name="tripolar_grid_amrex"
 if [[ "$machine" == "derecho" ]]; then
     spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
 else
-    spack_environment_config_file="$tripolar_dir/spack/generic_spack.yaml"
+    spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 fi
 
 if [[ "${DEBUG:-0}" == "1" ]]; then
