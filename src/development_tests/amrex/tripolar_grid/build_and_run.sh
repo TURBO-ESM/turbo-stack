@@ -112,6 +112,8 @@ elif [[ "$machine" == "ci_container" ]]; then
     echo "NETCDF_C_VERSION=${NETCDF_C_VERSION}"
     echo "NETCDF_FORTRAN_VERSION=${NETCDF_FORTRAN_VERSION}"
 
+    spack external find
+
 fi
 
 ###############################################################################
