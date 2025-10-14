@@ -101,8 +101,8 @@ jobs:
           echo "Building spack:"
           git clone --depth=2 https://github.com/spack/spack.git
           . spack/share/spack/setup-env.sh
-          spack compiler find
-          spack compiler list
+#          spack compiler find
+#          spack compiler list
 
       - name: Build and run amrex mini-app
         run: |
