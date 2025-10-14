@@ -55,9 +55,11 @@ fi
 ## Derecho Specific Environment Setup.
 if [[ "$machine" == "derecho" ]]; then
     module purge
-    module load gcc cmake cray-mpich # Works
+    module load gcc cmake cray-mpich hdf5 # Works
     #module load gcc ncarcompilers cmake cray-mpich # Does not work
     module list
+
+    
 elif [[ "$machine" == "ci_container" ]]; then
     # GCC compilers
     export COMPILER_FAMILY=gcc
@@ -112,7 +114,6 @@ elif [[ "$machine" == "ci_container" ]]; then
     echo "NETCDF_C_VERSION=${NETCDF_C_VERSION}"
     echo "NETCDF_FORTRAN_VERSION=${NETCDF_FORTRAN_VERSION}"
 
-    spack external find
 
 fi
 
@@ -139,6 +140,42 @@ if ! spack env list | grep --word-regexp --quiet "$spack_environment_name"; then
 fi
 
 spack env activate $spack_environment_name 
+
+if [[ "$machine" == "derecho" ]]; then
+
+    spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
+    spack external find cmake
+    spack external find hdf5
+    spack external find mpich
+
+elseif [[ "$machine" == "ci_container" ]]; then
+    spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
+
+    # if compiler family is gcc
+    if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
+        COMPILER="gcc@${GCC_VERSION}"
+    else
+        echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
+        exit 1
+    fi
+
+    if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
+        MPI_PROVIDER="openmpi"
+    else
+        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
+        exit 1
+    fi
+
+    sed -i "s/COMPILER/${COMPILER}/g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
+
+    spack external find cmake
+    spack external find hdf5
+    spack external find openmpi
+
+else
+    spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
+fi
+
 
 spack install
 
