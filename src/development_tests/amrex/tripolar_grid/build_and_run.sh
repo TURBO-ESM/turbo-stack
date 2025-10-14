@@ -169,7 +169,7 @@ if [[ "$machine" == "derecho" ]]; then
     spack external find hdf5
     spack external find mpich
 elif [[ "$machine" == "ci_container" ]]; then
-    spack external find gcc
+    spack external find --path $COMPILER_ROOT gcc
     spack external find cmake
     spack external find hdf5
     spack external find openmpi
