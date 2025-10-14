@@ -13,9 +13,10 @@ spack:
     - doxygen
   packages:
     all:
-      compiler: [COMPILER]
       providers:
           mpi: [MPI_PROVIDER]
+    COMPILER:
+      buildable: false
     mpi:
       buildable: false
     cmake:
