@@ -127,6 +127,8 @@ if [[ "$machine" == "derecho" ]]; then
     spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
 elif [[ "$machine" == "ci_container" ]]; then
 
+    spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
+
     if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
         COMPILER="gcc@${GCC_VERSION}"
     else
