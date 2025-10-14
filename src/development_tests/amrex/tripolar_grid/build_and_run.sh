@@ -167,11 +167,13 @@ if [[ "$machine" == "derecho" ]]; then
     spack external find hdf5
     spack external find mpich
 elif [[ "$machine" == "ci_container" ]]; then
-    spack external find gcc
+    spack external find gcc@${GCC_VERSION}
     spack external find cmake
     spack external find hdf5
     spack external find openmpi
 fi
+
+cat "$(spack config edit --print-file)"
 
 spack install
 
