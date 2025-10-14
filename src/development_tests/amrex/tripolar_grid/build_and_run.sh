@@ -145,7 +145,7 @@ elif [[ "$machine" == "ci_container" ]]; then
         exit 1
     fi
 
-    sed -i "s/COMPILER/${COMPILER}/g; s/COMPILER_VERSION/${COMPILER_VERSION}/g; s/COMPILER_ROOT/${COMPILER_ROOT}/g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
+    sed -i "s/COMPILER/${COMPILER}/g; s/COMPILER_VERSION/${COMPILER_VERSION}/g; s#COMPILER_ROOT#${COMPILER_ROOT}#g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
 
     cat $spack_environment_config_file
 else
