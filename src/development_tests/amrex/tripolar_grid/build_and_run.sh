@@ -125,6 +125,25 @@ spack_environment_name="tripolar_grid_amrex"
 
 if [[ "$machine" == "derecho" ]]; then
     spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
+elif [[ "$machine" == "ci_container" ]]; then
+
+    if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
+        COMPILER="gcc@${GCC_VERSION}"
+    else
+        echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
+        exit 1
+    fi
+
+    if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
+        MPI_PROVIDER="openmpi"
+    else
+        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
+        exit 1
+    fi
+
+    sed -i "s/COMPILER/${COMPILER}/g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
+
+    cat $spack_environment_config_file
 else
     spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 fi
@@ -142,40 +161,14 @@ fi
 spack env activate $spack_environment_name 
 
 if [[ "$machine" == "derecho" ]]; then
-
-    spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
     spack external find cmake
     spack external find hdf5
     spack external find mpich
-
-elseif [[ "$machine" == "ci_container" ]]; then
-    spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
-
-    # if compiler family is gcc
-    if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
-        COMPILER="gcc@${GCC_VERSION}"
-    else
-        echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
-        exit 1
-    fi
-
-    if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
-        MPI_PROVIDER="openmpi"
-    else
-        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
-        exit 1
-    fi
-
-    sed -i "s/COMPILER/${COMPILER}/g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
-
+elif [[ "$machine" == "ci_container" ]]; then
     spack external find cmake
     spack external find hdf5
     spack external find openmpi
-
-else
-    spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 fi
-
 
 spack install
 
