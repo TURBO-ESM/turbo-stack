@@ -130,7 +130,9 @@ elif [[ "$machine" == "ci_container" ]]; then
     spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
 
     if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
-        COMPILER="gcc@${GCC_VERSION}"
+        COMPILER="gcc"
+        COMPILER_VERSION="${GCC_VERSION}"
+        COMPILER_ROOT="${gcc_root}"
     else
         echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
         exit 1
@@ -143,7 +145,7 @@ elif [[ "$machine" == "ci_container" ]]; then
         exit 1
     fi
 
-    sed -i "s/COMPILER/${COMPILER}/g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
+    sed -i "s/COMPILER/${COMPILER}/g; s/COMPILER_VERSION/${COMPILER_VERSION}/g; s/COMPILER_ROOT/${COMPILER_ROOT}/g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
 
     cat $spack_environment_config_file
 else
@@ -167,7 +169,7 @@ if [[ "$machine" == "derecho" ]]; then
     spack external find hdf5
     spack external find mpich
 elif [[ "$machine" == "ci_container" ]]; then
-    spack external find gcc@${GCC_VERSION}
+    spack external find gcc
     spack external find cmake
     spack external find hdf5
     spack external find openmpi

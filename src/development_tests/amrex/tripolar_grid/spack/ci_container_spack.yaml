@@ -16,6 +16,9 @@ spack:
       providers:
           mpi: [MPI_PROVIDER]
     COMPILER:
+      externals:
+      - spec: ${COMPILER}@${COMPILER_VERSION}
+        prefix: ${COMPILER_ROOT}
       buildable: false
     mpi:
       buildable: false
