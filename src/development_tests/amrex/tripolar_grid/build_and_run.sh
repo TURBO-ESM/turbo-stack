@@ -147,7 +147,7 @@ elif [[ "$machine" == "ci_container" ]]; then
 
     spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
 
-    // Spack specific stuff based on the compiler
+    # Spack specific stuff based on the compiler
     if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
         compiler_package_name="gcc"
 
@@ -169,7 +169,7 @@ elif [[ "$machine" == "ci_container" ]]; then
         exit 1
     fi
 
-    // Spack specific stuff based on the MPI implementation
+    # Spack specific stuff based on the MPI implementation
     if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
         mpi_package_name="openmpi"
         mpi_version="${OPENMPI_VERSION}"
