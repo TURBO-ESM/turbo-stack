@@ -15,11 +15,11 @@ spack:
     all:
       providers:
           mpi: [MPI_PROVIDER]
-    COMPILER:
-      externals:
-      - spec: COMPILER@COMPILER_VERSION
-        prefix: COMPILER_ROOT
-      buildable: false
+    #COMPILER:
+    #  externals:
+    #  - spec: COMPILER@COMPILER_VERSION
+    #    prefix: COMPILER_ROOT
+    #  buildable: false
     mpi:
       buildable: false
     cmake:
