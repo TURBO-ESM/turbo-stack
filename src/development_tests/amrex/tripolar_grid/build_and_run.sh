@@ -62,9 +62,8 @@ if [[ "$machine" == "derecho" ]]; then
     
 elif [[ "$machine" == "ci_container" ]]; then
     # GCC compilers
-    export COMPILER_FAMILY=gcc
-    export GCC_VERSION=14.3.0
-    export gcc_root=/container/gcc/14.3.0
+    #export COMPILER_FAMILY=gcc
+    #export GCC_VERSION=14.3.0
     #export gcc_bin_dir=/container/gcc/14.3.0/bin
     #export gcc_lib_dir=/container/gcc/14.3.0/lib64
     #export gcc_lib64_dir=/container/gcc/14.3.0/lib
@@ -72,9 +71,28 @@ elif [[ "$machine" == "ci_container" ]]; then
     #export gcc_CXX=/container/gcc/14.3.0/bin/g++ && export CXX=${gcc_CXX}
     #export gcc_F77=/container/gcc/14.3.0/bin/gfortran && export F77=${gcc_F77}
     #export gcc_FC=/container/gcc/14.3.0/bin/gfortran && export FC=${gcc_FC}
+
+    if [[ -z "${COMPILER_FAMILY:-}" ]]; then
+        echo "Error: COMPILER_FAMILY environment variable is not set. Expected the container to already have that set." >&2
+        exit 1
+    fi
+
+    #if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
+    #    if [[ -z "${GCC_VERSION:-}" ]]; then
+    #        echo "Error: GCC_VERSION environment variable is not set. Expected the container to already have that set." >&2
+    #        exit 1
+    #    fi
+    #    export compiler_version=${GCC_VERSION}
+    #fi
+
+    #export compiler_root=/container/${COMPILER_FAMILY}/${compiler_version}
+    #if [[ ! -d "${compiler_root}" ]]; then
+    #    echo "Error: ${compiler_root} does not exist. Expected that path to exist in the container." >&2
+    #    exit 1
+    #fi
+
     echo "COMPILER_FAMILY=${COMPILER_FAMILY}"
     echo "GCC_VERSION=${GCC_VERSION}"
-    echo "gcc_root=${gcc_root}"
 
     # OPENMPI 5.0.8
     #export MPI_FAMILY=openmpi
@@ -129,25 +147,42 @@ elif [[ "$machine" == "ci_container" ]]; then
 
     spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
 
+    // Spack specific stuff based on the compiler
     if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
-        COMPILER="gcc"
-        COMPILER_VERSION="${GCC_VERSION}"
-        COMPILER_ROOT="${gcc_root}"
+        compiler_package_name="gcc"
+
+        if [[ -z "${GCC_VERSION:-}" ]]; then
+            echo "Error: GCC_VERSION environment variable is not set. Expected the container to already have that set." >&2
+            exit 1
+        fi
+        compiler_version=${GCC_VERSION}
+
     else
         echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
         exit 1
     fi
 
+    # Assuming the pattern /container/<compiler_family>/<compiler_version> is the same for all families... if not move into block above.
+    compiler_root=/container/${COMPILER_FAMILY}/${compiler_version}
+    if [[ ! -d "${compiler_root}" ]]; then
+        echo "Error: ${compiler_root} does not exist. Expected that path to exist in the container." >&2
+        exit 1
+    fi
+
+    // Spack specific stuff based on the MPI implementation
     if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
-        MPI_PROVIDER="openmpi"
+        mpi_package_name="openmpi"
+        mpi_version="${OPENMPI_VERSION}"
+        mpi_root="${MPI_ROOT}"
     else
         echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
         exit 1
     fi
 
-    sed -i "s/\bCOMPILER\b/${COMPILER}/g; s/COMPILER_VERSION/${COMPILER_VERSION}/g; s#COMPILER_ROOT#${COMPILER_ROOT}#g; s/MPI_PROVIDER/${MPI_PROVIDER}/g" $spack_environment_config_file
+    sed -i "s/\bCOMPILER\b/${compiler_package_name}/g; s/COMPILER_VERSION/${compiler_version}/g; s#COMPILER_ROOT#${compiler_root}#g; s/MPI_PROVIDER/${mpi_package_name}/g; s/MPI_VERSION/${mpi_version}/g; s#MPI_ROOT#${mpi_root}#g" $spack_environment_config_file
 
     cat $spack_environment_config_file
+
 else
     spack_environment_config_file="$tripolar_dir/spack/spack.yaml"
 fi
@@ -169,10 +204,10 @@ if [[ "$machine" == "derecho" ]]; then
     spack external find hdf5
     spack external find mpich
 elif [[ "$machine" == "ci_container" ]]; then
-    spack external find --not-buildable --path $COMPILER_ROOT gcc
-    spack external find cmake
+    spack external find --not-buildable --path $compiler_root $compiler_package_name
+    spack external find --not-buildable --path $mpi_root $mpi_package_name
     spack external find hdf5
-    spack external find openmpi
+    #spack external find cmake
 fi
 
 cat "$(spack config edit --print-file)"

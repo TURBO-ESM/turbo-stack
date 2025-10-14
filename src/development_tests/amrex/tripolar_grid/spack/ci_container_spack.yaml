@@ -20,12 +20,12 @@ spack:
     #  - spec: COMPILER@COMPILER_VERSION
     #    prefix: COMPILER_ROOT
     #  buildable: false
-    mpi:
-      buildable: false
-    cmake:
-      buildable: false
-    hdf5:
-      buildable: false
+    #mpi:
+    #  buildable: false
+    #cmake:
+    #  buildable: false
+    #hdf5:
+    #  buildable: false
   view: true
   concretizer:
     unify: true
