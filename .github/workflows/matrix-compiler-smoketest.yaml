@@ -82,7 +82,7 @@ jobs:
           if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
               mpicxx --showme
           elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
-              mpicxx --show
+              mpicxx -show
           fi
 
 # Temporarily disable turbo-stack and double gyre test
