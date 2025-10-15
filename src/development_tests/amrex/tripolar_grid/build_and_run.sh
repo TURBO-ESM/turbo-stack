@@ -257,7 +257,7 @@ elif [[ "$machine" == "ci_container" ]]; then
     spack external find --not-buildable --path $compiler_root $compiler_package_name
     spack external find --not-buildable --path $mpi_root $mpi_package_name
     spack external find --not-buildable --path $hdf5_root hdf5
-    spack find all
+    spack external find all
     #spack external find cmake
 fi
 
