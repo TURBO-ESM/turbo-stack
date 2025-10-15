@@ -148,52 +148,85 @@ elif [[ "$machine" == "ci_container" ]]; then
         fi
         compiler_version=${GCC_VERSION}
 
+        compiler_root=/container/${compiler_package_name}/${compiler_version}
+
+    elif [[ "${COMPILER_FAMILY:-}" == "clang" ]]; then
+        compiler_package_name="llvm"
+
+        if [[ -z "${LLVM_VERSION:-}" ]]; then
+            echo "Error: LLVM_VERSION environment variable is not set. Expected the container to already have that set." >&2
+            exit 1
+        fi
+        compiler_version=${LLVM_VERSION}
+
+        compiler_root=/container/${compiler_package_name}/${compiler_version}
+
+    elif [[ "${COMPILER_FAMILY:-}" == "oneapi" ]]; then
+        compiler_package_name=" intel-oneapi-compilers"
+        
+        # Hardcoding for now since the oneAPI containers do not set an environment variable with the version.
+        #compiler_version=2025.2
+
+        compiler_root=/container/intel-oneapi/compiler/2025.2
+
+    elif [[ "${COMPILER_FAMILY:-}" == "nvhpc" ]]; then
+        compiler_package_name="nvhpc"
+
+        # Hardcoding for now since the nvhpc containers do not set an environment variable with the version.
+        #compiler_version=25.7
+
+        compiler_root=/container/nvhpc/Linux_x86_64/25.7/compilers
+
     else
         echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
         exit 1
     fi
-
-    # Assuming the pattern /container/<compiler_family>/<compiler_version> is the same for all families... if not move into block above.
-    compiler_root=/container/${COMPILER_FAMILY}/${compiler_version}
+    
     if [[ ! -d "${compiler_root}" ]]; then
         echo "Error: ${compiler_root} does not exist. Expected that path to exist in the container." >&2
         exit 1
     fi
 
+
     # Spack specific stuff based on the MPI implementation
     if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
         mpi_package_name="openmpi"
 
-        if [[ -z "${OPENMPI_VERSION:-}" ]]; then
-            echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container to already have that set." >&2
-            exit 1
-        fi
-        mpi_version="${OPENMPI_VERSION}"
-
-        mpi_root="${MPI_ROOT}"
+        #if [[ -z "${OPENMPI_VERSION:-}" ]]; then
+        #    echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container to already have that set." >&2
+        #    exit 1
+        #fi
+        #mpi_version="${OPENMPI_VERSION}"
+        #mpi_root="${MPI_ROOT}"
     elif [[ "${MPI_FAMILY:-}" == "mpich" ]]; then
         mpi_package_name="mpich"
 
-        if [[ -z "${MPICH_VERSION:-}" ]]; then
-            echo "Error: MPICH_VERSION environment variable is not set. Expected the container to already have that set." >&2
-            exit 1
-        fi
-        mpi_version="${MPICH_VERSION}"
-
-        mpi_root="${MPI_ROOT}"
+        #if [[ -z "${MPICH_VERSION:-}" ]]; then
+        #    echo "Error: MPICH_VERSION environment variable is not set. Expected the container to already have that set." >&2
+        #    exit 1
+        #fi
+        #mpi_version="${MPICH_VERSION}"
+        #mpi_root="${MPI_ROOT}"
     else
         echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
         exit 1
     fi
+    # Change the environment spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
+    sed -i "s/MPI_PROVIDER/${mpi_package_name}/g" $spack_environment_config_file
 
-    # check that mpi_root points to a valid directory
-    if [[ ! -d "${mpi_root}" ]]; then
-        echo "Error: ${mpi_root} does not exist. Expected that path to exist in the container." >&2
+    # check that MPI_ROOT is set
+    if [[ -z "${MPI_ROOT:-}" ]]; then
+        echo "Error: MPI_ROOT environment variable is not set. Expected the container to already have that set." >&2
         exit 1
     fi
+    # check that MPI_ROOT points to a valid directory
+    if [[ ! -d "${MPI_ROOT}" ]]; then
+        echo "Error: ${MPI_ROOT} does not exist. Expected that path to exist in the container." >&2
+        exit 1
+    fi
+    # name to be consistent with spack external find command below
+    mpi_root="${MPI_ROOT}"
 
-    # Change the spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
-    sed -i "s/MPI_PROVIDER/${mpi_package_name}/g" $spack_environment_config_file
 
     # Spack specific stuff based on the hdf5 implementation
     hdf5_root=/container/hdf5/${HDF5_VERSION}
