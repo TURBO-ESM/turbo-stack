@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -e  # Exit immediately if a command exits with a non-zero status
+set -e  # Exit immediately if a command exits with a non-zero status
 set -u  # Treat expanding empty variables as an error
 
 ###############################################################################
@@ -249,7 +249,7 @@ fi
 
 spack env activate $spack_environment_name 
 
-spack concretize 
+#spack concretize 
 
 if [[ "$machine" == "derecho" ]]; then
     spack external find cmake
@@ -259,7 +259,7 @@ elif [[ "$machine" == "ci_container" ]]; then
     spack external find --not-buildable --path $compiler_root $compiler_package_name
     spack external find --not-buildable --path $mpi_root $mpi_package_name
     spack external find --not-buildable --path $hdf5_root hdf5
-    spack external find all
+    #spack external find all
     #spack external find cmake
 fi
 
@@ -267,7 +267,7 @@ cat "$(spack config edit --print-file)"
 
 spack install
 
-cat /tmp/root/spack-stage/spack-stage-m4-1.4.20-blcze4kp5jc5yixg4mxmofue3iiukar2/spack-build-out.txt
+#cat /tmp/root/spack-stage/spack-stage-m4-1.4.20-blcze4kp5jc5yixg4mxmofue3iiukar2/spack-build-out.txt
 
 ###############################################################################
 # Build, Test, and Run the Code
