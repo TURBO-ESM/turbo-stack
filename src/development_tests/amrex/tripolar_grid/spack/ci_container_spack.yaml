@@ -5,11 +5,11 @@
 
 spack:
   specs:
-    - cmake
-    - amrex
-    - mpi
-    - googletest
-    - hdf5
+#    - cmake
+#    - amrex
+#    - mpi
+#    - googletest
+#    - hdf5
     - doxygen
   packages:
     all:
