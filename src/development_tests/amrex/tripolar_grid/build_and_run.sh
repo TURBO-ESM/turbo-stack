@@ -264,6 +264,8 @@ cat "$(spack config edit --print-file)"
 
 spack install
 
+cat /tmp/root/spack-stage/spack-stage-m4-1.4.20-blcze4kp5jc5yixg4mxmofue3iiukar2/spack-build-out.txt
+
 ###############################################################################
 # Build, Test, and Run the Code
 ###############################################################################
