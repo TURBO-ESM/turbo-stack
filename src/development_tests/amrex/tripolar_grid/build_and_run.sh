@@ -91,8 +91,6 @@ elif [[ "$machine" == "ci_container" ]]; then
     #    exit 1
     #fi
 
-    echo "COMPILER_FAMILY=${COMPILER_FAMILY}"
-    echo "GCC_VERSION=${GCC_VERSION}"
 
     # OPENMPI 5.0.8
     #export MPI_FAMILY=openmpi
@@ -109,16 +107,12 @@ elif [[ "$machine" == "ci_container" ]]; then
     #export MPICC=/container/openmpi/5.0.8/bin/mpicc
     #export MPIFC=/container/openmpi/5.0.8/bin/mpifort
     #export MPIF77=/container/openmpi/5.0.8/bin/mpif77
-    echo "MPI_FAMILY=${MPI_FAMILY}"
-    echo "OPENMPI_VERSION=${OPENMPI_VERSION}"
-    echo "MPI_ROOT=${MPI_ROOT}"
 
     # HDF5 1.14.6
     #export HDF5_VERSION=1.14.6
     #export PATH=/container/hdf5/1.14.6/bin:${PATH}
     #export CPATH=/container/hdf5/1.14.6/include:${CPATH}
     #export LIBRARY_PATH=/container/hdf5/1.14.6/lib:${LIBRARY_PATH}
-    echo "HDF5_VERSION=${HDF5_VERSION}"
 
     # NETCDF libraries
     #export NETCDF=/container/netcdf
@@ -128,9 +122,6 @@ elif [[ "$machine" == "ci_container" ]]; then
     #export CPATH=/container/netcdf/include:${CPATH}
     #export LIBRARY_PATH=/container/netcdf/lib:/container/netcdf/lib/plugins${LIBRARY_PATH}
     #export HDF5_PLUGIN_PATH=/container/netcdf/lib/plugins
-    echo "NETCDF=${NETCDF}"
-    echo "NETCDF_C_VERSION=${NETCDF_C_VERSION}"
-    echo "NETCDF_FORTRAN_VERSION=${NETCDF_FORTRAN_VERSION}"
 
 
 fi
