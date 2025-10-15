@@ -249,6 +249,8 @@ fi
 
 spack env activate $spack_environment_name 
 
+spack concretize 
+
 if [[ "$machine" == "derecho" ]]; then
     spack external find cmake
     spack external find hdf5
