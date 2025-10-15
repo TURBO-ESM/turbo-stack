@@ -78,7 +78,7 @@ jobs:
           ldd ./hello_world_mpi
           export OMP_NUM_THREADS=2
           mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
-          mpicxx --show
+          mpicxx --showme
 
 # Temporarily disable turbo-stack and double gyre test
 #      - name: Build turbo-stack
