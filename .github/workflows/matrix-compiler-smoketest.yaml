@@ -78,7 +78,12 @@ jobs:
           ldd ./hello_world_mpi
           export OMP_NUM_THREADS=2
           mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
-          mpicxx --showme
+
+          if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
+              mpicxx --showme
+          elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
+              mpicxx --showme
+          fi
 
 # Temporarily disable turbo-stack and double gyre test
 #      - name: Build turbo-stack
