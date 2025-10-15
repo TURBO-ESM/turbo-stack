@@ -15,17 +15,6 @@ spack:
     all:
       providers:
           mpi: [MPI_PROVIDER]
-    #COMPILER:
-    #  externals:
-    #  - spec: COMPILER@COMPILER_VERSION
-    #    prefix: COMPILER_ROOT
-    #  buildable: false
-    #mpi:
-    #  buildable: false
-    #cmake:
-    #  buildable: false
-    #hdf5:
-    #  buildable: false
   view: true
   concretizer:
     unify: true

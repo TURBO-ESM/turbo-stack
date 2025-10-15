@@ -18,8 +18,8 @@ jobs:
       matrix:
         #compiler: [ nvhpc, oneapi, gcc14, clang ]
         compiler: [ gcc14 ] # temporarily test one compiler at a time. Add all compilers back later.
-        #mpi:      [ openmpi, mpich ]
-        mpi:      [ openmpi ] # temporarily test one mpi at a time. Add all back later.
+        mpi:      [ openmpi, mpich ]
+        #mpi:      [ openmpi ] # temporarily test one mpi at a time. Add all back later.
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]

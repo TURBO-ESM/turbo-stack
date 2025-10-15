@@ -172,14 +172,40 @@ elif [[ "$machine" == "ci_container" ]]; then
     # Spack specific stuff based on the MPI implementation
     if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
         mpi_package_name="openmpi"
+
+        if [[ -z "${OPENMPI_VERSION:-}" ]]; then
+            echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container to already have that set." >&2
+            exit 1
+        fi
         mpi_version="${OPENMPI_VERSION}"
+
+        mpi_root="${MPI_ROOT}"
+    elif [[ "${MPI_FAMILY:-}" == "mpich" ]]; then
+        mpi_package_name="mpich"
+
+        if [[ -z "${MPICH_VERSION:-}" ]]; then
+            echo "Error: MPICH_VERSION environment variable is not set. Expected the container to already have that set." >&2
+            exit 1
+        fi
+        mpi_version="${MPICH_VERSION}"
+
         mpi_root="${MPI_ROOT}"
     else
         echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
         exit 1
     fi
 
-    sed -i "s/\bCOMPILER\b/${compiler_package_name}/g; s/COMPILER_VERSION/${compiler_version}/g; s#COMPILER_ROOT#${compiler_root}#g; s/MPI_PROVIDER/${mpi_package_name}/g; s/MPI_VERSION/${mpi_version}/g; s#MPI_ROOT#${mpi_root}#g" $spack_environment_config_file
+    # check that mpi_root points to a valid directory
+    if [[ ! -d "${mpi_root}" ]]; then
+        echo "Error: ${mpi_root} does not exist. Expected that path to exist in the container." >&2
+        exit 1
+    fi
+
+    # Change the spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
+    sed -i "s/MPI_PROVIDER/${mpi_package_name}/g" $spack_environment_config_file
+
+    # Spack specific stuff based on the hdf5 implementation
+    hdf5_root=/container/hdf5/${HDF5_VERSION}
 
     cat $spack_environment_config_file
 
@@ -206,7 +232,7 @@ if [[ "$machine" == "derecho" ]]; then
 elif [[ "$machine" == "ci_container" ]]; then
     spack external find --not-buildable --path $compiler_root $compiler_package_name
     spack external find --not-buildable --path $mpi_root $mpi_package_name
-    spack external find hdf5
+    spack external find --not-buildable --path $hdf5_root hdf5
     #spack external find cmake
 fi
 
