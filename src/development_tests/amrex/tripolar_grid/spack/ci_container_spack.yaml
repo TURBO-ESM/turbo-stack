@@ -17,4 +17,4 @@ spack:
           mpi: [MPI_PROVIDER]
   view: true
   concretizer:
-    unify: true
+    unify: when_possible
