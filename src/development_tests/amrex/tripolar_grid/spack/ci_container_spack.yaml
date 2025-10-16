@@ -10,7 +10,7 @@ spack:
     - mpi
     - googletest
     - hdf5
-    - doxygen
+    #- doxygen
   packages:
     all:
       providers:
