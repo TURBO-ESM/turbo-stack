@@ -10,18 +10,11 @@ spack:
     - mpi
     - googletest
     - hdf5
-    - doxygen
+    #- doxygen
   packages:
     all:
-      compiler: [gcc]
       providers:
-          mpi: [cray-mpich]
-    mpi:
-      buildable: false
-    cmake:
-      buildable: false
-    hdf5:
-      buildable: false
+          mpi: [MPI_PROVIDER]
   view: true
   concretizer:
-    unify: true
+    unify: when_possible
