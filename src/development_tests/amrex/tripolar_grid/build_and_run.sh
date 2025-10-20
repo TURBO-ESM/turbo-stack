@@ -100,3 +100,4 @@ cd "$tripolar_dir/doc"
 doxygen Doxyfile
 
 #python "$tripolar_dir/postprocessing/plot_hdf5.py" tripolar_grid.h5
+
