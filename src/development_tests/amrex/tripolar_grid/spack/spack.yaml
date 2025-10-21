@@ -10,6 +10,7 @@ spack:
   - mpi
   - googletest
   - hdf5
+  - doxygen
   view: true
   concretizer:
     unify: true

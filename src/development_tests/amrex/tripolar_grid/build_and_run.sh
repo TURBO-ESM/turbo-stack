@@ -286,7 +286,7 @@ cmake --build "$build_dir"
 # Test the code. 
 ctest --test-dir "$build_dir"
 
-# Run the code. 
+# Run the examples. 
 cd "$build_dir/examples"
 if [[ -x "./tripolar_grid" ]]; then
     ./tripolar_grid
@@ -295,4 +295,9 @@ else
     exit 1
 fi
 
+# Build the documentation.
+cd "$tripolar_dir/doc"
+doxygen Doxyfile
+
 #python "$tripolar_dir/postprocessing/plot_hdf5.py" tripolar_grid.h5
+

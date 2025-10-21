@@ -16,6 +16,10 @@ ocean.stats*
 ocean_solo.res
 time_stamp.out
 
+# doxygen documentation output:
+src/development_tests/amrex/tripolar_grid/doc/html
+src/development_tests/amrex/tripolar_grid/doc/latex
+
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
