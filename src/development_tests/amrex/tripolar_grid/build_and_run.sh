@@ -138,7 +138,7 @@ elif [[ "$machine" == "ci_container" ]]; then
 
     # Make a copy of the template spack.yaml to modify for this run.
     spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
-    cp "$tripolar_dir/spack/ci_container_spack_template.yaml" "$spack_environment_config_file"
+    cp "$tripolar_dir/spack/ci_container_template_spack.yaml" "$spack_environment_config_file"
 
     # Spack specific stuff based on the compiler
     if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
