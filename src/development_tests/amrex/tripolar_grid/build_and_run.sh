@@ -52,77 +52,71 @@ fi
 # Environment Setup
 ###############################################################################
 
-## Derecho Specific Environment Setup.
 if [[ "$machine" == "derecho" ]]; then
     module purge
     module load gcc cmake cray-mpich hdf5 # Works
     #module load gcc ncarcompilers cmake cray-mpich # Does not work
     module list
-
     
 elif [[ "$machine" == "ci_container" ]]; then
-    # GCC compilers
-    #export COMPILER_FAMILY=gcc
-    #export GCC_VERSION=14.3.0
-    #export gcc_bin_dir=/container/gcc/14.3.0/bin
-    #export gcc_lib_dir=/container/gcc/14.3.0/lib64
-    #export gcc_lib64_dir=/container/gcc/14.3.0/lib
-    #export gcc_CC=/container/gcc/14.3.0/bin/gcc && export CC=${gcc_CC}
-    #export gcc_CXX=/container/gcc/14.3.0/bin/g++ && export CXX=${gcc_CXX}
-    #export gcc_F77=/container/gcc/14.3.0/bin/gfortran && export F77=${gcc_F77}
-    #export gcc_FC=/container/gcc/14.3.0/bin/gfortran && export FC=${gcc_FC}
 
+    # Check that COMPILER_FAMILY is set
     if [[ -z "${COMPILER_FAMILY:-}" ]]; then
-        echo "Error: COMPILER_FAMILY environment variable is not set. Expected the container to already have that set." >&2
+      echo "Error: COMPILER_FAMILY environment variable is not set. Expected the container environment to already have that set." >&2
+      exit 1
+    fi
+
+    # Check that a environment variable for the compiler version is set.. the name depends on the compiler family.
+    if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
+      if [[ -z "${GCC_VERSION:-}" ]]; then
+          echo "Error: GCC_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
+          exit 1
+      fi
+    elif [[ "${COMPILER_FAMILY:-}" == "clang" ]]; then
+      if [[ -z "${LLVM_VERSION:-}" ]]; then
+          echo "Error: LLVM_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
+          exit 1
+      fi
+    elif [[ "${COMPILER_FAMILY:-}" == "oneapi" ]]; then
+        # Does not look like the oneAPI containers set an environment variable with the version.
+    elif [[ "${COMPILER_FAMILY:-}" == "nvhpc" ]]; then
+        # Does not look like the nvhpc containers set an environment variable with the version.
+    else
+        echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}." >&2
         exit 1
     fi
 
-    #if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
-    #    if [[ -z "${GCC_VERSION:-}" ]]; then
-    #        echo "Error: GCC_VERSION environment variable is not set. Expected the container to already have that set." >&2
-    #        exit 1
-    #    fi
-    #    export compiler_version=${GCC_VERSION}
-    #fi
+    # Check that MPI_FAMILY is set
+    if [[ -z "${MPI_FAMILY:-}" ]]; then
+      echo "Error: MPI_FAMILY environment variable is not set. Expected the container environment to already have that set." >&2
+      exit 1
+    fi
 
-    #export compiler_root=/container/${COMPILER_FAMILY}/${compiler_version}
-    #if [[ ! -d "${compiler_root}" ]]; then
-    #    echo "Error: ${compiler_root} does not exist. Expected that path to exist in the container." >&2
-    #    exit 1
-    #fi
+    if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
+        if [[ -z "${OPENMPI_VERSION:-}" ]]; then
+            echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
+            exit 1
+        fi
+    elif [[ "${MPI_FAMILY:-}" == "mpich" ]]; then
+        if [[ -z "${MPICH_VERSION:-}" ]]; then
+            echo "Error: MPICH_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
+            exit 1
+        fi
+    else
+        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
+        exit 1
+    fi
 
-
-    # OPENMPI 5.0.8
-    #export MPI_FAMILY=openmpi
-    #export MPI_ROOT=/container/openmpi/5.0.8
-    #export OPENMPI_VERSION=5.0.8
-    #export PATH=/container/openmpi/5.0.8/bin:${PATH}
-    #export PRTE_ALLOW_RUN_AS_ROOT=1
-    #export PRTE_ALLOW_RUN_AS_ROOT_CONFIRM=1
-    #export CXX=/container/openmpi/5.0.8/bin/mpicxx
-    #export CC=/container/openmpi/5.0.8/bin/mpicc
-    #export FC=/container/openmpi/5.0.8/bin/mpifort
-    #export F77=/container/openmpi/5.0.8/bin/mpif77
-    #export MPICXX=/container/openmpi/5.0.8/bin/mpicxx
-    #export MPICC=/container/openmpi/5.0.8/bin/mpicc
-    #export MPIFC=/container/openmpi/5.0.8/bin/mpifort
-    #export MPIF77=/container/openmpi/5.0.8/bin/mpif77
-
-    # HDF5 1.14.6
-    #export HDF5_VERSION=1.14.6
-    #export PATH=/container/hdf5/1.14.6/bin:${PATH}
-    #export CPATH=/container/hdf5/1.14.6/include:${CPATH}
-    #export LIBRARY_PATH=/container/hdf5/1.14.6/lib:${LIBRARY_PATH}
-
-    # NETCDF libraries
-    #export NETCDF=/container/netcdf
-    #export NETCDF_C_VERSION=4.9.3
-    #export NETCDF_FORTRAN_VERSION=4.6.2
-    #export PATH=/container/netcdf/bin:${PATH}
-    #export CPATH=/container/netcdf/include:${CPATH}
-    #export LIBRARY_PATH=/container/netcdf/lib:/container/netcdf/lib/plugins${LIBRARY_PATH}
-    #export HDF5_PLUGIN_PATH=/container/netcdf/lib/plugins
-
+    # check that MPI_ROOT is set
+    if [[ -z "${MPI_ROOT:-}" ]]; then
+        echo "Error: MPI_ROOT environment variable is not set. Expected the container environment to already have that set." >&2
+        exit 1
+    fi
+    # check that MPI_ROOT points to a valid directory
+    if [[ ! -d "${MPI_ROOT}" ]]; then
+        echo "Error: ${MPI_ROOT} does not exist. Expected that path to exist in the container." >&2
+        exit 1
+    fi
 
 fi
 
@@ -170,7 +164,7 @@ elif [[ "$machine" == "ci_container" ]]; then
         compiler_name="oneapi"
         
         # Hardcoding for now since the oneAPI containers do not set an environment variable with the version.
-        #compiler_version=2025.2
+        compiler_version=2025.2
         compiler_root=/container/intel-oneapi/compiler/2025.2
 
     elif [[ "${COMPILER_FAMILY:-}" == "nvhpc" ]]; then
@@ -178,7 +172,7 @@ elif [[ "$machine" == "ci_container" ]]; then
         compiler_name="nvhpc"
 
         # Hardcoding for now since the nvhpc containers do not set an environment variable with the version.
-        #compiler_version=25.7
+        compiler_version=25.7
         compiler_root=/container/nvhpc/Linux_x86_64/25.7/compilers
 
     else
@@ -198,41 +192,30 @@ elif [[ "$machine" == "ci_container" ]]; then
     if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
         mpi_package_name="openmpi"
 
-        #if [[ -z "${OPENMPI_VERSION:-}" ]]; then
-        #    echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container to already have that set." >&2
-        #    exit 1
-        #fi
-        #mpi_version="${OPENMPI_VERSION}"
-        #mpi_root="${MPI_ROOT}"
+        if [[ -z "${OPENMPI_VERSION:-}" ]]; then
+            echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container to already have that set." >&2
+            exit 1
+        fi
+        mpi_version="${OPENMPI_VERSION}"
+        mpi_root="${MPI_ROOT}"
     elif [[ "${MPI_FAMILY:-}" == "mpich" ]]; then
         mpi_package_name="mpich"
 
-        #if [[ -z "${MPICH_VERSION:-}" ]]; then
-        #    echo "Error: MPICH_VERSION environment variable is not set. Expected the container to already have that set." >&2
-        #    exit 1
-        #fi
-        #mpi_version="${MPICH_VERSION}"
-        #mpi_root="${MPI_ROOT}"
+        if [[ -z "${MPICH_VERSION:-}" ]]; then
+            echo "Error: MPICH_VERSION environment variable is not set. Expected the container to already have that set." >&2
+            exit 1
+        fi
+        mpi_version="${MPICH_VERSION}"
+        mpi_root="${MPI_ROOT}"
     else
         echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
-        exit 1
-    fi
-    # Change the environment spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
-    sed -i "s/MPI_PROVIDER/${mpi_package_name}/g" $spack_environment_config_file
-
-    # check that MPI_ROOT is set
-    if [[ -z "${MPI_ROOT:-}" ]]; then
-        echo "Error: MPI_ROOT environment variable is not set. Expected the container to already have that set." >&2
-        exit 1
-    fi
-    # check that MPI_ROOT points to a valid directory
-    if [[ ! -d "${MPI_ROOT}" ]]; then
-        echo "Error: ${MPI_ROOT} does not exist. Expected that path to exist in the container." >&2
         exit 1
     fi
     # name to be consistent with spack external find command below
     mpi_root="${MPI_ROOT}"
 
+    # Change the environment spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
+    sed -i "s/MPI_PROVIDER/${mpi_package_name}/g" $spack_environment_config_file
 
     # Spack specific stuff based on the hdf5 implementation
     hdf5_root=/container/hdf5/${HDF5_VERSION}
@@ -254,8 +237,6 @@ if ! spack env list | grep --word-regexp --quiet "$spack_environment_name"; then
 fi
 
 spack env activate $spack_environment_name 
-
-#spack concretize 
 
 if [[ "$machine" == "derecho" ]]; then
     spack external find cmake

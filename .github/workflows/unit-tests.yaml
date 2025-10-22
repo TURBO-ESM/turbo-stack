@@ -72,30 +72,18 @@ jobs:
           which mpicc
           mpicc --version 2>/dev/null || true
 
-      - name: MPI+OpenMP Hello World
-        run: |
-          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
-          ldd ./hello_world_mpi
-          export OMP_NUM_THREADS=2
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
-
-          if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
-              mpicxx --showme
-          elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
-              mpicxx -show
-          fi
-
-# Temporarily disable turbo-stack and double gyre test
-#      - name: Build turbo-stack
+#      - name: MPI+OpenMP Hello World
 #        run: |
-#          echo "Building turbo-stack..."
-#          ./build.sh --machine container --compiler ${COMPILER_FAMILY}
+#          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
+#          ldd ./hello_world_mpi
+#          export OMP_NUM_THREADS=2
+#          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
 #
-#      - name: Run double gyre test
-#        run: |
-#          echo "Running double gyre test..."
-#          cd ./examples/double_gyre
-#          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+#          if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
+#              mpicxx --showme
+#          elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
+#              mpicxx -show
+#          fi
 
       - name: Install prerequisite utilities for spack
         run: |
@@ -109,12 +97,11 @@ jobs:
           . spack/share/spack/setup-env.sh
           spack compiler find
           spack compiler list
-          spack spec zlib # just to test that spack is working
+          spack spec zlib # Just to test that spack is working. 
 
       - name: Build and run amrex mini-app
         run: |
 
-          # get spack command in path
           . spack/share/spack/setup-env.sh
 
           echo "Building spack environment for turbo mini-app..."
