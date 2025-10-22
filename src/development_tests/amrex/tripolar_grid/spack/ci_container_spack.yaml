@@ -10,11 +10,12 @@ spack:
     - mpi
     - googletest
     - hdf5
-    #- doxygen
+    - doxygen
   packages:
     all:
       providers:
           mpi: [MPI_PROVIDER]
+      compiler: [COMPILER_NAME]
   view: true
   concretizer:
     unify: when_possible

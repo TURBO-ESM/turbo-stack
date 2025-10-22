@@ -136,11 +136,14 @@ if [[ "$machine" == "derecho" ]]; then
     spack_environment_config_file="$tripolar_dir/spack/derecho_spack.yaml"
 elif [[ "$machine" == "ci_container" ]]; then
 
+    # Make a copy of the template spack.yaml to modify for this run.
     spack_environment_config_file="$tripolar_dir/spack/ci_container_spack.yaml"
+    cp "$tripolar_dir/spack/ci_container_spack_template.yaml" "$spack_environment_config_file"
 
     # Spack specific stuff based on the compiler
     if [[ "${COMPILER_FAMILY:-}" == "gcc" ]]; then
         compiler_package_name="gcc"
+        compiler_name="gcc"
 
         if [[ -z "${GCC_VERSION:-}" ]]; then
             echo "Error: GCC_VERSION environment variable is not set. Expected the container to already have that set." >&2
@@ -152,6 +155,7 @@ elif [[ "$machine" == "ci_container" ]]; then
 
     elif [[ "${COMPILER_FAMILY:-}" == "clang" ]]; then
         compiler_package_name="llvm"
+        compiler_name="clang"
 
         if [[ -z "${LLVM_VERSION:-}" ]]; then
             echo "Error: LLVM_VERSION environment variable is not set. Expected the container to already have that set." >&2
@@ -162,31 +166,33 @@ elif [[ "$machine" == "ci_container" ]]; then
         compiler_root=/container/${compiler_package_name}/${compiler_version}
 
     elif [[ "${COMPILER_FAMILY:-}" == "oneapi" ]]; then
-        compiler_package_name=" intel-oneapi-compilers"
+        compiler_package_name="intel-oneapi-compilers"
+        compiler_name="oneapi"
         
         # Hardcoding for now since the oneAPI containers do not set an environment variable with the version.
         #compiler_version=2025.2
-
         compiler_root=/container/intel-oneapi/compiler/2025.2
 
     elif [[ "${COMPILER_FAMILY:-}" == "nvhpc" ]]; then
         compiler_package_name="nvhpc"
+        compiler_name="nvhpc"
 
         # Hardcoding for now since the nvhpc containers do not set an environment variable with the version.
         #compiler_version=25.7
-
         compiler_root=/container/nvhpc/Linux_x86_64/25.7/compilers
 
     else
         echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
         exit 1
     fi
-    
+
     if [[ ! -d "${compiler_root}" ]]; then
         echo "Error: ${compiler_root} does not exist. Expected that path to exist in the container." >&2
         exit 1
     fi
 
+    # Change the environment spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
+    sed -i "s/COMPILER_NAME/${compiler_name}/g" $spack_environment_config_file
 
     # Spack specific stuff based on the MPI implementation
     if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
@@ -267,8 +273,6 @@ cat "$(spack config edit --print-file)"
 
 spack install
 
-#cat /tmp/root/spack-stage/spack-stage-m4-1.4.20-blcze4kp5jc5yixg4mxmofue3iiukar2/spack-build-out.txt
-
 ###############################################################################
 # Build, Test, and Run the Code
 ###############################################################################
@@ -300,4 +304,3 @@ cd "$tripolar_dir/doc"
 doxygen Doxyfile
 
 #python "$tripolar_dir/postprocessing/plot_hdf5.py" tripolar_grid.h5
-
