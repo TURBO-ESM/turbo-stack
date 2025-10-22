@@ -79,8 +79,10 @@ elif [[ "$machine" == "ci_container" ]]; then
       fi
     elif [[ "${COMPILER_FAMILY:-}" == "oneapi" ]]; then
         # Does not look like the oneAPI containers set an environment variable with the version.
+        echo "Error: oneAPI compiler detected via COMPILER_FAMILY=oneapi. The version is hardcoded in this script since it is not saved as an environment variable in the container." >&2
     elif [[ "${COMPILER_FAMILY:-}" == "nvhpc" ]]; then
         # Does not look like the nvhpc containers set an environment variable with the version.
+        echo "Error: nvhpc compiler detected via COMPILER_FAMILY=nvhpc. The version is hardcoded in this script since it is not saved as an environment variable in the container." >&2
     else
         echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}." >&2
         exit 1

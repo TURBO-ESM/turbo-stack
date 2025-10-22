@@ -16,15 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #compiler: [ nvhpc, oneapi, gcc14, clang ]
-        compiler: [ gcc14, clang ] # temporarily test one compiler at a time. Add all compilers back later.
+        compiler: [ nvhpc, oneapi, gcc14, clang ]
         mpi:      [ openmpi, mpich ]
-        #mpi:      [ openmpi ] # temporarily test one mpi at a time. Add all back later.
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
-        #runner:   [ ubuntu-latest, gha-runner-turbo ]
-        runner:   [ gha-runner-turbo ]
+        runner:   [ ubuntu-latest, gha-runner-turbo ]
         include:
           - mpi: openmpi
             extra_mpiexec_args: '--allow-run-as-root'
@@ -79,45 +76,13 @@ jobs:
           export OMP_NUM_THREADS=2
           mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
 
-          if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
-              mpicxx --showme
-          elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
-              mpicxx -show
-          fi
-
-# Temporarily disable turbo-stack and double gyre test
-#      - name: Build turbo-stack
-#        run: |
-#          echo "Building turbo-stack..."
-#          ./build.sh --machine container --compiler ${COMPILER_FAMILY}
-#
-#      - name: Run double gyre test
-#        run: |
-#          echo "Running double gyre test..."
-#          cd ./examples/double_gyre
-#          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
-
-      - name: Install prerequisite utilities for spack
+      - name: Build turbo-stack
         run: |
-          dnf install -y epel-release
-          dnf install -y file bzip2 ca-certificates git gzip patch python3 tar unzip xz zstd gcc gcc-c++ gcc-gfortran
+          echo "Building turbo-stack..."
+          ./build.sh --machine container --compiler ${COMPILER_FAMILY}
 
-      - name: Install spack
+      - name: Run double gyre test
         run: |
-          echo "Building spack:"
-          git clone --depth=2 https://github.com/spack/spack.git
-          . spack/share/spack/setup-env.sh
-          spack compiler find
-          spack compiler list
-          spack spec zlib # just to test that spack is working
-
-      - name: Build and run amrex mini-app
-        run: |
-
-          # get spack command in path
-          . spack/share/spack/setup-env.sh
-
-          echo "Building spack environment for turbo mini-app..."
-          export TURBO_STACK_ROOT=$(pwd)
-          echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
-          DEBUG=1 ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
+          echo "Running double gyre test..."
+          cd ./examples/double_gyre
+          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
