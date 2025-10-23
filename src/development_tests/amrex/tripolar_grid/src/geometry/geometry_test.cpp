@@ -1,14 +1,14 @@
+#include "geometry.h"
+
 #include <gtest/gtest.h>
 
 #include <set>
 #include <string>
 
-#include "geometry.h"
-
 using namespace turbo;
 
-TEST(CartesianGeometry, Constructor) {
-
+TEST(CartesianGeometry, Constructor)
+{
     const double x_min = 0.0;
     const double x_max = 1.0;
     const double y_min = -1.0;
@@ -34,11 +34,10 @@ TEST(CartesianGeometry, Constructor) {
     // Check that boundaries are set correctly
     std::set<Geometry::Boundary> boundary_expected = {"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"};
     EXPECT_EQ(boundary_expected, geom.Boundaries());
-
 }
 
-TEST(CartesianGeometry, DomainLengths) {
-
+TEST(CartesianGeometry, DomainLengths)
+{
     const double x_min = 0.0;
     const double x_max = 1.0;
     const double y_min = -1.0;
@@ -56,5 +55,4 @@ TEST(CartesianGeometry, DomainLengths) {
     EXPECT_GT(geom.LX(), 0.0);
     EXPECT_GT(geom.LY(), 0.0);
     EXPECT_GT(geom.LZ(), 0.0);
-
 }
