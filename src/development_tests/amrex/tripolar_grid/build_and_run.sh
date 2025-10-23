@@ -191,10 +191,10 @@ elif [[ "$machine" == "ci_container" ]]; then
     sed -i "s/COMPILER_NAME/${compiler_name}/g" $spack_environment_config_file
 
     # Spack specific stuff based on the MPI implementation
-    if [[ "${MPI_FAMILY:-}" == "openmpi" ]]; then
+    if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
         mpi_package_name="openmpi"
 
-        if [[ -z "${OPENMPI_VERSION:-}" ]]; then
+        if [[ -z "${OPENMPI_VERSION}" ]]; then
             echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container to already have that set." >&2
             exit 1
         fi
@@ -203,7 +203,7 @@ elif [[ "$machine" == "ci_container" ]]; then
     elif [[ "${MPI_FAMILY:-}" == "mpich" ]]; then
         mpi_package_name="mpich"
 
-        if [[ -z "${MPICH_VERSION:-}" ]]; then
+        if [[ -z "${MPICH_VERSION}" ]]; then
             echo "Error: MPICH_VERSION environment variable is not set. Expected the container to already have that set." >&2
             exit 1
         fi
@@ -251,7 +251,7 @@ elif [[ "$machine" == "ci_container" ]]; then
     #spack external find all
     #spack external find cmake
 
-    if [[ COMPILER_FAMILY == "clang" ]]; then
+    if [[ ${COMPILER_FAMILY} == "clang" ]]; then
         spack add amrex+pic
     fi
 
