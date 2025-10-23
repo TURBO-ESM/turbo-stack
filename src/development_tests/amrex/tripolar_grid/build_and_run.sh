@@ -250,6 +250,11 @@ elif [[ "$machine" == "ci_container" ]]; then
     spack external find --not-buildable --path $hdf5_root hdf5
     #spack external find all
     #spack external find cmake
+
+    if [[ COMPILER_FAMILY == "clang" ]]; then
+        spack add amrex+pic
+    fi
+
 fi
 
 cat "$(spack config edit --print-file)"
