@@ -70,6 +70,9 @@ if [[ "$machine" == "generic" ]]; then
     #compiler_package_name="intel-oneapi-compilers"
     #compiler_version="2025.2.1"
 
+    #compiler_package_name="nvhpc"
+    #compiler_version="25.7"
+
     # Hardcode a mpi package name and version for testing
     #mpi_package_name="openmpi"
     #mpi_package_version="5.0.8"
@@ -117,6 +120,9 @@ elif [[ "$machine" == "derecho" ]]; then
     module load gcc cmake cray-mpich hdf5 # Works
     #module load gcc ncarcompilers cmake cray-mpich # Does not work
     module list
+
+    compiler_spec="gcc"
+    mpi_spec="cray-mpich"
 
     build_doxygen_documentation=0
 
@@ -182,52 +188,25 @@ elif [[ "$machine" == "ci_container" ]]; then
         exit 1
     fi
 
-    build_doxygen_documentation=0
-
-fi
-
-# Check the environment specific stuff that we set above.
-if [[ -z "${build_doxygen_documentation:-}" ]]; then
-    echo "Error: build_doxygen_documentation variable is not set." >&2
-    exit 1
-fi
-
-if [[ "$machine" == "ci_container" ]]; then
-
     # Spack specific stuff based on the compiler
     if [[ "${COMPILER_FAMILY}" == "gcc" ]]; then
         compiler_package_name="gcc"
-        compiler_name="gcc"
-
         compiler_version=${GCC_VERSION}
-
         compiler_root=/container/${compiler_package_name}/${compiler_version}
-
     elif [[ "${COMPILER_FAMILY}" == "clang" ]]; then
         compiler_package_name="llvm"
-        compiler_name="llvm"
-        #compiler_name="clang"
-
         compiler_version=${LLVM_VERSION}
-
         compiler_root=/container/${compiler_package_name}/${compiler_version}
-
     elif [[ "${COMPILER_FAMILY}" == "oneapi" ]]; then
         compiler_package_name="intel-oneapi-compilers"
-        compiler_name="oneapi"
-        
         # Hardcoding for now since the oneAPI containers do not set an environment variable with the version.
         compiler_version=2025.2
         compiler_root=/container/intel-oneapi/compiler/2025.2
-
     elif [[ "${COMPILER_FAMILY}" == "nvhpc" ]]; then
         compiler_package_name="nvhpc"
-        compiler_name="nvhpc"
-
         # Hardcoding for now since the nvhpc containers do not set an environment variable with the version.
         compiler_version=25.7
         compiler_root=/container/nvhpc/Linux_x86_64/25.7/compilers
-
     else
         echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
         exit 1
@@ -253,15 +232,30 @@ if [[ "$machine" == "ci_container" ]]; then
         echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
         exit 1
     fi
-    # name to be consistent with spack external find command below
-    mpi_root="${MPI_ROOT}"
 
     mpi_spec="${mpi_package_name}@${mpi_version}"
 
+    if [[ ! -d "${mpi_root}" ]]; then
+        echo "Error: ${mpi_root} does not exist. Expected that path to exist in the container." >&2
+        exit 1
+    fi
+
+
     hdf5_root=/container/hdf5/${HDF5_VERSION}
+    if [[ ! -d "${hdf5_root}" ]]; then
+        echo "Error: ${hdf5_root} does not exist. Expected that path to exist in the container." >&2
+        exit 1
+    fi
+
+    build_doxygen_documentation=0
 
 fi
 
+# Check the machine dependent environment stuff that we expect to be set above.
+if [[ -z "${build_doxygen_documentation:-}" ]]; then
+    echo "Error: build_doxygen_documentation variable is not set." >&2
+    exit 1
+fi
 if [[ -z "${compiler_spec:-}" ]]; then
     echo "Error: compiler_spec environment variable is not set or is empty." >&2
     exit 1
@@ -271,37 +265,20 @@ if [[ -z "${mpi_spec:-}" ]]; then
     exit 1
 fi
 
-
-
 ###############################################################################
 # Spack Environment Setup
 ###############################################################################
 
+# Name the Spack environment based on the compiler and mpi specs... but remove the special characters (@ and .) that are not allowed in spack environment names.
 spack_environment_name="turbo_mini_app"
 if [[ -n "${compiler_spec:-}" ]]; then
-    ## Replace the @ symbol and . with _ in the spec.
     spack_environment_name="${spack_environment_name}_${compiler_spec//[@.]/_}"
 fi
 if [[ -n "${mpi_spec:-}" ]]; then
-    ## Replace the @ symbol and . with _ in the spec.
     spack_environment_name="${spack_environment_name}_${mpi_spec//[@.]/_}"
 fi
 
 spack_environment_config_file="$mini_app_root/spack/spack.yaml"
-#if [[ "$machine" == "derecho" ]]; then
-#    spack_environment_config_file="$mini_app_root/spack/derecho_spack.yaml"
-#elif [[ "$machine" == "ci_container" ]]; then
-#
-#    # Make a copy of the template spack.yaml to modify for this run.
-#    spack_environment_config_file="$mini_app_root/spack/ci_container_spack.yaml"
-#    cp "$mini_app_root/spack/ci_container_template_spack.yaml" "$spack_environment_config_file"
-#
-#    ## Change the environment spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
-#    sed -i "s/COMPILER_NAME/${compiler_name}/g" $spack_environment_config_file
-#
-#    ## Change the environment spack.yaml file to use the right MPI package as the provider of the mpi virtual package.
-#    sed -i "s/MPI_PROVIDER/${mpi_package_name}/g" $spack_environment_config_file
-#fi
 if [[ ! -f "$spack_environment_config_file" ]]; then
     echo "Error: spack_environment_config_file does not point to a valid file. It should point to the spack.yaml file to use for this build." >&2
     exit 1
@@ -328,10 +305,29 @@ spack env activate $spack_environment_name
 if [[ "$build_doxygen_documentation" == "1" ]]; then
     # Build doxygen with gcc when since generating our developer documentation is not performance critical and it may not build easily with other compilers.
     spack add doxygen %gcc
-    #spack add doxygen
 fi
 
-if [[ "$machine" == "derecho" ]]; then
+if [[ "$machine" == "generic" ]]; then
+
+    spack external find "$compiler_spec"
+
+    spack config add packages:mpi:require:${mpi_spec}
+
+    if [[ "${compiler_spec}" == *"llvm"* ]]; then
+        # HDF5 complains about position-independent code when built with clang/llvm for c/c++ and gcc for fortran...  So add pic flags.
+        spack add hdf5 cflags="-fPIC" cxxflags="-fPIC" fflags="-fPIC"
+    fi
+
+    spack config add packages:all:prefer:[\"%c=${compiler_spec}\"]
+    spack config add packages:all:prefer:[\"%cxx=${compiler_spec}\"]
+    if [[ "${compiler_spec}" == *"llvm"* ]]; then
+        # Assume we dont have a Fortran compiler with llvm/clang... so use gcc to compile Fortran.
+        spack config add packages:all:prefer:[\"%fortran=gcc\"]
+    else
+        spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
+    fi
+
+elif [[ "$machine" == "derecho" ]]; then
     spack external find cmake
     spack external find hdf5
     spack external find mpich
@@ -348,19 +344,9 @@ if [[ "$machine" == "derecho" ]]; then
     #spack config add packages:all:prefer:[\"%fortran=gcc\"]
 
 elif [[ "$machine" == "ci_container" ]]; then
-    if [[ "${DEBUG:-0}" == "1" ]]; then
-        echo "Compilers that spack knows about:"
-        spack compiler list
-        spack compiler info "${compiler_package_name}@${compiler_version}"
 
-        echo "Attempting to add external packages to this spack environment:"
-        echo "  Compiler: $compiler_package_name@$compiler_version at $compiler_root"
-        echo "  MPI:      $mpi_package_name@$mpi_version at $mpi_root"
-        echo "  HDF5:     hdf5 at $hdf5_root"
-    fi
-
-    spack external find --not-buildable --path $compiler_root $compiler_package_name
-    spack external find --not-buildable --path $mpi_root $mpi_package_name
+    spack external find --not-buildable --path $compiler_root $compiler_spec
+    spack external find --not-buildable --path $mpi_root $mpi_spec
     spack external find --not-buildable --path $hdf5_root hdf5
 
     spack config add packages:mpi:require:${mpi_spec}
@@ -368,45 +354,49 @@ elif [[ "$machine" == "ci_container" ]]; then
     spack config add packages:all:prefer:[\"%cxx=${compiler_spec}\"]
     spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
 
-    if [[ ${COMPILER_FAMILY} == "clang" ]]; then
+    if [[ ${compiler_spec} == *"llvm"* ]]; then
         # HDF5 complains about position-independent code when built with clang/llvm for c/c++ and gcc for fortran...  So add pic flags.
         spack add amrex+pic
-        #spack add hdf5 cflags="-fPIC" cxxflags="-fPIC" fflags="-fPIC"
 
         # Still use gcc for Fortran when using llvm/clang
         spack config remove packages:all:prefer:[\"%fortran=${compiler_spec}\"]
         spack config add    packages:all:prefer:[\"%fortran=gcc\"]
     fi
 
-elif [[ "$machine" == "generic" ]]; then
-
-    spack external find "$compiler_spec"
-
-    spack config add packages:mpi:require:${mpi_spec}
-
-    if [[ "${compiler_package_name}" == "llvm" ]]; then
-        # HDF5 complains about position-independent code when built with clang/llvm for c/c++ and gcc for fortran...  So add pic flags.
-        spack add hdf5 cflags="-fPIC" cxxflags="-fPIC" fflags="-fPIC"
-    fi
-
-    spack config add packages:all:prefer:[\"%c=${compiler_spec}\"]
-    spack config add packages:all:prefer:[\"%cxx=${compiler_spec}\"]
-    if [[ "${compiler_package_name}" == "llvm" ]]; then
-        # Assume we dont have a Fortran compiler with llvm/clang... so use gcc to compile Fortran.
-        spack config add packages:all:prefer:[\"%fortran=gcc\"]
-    else
-        spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
-    fi
-
-    #if [[ "${compiler_package_name}" == "intel-oneapi-compilers" || "${compiler_package_name}" == "llvm" || "${compiler_package_name}" == "nvhpc" ]]; then
-    #  #spack config add concretizer:unify:when_possible
-    #fi
-
 else
     echo "Error: Unsupported machine type '$machine'" >&2
     exit 1
 fi
 
+if [[ "${compiler_spec}" == *"nvhpc"* ]]; then  
+
+  echo "nvhpc build is not working yet. Will update later."
+  exit 1
+
+  spack config add concretizer:unify:when_possible
+
+  #spack config remove packages:all:prefer:[\"%c=${compiler_spec}\"]
+  #spack config remove packages:all:prefer:[\"%cxx=${compiler_spec}\"]
+  #spack config remove packages:all:prefer:[\"%fortran=${compiler_spec}\"]
+  #spack config add packages:all:prefer:[\"%c=gcc\"]
+  #spack config add packages:all:prefer:[\"%cxx=gcc\"]
+  #spack config add packages:all:prefer:[\"%fortran=gcc\"]
+
+  #spack remove amrex
+  #spack remove mpi
+  #spack remove hdf5
+  #spack add amrex %${compiler_spec}
+  #spack add mpi %${compiler_spec}
+  #spack add hdf5 %${compiler_spec}
+
+  #spack config add packages:mbedtls:require:[\"%gcc\"]
+  #spack config add packages:diffutils:require:[\"%gcc\"]
+  #spack config add packages:gettext:require:[\"%gcc\"]
+  #spack config add packages:findutils:require:[\"%gcc\"]
+  #spack config add packages:m4:require:[\"%gcc\"]
+  #spack config add packages:flex:require:[\"%gcc\"]
+  #spack config add packages:mpich:require:[\"%c,cxx,fortran=gcc\"]
+fi
 
 if [[ "${DEBUG:-0}" == "1" ]]; then
     echo "Final spack configuration for this environment:"
@@ -414,14 +404,16 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
 
     spack install --fresh --force
 
-    echo "Number of spack installed packages is: $(spack find --format '{name}' | wc -l)"
+    echo "Number of spack packages in the environment is: $(spack find --format '{name}' | wc -l)"
+
+    graph_file=~/spack_environment_${spack_environment_name}_build_graph.dot
+    echo "Generating spack environment build graph in DOT format at: $graph_file"
+    spack graph --dot --color > "$graph_file"
+    if command -v dot &> /dev/null; then
+        dot -O -Tpng "$graph_file"
+    fi
 else
     spack install
-fi
-
-if [[ "${DEBUG:-0}" == "1" ]]; then
-    spack graph --dot --color > ~/spack_environment_${spack_environment_name}_build_graph.dot
-    command -v dot &> /dev/null && dot -O -Tpng ~/spack_environment_${spack_environment_name}_build_graph.dot
 fi
 
 ###############################################################################
@@ -443,11 +435,12 @@ if [[ ! -x "$(command -v $CXX)" ]]; then
     echo "Error: CXX compiler at path '$CXX' is not executable." >&2
     exit 1
 fi
-# Maybe also check for mpi compiler wrappers?
 if [[ "${DEBUG:-0}" == "1" ]]; then
     echo "C compiler path is CC=$CC"
     echo "CXX compiler path is CXX=$CXX"
 fi
+
+# Maybe also check for mpi compiler wrappers MPICC and MPICXX?
 
 cmake_options=()
 cmake_options+=("-DCMAKE_C_COMPILER=$CC")
@@ -470,15 +463,18 @@ ctest --test-dir "$build_dir"
 cd "$build_dir/examples"
 if [[ -x "./tripolar_grid" ]]; then
     ./tripolar_grid
+    #python "$mini_app_root/postprocessing/plot_hdf5.py" tripolar_grid.h5
 else
     echo "Error: tripolar_grid binary not found or not executable in $build_dir/examples." >&2
     exit 1
 fi
+
+###############################################################################
+# Build the Doxygen Documentation
+###############################################################################
 
 if [[ "$build_doxygen_documentation" == "1" ]]; then
     echo "Building Doxygen documentation..."
     cd "$mini_app_root/doc"
     doxygen Doxyfile
 fi
-
-#python "$mini_app_root/postprocessing/plot_hdf5.py" tripolar_grid.h5

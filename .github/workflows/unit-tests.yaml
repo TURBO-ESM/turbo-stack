@@ -16,8 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ nvhpc, oneapi, gcc14, clang ]
-        #compiler: [ gcc14, clang ] # temporarily test one compiler at a time. Add all compilers back later.
+        #compiler: [ nvhpc, oneapi, gcc14, clang ]
+        compiler: [ oneapi, gcc14, clang ] # temporarily test one compiler at a time. Add all compilers back later.
         mpi:      [ openmpi, mpich ]
         #mpi:      [ openmpi ] # temporarily test one mpi at a time. Add all back later.
         #gpu:      [ nogpu, cuda ]
