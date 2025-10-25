@@ -124,8 +124,11 @@ elif [[ "$machine" == "derecho" ]]; then
     # Looks like the gcc module does not set CXX
     export CXX="$(which g++)"
 
-    compiler_spec="gcc"
-    mpi_spec="cray-mpich"
+    compiler_package_name="gcc"
+    mpi_package_name="cray-mpich"
+
+    compiler_spec="${compiler_package_name}"
+    mpi_spec="${mpi_package_name}"
 
     build_doxygen_documentation=0
 
@@ -259,8 +262,16 @@ if [[ -z "${build_doxygen_documentation:-}" ]]; then
     echo "Error: build_doxygen_documentation variable is not set." >&2
     exit 1
 fi
+if [[ -z "${compiler_package_name:-}" ]]; then
+    echo "Error: compiler_package_name variable is not set." >&2
+    exit 1
+fi
 if [[ -z "${compiler_spec:-}" ]]; then
     echo "Error: compiler_spec environment variable is not set or is empty." >&2
+    exit 1
+fi
+if [[ -z "${mpi_package_name:-}" ]]; then
+    echo "Error: mpi_package_name variable is not set." >&2
     exit 1
 fi
 if [[ -z "${mpi_spec:-}" ]]; then
@@ -350,8 +361,8 @@ elif [[ "$machine" == "derecho" ]]; then
 
 elif [[ "$machine" == "ci_container" ]]; then
 
-    spack external find --not-buildable --path $compiler_root $compiler_spec
-    spack external find --not-buildable --path $mpi_root $mpi_spec
+    spack external find --not-buildable --path $compiler_root $compiler_package_name
+    spack external find --not-buildable --path $mpi_root $mpi_package_name
     spack external find --not-buildable --path $hdf5_root hdf5
 
     spack config add packages:mpi:require:${mpi_spec}
