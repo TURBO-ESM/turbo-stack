@@ -16,7 +16,7 @@ fi
 # Error Checking Pre-requisites... Should be true for all environments
 ###############################################################################
 
-set -e  # Exit immediately if a command exits with a non-zero status
+#set -e  # Exit immediately if a command exits with a non-zero status
 set -u  # Treat expanding empty variables as an error
 
 if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
@@ -120,6 +120,9 @@ elif [[ "$machine" == "derecho" ]]; then
     module load gcc cmake cray-mpich hdf5 # Works
     #module load gcc ncarcompilers cmake cray-mpich # Does not work
     module list
+
+    # Looks like the gcc module does not set CXX
+    export CXX="$(which g++)"
 
     compiler_spec="gcc"
     mpi_spec="cray-mpich"
@@ -334,8 +337,10 @@ elif [[ "$machine" == "derecho" ]]; then
 
     # Hard coded to gcc and cray-mpich for now on derecho
     # Using older version of spack on derecho so use syntax that works there.
-    spack config add packages:all:compiler: [gcc]
-    spack config add packages:all:providers:mpi: [cray-mpich]
+    spack config add packages:all:compiler:[gcc]
+    spack config add packages:all:providers:mpi:[cray-mpich]
+    #cat "$(spack config edit --print-file)"
+    #exit 0
 
     # This would be more portable to newer versions of spack
     #spack config add packages:mpi:require:cary-mpich
@@ -402,7 +407,12 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
     echo "Final spack configuration for this environment:"
     cat "$(spack config edit --print-file)"
 
-    spack install --fresh --force
+    if [[ "$machine" == "derecho" ]]; then
+        # Older version of spack on derecho does not support --force
+        spack install --fresh
+    else
+        spack install --fresh --force
+    fi
 
     echo "Number of spack packages in the environment is: $(spack find --format '{name}' | wc -l)"
 
