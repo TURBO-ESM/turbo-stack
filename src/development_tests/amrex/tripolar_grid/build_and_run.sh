@@ -235,7 +235,7 @@ elif [[ "$machine" == "ci_container" ]]; then
         mpi_version="${MPICH_VERSION}"
         mpi_root="${MPI_ROOT}"
     else
-        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
+        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi, mpich" >&2
         exit 1
     fi
 
