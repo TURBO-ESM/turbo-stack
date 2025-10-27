@@ -6,9 +6,9 @@ name: AmREX Mini-App Unit Tests
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "ci-tests", "container-ci"]
+    branches: ["main"]
   pull_request:
-    branches: ["main", "ci-tests", "container-ci"]
+    branches: ["main"]
 
 jobs:
 
