@@ -354,7 +354,7 @@ elif [[ "$machine" == "derecho" ]]; then
     #exit 0
 
     # This would be more portable to newer versions of spack
-    #spack config add packages:mpi:require:cary-mpich
+    #spack config add packages:mpi:require:cray-mpich
     #spack config add packages:all:prefer:[\"%c=gcc\"]
     #spack config add packages:all:prefer:[\"%cxx=gcc\"]
     #spack config add packages:all:prefer:[\"%fortran=gcc\"]
