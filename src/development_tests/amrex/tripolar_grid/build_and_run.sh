@@ -16,7 +16,7 @@ fi
 # Error Checking Pre-requisites... Should be true for all environments
 ###############################################################################
 
-#set -e  # Exit immediately if a command exits with a non-zero status
+set -e  # Exit immediately if a command exits with a non-zero status
 set -u  # Treat expanding empty variables as an error
 
 if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
