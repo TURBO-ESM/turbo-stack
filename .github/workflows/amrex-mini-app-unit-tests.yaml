@@ -1,4 +1,4 @@
-name: Build Inside NCAR HPC Development Containers
+name: AmREX Mini-App Unit Tests
 
 # See the following link for more information on the NCAR HPC development containers:
 # https://hub.docker.com/u/ncarcisl
@@ -17,13 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         #compiler: [ nvhpc, oneapi, gcc14, clang ]
-        compiler: [ oneapi, gcc14, clang ] # temporarily test one compiler at a time. Add all compilers back later.
+        compiler: [ oneapi, gcc14, clang ] 
         mpi:      [ openmpi, mpich ]
-        #mpi:      [ openmpi ] # temporarily test one mpi at a time. Add all back later.
-        #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
-        #runner:   [ ubuntu-latest, gha-runner-turbo ]
         runner:   [ gha-runner-turbo ]
         include:
           - mpi: openmpi
@@ -71,19 +68,6 @@ jobs:
           conda --version 2>/dev/null || echo " --> no conda in this container"
           which mpicc
           mpicc --version 2>/dev/null || true
-
-#      - name: MPI+OpenMP Hello World
-#        run: |
-#          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
-#          ldd ./hello_world_mpi
-#          export OMP_NUM_THREADS=2
-#          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
-#
-#          if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
-#              mpicxx --showme
-#          elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
-#              mpicxx -show
-#          fi
 
       - name: Install prerequisite utilities for spack
         run: |

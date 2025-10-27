@@ -350,8 +350,6 @@ elif [[ "$machine" == "derecho" ]]; then
     # Using older version of spack on derecho so use syntax that works there.
     spack config add packages:all:compiler:[gcc]
     spack config add packages:all:providers:mpi:[cray-mpich]
-    #cat "$(spack config edit --print-file)"
-    #exit 0
 
     # This would be more portable to newer versions of spack
     #spack config add packages:mpi:require:cray-mpich
@@ -391,27 +389,27 @@ if [[ "${compiler_spec}" == *"nvhpc"* ]]; then
 
   spack config add concretizer:unify:when_possible
 
-  #spack config remove packages:all:prefer:[\"%c=${compiler_spec}\"]
-  #spack config remove packages:all:prefer:[\"%cxx=${compiler_spec}\"]
-  #spack config remove packages:all:prefer:[\"%fortran=${compiler_spec}\"]
-  #spack config add packages:all:prefer:[\"%c=gcc\"]
-  #spack config add packages:all:prefer:[\"%cxx=gcc\"]
-  #spack config add packages:all:prefer:[\"%fortran=gcc\"]
+  spack config remove packages:all:prefer:[\"%c=${compiler_spec}\"]
+  spack config remove packages:all:prefer:[\"%cxx=${compiler_spec}\"]
+  spack config remove packages:all:prefer:[\"%fortran=${compiler_spec}\"]
+  spack config add packages:all:prefer:[\"%c=gcc\"]
+  spack config add packages:all:prefer:[\"%cxx=gcc\"]
+  spack config add packages:all:prefer:[\"%fortran=gcc\"]
 
-  #spack remove amrex
-  #spack remove mpi
-  #spack remove hdf5
-  #spack add amrex %${compiler_spec}
-  #spack add mpi %${compiler_spec}
-  #spack add hdf5 %${compiler_spec}
+  spack remove amrex
+  spack remove mpi
+  spack remove hdf5
+  spack add amrex %${compiler_spec}
+  spack add mpi %${compiler_spec}
+  spack add hdf5 %${compiler_spec}
 
-  #spack config add packages:mbedtls:require:[\"%gcc\"]
-  #spack config add packages:diffutils:require:[\"%gcc\"]
-  #spack config add packages:gettext:require:[\"%gcc\"]
-  #spack config add packages:findutils:require:[\"%gcc\"]
-  #spack config add packages:m4:require:[\"%gcc\"]
-  #spack config add packages:flex:require:[\"%gcc\"]
-  #spack config add packages:mpich:require:[\"%c,cxx,fortran=gcc\"]
+  spack config add packages:mbedtls:require:[\"%gcc\"]
+  spack config add packages:diffutils:require:[\"%gcc\"]
+  spack config add packages:gettext:require:[\"%gcc\"]
+  spack config add packages:findutils:require:[\"%gcc\"]
+  spack config add packages:m4:require:[\"%gcc\"]
+  spack config add packages:flex:require:[\"%gcc\"]
+  spack config add packages:mpich:require:[\"%c,cxx,fortran=gcc\"]
 fi
 
 if [[ "${DEBUG:-0}" == "1" ]]; then
