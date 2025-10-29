@@ -1,17 +1,8 @@
 # Grid Library (for now just one that contains the base grid class and the specific cartesian grid implementation)
 
-#find_package(netCDF REQUIRED)
-#find_package(netCDFCxx REQUIRED)
-
 add_library(grid STATIC cartesian_grid.cpp)
-#target_include_directories(grid PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-#target_link_libraries(grid PUBLIC geometry HDF5::HDF5 netCDFCxx::netCDFCxx)
-#target_link_libraries(grid PUBLIC geometry HDF5::HDF5 netcdf_c++4)
-
-target_include_directories(grid PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} $ENV{SPACK_ENV_VIEW_DIR}/include)
-link_directories($ENV{SPACK_ENV_VIEW_DIR}/lib)
+target_include_directories(grid PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(grid PUBLIC geometry HDF5::HDF5)
-target_link_libraries(grid PRIVATE geometry netcdf-cxx4)
 
 # Grid Tests
 add_executable(cartesian_grid_test cartesian_grid_test.cpp)
