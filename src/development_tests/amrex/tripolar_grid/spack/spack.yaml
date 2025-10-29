@@ -10,7 +10,6 @@ spack:
   - mpi
   - googletest
   - hdf5
-  - doxygen
   - netcdf-cxx4
   view: true
   concretizer:

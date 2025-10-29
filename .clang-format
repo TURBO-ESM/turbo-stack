@@ -1,0 +1,13 @@
+BasedOnStyle: Google
+
+Language: Cpp
+Standard: c++20
+IndentWidth: 4
+ColumnLimit: 120
+BinPackParameters: true
+BreakBeforeBraces: Allman
+AlignConsecutiveAssignments: AcrossEmptyLines
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 1
+

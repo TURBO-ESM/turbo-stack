@@ -1,4 +1,4 @@
-name: Build Inside NCAR HPC Development Containers
+name: AmREX Mini-App Unit Tests
 
 # See the following link for more information on the NCAR HPC development containers:
 # https://hub.docker.com/u/ncarcisl
@@ -6,9 +6,9 @@ name: Build Inside NCAR HPC Development Containers
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "ci-tests", "container-ci"]
+    branches: ["main"]
   pull_request:
-    branches: ["main", "ci-tests", "container-ci"]
+    branches: ["main"]
 
 jobs:
 
@@ -16,12 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ nvhpc, oneapi, gcc14, clang ]
+        #compiler: [ nvhpc, oneapi, gcc14, clang ]
+        compiler: [ oneapi, gcc14, clang ] 
         mpi:      [ openmpi, mpich ]
-        #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
-        runner:   [ ubuntu-latest, gha-runner-turbo ]
+        runner:   [ gha-runner-turbo ]
         include:
           - mpi: openmpi
             extra_mpiexec_args: '--allow-run-as-root'
@@ -30,7 +30,6 @@ jobs:
           # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
           - compiler: nvhpc
             mpi: openmpi
-
 
 
     name: Build
@@ -70,20 +69,26 @@ jobs:
           which mpicc
           mpicc --version 2>/dev/null || true
 
-      - name: MPI+OpenMP Hello World
+      - name: Install prerequisite utilities for spack
         run: |
-          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
-          ldd ./hello_world_mpi
-          export OMP_NUM_THREADS=2
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
+          dnf install -y epel-release
+          dnf install -y file bzip2 ca-certificates git gzip patch python3 tar unzip xz zstd gcc gcc-c++ gcc-gfortran
 
-      - name: Build turbo-stack
+      - name: Install spack
         run: |
-          echo "Building turbo-stack..."
-          ./build.sh --machine container --compiler ${COMPILER_FAMILY}
+          echo "Building spack:"
+          git clone --depth=2 https://github.com/spack/spack.git
+          . spack/share/spack/setup-env.sh
+          spack compiler find
+          spack compiler list
+          spack spec zlib # Just to test that spack is working. 
 
-      - name: Run double gyre test
+      - name: Build and run amrex mini-app
         run: |
-          echo "Running double gyre test..."
-          cd ./examples/double_gyre
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+
+          . spack/share/spack/setup-env.sh
+
+          echo "Building spack environment for turbo mini-app..."
+          export TURBO_STACK_ROOT=$(pwd)
+          echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
+          DEBUG=1 ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
