@@ -47,7 +47,7 @@ public:
          */
         Point operator+(const Point& other) const noexcept {
             return {x + other.x, y + other.y, z + other.z};
-        };
+        }
     };
 
     //-----------------------------------------------------------------------//
