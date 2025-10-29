@@ -17,6 +17,4 @@ target_link_libraries(tripolar_grid_lib PUBLIC AMReX::amrex_3d HDF5::HDF5)
 # Tripolar Grid Tests
 ###############################################################################
 
-add_executable(tripolar_grid_test tripolar_grid_test.cpp)
-target_link_libraries(tripolar_grid_test PRIVATE tripolar_grid_lib GTest::gtest_main)
-gtest_discover_tests(tripolar_grid_test)
+add_gtest(tripolar_grid_test.cpp tripolar_grid_lib)
