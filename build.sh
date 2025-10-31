@@ -11,6 +11,7 @@ SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 # Default values for CLI arguments
 COMPILER="intel"
 MACHINE="ncar"
+INFRA="FMS2"
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
@@ -30,6 +31,7 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
             echo "  --unit-tests-only            Build infrastructure unit tests rather than MOM6 executable (default: false)"
             echo "Examples:"
             echo "  $0 --compiler nvhpc --machine ncar"
@@ -53,6 +55,9 @@ while [[ "$#" -gt 0 ]]; do
             DEBUG=1 ;;
         --override)
             OVERRIDE=1 ;;
+        --infra)
+            INFRA="$2"
+            shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
         *) 
@@ -71,6 +76,8 @@ echo "Code coverage enabled?: $CODECOV"
 echo "Offloading: $OFFLOAD"
 echo "Debug mode: $DEBUG"
 echo "Override existing build?: $OVERRIDE"
+LIBINFRA=libinfra-${INFRA}.a
+echo "Infrastructure library: $LIBINFRA"
 
 TEMPLATE=${TEMPLATE_DIR}/${MACHINE}-${COMPILER}.mk
 
@@ -179,7 +186,7 @@ if [ "$MACHINE" == "ncar" ]; then
   fi
 fi
 
-# comma-separated list of files in src/framework that are needed to build libinfra (for FMS2, at least)
+# comma-separated list of files in src/framework that are needed to build $LININFRA (for FMS2, at least)
 MOM6_infra_framework_deps=`printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s" MOM_string_functions.F90 \
                                                                                     MOM_io.F90 \
                                                                                     MOM_array_transform.F90 \
@@ -196,10 +203,9 @@ MOM6_infra_framework_deps=`printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
                                                                                     MOM_ensemble_manager.F90 \
                                                                                     MOM_io_file.F90 \
                                                                                     MOM_netcdf.F90`
-# comma-separated list of files in src/core that are needed to build libinfra (for FMS2, at least)
+# comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
 MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
-MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/FMS2,src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
-# MOM6_infra_files=${MOM_ROOT}/{config_src/infra/FMS2,src/framework,config_src/memory/${MEMORY_MODE},src/diagnostics}
+MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
 # 1) Build FMS
@@ -219,8 +225,8 @@ mkdir -p MOM6-infra
 cd MOM6-infra
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p libinfra.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libinfra.a
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
 if [ $UNIT_TESTS_ONLY -eq 1 ]; then
@@ -231,7 +237,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l '-L../MOM6-infra -linfra -L../FMS -lfms' -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
