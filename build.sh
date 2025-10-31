@@ -205,22 +205,25 @@ MOM_ensemble_manager.F90
 MOM_io_file.F90
 MOM_netcdf.F90
 EOF`
-MOM6_infra_framework_deps=`echo ${MOM6_infra_framework_deps_list} | tr ' ' ','`
+MOM6_infra_framework_deps=$(echo ${MOM6_infra_framework_deps_list} | tr ' ' ',')
 # comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
 MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
 MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
-# 1) Build FMS
-cd ${BLD_PATH}
-mkdir -p FMS
-cd FMS
-${MKMF_ROOT}/list_paths ${FMS_ROOT}
-# We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
+# 1) Build Underlying Infrastructure Library
+if [ "${INFRA}" == "FMS2" ]; then
+  cd ${BLD_PATH}
+  mkdir -p FMS
+  cd FMS
+  ${MKMF_ROOT}/list_paths ${FMS_ROOT}
+  # We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
+  echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
+  echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
+  LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms"
+fi
 
 # 2) Build MOM6 infra
 cd ${BLD_PATH}
@@ -240,7 +243,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
