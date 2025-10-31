@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # Save various paths to use as shortcuts
-ROOTDIR=`pwd -P`
+ROOTDIR=$(pwd -P)
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
@@ -68,7 +68,7 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-echo "Starting build at `date`"
+echo "Starting build at $(date)"
 echo "Compiler: $COMPILER"
 echo "Machine: $MACHINE"
 echo "Memory mode: $MEMORY_MODE"
@@ -159,7 +159,7 @@ fi
 
 # Load modules for NCAR machines
 if [ "$MACHINE" == "ncar" ]; then
-  HOST=`hostname`
+  HOST=$(hostname)
   # Load modules if on derecho
   if [ ! "${HOST:0:5}" == "crhtc" ] && [ ! "${HOST:0:6}" == "casper" ]; then
     module --force purge
@@ -187,7 +187,7 @@ if [ "$MACHINE" == "ncar" ]; then
 fi
 
 # comma-separated list of files in src/framework that are needed to build $LININFRA (for FMS2, at least)
-MOM6_infra_framework_deps_list=`cat << EOF
+MOM6_infra_framework_deps_list=$(cat << EOF
 MOM_string_functions.F90
 MOM_io.F90
 MOM_array_transform.F90
@@ -204,7 +204,8 @@ MOM_hor_index.F90
 MOM_ensemble_manager.F90
 MOM_io_file.F90
 MOM_netcdf.F90
-EOF`
+EOF
+)
 MOM6_infra_framework_deps=$(echo ${MOM6_infra_framework_deps_list} | tr ' ' ',')
 # comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
 MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
@@ -247,4 +248,4 @@ else
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
-echo "Finished build at `date`"
+echo "Finished build at $(date)"
