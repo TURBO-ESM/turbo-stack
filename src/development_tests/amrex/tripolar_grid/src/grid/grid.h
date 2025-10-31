@@ -1,36 +1,41 @@
 #pragma once
 
+#include <hdf5.h>
+
 #include <cstddef>
 #include <string>
 
-#include <hdf5.h>
-
-namespace turbo {
+namespace turbo
+{
 
 /**
- * @brief Abstract base class for discretized geometry grids. 
+ * @brief Abstract base class for discretized geometry grids.
  * Assumes that the grid is structured, 3D, and indexed by (i,j,k).
  *
  * Provides an interface for grid operations. Does things like get cell and node counts,
  * location queries, validity checks, and HDF5 output.
  */
-class Grid {
-public:
+class Grid
+{
+   public:
     //-----------------------------------------------------------------------//
     // Public Types
     //-----------------------------------------------------------------------//
     /**
      * @brief Type alias for grid indices.
      *
-     * Note: We may want to change this type alias later to support negative 
+     * Note: We may want to change this type alias later to support negative
      * indices for ghost cells or periodic boundaries in some implementations.
      */
     using Index = std::size_t;
-    // Thinking ahead to AMReX IntVect actually uses int internally for this type of indexing. 
+    // Thinking ahead to AMReX IntVect actually uses int internally for this type of indexing.
     // Because an index can be negative for ghost cells on the boundaries of the domain, etc.
-    // For now this class is using std::size_t and assuming we do the checks/conversions when needed for potential negative indices for wrapping around the domain boundaries (e.g., for periodic boundary conditions or ghost cells).
+    // For now this class is using std::size_t and assuming we do the checks/conversions when needed for potential
+    // negative indices for wrapping around the domain boundaries (e.g., for periodic boundary conditions or ghost
+    // cells).
 
-    struct Point {
+    struct Point
+    {
         double x; /**< X coordinate */
         double y; /**< Y coordinate */
         double z; /**< Z coordinate */
@@ -45,9 +50,7 @@ public:
          * @param other Point to add
          * @return Sum of two points
          */
-        Point operator+(const Point& other) const noexcept {
-            return {x + other.x, y + other.y, z + other.z};
-        }
+        Point operator+(const Point& other) const noexcept { return {x + other.x, y + other.y, z + other.z}; }
     };
 
     //-----------------------------------------------------------------------//
@@ -62,7 +65,7 @@ public:
      * @brief Get the total number of cells in the grid.
      * @return Number of cells
      */
-    virtual std::size_t NCell()  const noexcept = 0;
+    virtual std::size_t NCell() const noexcept = 0;
 
     /**
      * @brief Get the number of cells in the I index direction.
@@ -86,7 +89,7 @@ public:
      * @brief Get the total number of nodes in the grid.
      * @return Number of nodes
      */
-    virtual std::size_t NNode()  const noexcept = 0;
+    virtual std::size_t NNode() const noexcept = 0;
 
     /**
      * @brief Get the number of nodes in the I index direction.
@@ -208,11 +211,10 @@ public:
      */
     virtual void WriteHDF5(const hid_t file_id) const = 0;
 
-protected:
+   protected:
     //-----------------------------------------------------------------------//
     // Protected Member Functions
     //-----------------------------------------------------------------------//
-
 };
 
-} // namespace turbo
+}  // namespace turbo
