@@ -435,6 +435,8 @@ else
     spack install
 fi
 
+export SPACK_ENV_VIEW_DIR=$(spack location --env)/.spack-env/view
+
 ###############################################################################
 # Build, Test, and Run the Code
 ###############################################################################
