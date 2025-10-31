@@ -187,22 +187,25 @@ if [ "$MACHINE" == "ncar" ]; then
 fi
 
 # comma-separated list of files in src/framework that are needed to build $LININFRA (for FMS2, at least)
-MOM6_infra_framework_deps=`printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s" MOM_string_functions.F90 \
-                                                                                    MOM_io.F90 \
-                                                                                    MOM_array_transform.F90 \
-                                                                                    MOM_domains.F90 \
-                                                                                    MOM_error_handler.F90 \
-                                                                                    posix.F90 \
-                                                                                    MOM_file_parser.F90 \
-                                                                                    MOM_coms.F90 \
-                                                                                    MOM_document.F90 \
-                                                                                    MOM_cpu_clock.F90 \
-                                                                                    MOM_unit_scaling.F90 \
-                                                                                    MOM_dyn_horgrid.F90 \
-                                                                                    MOM_hor_index.F90 \
-                                                                                    MOM_ensemble_manager.F90 \
-                                                                                    MOM_io_file.F90 \
-                                                                                    MOM_netcdf.F90`
+MOM6_infra_framework_deps_list=`cat << EOF
+MOM_string_functions.F90
+MOM_io.F90
+MOM_array_transform.F90
+MOM_domains.F90
+MOM_error_handler.F90
+posix.F90
+MOM_file_parser.F90
+MOM_coms.F90
+MOM_document.F90
+MOM_cpu_clock.F90
+MOM_unit_scaling.F90
+MOM_dyn_horgrid.F90
+MOM_hor_index.F90
+MOM_ensemble_manager.F90
+MOM_io_file.F90
+MOM_netcdf.F90
+EOF`
+MOM6_infra_framework_deps=`echo ${MOM6_infra_framework_deps_list} | tr ' ' ','`
 # comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
 MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
 MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
