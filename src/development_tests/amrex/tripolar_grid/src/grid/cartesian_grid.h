@@ -1,22 +1,24 @@
 #pragma once
 
+#include <hdf5.h>
+
 #include <cstddef>
 #include <memory>
 
-#include <hdf5.h>
-
-#include "grid.h"
 #include "geometry.h"
+#include "grid.h"
 
-namespace turbo {
+namespace turbo
+{
 /**
  * @brief Cartesian grid implementation for discretized geometry.
  *
  * Extends the Grid interface for Cartesian domains, providing convenience functions
  * for X, Y, Z notation and face locations. Inherited methods are documented in the parent class Grid.
  */
-class CartesianGrid : public Grid {
-public:
+class CartesianGrid : public Grid
+{
+   public:
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
@@ -27,8 +29,8 @@ public:
      * @param n_cell_y Number of cells in Y direction
      * @param n_cell_z Number of cells in Z direction
      */
-    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, 
-                  std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z);
+    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, std::size_t n_cell_x, std::size_t n_cell_y,
+                  std::size_t n_cell_z);
 
     std::size_t NCell() const noexcept override;
     std::size_t NCellI() const noexcept override;
@@ -149,8 +151,7 @@ public:
     // Public Data Members
     //-----------------------------------------------------------------------//
 
-
-private:
+   private:
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
@@ -172,7 +173,6 @@ private:
     //-----------------------------------------------------------------------//
     // Private Member Functions
     //-----------------------------------------------------------------------//
-
 };
 
-} // namespace turbo
+}  // namespace turbo
