@@ -34,7 +34,7 @@ if ! command -v spack &> /dev/null; then
 fi
 
 # Make sure the assumed location of our mini-app within the turbo-stack repo exists. This path might change later.
-mini_app_root="$TURBO_STACK_ROOT"/src/development_tests/amrex/tripolar_grid
+mini_app_root="$TURBO_STACK_ROOT"/src/amrex_mini_app
 if [[ ! -d "$mini_app_root" ]]; then
     echo "Error: mini_app_root does not point to a valid directory. It should point to the directory with the top level cmake file for the mini-app." >&2
     exit 1
