@@ -91,4 +91,4 @@ jobs:
           echo "Building spack environment for turbo mini-app..."
           export TURBO_STACK_ROOT=$(pwd)
           echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
-          DEBUG=1 ./src/development_tests/amrex/tripolar_grid/build_and_run.sh
+          DEBUG=1 ${TURBO_STACK_ROOT}/src/amrex_mini_app/build_and_run.sh
