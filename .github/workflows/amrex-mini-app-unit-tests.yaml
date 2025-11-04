@@ -86,11 +86,13 @@ jobs:
       - name: Build and run amrex mini-app
         run: |
 
-          . ./src/amrex_mini_app/ncar_container_environment_variable_standardization.sh
 
           . spack/share/spack/setup-env.sh
 
           echo "Building spack environment for turbo mini-app..."
           export TURBO_STACK_ROOT=$(pwd)
           echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
+
+          . ${TURBO_STACK_ROOT}/src/amrex_mini_app/ncar_container_environment_variable_standardization.sh
+
           DEBUG=1 ${TURBO_STACK_ROOT}/src/amrex_mini_app/build_and_run.sh
