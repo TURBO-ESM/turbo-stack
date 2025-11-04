@@ -58,33 +58,27 @@ else
     machine="generic"
 fi
 
+#if [[ -n "${COMPILER_PACKAGE_NAME:-}" ]]; then
+#    compiler_package_name="${COMPILER_PACKAGE_NAME}"
+#else
+#    compiler_package_name="gcc"
+#fi
+
+#if [[ -n "${MPI_PACKAGE_NAME:-}" ]]; then
+#    mpi_package_name="${MPI_PACKAGE_NAME}"
+#else
+#    mpi_package_name="openmpi"
+#fi
+
 if [[ "$machine" == "generic" ]]; then
 
-    # Hardcode a compiler name for testing
-    #compiler_package_name="gcc"
-    #compiler_version="15.2.0"
-    
-    #compiler_package_name="llvm"
-    #compiler_version="20.1.8"
-
-    #compiler_package_name="intel-oneapi-compilers"
-    #compiler_version="2025.2.1"
-
-    #compiler_package_name="nvhpc"
-    #compiler_version="25.7"
-
-    # Hardcode a mpi package name and version for testing
-    #mpi_package_name="openmpi"
-    #mpi_package_version="5.0.8"
-
-    #mpi_package_name="mpich"
-    #mpi_package_version="4.3.2"
-
-    # If compiler_package_name is explicitly set then print it out.
-    if [[ -n "${compiler_package_name:-}" ]]; then
+    if [[ -n "${COMPILER_PACKAGE_NAME:-}" ]]; then
+        compiler_package_name="${COMPILER_PACKAGE_NAME}"
         echo "You explicitly asked for compiler: $compiler_package_name"
         compiler_spec="${compiler_package_name}"
-        if [[ -n "${compiler_version:-}" ]]; then
+
+        if [[ -n "${COMPILER_VERSION:-}" ]]; then
+            compiler_version="${COMPILER_VERSION}"
             echo "You explicitly asked for compiler version: $compiler_version"
             compiler_spec="${compiler_package_name}@${compiler_version}"
         fi
@@ -95,10 +89,12 @@ if [[ "$machine" == "generic" ]]; then
         compiler_spec="${compiler_package_name}"
     fi
 
-    if [[ -n "${mpi_package_name:-}" ]]; then
+    if [[ -n "${MPI_PACKAGE_NAME:-}" ]]; then
+        mpi_package_name="${MPI_PACKAGE_NAME}"
         echo "You explicitly asked for mpi package: $mpi_package_name"
         mpi_spec="${mpi_package_name}"
-        if [[ -n "${mpi_version:-}" ]]; then
+        if [[ -n "${MPI_VERSION:-}" ]]; then
+            mpi_version="${MPI_VERSION}"
             echo "You explicitly asked for mpi version: $mpi_version"
             mpi_spec="${mpi_package_name}@${mpi_version}"
         fi
@@ -134,124 +130,35 @@ elif [[ "$machine" == "derecho" ]]; then
 
 elif [[ "$machine" == "ci_container" ]]; then
 
-    # Check that COMPILER_FAMILY is set
-    if [[ -z "${COMPILER_FAMILY:-}" ]]; then
-      echo "Error: COMPILER_FAMILY environment variable is not set. Expected the container environment to already have that set." >&2
-      exit 1
-    fi
 
-    # Check that a environment variable for the compiler version is set.. the name depends on the compiler family.
-    if [[ "${COMPILER_FAMILY}" == "gcc" ]]; then
-      if [[ -z "${GCC_VERSION:-}" ]]; then
-          echo "Error: GCC_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
-          exit 1
-      fi
-    elif [[ "${COMPILER_FAMILY}" == "clang" ]]; then
-      if [[ -z "${LLVM_VERSION:-}" ]]; then
-          echo "Error: LLVM_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
-          exit 1
-      fi
-    elif [[ "${COMPILER_FAMILY}" == "oneapi" ]]; then
-        # Does not look like the oneAPI containers set an environment variable with the version.
-        echo "Warning: Using hardcoded version for oneAPI compiler as the container does not provide a version environment variable. The script will continue." >&2
-    elif [[ "${COMPILER_FAMILY}" == "nvhpc" ]]; then
-        # Does not look like the nvhpc containers set an environment variable with the version.
-        echo "Warning: Using hardcoded version for nvhpc compiler as the container does not provide a version environment variable. The script will continue." >&2
-    else
-        echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}." >&2
+    for var in COMPILER_PACKAGE_NAME COMPILER_VERSION COMPILER_ROOT MPI_PACKAGE_NAME MPI_VERSION MPI_ROOT HDF5_VERSION HDF5_ROOT; do
+      if [[ -z "${!var:-}" ]]; then
+        echo "Error: $var environment variable is not set." >&2
         exit 1
-    fi
-
-    # Check that MPI_FAMILY is set
-    if [[ -z "${MPI_FAMILY:-}" ]]; then
-      echo "Error: MPI_FAMILY environment variable is not set. Expected the container environment to already have that set." >&2
-      exit 1
-    fi
-
-    if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
-        if [[ -z "${OPENMPI_VERSION:-}" ]]; then
-            echo "Error: OPENMPI_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
+      fi
+    done
+    
+    for path in COMPILER_ROOT MPI_ROOT HDF5_ROOT; do
+        if [[ ! -d "${!path}" ]]; then
+            echo "Error: ${!path} does not exist. Expected that path to exist in the container." >&2
             exit 1
         fi
-    elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
-        if [[ -z "${MPICH_VERSION:-}" ]]; then
-            echo "Error: MPICH_VERSION environment variable is not set. Expected the container environment to already have that set." >&2
-            exit 1
-        fi
-    else
-        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi" >&2
-        exit 1
-    fi
+    done
 
-    # check that MPI_ROOT is set
-    if [[ -z "${MPI_ROOT:-}" ]]; then
-        echo "Error: MPI_ROOT environment variable is not set. Expected the container environment to already have that set." >&2
-        exit 1
-    fi
-    # check that MPI_ROOT points to a valid directory
-    if [[ ! -d "${MPI_ROOT}" ]]; then
-        echo "Error: ${MPI_ROOT} does not exist. Expected that path to exist in the container." >&2
-        exit 1
-    fi
-
-    # Spack specific stuff based on the compiler
-    if [[ "${COMPILER_FAMILY}" == "gcc" ]]; then
-        compiler_package_name="gcc"
-        compiler_version=${GCC_VERSION}
-        compiler_root=/container/${compiler_package_name}/${compiler_version}
-    elif [[ "${COMPILER_FAMILY}" == "clang" ]]; then
-        compiler_package_name="llvm"
-        compiler_version=${LLVM_VERSION}
-        compiler_root=/container/${compiler_package_name}/${compiler_version}
-    elif [[ "${COMPILER_FAMILY}" == "oneapi" ]]; then
-        compiler_package_name="intel-oneapi-compilers"
-        # Hardcoding for now since the oneAPI containers do not set an environment variable with the version.
-        compiler_version=2025.2
-        compiler_root=/container/intel-oneapi/compiler/2025.2
-    elif [[ "${COMPILER_FAMILY}" == "nvhpc" ]]; then
-        compiler_package_name="nvhpc"
-        # Hardcoding for now since the nvhpc containers do not set an environment variable with the version.
-        compiler_version=25.7
-        compiler_root=/container/nvhpc/Linux_x86_64/25.7/compilers
-    else
-        echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
-        exit 1
-    fi
+    compiler_package_name=${COMPILER_PACKAGE_NAME}
+    compiler_version=${COMPILER_VERSION}
+    compiler_root=${COMPILER_ROOT}
 
     compiler_spec="${compiler_package_name}@${compiler_version}"
 
-    if [[ ! -d "${compiler_root}" ]]; then
-        echo "Error: ${compiler_root} does not exist. Expected that path to exist in the container." >&2
-        exit 1
-    fi
-
-    # Spack specific stuff based on the MPI implementation
-    if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
-        mpi_package_name="openmpi"
-        mpi_version="${OPENMPI_VERSION}"
-        mpi_root="${MPI_ROOT}"
-    elif [[ "${MPI_FAMILY}" == "mpich" ]]; then
-        mpi_package_name="mpich"
-        mpi_version="${MPICH_VERSION}"
-        mpi_root="${MPI_ROOT}"
-    else
-        echo "Error: Unsupported MPI_FAMILY=${MPI_FAMILY}. Supported values are: openmpi, mpich" >&2
-        exit 1
-    fi
+    mpi_package_name=${MPI_PACKAGE_NAME}
+    mpi_version=${MPI_VERSION}
+    mpi_root=${MPI_ROOT}
 
     mpi_spec="${mpi_package_name}@${mpi_version}"
 
-    if [[ ! -d "${mpi_root}" ]]; then
-        echo "Error: ${mpi_root} does not exist. Expected that path to exist in the container." >&2
-        exit 1
-    fi
-
-
-    hdf5_root=/container/hdf5/${HDF5_VERSION}
-    if [[ ! -d "${hdf5_root}" ]]; then
-        echo "Error: ${hdf5_root} does not exist. Expected that path to exist in the container." >&2
-        exit 1
-    fi
+    hdf5_version=${HDF5_VERSION}
+    hdf5_root=${HDF5_ROOT}
 
     build_doxygen_documentation=0
 
@@ -323,7 +230,7 @@ fi
 
 if [[ "$machine" == "generic" ]]; then
 
-    spack external find "$compiler_spec"
+    spack external find "$compiler_package_name"
 
     spack config add packages:mpi:require:${mpi_spec}
 

@@ -86,6 +86,8 @@ jobs:
       - name: Build and run amrex mini-app
         run: |
 
+          . ./src/amrex_mini_app/ncar_container_environment_variable_standardization.sh
+
           . spack/share/spack/setup-env.sh
 
           echo "Building spack environment for turbo mini-app..."
