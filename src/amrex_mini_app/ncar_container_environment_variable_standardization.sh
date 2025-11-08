@@ -4,7 +4,7 @@ set -e  # Exit immediately if a command exits with a non-zero status
 set -u  # Treat expanding empty variables as an error
 
 ###############################################################################
-# Error Checking Pre-requisites for Container Environment
+# Error Checking Pre-conditions for Container Environment
 ###############################################################################
 
 if [[ -z "${COMPILER_FAMILY:-}" ]]; then
@@ -96,6 +96,10 @@ else
     echo "Error: Unsupported COMPILER_FAMILY=${COMPILER_FAMILY}. Supported values are: gcc" >&2
     exit 1
 fi
+
+###############################################################################
+# Error Checking Post-conditions for this script
+###############################################################################
 
 # Spack specific stuff based on the MPI implementation
 if [[ "${MPI_FAMILY}" == "openmpi" ]]; then
