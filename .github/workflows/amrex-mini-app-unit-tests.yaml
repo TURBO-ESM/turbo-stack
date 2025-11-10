@@ -83,16 +83,28 @@ jobs:
           spack compiler list
           spack spec zlib # Just to test that spack is working. 
 
+      #- name: Install turbo mini-app dependencies in a spack environment
+      #  run: |
+      #    . spack/share/spack/setup-env.sh
+
+      #    echo "Building turbo spack environment:"
+
       - name: Build and run amrex mini-app
         run: |
 
 
           . spack/share/spack/setup-env.sh
 
-          echo "Building spack environment for turbo mini-app..."
           export TURBO_STACK_ROOT=$(pwd)
-          echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
+          export DEBUG=1
+          export DOXYGEN=1
 
-          . ${TURBO_STACK_ROOT}/src/amrex_mini_app/ncar_container_environment_variable_standardization.sh
+          mini_app_root=${TURBO_STACK_ROOT}/src/amrex_mini_app
 
-          DEBUG=1 ${TURBO_STACK_ROOT}/src/amrex_mini_app/build_and_run.sh
+          . ${mini_app_root}/ncar_container_environment_variable_standardization.sh
+
+          . ${mini_app_root}/create_spack_environment.sh
+
+          spack env activate $SPACK_ENVIRONMENT_NAME
+
+          ${mini_app_root}/build_and_run.sh
