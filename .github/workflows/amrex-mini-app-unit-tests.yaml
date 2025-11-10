@@ -97,7 +97,7 @@ jobs:
 
           export TURBO_STACK_ROOT=$(pwd)
           export DEBUG=1
-          export DOXYGEN=1
+          export DOXYGEN=0
 
           mini_app_root=${TURBO_STACK_ROOT}/src/amrex_mini_app
 
