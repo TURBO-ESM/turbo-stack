@@ -117,6 +117,7 @@ jobs:
             echo "Error: SPACK_ENVIRONMENT_NAME is not set."
             exit 1
           fi
+          echo "SPACK_ENVIRONMENT_NAME=${SPACK_ENVIRONMENT_NAME}" >> $GITHUB_ENV
 
       - name: Build and run turbo amrex mini-app
         run: |
