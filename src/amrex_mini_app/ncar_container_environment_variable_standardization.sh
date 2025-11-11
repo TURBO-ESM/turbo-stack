@@ -119,10 +119,13 @@ export HDF5_VERSION=${HDF5_VERSION} # HDF5_VERSION should already be set in the 
 export HDF5_ROOT=/container/hdf5/${HDF5_VERSION}
 
 for var in COMPILER_PACKAGE_NAME COMPILER_VERSION COMPILER_ROOT MPI_PACKAGE_NAME MPI_VERSION MPI_ROOT HDF5_VERSION HDF5_ROOT; do
+  
   if [[ -z "${!var:-}" ]]; then
     echo "Error: $var environment variable is not set." >&2
     exit 1
   fi
+
+  echo "$var=${!var}" >> $GITHUB_ENV
 done
 
 for path in COMPILER_ROOT MPI_ROOT HDF5_ROOT; do
