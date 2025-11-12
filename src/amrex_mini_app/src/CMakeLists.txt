@@ -1,5 +1,7 @@
 add_subdirectory(geometry)
 add_subdirectory(grid)
+add_subdirectory(field)
+add_subdirectory(testing_utils)
 
 ###############################################################################
 # Tripolar Grid Library
