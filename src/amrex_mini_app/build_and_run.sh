@@ -14,7 +14,7 @@ fi
 
 # You can set the DOXYGEN environment variable to 1 to build the doxygen documentation. You will need the doxygen executable installed and in your path to do this.
 if [[ "${DOXYGEN:-0}" == "1" ]]; then
-    set -x  # Print each command before executing it
+    echo "Will generate Doxygen documentation."
 fi
 
 ###############################################################################
