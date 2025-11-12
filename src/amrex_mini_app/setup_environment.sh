@@ -42,7 +42,7 @@ if [[ "$machine" == "generic" ]]; then
         compiler_spec="${COMPILER_PACKAGE_NAME}"
 
         if [[ -n "${COMPILER_VERSION:-}" ]]; then
-            echo "You explicitly asked for compiler version: $COMILER_VERSION"
+            echo "You explicitly asked for compiler version: $COMPILER_VERSION"
             compiler_spec="${COMPILER_PACKAGE_NAME}@${COMPILER_VERSION}"
         fi
     else
