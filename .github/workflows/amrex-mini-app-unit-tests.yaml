@@ -1,4 +1,4 @@
-name: AmREX Mini-App Unit Tests
+name: AMReX Mini-App Unit Tests
 
 # See the following link for more information on the NCAR HPC development containers:
 # https://hub.docker.com/u/ncarcisl
@@ -111,12 +111,15 @@ jobs:
 
           . spack/share/spack/setup-env.sh
 
+          unset SPACK_ENVIRONMENT_NAME
+
           . ${TURBO_MINI_APP_ROOT}/create_spack_environment.sh
 
           if [ -z "$SPACK_ENVIRONMENT_NAME" ]; then
             echo "Error: SPACK_ENVIRONMENT_NAME is not set."
             exit 1
           fi
+
           echo "SPACK_ENVIRONMENT_NAME=${SPACK_ENVIRONMENT_NAME}" >> $GITHUB_ENV
 
       - name: Build and run turbo amrex mini-app

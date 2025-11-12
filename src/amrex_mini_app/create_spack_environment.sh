@@ -61,23 +61,6 @@ else
     machine="generic"
 fi
 
-#This derecho specific environment setup should probalby go somewhere else so that we can change modules and compilers without editing this script.
-if [[ "$machine" == "derecho" ]]; then
-    module purge
-    module load gcc cmake cray-mpich hdf5
-    module list
-
-    # Looks like the gcc module does not set CXX
-    export CXX="$(which g++)"
-
-    export COMPILER_PACKAGE_NAME="gcc"
-    export MPI_PACKAGE_NAME="cray-mpich"
-
-    if [[ -n "${$NCAR_SPACK_HASH_GCC:-}" ]]; then
-        export MPI_VERSION="${MPI_VERSION}"
-    fi
-fi
-
 if [[ "$machine" == "generic" ]]; then
 
     if [[ -n "${COMPILER_PACKAGE_NAME:-}" ]]; then
@@ -118,16 +101,30 @@ if [[ "$machine" == "generic" ]]; then
 
 elif [[ "$machine" == "derecho" ]]; then
 
+    for var in COMPILER_PACKAGE_NAME MPI_PACKAGE_NAME; do
+        if [[ -z "${!var:-}" ]]; then
+            echo "Error: $var environment variable is not set or is empty." >&2
+            exit 1
+        fi
+    done
 
-    compiler_package_name="gcc"
-    mpi_package_name="cray-mpich"
+    compiler_package_name=${COMPILER_PACKAGE_NAME}
+    if [[ -n "${COMPILER_VERSION:-}" ]]; then
+        compiler_version="${COMPILER_VERSION}"
+        compiler_spec="${compiler_package_name}@${compiler_version}"
+    else
+        compiler_spec="${compiler_package_name}"
+    fi
 
-    compiler_spec="${compiler_package_name}"
-    mpi_spec="${mpi_package_name}"
-
+    mpi_package_name=${MPI_PACKAGE_NAME}
+    if [[ -n "${MPI_VERSION:-}" ]]; then
+        mpi_version="${MPI_VERSION}"
+        mpi_spec="${mpi_package_name}@${mpi_version}"
+    else
+        mpi_spec="${mpi_package_name}"
+    fi
 
 elif [[ "$machine" == "ci_container" ]]; then
-
 
     for var in COMPILER_PACKAGE_NAME COMPILER_VERSION COMPILER_ROOT MPI_PACKAGE_NAME MPI_VERSION MPI_ROOT HDF5_VERSION HDF5_ROOT; do
       if [[ -z "${!var:-}" ]]; then
@@ -241,28 +238,41 @@ if [[ "$machine" == "generic" ]]; then
 
 elif [[ "$machine" == "derecho" ]]; then
 
+    #spack external find --not-buildable --path $compiler_root $compiler_package_name
 
+    #spack add /${NCAR_SPACK_HASH_GCC}
+
+    #spack add "$compiler_spec"
+
+    #spack external find --not-buildable $compiler_package_name
+    #spack external find --not-buildable cmake
+    #spack external find --not-buildable hdf5
+    #spack external find --not-buildable cray-mpich
+
+    #spack external find --not-buildable --path ${NCAR_ROOT_COMPILER} $compiler_package_name
+    #spack external find --not-buildable $compiler_spec
+    spack external find cmake
+    spack external find hdf5
+    spack external find mpich
+    #spack external find --not-buildable gcc-runtime
+
+    # Maybe a new way of doing this that uses hases 0
     #spack add /$NCAR_SPACK_HASH_GCC
     #spack remove cmake
     #spack add /$NCAR_SPACK_HASH_CMAKE
     #spack external find --path $NCAR_ROOT_MPI mpich
 
-    spack add /$NCAR_SPACK_HASH_GCC
-    spack external find cmake
-    spack external find hdf5
-    spack external find mpich
-
-
     # Hard coded to gcc and cray-mpich for now on derecho
     # Using older version of spack on derecho so use syntax that works there.
-    spack config add packages:all:compiler:[gcc]
-    spack config add packages:all:providers:mpi:[cray-mpich]
+    #spack config add packages:all:compiler:[gcc]
+    #spack config add packages:all:compiler:[${compiler_spec}]
+    #spack config add packages:all:providers:mpi:[cray-mpich]
 
     # This would be more portable to newer versions of spack
-    #spack config add packages:mpi:require:cray-mpich
-    #spack config add packages:all:prefer:[\"%c=gcc\"]
-    #spack config add packages:all:prefer:[\"%cxx=gcc\"]
-    #spack config add packages:all:prefer:[\"%fortran=gcc\"]
+    #spack config add packages:mpi:require:${mpi_spec}
+    #spack config add packages:all:prefer:[\"%c=${compiler_spec}\"]
+    #spack config add packages:all:prefer:[\"%cxx=${compiler_spec}\"]
+    #spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
 
 elif [[ "$machine" == "ci_container" ]]; then
 
