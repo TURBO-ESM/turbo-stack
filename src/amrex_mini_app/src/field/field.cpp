@@ -14,15 +14,16 @@
 namespace turbo {
 
 
-Field::Field(const std::string& name, const std::shared_ptr<Grid> grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost)
+Field::Field(const std::string& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost)
     : name(name), grid(grid), field_grid_stagger(field_grid_stagger) {
+    
+    // Check that grid is a valid pointer.
+    if (!grid) {
+        throw std::invalid_argument("Field constructor: Invalid grid pointer.");
+    }
 
     if (n_component <= 0) {
         throw std::invalid_argument("Field constructor: Number of components must be greater than zero.");
-    }
-
-    if (n_ghost < 0) {
-        throw std::invalid_argument("Field constructor: Number of ghost cells cannot be negative.");
     }
 
     const amrex::IntVect lower_index(AMREX_D_DECL(0,0,0));
@@ -68,15 +69,15 @@ bool Field::IsCellCentered() const noexcept{
     return (field_grid_stagger == FieldGridStagger::CellCentered);
 }
 
-bool Field::IsXFaceCentered() const noexcept {
+bool Field::IsIFaceCentered() const noexcept {
     return (field_grid_stagger == FieldGridStagger::IFace);
 }
 
-bool Field::IsYFaceCentered() const noexcept{
+bool Field::IsJFaceCentered() const noexcept{
     return (field_grid_stagger == FieldGridStagger::JFace);
 }
 
-bool Field::IsZFaceCentered() const noexcept {
+bool Field::IsKFaceCentered() const noexcept {
     return (field_grid_stagger == FieldGridStagger::KFace);
 }
 
@@ -103,7 +104,7 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const {
 }
 
 // Write the field data to an HDF5 file. This will overwrite the file if it already exists.
-void Field::WriteHDF5(const std::string filename) const {
+void Field::WriteHDF5(const std::string& filename) const {
     const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     if (file_id < 0) {
         throw std::runtime_error("Failed to create HDF5 file: " + filename);

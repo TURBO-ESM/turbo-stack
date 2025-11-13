@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <set>
+#include <stdexcept>
 
 #include <hdf5.h>
 
@@ -76,7 +77,7 @@ public:
      * @param n_component Number of components (e.g., 1 for a scalar field).
      * @param n_ghost Number of ghost cells.
      */
-    Field(const std::string& name, const std::shared_ptr<Grid> grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost);
+    Field(const std::string& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost);
 
     /**
      * @brief Check if the field is cell-centered.
@@ -88,19 +89,19 @@ public:
      * @brief Check if the field is x-face centered.
      * @return true if x-face centered, false otherwise.
      */
-    bool IsXFaceCentered() const noexcept;
+    bool IsIFaceCentered() const noexcept;
 
     /**
      * @brief Check if the field is y-face centered.
      * @return true if y-face centered, false otherwise.
      */
-    bool IsYFaceCentered() const noexcept;
+    bool IsJFaceCentered() const noexcept;
 
     /**
      * @brief Check if the field is z-face centered.
      * @return true if z-face centered, false otherwise.
      */
-    bool IsZFaceCentered() const noexcept;
+    bool IsKFaceCentered() const noexcept;
 
     /**
      * @brief Check if the field is nodal.
@@ -123,7 +124,7 @@ public:
      * @brief Write the field data to an HDF5 file (overwrites file if exists).
      * @param filename Name of the HDF5 file to write.
      */
-    void WriteHDF5(const std::string filename) const;
+    void WriteHDF5(const std::string& filename) const;
 
     /**
      * @brief Write the field data to an already open HDF5 file.

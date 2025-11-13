@@ -1,5 +1,9 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
+#include <stdexcept>
+
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
@@ -26,15 +30,15 @@ protected:
     double y_max = 1.0;
     double z_min = 0.0;
     double z_max = 1.0;
-    geom = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
+    geometry = std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
 
     std::size_t n_cell_x = 2;
     std::size_t n_cell_y = 3;
     std::size_t n_cell_z = 4;
-    grid = std::make_shared<CartesianGrid>(geom, n_cell_x, n_cell_y, n_cell_z);
+    grid = std::make_shared<CartesianGrid>(geometry, n_cell_x, n_cell_y, n_cell_z);
   }
 
-  std::shared_ptr<CartesianGeometry> geom;
+  std::shared_ptr<CartesianGeometry> geometry;
   std::shared_ptr<CartesianGrid> grid;
 };
 
@@ -44,14 +48,19 @@ protected:
 
 TEST_F(FieldTest, Constructor) {
 
-  std::string name = "test_field";
-  FieldGridStagger stagger = FieldGridStagger::Nodal;
-  std::size_t n_component = 1;
-  std::size_t n_ghost = 0;
-
+  // Test Field constructor
+  const std::string name = "test_field";
+  const FieldGridStagger stagger = FieldGridStagger::Nodal;
+  const std::size_t n_component = 1;
+  const std::size_t n_ghost = 0;
   Field field(name, grid, stagger, n_component, n_ghost);
 
-  for (std::size_t n_component : {1,3}) {
+  // Expect constructor to throw with invalid input
+  EXPECT_THROW(Field("invalid_field_because_nullptr_grid", nullptr, stagger, n_component, n_ghost), std::invalid_argument);
+  EXPECT_THROW(Field("invalid_field_because_0_components", grid, stagger, 0, n_ghost), std::invalid_argument);
+
+  // Test Field state after construction with the most common constructor arguments
+  for (std::size_t n_component : {1,2,3}) {
     for (std::size_t n_ghost : {0,1,2}) {
       for (const FieldGridStagger field_stagger : {FieldGridStagger::Nodal, FieldGridStagger::CellCentered, FieldGridStagger::IFace, FieldGridStagger::JFace, FieldGridStagger::KFace}) {
 
@@ -137,9 +146,9 @@ TEST_F(FieldTest, StaggerChecks) {
 
     EXPECT_TRUE(field.IsNodal());
     EXPECT_FALSE(field.IsCellCentered());
-    EXPECT_FALSE(field.IsXFaceCentered());
-    EXPECT_FALSE(field.IsYFaceCentered());
-    EXPECT_FALSE(field.IsZFaceCentered());
+    EXPECT_FALSE(field.IsIFaceCentered());
+    EXPECT_FALSE(field.IsJFaceCentered());
+    EXPECT_FALSE(field.IsKFaceCentered());
   }
 
   {
@@ -149,45 +158,45 @@ TEST_F(FieldTest, StaggerChecks) {
 
     EXPECT_FALSE(field.IsNodal());
     EXPECT_TRUE(field.IsCellCentered());
-    EXPECT_FALSE(field.IsXFaceCentered());
-    EXPECT_FALSE(field.IsYFaceCentered());
-    EXPECT_FALSE(field.IsZFaceCentered());
+    EXPECT_FALSE(field.IsIFaceCentered());
+    EXPECT_FALSE(field.IsJFaceCentered());
+    EXPECT_FALSE(field.IsKFaceCentered());
   }
 
   {
-    std::string name = "x_face_centered_field";
+    std::string name = "i_face_centered_field";
     FieldGridStagger stagger = FieldGridStagger::IFace;
     Field field(name, grid, stagger, n_component, n_ghost);
 
     EXPECT_FALSE(field.IsNodal());
     EXPECT_FALSE(field.IsCellCentered());
-    EXPECT_TRUE(field.IsXFaceCentered());
-    EXPECT_FALSE(field.IsYFaceCentered());
-    EXPECT_FALSE(field.IsZFaceCentered());
+    EXPECT_TRUE(field.IsIFaceCentered());
+    EXPECT_FALSE(field.IsJFaceCentered());
+    EXPECT_FALSE(field.IsKFaceCentered());
   }
 
   {
-    std::string name = "y_face_centered_field";
+    std::string name = "j_face_centered_field";
     FieldGridStagger stagger = FieldGridStagger::JFace;
     Field field(name, grid, stagger, n_component, n_ghost);
 
     EXPECT_FALSE(field.IsNodal());
     EXPECT_FALSE(field.IsCellCentered());
-    EXPECT_FALSE(field.IsXFaceCentered());
-    EXPECT_TRUE(field.IsYFaceCentered());
-    EXPECT_FALSE(field.IsZFaceCentered());
+    EXPECT_FALSE(field.IsIFaceCentered());
+    EXPECT_TRUE(field.IsJFaceCentered());
+    EXPECT_FALSE(field.IsKFaceCentered());
   }
 
   {
-    std::string name = "z_face_centered_field";
+    std::string name = "k_face_centered_field";
     FieldGridStagger stagger = FieldGridStagger::KFace;
     Field field(name, grid, stagger, n_component, n_ghost);
 
     EXPECT_FALSE(field.IsNodal());
     EXPECT_FALSE(field.IsCellCentered());
-    EXPECT_FALSE(field.IsXFaceCentered());
-    EXPECT_FALSE(field.IsYFaceCentered());
-    EXPECT_TRUE(field.IsZFaceCentered());
+    EXPECT_FALSE(field.IsIFaceCentered());
+    EXPECT_FALSE(field.IsJFaceCentered());
+    EXPECT_TRUE(field.IsKFaceCentered());
   }
 
 }
