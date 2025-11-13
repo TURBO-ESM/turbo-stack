@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <set>
+#include <stdexcept>
 
 #include "grid.h"
 #include "field.h"
@@ -54,7 +55,7 @@ public:
      * @param n_ghost Number of ghost cells.
      * @return Shared pointer to the inserted Field.
      * @throws std::invalid_argument if invalid input (name already exists in container, invalid number of components or ghost cells, invalid stagger type, etc.).
-     * @throws std::logic_error if the field cannot be inserted into the container.
+     * @throws std::logic_error if the field cannot be inserted into the container given valid input.
      */
     std::shared_ptr<Field> Insert(const std::string& name, const FieldGridStagger stagger, const std::size_t n_component, const std::size_t n_ghost);
 
