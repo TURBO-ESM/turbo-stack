@@ -34,12 +34,6 @@ std::shared_ptr<Field> FieldContainer::Insert(const std::string& name, const Fie
         }
     }
 
-    if (n_component <= 0) {
-    throw std::invalid_argument("FieldContainer::Insert: Number of components must be greater than zero.");
-    }
-
-    // n_ghost is size_t, so it cannot be negative. No need to check for n_ghost < 0.
-
     const std::shared_ptr<Field> field = std::make_shared<Field>(name, grid_, field_grid_stagger, n_component, n_ghost);
     auto [iter, inserted] = fields_.insert(field);
     if (!inserted) {
