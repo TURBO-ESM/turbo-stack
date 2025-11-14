@@ -50,7 +50,7 @@ std::shared_ptr<Field> FieldContainer::Get(const std::string& name) const {
             return field;
         }
     }
-    // Maybe we want to do something else instead of throwing an exception here? T
+    // Maybe we want to do something else instead of throwing an exception here?
     throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' does not exist.");
 }
 
