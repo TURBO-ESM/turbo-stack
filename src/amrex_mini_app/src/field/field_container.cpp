@@ -14,7 +14,7 @@ FieldContainer::FieldContainer(const std::shared_ptr<Grid>& grid)
 : grid_(grid)
 {
     if (!grid_) {
-        throw std::invalid_argument("FieldContainer constructor: grid pointer is null");
+        throw std::invalid_argument("FieldContainer::FieldContainer: grid pointer is null");
     }
 }
 

@@ -19,11 +19,11 @@ Field::Field(const std::string& name, const std::shared_ptr<Grid>& grid, const F
     
     // Check that grid is a valid pointer.
     if (!grid) {
-        throw std::invalid_argument("Field constructor: Invalid grid pointer.");
+        throw std::invalid_argument("Field::Field: Invalid grid pointer.");
     }
 
     if (n_component == 0) {
-        throw std::invalid_argument("Field constructor: Number of components must be greater than zero.");
+        throw std::invalid_argument("Field::Field: Number of components must be greater than zero.");
     }
 
     const amrex::IntVect lower_index(AMREX_D_DECL(0,0,0));
@@ -46,7 +46,7 @@ Field::Field(const std::string& name, const std::shared_ptr<Grid>& grid, const F
             upper_index = amrex::IntVect(AMREX_D_DECL(grid->NNodeI() - 1, grid->NNodeJ() - 1, grid->NNodeK() - 1));
             break;
         default:
-            throw std::invalid_argument("Field: Invalid FieldGridStagger specified.");
+            throw std::invalid_argument("Field::Field: Invalid FieldGridStagger specified.");
     }
 
     const amrex::IndexType index_type(FieldGridStaggerToAMReXIndexType(field_grid_stagger));
@@ -99,7 +99,7 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const {
         case FieldGridStagger::Nodal:
             return grid->Node(i, j, k);
         default:
-            throw std::invalid_argument("Field:: GetGridPoint: Invalid FieldGridStagger specified.");
+            throw std::invalid_argument("Field::GetGridPoint: Invalid FieldGridStagger specified.");
     }
 }
 
@@ -117,7 +117,7 @@ void Field::WriteHDF5(const std::string& filename) const {
 void Field::WriteHDF5(const hid_t file_id) const {
 
     if (file_id < 0) {
-        throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
+        throw std::runtime_error("Field::WriteHDF5: Invalid HDF5 file_id passed to WriteHDF5.");
     }
 
     // Copy the MultiFab to a single rank
@@ -188,7 +188,7 @@ amrex::IndexType Field::FieldGridStaggerToAMReXIndexType(const FieldGridStagger 
         case FieldGridStagger::IFace:        return amrex::IndexType({AMREX_D_DECL(1,0,0)});
         case FieldGridStagger::JFace:        return amrex::IndexType({AMREX_D_DECL(0,1,0)});
         case FieldGridStagger::KFace:        return amrex::IndexType({AMREX_D_DECL(0,0,1)});
-        default:                          throw std::invalid_argument("Field:: Invalid FieldGridStagger specified.");
+        default:                          throw std::invalid_argument("Field::FieldGridStaggerToAMReXIndexType: Invalid FieldGridStagger specified.");
     }
 }
 
