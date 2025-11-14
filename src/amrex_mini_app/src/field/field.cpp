@@ -22,7 +22,7 @@ Field::Field(const std::string& name, const std::shared_ptr<Grid>& grid, const F
         throw std::invalid_argument("Field::Field: Invalid grid pointer.");
     }
 
-    if (n_component <= 0) {
+    if (n_component == 0) {
         throw std::invalid_argument("Field::Field: Number of components must be greater than zero.");
     }
 
