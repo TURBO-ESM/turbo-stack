@@ -34,7 +34,7 @@ std::shared_ptr<Field> FieldContainer::Insert(const std::string& name, const Fie
         }
     }
 
-    if (n_component <= 0) {
+    if (n_component == 0) {
     throw std::invalid_argument("FieldContainer::Insert: Number of components must be greater than zero.");
     }
 
