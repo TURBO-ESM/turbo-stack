@@ -19,11 +19,11 @@ Field::Field(const std::string& name, const std::shared_ptr<Grid>& grid, const F
     
     // Check that grid is a valid pointer.
     if (!grid) {
-        throw std::invalid_argument("Field constructor: Invalid grid pointer.");
+        throw std::invalid_argument("Field::Field: Invalid grid pointer.");
     }
 
     if (n_component <= 0) {
-        throw std::invalid_argument("Field constructor: Number of components must be greater than zero.");
+        throw std::invalid_argument("Field::Field: Number of components must be greater than zero.");
     }
 
     const amrex::IntVect lower_index(AMREX_D_DECL(0,0,0));
@@ -46,7 +46,7 @@ Field::Field(const std::string& name, const std::shared_ptr<Grid>& grid, const F
             upper_index = amrex::IntVect(AMREX_D_DECL(grid->NNodeI() - 1, grid->NNodeJ() - 1, grid->NNodeK() - 1));
             break;
         default:
-            throw std::invalid_argument("Field: Invalid FieldGridStagger specified.");
+            throw std::invalid_argument("Field::Field: Invalid FieldGridStagger specified.");
     }
 
     const amrex::IndexType index_type(FieldGridStaggerToAMReXIndexType(field_grid_stagger));
@@ -99,7 +99,7 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const {
         case FieldGridStagger::Nodal:
             return grid->Node(i, j, k);
         default:
-            throw std::invalid_argument("Field:: GetGridPoint: Invalid FieldGridStagger specified.");
+            throw std::invalid_argument("Field::GetGridPoint: Invalid FieldGridStagger specified.");
     }
 }
 
@@ -107,7 +107,7 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const {
 void Field::WriteHDF5(const std::string& filename) const {
     const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     if (file_id < 0) {
-        throw std::runtime_error("Failed to create HDF5 file: " + filename);
+        throw std::runtime_error("Field::WriteHDF5: Failed to create HDF5 file: " + filename);
     }
     WriteHDF5(file_id);
     H5Fclose(file_id);
@@ -117,7 +117,7 @@ void Field::WriteHDF5(const std::string& filename) const {
 void Field::WriteHDF5(const hid_t file_id) const {
 
     if (file_id < 0) {
-        throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
+        throw std::runtime_error("Field::WriteHDF5: Invalid HDF5 file_id passed to WriteHDF5.");
     }
 
     // Copy the MultiFab to a single rank
