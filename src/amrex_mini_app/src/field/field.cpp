@@ -188,7 +188,7 @@ amrex::IndexType Field::FieldGridStaggerToAMReXIndexType(const FieldGridStagger 
         case FieldGridStagger::IFace:        return amrex::IndexType({AMREX_D_DECL(1,0,0)});
         case FieldGridStagger::JFace:        return amrex::IndexType({AMREX_D_DECL(0,1,0)});
         case FieldGridStagger::KFace:        return amrex::IndexType({AMREX_D_DECL(0,0,1)});
-        default:                          throw std::invalid_argument("Field:: Invalid FieldGridStagger specified.");
+        default:                          throw std::invalid_argument("Field::FieldGridStaggerToAMReXIndexType: Invalid FieldGridStagger specified.");
     }
 }
 
