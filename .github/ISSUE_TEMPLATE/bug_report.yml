@@ -6,63 +6,29 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Bug Description
-      description: Please provide a clear and concise description of the bug
-      placeholder: Describe what happened and what you expected to happen...
+      label: What happened?
+      description: Describe the bug and what you expected
+      placeholder: What happened and what did you expect to happen?
     validations:
       required: true
   
   - type: textarea
     id: steps-to-reproduce
     attributes:
-      label: Steps to Reproduce
-      description: List the steps to reproduce the behavior
+      label: How to reproduce
+      description: Steps to reproduce the behavior
       placeholder: |
-        1. Build the project with...
-        2. Run the command...
-        3. Observe the error...
+        1. Build with...
+        2. Run...
+        3. See error...
     validations:
       required: true
   
   - type: textarea
-    id: environment
+    id: additional-info
     attributes:
-      label: Environment
-      description: Please provide details about your environment
-      placeholder: |
-        - OS: [e.g., Linux, macOS]
-        - Compiler: [e.g., Intel, GNU, NVHPC]
-        - MPI Implementation: [e.g., OpenMPI, MPICH]
-        - Machine: [e.g., derecho, local]
-    validations:
-      required: true
-  
-  - type: textarea
-    id: acceptance-criteria
-    attributes:
-      label: Acceptance Criteria
-      description: What needs to be accomplished to consider this bug fixed?
-      placeholder: |
-        - [ ] The issue is resolved and the expected behavior occurs
-        - [ ] Tests pass with the fix
-        - [ ] No regression in other functionality
-    validations:
-      required: true
-  
-  - type: textarea
-    id: ideas
-    attributes:
-      label: Ideas
-      description: Any initial thoughts on potential solutions or debugging approaches?
-      placeholder: Potential solutions, debugging ideas, or related issues...
-    validations:
-      required: false
-  
-  - type: textarea
-    id: additional-context
-    attributes:
-      label: Additional Context
-      description: Add any other context, screenshots, or relevant information
-      placeholder: Error logs, stack traces, related issues, etc.
+      label: Additional info
+      description: Environment, logs, screenshots, or other relevant details
+      placeholder: OS, compiler, error logs, etc.
     validations:
       required: false
