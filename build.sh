@@ -224,6 +224,10 @@ if [ "${INFRA}" == "FMS2" ]; then
   ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
   LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms"
+else
+  echo "ERROR: Unknown infrastructure ('${INFRA}' is not supported choice)"
+  echo "       Valid option is 'FMS2'"
+  exit 1
 fi
 
 # 2) Build MOM6 infra
