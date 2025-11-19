@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # Save various paths to use as shortcuts
-ROOTDIR=`pwd -P`
+ROOTDIR=$(pwd -P)
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
@@ -11,11 +11,13 @@ SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 # Default values for CLI arguments
 COMPILER="intel"
 MACHINE="ncar"
+INFRA="FMS2"
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
 CODECOV=0 # False
 OVERRIDE=0 # False
+UNIT_TESTS_ONLY=0 # False
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -29,6 +31,8 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
+            echo "  --unit-tests-only            Build infrastructure unit tests rather than MOM6 executable (default: false)"
             echo "Examples:"
             echo "  $0 --compiler nvhpc --machine ncar"
             echo "  $0 --memory-mode dynamic_nonsymmetric"
@@ -51,6 +55,11 @@ while [[ "$#" -gt 0 ]]; do
             DEBUG=1 ;;
         --override)
             OVERRIDE=1 ;;
+        --infra)
+            INFRA="$2"
+            shift ;;
+        --unit-tests-only)
+            UNIT_TESTS_ONLY=1 ;;
         *) 
             echo "Unknown parameter passed: $1"
             echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
@@ -59,7 +68,7 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-echo "Starting build at `date`"
+echo "Starting build at $(date)"
 echo "Compiler: $COMPILER"
 echo "Machine: $MACHINE"
 echo "Memory mode: $MEMORY_MODE"
@@ -67,6 +76,8 @@ echo "Code coverage enabled?: $CODECOV"
 echo "Offloading: $OFFLOAD"
 echo "Debug mode: $DEBUG"
 echo "Override existing build?: $OVERRIDE"
+LIBINFRA=libinfra-${INFRA}.a
+echo "Infrastructure library: $LIBINFRA"
 
 TEMPLATE=${TEMPLATE_DIR}/${MACHINE}-${COMPILER}.mk
 
@@ -148,7 +159,7 @@ fi
 
 # Load modules for NCAR machines
 if [ "$MACHINE" == "ncar" ]; then
-  HOST=`hostname`
+  HOST=$(hostname)
   # Load modules if on derecho
   if [ ! "${HOST:0:5}" == "crhtc" ] && [ ! "${HOST:0:6}" == "casper" ]; then
     module --force purge
@@ -175,27 +186,70 @@ if [ "$MACHINE" == "ncar" ]; then
   fi
 fi
 
+# comma-separated list of files in src/framework that are needed to build $LININFRA (for FMS2, at least)
+MOM6_infra_framework_deps_list=$(cat << EOF
+MOM_string_functions.F90
+MOM_io.F90
+MOM_array_transform.F90
+MOM_domains.F90
+MOM_error_handler.F90
+posix.F90
+MOM_file_parser.F90
+MOM_coms.F90
+MOM_document.F90
+MOM_cpu_clock.F90
+MOM_unit_scaling.F90
+MOM_dyn_horgrid.F90
+MOM_hor_index.F90
+MOM_ensemble_manager.F90
+MOM_io_file.F90
+MOM_netcdf.F90
+EOF
+)
+MOM6_infra_framework_deps=$(echo ${MOM6_infra_framework_deps_list} | tr ' ' ',')
+# comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
+MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
+MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
+MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
-MOM6_src_files=${MOM_ROOT}/{config_src/infra/FMS2,config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
+# 1) Build Underlying Infrastructure Library
+if [ "${INFRA}" == "FMS2" ]; then
+  cd ${BLD_PATH}
+  mkdir -p FMS
+  cd FMS
+  ${MKMF_ROOT}/list_paths ${FMS_ROOT}
+  # We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
+  echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
+  echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
+  LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms"
+else
+  echo "ERROR: Unknown infrastructure ('${INFRA}' is not supported choice)"
+  echo "       Valid option is 'FMS2'"
+  exit 1
+fi
 
-# 1) Build FMS
+# 2) Build MOM6 infra
 cd ${BLD_PATH}
-mkdir -p FMS
-cd FMS
-${MKMF_ROOT}/list_paths ${FMS_ROOT}
-# We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
-
-# 2) Build MOM6
-cd ${BLD_PATH}
-mkdir -p MOM6
-cd MOM6
-expanded=$(eval echo ${MOM6_src_files})
+mkdir -p MOM6-infra
+cd MOM6-infra
+expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p MOM6 -l '-L../FMS -lfms' -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
-make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
-echo "Finished build at `date`"
+# 3) Build unit tests or MOM6
+if [ $UNIT_TESTS_ONLY -eq 1 ]; then
+  echo "TODO: build unit tests here!"
+else
+  cd ${BLD_PATH}
+  mkdir -p MOM6
+  cd MOM6
+  expanded=$(eval echo ${MOM6_src_files})
+  ${MKMF_ROOT}/list_paths -l ${expanded}
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
+fi
+
+echo "Finished build at $(date)"
