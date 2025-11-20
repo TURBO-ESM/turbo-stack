@@ -14,6 +14,9 @@ enable_testing()
 
 find_package(HDF5 REQUIRED COMPONENTS C)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(GTestHelpers)
+
 add_subdirectory(src)
 add_subdirectory(examples)
 

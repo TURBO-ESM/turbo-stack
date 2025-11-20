@@ -6,24 +6,16 @@
 spack:
   specs:
     - cmake
-    - amrex ^cray-mpich
+    - amrex
     - mpi
     - googletest
     - hdf5
     - doxygen
   packages:
     all:
-      compiler: [gcc]
       providers:
-          mpi: [cray-mpich]
-    mpi:
-      buildable: false
-#    cmake:
-#      buildable: false
-#      externals:
-#        - spec: cmake@3.26.6
-#          modules: 
-#          - cmake/3.26.6
+          mpi: [MPI_PROVIDER]
+      compiler: [COMPILER_NAME]
   view: true
   concretizer:
-    unify: true
+    unify: when_possible
