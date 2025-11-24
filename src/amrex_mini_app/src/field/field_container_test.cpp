@@ -81,9 +81,9 @@ TEST_F(FieldContainerTest, Contains) {
   const std::size_t n_component = 1;
   const std::size_t n_ghost = 0;
 
-  EXPECT_FALSE(fields.Contains(name));
+  EXPECT_FALSE(fields.Contains(name, stagger));
   std::shared_ptr<Field> field1 = fields.Insert(name, stagger, n_component, n_ghost);
-  EXPECT_TRUE(fields.Contains(name));
+  EXPECT_TRUE(fields.Contains(name, stagger));
 
 }
 
@@ -97,7 +97,7 @@ TEST_F(FieldContainerTest, Get) {
   const std::size_t n_ghost = 0;
 
   std::shared_ptr<Field> field_returned_from_insert = fields.Insert(name, stagger, n_component, n_ghost);
-  std::shared_ptr<Field> field_returned_from_get    = fields.Get(name);
+  std::shared_ptr<Field> field_returned_from_get    = fields.Get(name, stagger);
   EXPECT_EQ(field_returned_from_insert, field_returned_from_get);
 
 }

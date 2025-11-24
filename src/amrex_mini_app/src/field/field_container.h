@@ -3,7 +3,8 @@
 #include <cstddef>
 #include <memory>
 #include <string>
-#include <set>
+#include <tuple>
+#include <map>
 #include <stdexcept>
 
 #include "grid.h"
@@ -19,6 +20,9 @@ namespace turbo {
  * It ensures that all fields share the same grid and supports const-only iteration.
  */
 class FieldContainer {
+    // Some private type aliases for convenience. For the underlying container used to store the fields.
+    using FieldKey = std::tuple<Field::NameType, FieldGridStagger>;
+    using FieldMap = std::map<FieldKey, std::shared_ptr<Field>>;
 public:
 
     //-----------------------------------------------------------------------//
@@ -28,7 +32,7 @@ public:
     /**
      * @brief Const iterator type for iterating over fields.
      */
-    using const_iterator = std::set<std::shared_ptr<Field>>::const_iterator;
+    using const_iterator = FieldMap::const_iterator;
 
     //-----------------------------------------------------------------------//
     // Public Member Functions
@@ -45,7 +49,7 @@ public:
      * @param name Name of the field to check.
      * @return true if the field exists, false otherwise.
      */
-    bool Contains(const std::string& name) const noexcept;
+    bool Contains(const Field::NameType& name, const FieldGridStagger stagger) const noexcept;
 
     /**
      * @brief Insert a new field into the container.
@@ -57,14 +61,16 @@ public:
      * @throws std::invalid_argument if invalid input (name already exists in container, invalid number of components or ghost cells, invalid stagger type, etc.).
      * @throws std::logic_error if the field cannot be inserted into the container given valid input.
      */
-    std::shared_ptr<Field> Insert(const std::string& name, const FieldGridStagger stagger, const std::size_t n_component, const std::size_t n_ghost);
+    std::shared_ptr<Field> Insert(const Field::NameType& name, const FieldGridStagger stagger, const std::size_t n_component, const std::size_t n_ghost);
 
     /**
-     * @brief Get a field by name.
+     * @brief Get a field by name and stagger.
      * @param name Name of the field to retrieve.
-     * @return Shared pointer to the Field, or nullptr if not found.
+     * @param stagger Field grid staggering type.
+     * @return Shared pointer to the Field.
+     * @throws std::invalid_argument if the field does not exist in the container.
      */
-    std::shared_ptr<Field> Get(const std::string& name) const;
+    std::shared_ptr<Field> Get(const Field::NameType& name, const FieldGridStagger stagger) const;
 
     /**
      * @brief Get a const iterator to the beginning of the fields set.
@@ -92,7 +98,7 @@ private:
     /**
      * @brief Set of shared pointers to Field objects managed by this container.
      */
-    std::set<std::shared_ptr<Field>> fields_;
+    FieldMap field_map;
 
 };
 

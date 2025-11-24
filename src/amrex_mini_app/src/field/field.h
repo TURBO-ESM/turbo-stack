@@ -63,6 +63,7 @@ public:
     /**
      * @brief Value type for field data (AMReX real type).
      */
+    using NameType = std::string;
     using ValueType = amrex::Real;
 
     //-----------------------------------------------------------------------//
@@ -77,7 +78,7 @@ public:
      * @param n_component Number of components (e.g., 1 for a scalar field).
      * @param n_ghost Number of ghost cells.
      */
-    Field(const std::string& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost);
+    Field(const NameType& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost);
 
     /**
      * @brief Check if the field is cell-centered.
@@ -152,7 +153,7 @@ public:
     /**
      * @brief Name of the field.
      */
-    const std::string name;
+    const NameType name;
 
     /**
      * @brief Location of the field on the grid.
