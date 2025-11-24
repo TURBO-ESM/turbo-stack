@@ -121,10 +121,10 @@ void Field::WriteHDF5(const hid_t file_id) const {
     }
 
     // Copy the MultiFab to a single rank
-    int dest_rank = 0; // We are copying to rank 0
-    const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(multifab, dest_rank);
+    int destination_rank = amrex::ParallelDescriptor::IOProcessorNumber(); 
+    const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(multifab, destination_rank);
 
-    if (amrex::ParallelDescriptor::MyProc() == dest_rank) {
+    if (amrex::ParallelDescriptor::MyProc() == destination_rank) {
 
         AMREX_ASSERT(mf->boxArray().size() == 1);
         amrex::Box box = mf->boxArray()[0]; // We are assuming that there is only one box in the MultiFabs box array.
@@ -192,10 +192,10 @@ amrex::IndexType Field::FieldGridStaggerToAMReXIndexType(const FieldGridStagger 
     }
 }
 
-std::shared_ptr<amrex::MultiFab> Field::CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf, int dest_rank) const {
+std::shared_ptr<amrex::MultiFab> Field::CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf, int destination_rank) const {
     // Create a temporary MultiFab to hold all the data on a single rank
     const amrex::BoxArray box_array_with_one_box(source_mf->boxArray().minimalBox()); // BoxArray with a single box that covers the entire domain
-    const amrex::DistributionMapping distribution_mapping(amrex::Vector<int>{dest_rank}); // Distribution mapping that puts the single box in the box array to a single rank
+    const amrex::DistributionMapping distribution_mapping(amrex::Vector<int>{destination_rank}); // Distribution mapping that puts the single box in the box array to a single rank
     const int n_comp = source_mf->nComp();
     const amrex::IntVect n_ghost = source_mf->nGrowVect();
     std::shared_ptr<amrex::MultiFab> dest_mf = std::make_shared<amrex::MultiFab>(box_array_with_one_box, distribution_mapping, n_comp, n_ghost);
