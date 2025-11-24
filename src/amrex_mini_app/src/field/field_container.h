@@ -96,7 +96,7 @@ private:
     const std::shared_ptr<Grid> grid_;
 
     /**
-     * @brief Set of shared pointers to Field objects managed by this container.
+     * @brief Map of field keys to shared pointers to Field objects managed by this container.
      */
     FieldMap field_map;
 
