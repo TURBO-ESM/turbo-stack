@@ -69,6 +69,20 @@ jobs:
           which mpicc
           mpicc --version 2>/dev/null || true
 
+      - name: Install prerequisite utilities for spack
+        run: |
+          dnf install -y epel-release
+          dnf install -y file bzip2 ca-certificates git gzip patch python3 tar unzip xz zstd gcc gcc-c++ gcc-gfortran
+
+      - name: Install spack
+        run: |
+          echo "Building spack:"
+          git clone --depth=2 https://github.com/spack/spack.git
+          . spack/share/spack/setup-env.sh
+          spack compiler find
+          spack compiler list
+          spack spec zlib # Just to test that spack is working. 
+
       - name: Modify default CI container environment
         run: |
 
@@ -90,21 +104,6 @@ jobs:
           # To control build and runtime behavior later
           export DEBUG=1
           echo "DEBUG=${DEBUG}" >> $GITHUB_ENV
-
-
-      - name: Install prerequisite utilities for spack
-        run: |
-          dnf install -y epel-release
-          dnf install -y file bzip2 ca-certificates git gzip patch python3 tar unzip xz zstd gcc gcc-c++ gcc-gfortran
-
-      - name: Install spack
-        run: |
-          echo "Building spack:"
-          git clone --depth=2 https://github.com/spack/spack.git
-          . spack/share/spack/setup-env.sh
-          spack compiler find
-          spack compiler list
-          spack spec zlib # Just to test that spack is working. 
 
       - name: Install turbo mini-app dependencies in a spack environment
         run: |

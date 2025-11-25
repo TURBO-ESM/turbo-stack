@@ -33,9 +33,6 @@ fi
 # Environment Setup
 ###############################################################################
 module purge
-#module load ncarenv/25.10
-#module load cray-mpich hdf5
-#module load gcc cray-mpich hdf5
 module load gcc cray-mpich hdf5 cmake # had problems when also loading cmake and ncarcompilers module
 module list
 
@@ -50,8 +47,10 @@ export MPI_PACKAGE_NAME="cray-mpich"
 #export MPI_VERSION=${CRAY_MPICH_VERSION}
 
 ###############################################################################
-# Create Spack Environment
+# Create the Spack Environment
 ###############################################################################
+
+unset SPACK_ENVIRONMENT_NAME
 
 . ${turbo_mini_app_root}/create_spack_environment.sh
 
@@ -60,11 +59,10 @@ if [ -z "$SPACK_ENVIRONMENT_NAME" ]; then
   exit 1
 fi
 
-#spack env activate $SPACK_ENVIRONMENT_NAME
-spack env status
-
 ###############################################################################
 # Build and run turbo amrex mini-app
 ###############################################################################
+
+spack env activate "$SPACK_ENVIRONMENT_NAME"
 
 ${turbo_mini_app_root}/build_and_run.sh

@@ -91,13 +91,15 @@ for compiler in $compiler_list; do
         fi
 
         unset SPACK_ENVIRONMENT_NAME
+
         . ${turbo_mini_app_root}/create_spack_environment.sh
+
         if [ -z "$SPACK_ENVIRONMENT_NAME" ]; then
           echo "Error: SPACK_ENVIRONMENT_NAME is not set."
           exit 1
         fi
 
-        spack env activate $SPACK_ENVIRONMENT_NAME
+        spack env activate "$SPACK_ENVIRONMENT_NAME"
 
         ${turbo_mini_app_root}/build_and_run.sh
 

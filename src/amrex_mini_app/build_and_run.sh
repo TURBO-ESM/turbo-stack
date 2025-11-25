@@ -58,8 +58,6 @@ if [[ ! -x "$(command -v $CXX)" ]]; then
     exit 1
 fi
 
-# Maybe also check for mpi compiler wrappers MPICC and MPICXX?
-
 if [[ "${DEBUG:-0}" == "1" ]]; then
     echo "TURBO_STACK_ROOT is set to $TURBO_STACK_ROOT"
     echo "C compiler path is CC=$CC"

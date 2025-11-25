@@ -95,10 +95,6 @@ if [[ "$machine" == "generic" ]]; then
         echo "You did not explicitly ask for a specific mpi implementation. Just going to use $mpi_spec as the default option."
     fi
 
-    ## Find the path to the C and C++ compilers. Only take the first one in case there are multiple.
-    #export CC=$( spack compiler info "$compiler_spec" | grep 'c: '   | awk '{print $NF}' | head -n 1)
-    #export CXX=$(spack compiler info "$compiler_spec" | grep 'cxx: ' | awk '{print $NF}' | head -n 1)
-
 elif [[ "$machine" == "derecho" ]]; then
 
     for var in COMPILER_PACKAGE_NAME MPI_PACKAGE_NAME; do
