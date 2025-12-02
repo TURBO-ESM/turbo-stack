@@ -7,7 +7,7 @@ TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 FMS_ROOT=${ROOTDIR}/submodules/FMS
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
-FMS3_ROOT=${ROOTDIR}/src/amrex_interface
+TIM_ROOT=${ROOTDIR}/src/amrex_interface
 
 # Default values for CLI arguments
 COMPILER="intel"
@@ -225,7 +225,7 @@ MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE}${FMS2_PATH},src/f
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
 # 1) Build Underlying Infrastructure Library
-if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "FMS3" ]]; then
+if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
   echo "Building FMS"
   cd ${BLD_PATH}
   mkdir -p FMS
@@ -250,10 +250,10 @@ mkdir -p MOM6-infra
 cd MOM6-infra
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
-if [ "${INFRA}" == "FMS3" ]; then
+if [ "${INFRA}" == "TIM" ]; then
   AMREX_LINK_FLAGS="-L${AMREX_PATH}/lib -lamrex"
   AMREX_INCLUDE_FLAGS="-I${AMREX_PATH}/include"
-  for file in $(eval echo "${FMS3_ROOT}/*.F90"); do
+  for file in $(eval echo "${TIM_ROOT}/*.F90"); do
     echo ${file} >> path_names
   done
 fi
@@ -262,12 +262,12 @@ make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
 if [ ${UNIT_TESTS_ONLY} -eq 1 ]; then
-  echo "TODO: build unit tests here!"
+  echo "Building unit tests"
   cd ${BLD_PATH}
   mkdir -p unit-tests
   cd unit-tests
-  echo "${FMS3_ROOT}/test/error_infra_test.pf" >> path_names
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p unit-tests -l "${LINKING_FLAGS} ${AMREX_LINK_FLAGS} -L${PFUNIT_PATH} -lpfunit -lstdc++" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  echo "${TIM_ROOT}/test/error_infra_test.F90" >> path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../FMS -I../MOM6-infra ${AMREX_INCLUDE_FLAGS}" -p unit-tests -l "${LINKING_FLAGS} ${AMREX_LINK_FLAGS} -L${PFUNIT_PATH} -lpfunit -lstdc++" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} unit-tests
 else
   cd ${BLD_PATH}
@@ -275,7 +275,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "${LINKING_FLAGS} ${AMREX_LINK_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../FMS -I../MOM6-infra ${AMREX_INCLUDE_FLAGS}" -p MOM6 -l "${LINKING_FLAGS} ${AMREX_LINK_FLAGS} -lstdc++" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
