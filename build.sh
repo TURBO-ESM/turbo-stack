@@ -63,6 +63,9 @@ while [[ "$#" -gt 0 ]]; do
         --amrex)
             AMREX_PATH="$2"
             shift ;;
+        --pfunit)
+            PFUNIT_PATH="$2"
+            shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
         *) 
@@ -260,6 +263,12 @@ make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 # 3) Build unit tests or MOM6
 if [ ${UNIT_TESTS_ONLY} -eq 1 ]; then
   echo "TODO: build unit tests here!"
+  cd ${BLD_PATH}
+  mkdir -p unit-tests
+  cd unit-tests
+  echo "${FMS3_ROOT}/test/error_infra_test.pf" >> path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p unit-tests -l "${LINKING_FLAGS} ${AMREX_LINK_FLAGS} -L${PFUNIT_PATH} -lpfunit -lstdc++" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} unit-tests
 else
   cd ${BLD_PATH}
   mkdir -p MOM6
