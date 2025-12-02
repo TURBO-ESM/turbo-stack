@@ -243,6 +243,7 @@ else
   exit 1
 fi
 
+# Check if AMREX_PATH was provided or if need to clone and build first
 if [[ "${INFRA}" == "TIM" && ! -v ${AMREX_PATH} ]]; then
   echo "Path to AMReX not declared.  Cloning and building AMReX"
   git clone -b 25.11 https://github.com/AMReX-Codes/amrex.git "${ROOTDIR}/submodules/amrex"
