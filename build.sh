@@ -246,12 +246,14 @@ fi
 # Check if AMREX_PATH was provided or if need to clone and build first
 if [[ "${INFRA}" == "TIM" && ! -v ${AMREX_PATH} ]]; then
   echo "Path to AMReX not declared.  Cloning and building AMReX"
-  git clone -b 25.11 https://github.com/AMReX-Codes/amrex.git "${ROOTDIR}/submodules/amrex"
-  cd "${ROOTDIR}/submodules/amrex"
-  cmake -B./build -S. -DAMReX_FORTRAN_INTERFACES=YES -DAMReX_FORTRAN=YES -DCMAKE_INSTALL_PREFIX=./install
-  cd build
-  make
-  make install
+  if [[ ! -d "${ROOTDIR}/submodules/amrex" ]]; then
+    git clone -b 25.11 https://github.com/AMReX-Codes/amrex.git "${ROOTDIR}/submodules/amrex"
+    cd "${ROOTDIR}/submodules/amrex"
+    cmake -B./build -S. -DAMReX_FORTRAN_INTERFACES=YES -DAMReX_FORTRAN=YES -DCMAKE_INSTALL_PREFIX=./install
+    cd build
+    make
+    make install
+  fi
   AMREX_PATH="${ROOTDIR}/submodules/amrex/install"
 fi
 
