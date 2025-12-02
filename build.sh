@@ -13,7 +13,6 @@ TIM_ROOT=${ROOTDIR}/src/amrex_interface
 COMPILER="intel"
 MACHINE="ncar"
 INFRA="FMS2"
-AMREX_PATH=""
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
@@ -62,6 +61,10 @@ while [[ "$#" -gt 0 ]]; do
             shift ;;
         --amrex)
             AMREX_PATH="$2"
+            if [ ! -d "${AMREX_PATH}" ]; then
+              echo "--amrex path ${AMREX_PATH} not valid"
+              exit 1
+            fi
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
@@ -238,6 +241,17 @@ else
   echo "ERROR: Unknown infrastructure ('${INFRA}' is not supported choice)"
   echo "       Valid option is 'FMS2'"
   exit 1
+fi
+
+if [[ "${INFRA}" == "TIM" && ! -v ${AMREX_PATH} ]]; then
+  echo "Path to AMReX not declared.  Cloning and building AMReX"
+  git clone -b 25.11 https://github.com/AMReX-Codes/amrex.git "${ROOTDIR}/submodules/amrex"
+  cd "${ROOTDIR}/submodules/amrex"
+  cmake -B./build -S. -DAMReX_FORTRAN_INTERFACES=YES -DAMReX_FORTRAN=YES -DCMAKE_INSTALL_PREFIX=./install
+  cd build
+  make
+  make install
+  AMREX_PATH="${ROOTDIR}/submodules/amrex/install"
 fi
 
 # 2) Build MOM6 infra
