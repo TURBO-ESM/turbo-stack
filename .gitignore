@@ -1,9 +1,6 @@
 # Build directory:
 bin/
 
-# Build dependencies
-submodules/amrex
-
 # experiment output files:
 CPU_stats
 examples/*/*.nc
