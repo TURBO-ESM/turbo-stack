@@ -1,32 +1,32 @@
 #pragma once
 
-#include <cstddef>
-#include <memory>
-#include <string>
-#include <set>
-#include <stdexcept>
-
-#include <hdf5.h>
-
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
+#include <hdf5.h>
+
+#include <cstddef>
+#include <memory>
+#include <set>
+#include <stdexcept>
+#include <string>
 
 #include "grid.h"
 
-namespace turbo {
+namespace turbo
+{
 
 /**
  * @enum FieldGridStagger
  * @brief Specifies the location of the field on the grid.
  */
-enum class FieldGridStagger {
-    Nodal,         /**< Field is defined at grid nodes. */
-    CellCentered,  /**< Field is defined at cell centers. */
-    IFace,         /**< Field is defined at I (x) faces. */
-    JFace,         /**< Field is defined at J (y) faces. */
-    KFace          /**< Field is defined at K (z) faces. */
+enum class FieldGridStagger
+{
+    Nodal,        /**< Field is defined at grid nodes. */
+    CellCentered, /**< Field is defined at cell centers. */
+    IFace,        /**< Field is defined at I (x) faces. */
+    JFace,        /**< Field is defined at J (y) faces. */
+    KFace         /**< Field is defined at K (z) faces. */
 };
-
 
 /**
  * @brief Convert a FieldGridStagger enum value to a string. Useful for debugging and logging.
@@ -34,17 +34,24 @@ enum class FieldGridStagger {
  * @return String representation of the field grid stagger.
  * @throws std::invalid_argument if the value is invalid.
  */
-inline std::string FieldGridStaggerToString(FieldGridStagger field_grid_stagger) {
-    switch (field_grid_stagger) {
-        case FieldGridStagger::Nodal:        return "Nodal";
-        case FieldGridStagger::CellCentered: return "CellCentered";
-        case FieldGridStagger::IFace:        return "IFace";
-        case FieldGridStagger::JFace:        return "JFace";
-        case FieldGridStagger::KFace:        return "KFace";
-        default: throw std::invalid_argument("FieldGridStaggerToString Invalid FieldGridStagger specified.");
+inline std::string FieldGridStaggerToString(FieldGridStagger field_grid_stagger)
+{
+    switch (field_grid_stagger)
+    {
+        case FieldGridStagger::Nodal:
+            return "Nodal";
+        case FieldGridStagger::CellCentered:
+            return "CellCentered";
+        case FieldGridStagger::IFace:
+            return "IFace";
+        case FieldGridStagger::JFace:
+            return "JFace";
+        case FieldGridStagger::KFace:
+            return "KFace";
+        default:
+            throw std::invalid_argument("FieldGridStaggerToString Invalid FieldGridStagger specified.");
     }
 }
-
 
 /**
  * @class Field
@@ -53,9 +60,9 @@ inline std::string FieldGridStaggerToString(FieldGridStagger field_grid_stagger)
  * The Field class manages data storage, grid location, and I/O for a field variable.
  * It supports different grid staggers, HDF5 output, and AMReX MultiFab integration.
  */
-class Field {
-
-public:
+class Field
+{
+   public:
     //-----------------------------------------------------------------------//
     // Public Types
     //-----------------------------------------------------------------------//
@@ -63,7 +70,7 @@ public:
     /**
      * @brief Value type for field data (AMReX real type).
      */
-    using NameType = std::string;
+    using NameType  = std::string;
     using ValueType = amrex::Real;
 
     //-----------------------------------------------------------------------//
@@ -78,7 +85,8 @@ public:
      * @param n_component Number of components (e.g., 1 for a scalar field).
      * @param n_ghost Number of ghost cells.
      */
-    Field(const NameType& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost);
+    Field(const NameType& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger,
+          const std::size_t n_component, const std::size_t n_ghost);
 
     /**
      * @brief Check if the field is cell-centered.
@@ -111,9 +119,10 @@ public:
     bool IsNodal() const noexcept;
 
     /**
-     * @brief Get the physical location of a grid point for this field. 
+     * @brief Get the physical location of a grid point for this field.
      *        This is where the coupling between the Field and Grid classes happens.
-     *        The field knows where it is on the grid and can ask the grid for the location of a point given its indices.
+     *        The field knows where it is on the grid and can ask the grid for the location of a point given its
+     * indices.
      * @param i Index in the x-direction.
      * @param j Index in the y-direction.
      * @param k Index in the z-direction.
@@ -165,11 +174,10 @@ public:
      */
     std::shared_ptr<amrex::MultiFab> multifab;
 
-private:
-
+   private:
     //-----------------------------------------------------------------------//
     // Private Member Functions
-    //-----------------------------------------------------------------------//    
+    //-----------------------------------------------------------------------//
 
     /**
      * @brief Convert FieldGridStagger to AMReX IndexType.
@@ -184,8 +192,8 @@ private:
      * @param dest_rank Destination MPI rank.
      * @return Shared pointer to the copied MultiFab.
      */
-    std::shared_ptr<amrex::MultiFab> CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf, int dest_rank) const;
-
+    std::shared_ptr<amrex::MultiFab> CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf,
+                                                              int dest_rank) const;
 };
 
-} // namespace turbo
+}  // namespace turbo

@@ -1,22 +1,24 @@
 #pragma once
 
-#include <iostream>
-
+#include <AMReX.H>
 #include <gtest/gtest.h>
 
-#include <AMReX.H>
+#include <iostream>
 
-class AmrexEnvironment : public ::testing::Environment {
-public:
-    void SetUp() override {
-        int argc = 1;
-        char arg0[] = "test";
-        char* argv_array[] = { arg0, nullptr };
-        char** argv = argv_array;
+class AmrexEnvironment : public ::testing::Environment
+{
+   public:
+    void SetUp() override
+    {
+        int argc           = 1;
+        char arg0[]        = "test";
+        char* argv_array[] = {arg0, nullptr};
+        char** argv        = argv_array;
         amrex::Initialize(argc, argv);
         std::cout << "AmrexEnvironment SetUp called\n";
     }
-    void TearDown() override {
+    void TearDown() override
+    {
         amrex::Finalize();
         std::cout << "AmrexEnvironment TearDown called\n";
     }
