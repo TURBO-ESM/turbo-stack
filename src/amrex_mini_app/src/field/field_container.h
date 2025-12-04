@@ -1,16 +1,17 @@
 #pragma once
 
 #include <cstddef>
+#include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <tuple>
-#include <map>
-#include <stdexcept>
 
-#include "grid.h"
 #include "field.h"
+#include "grid.h"
 
-namespace turbo {
+namespace turbo
+{
 
 /**
  * @class FieldContainer
@@ -19,14 +20,13 @@ namespace turbo {
  * FieldContainer provides insertion, lookup, and iteration for fields defined on a grid.
  * It ensures that all fields share the same grid and supports const-only iteration.
  */
-class FieldContainer {
-
+class FieldContainer
+{
     // Some private type aliases for convenience. For the underlying container used to store the fields.
     using FieldKey = std::tuple<Field::NameType, FieldGridStagger>;
     using FieldMap = std::map<FieldKey, std::shared_ptr<Field>>;
 
-public:
-
+   public:
     //-----------------------------------------------------------------------//
     // Public Member Types
     //-----------------------------------------------------------------------//
@@ -60,10 +60,12 @@ public:
      * @param n_component Number of components (e.g., 1 for scalar fields).
      * @param n_ghost Number of ghost cells.
      * @return Shared pointer to the inserted Field.
-     * @throws std::invalid_argument if invalid input (name already exists in container, invalid number of components or ghost cells, invalid stagger type, etc.).
+     * @throws std::invalid_argument if invalid input (name already exists in container, invalid number of components or
+     * ghost cells, invalid stagger type, etc.).
      * @throws std::logic_error if the field cannot be inserted into the container given valid input.
      */
-    std::shared_ptr<Field> Insert(const Field::NameType& name, const FieldGridStagger stagger, const std::size_t n_component, const std::size_t n_ghost);
+    std::shared_ptr<Field> Insert(const Field::NameType& name, const FieldGridStagger stagger,
+                                  const std::size_t n_component, const std::size_t n_ghost);
 
     /**
      * @brief Get a field by name and stagger.
@@ -86,8 +88,7 @@ public:
      */
     const_iterator end() const;
 
-private:
-
+   private:
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
@@ -101,7 +102,6 @@ private:
      * @brief Set of shared pointers to Field objects managed by this container.
      */
     FieldMap field_map;
-
 };
 
-} // namespace turbo
+}  // namespace turbo
