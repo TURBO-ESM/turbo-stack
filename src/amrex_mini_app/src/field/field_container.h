@@ -20,9 +20,11 @@ namespace turbo {
  * It ensures that all fields share the same grid and supports const-only iteration.
  */
 class FieldContainer {
+
     // Some private type aliases for convenience. For the underlying container used to store the fields.
     using FieldKey = std::tuple<Field::NameType, FieldGridStagger>;
     using FieldMap = std::map<FieldKey, std::shared_ptr<Field>>;
+
 public:
 
     //-----------------------------------------------------------------------//
@@ -96,7 +98,7 @@ private:
     const std::shared_ptr<Grid> grid_;
 
     /**
-     * @brief Map of field keys to shared pointers to Field objects managed by this container.
+     * @brief Set of shared pointers to Field objects managed by this container.
      */
     FieldMap field_map;
 

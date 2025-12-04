@@ -1,6 +1,5 @@
 #include <cstddef>
 #include <memory>
-#include <string>
 #include <tuple>
 #include <map>
 #include <stdexcept>
@@ -19,7 +18,7 @@ FieldContainer::FieldContainer(const std::shared_ptr<Grid>& grid)
     }
 }
 
-bool FieldContainer::Contains(const std::string& name, const FieldGridStagger stagger) const noexcept {
+bool FieldContainer::Contains(const Field::NameType& name, const FieldGridStagger stagger) const noexcept {
     return field_map.contains(std::make_tuple(name, stagger));
 }
 

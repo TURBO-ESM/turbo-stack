@@ -54,7 +54,7 @@ TEST_F(FieldContainerTest, Insert) {
   FieldContainer fields(grid);
 
   {
-    std::string name = "first_field";
+    Field::NameType name = "first_field";
     FieldGridStagger stagger = FieldGridStagger::Nodal;
     const std::size_t n_component = 1;
     const std::size_t n_ghost = 0;
@@ -63,7 +63,7 @@ TEST_F(FieldContainerTest, Insert) {
   }
 
   {
-    std::string name = "second_field";
+    Field::NameType name = "second_field";
     FieldGridStagger stagger = FieldGridStagger::CellCentered;
     const std::size_t n_component = 3;
     const std::size_t n_ghost = 3;
@@ -76,7 +76,7 @@ TEST_F(FieldContainerTest, Contains) {
 
   FieldContainer fields(grid);
 
-  std::string name = "test_nodal_field";
+  Field::NameType name = "test_nodal_field";
   FieldGridStagger stagger = FieldGridStagger::Nodal;
   const std::size_t n_component = 1;
   const std::size_t n_ghost = 0;
@@ -91,7 +91,7 @@ TEST_F(FieldContainerTest, Get) {
 
   FieldContainer fields(grid);
 
-  std::string name = "test_nodal_field";
+  Field::NameType name = "test_nodal_field";
   FieldGridStagger stagger = FieldGridStagger::Nodal;
   const std::size_t n_component = 1;
   const std::size_t n_ghost = 0;

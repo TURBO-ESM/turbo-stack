@@ -49,7 +49,7 @@ protected:
 TEST_F(FieldTest, Constructor) {
 
   // Test Field constructor
-  const std::string name = "test_field";
+  const Field::NameType name = "test_field";
   const FieldGridStagger stagger = FieldGridStagger::Nodal;
   const std::size_t n_component = 1;
   const std::size_t n_ghost = 0;
@@ -64,7 +64,7 @@ TEST_F(FieldTest, Constructor) {
     for (std::size_t n_ghost : {0,1,2}) {
       for (const FieldGridStagger field_stagger : {FieldGridStagger::Nodal, FieldGridStagger::CellCentered, FieldGridStagger::IFace, FieldGridStagger::JFace, FieldGridStagger::KFace}) {
 
-        std::string field_name = "field_" + FieldGridStaggerToString(field_stagger) + "_ncomp_" + std::to_string(n_component) + "_nghost_" + std::to_string(n_ghost);
+        Field::NameType field_name = "field_" + FieldGridStaggerToString(field_stagger) + "_ncomp_" + std::to_string(n_component) + "_nghost_" + std::to_string(n_ghost);
         Field field(field_name, grid, field_stagger, n_component, n_ghost);
 
         EXPECT_EQ(field.name, field_name);
@@ -140,7 +140,7 @@ TEST_F(FieldTest, StaggerChecks) {
 
   // The field location checks should report grid location correctly for all grid staggers
   {
-    std::string name = "nodal_field";
+    Field::NameType name = "nodal_field";
     FieldGridStagger stagger = FieldGridStagger::Nodal;
     Field field(name, grid, stagger, n_component, n_ghost);
 
@@ -152,7 +152,7 @@ TEST_F(FieldTest, StaggerChecks) {
   }
 
   {
-    std::string name = "cell_centered_field";
+    Field::NameType name = "cell_centered_field";
     FieldGridStagger stagger = FieldGridStagger::CellCentered;
     Field field(name, grid, stagger, n_component, n_ghost);
 
@@ -164,7 +164,7 @@ TEST_F(FieldTest, StaggerChecks) {
   }
 
   {
-    std::string name = "i_face_centered_field";
+    Field::NameType name = "i_face_centered_field";
     FieldGridStagger stagger = FieldGridStagger::IFace;
     Field field(name, grid, stagger, n_component, n_ghost);
 
@@ -176,7 +176,7 @@ TEST_F(FieldTest, StaggerChecks) {
   }
 
   {
-    std::string name = "j_face_centered_field";
+    Field::NameType name = "j_face_centered_field";
     FieldGridStagger stagger = FieldGridStagger::JFace;
     Field field(name, grid, stagger, n_component, n_ghost);
 
@@ -188,7 +188,7 @@ TEST_F(FieldTest, StaggerChecks) {
   }
 
   {
-    std::string name = "k_face_centered_field";
+    Field::NameType name = "k_face_centered_field";
     FieldGridStagger stagger = FieldGridStagger::KFace;
     Field field(name, grid, stagger, n_component, n_ghost);
 
@@ -233,7 +233,7 @@ TEST_F(FieldTest, GetGridPoint) {
 
   for (const FieldGridStagger field_grid_stagger : {FieldGridStagger::Nodal, FieldGridStagger::CellCentered, FieldGridStagger::IFace, FieldGridStagger::JFace, FieldGridStagger::KFace}) {
 
-    std::string field_name = "field_at_" + FieldGridStaggerToString(field_grid_stagger);
+    Field::NameType field_name = "field_at_" + FieldGridStaggerToString(field_grid_stagger);
     Field field(field_name, grid, field_grid_stagger, n_component, n_ghost);
 
     auto [i_size, j_size, k_size] = GridSizeHelper(field_grid_stagger);
@@ -267,7 +267,7 @@ TEST_F(FieldTest, GetGridPoint) {
 
 TEST_F(FieldTest, WriteHDF5) {
 
-  std::string name = "test_field";
+  Field::NameType name = "test_field";
   FieldGridStagger stagger = FieldGridStagger::Nodal;
   std::size_t n_component = 1;
   std::size_t n_ghost = 0;

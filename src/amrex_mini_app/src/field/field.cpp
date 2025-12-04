@@ -14,7 +14,7 @@
 namespace turbo {
 
 
-Field::Field(const std::string& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost)
+Field::Field(const Field::NameType& name, const std::shared_ptr<Grid>& grid, const FieldGridStagger field_grid_stagger, const std::size_t n_component, const std::size_t n_ghost)
     : name(name), grid(grid), field_grid_stagger(field_grid_stagger) {
     
     // Check that grid is a valid pointer.
