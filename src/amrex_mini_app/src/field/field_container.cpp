@@ -5,6 +5,7 @@
 #include <memory>
 #include <stdexcept>
 #include <tuple>
+#include <ranges>
 
 #include "field.h"
 #include "grid.h"
@@ -60,7 +61,14 @@ std::shared_ptr<Field> FieldContainer::Get(const Field::NameType& name, const Fi
                                 FieldGridStaggerToString(stagger) + "' does not exist.");
 }
 
-FieldContainer::const_iterator FieldContainer::begin() const { return field_map.begin(); }
-FieldContainer::const_iterator FieldContainer::end() const { return field_map.end(); }
+auto FieldContainer::begin() const -> decltype(std::views::values(std::declval<const FieldMap&>()).begin()) 
+{
+    return std::views::values(field_map).begin();
+}
+
+auto FieldContainer::end() const -> decltype(std::views::values(std::declval<const FieldMap&>()).end()) 
+{
+    return std::views::values(field_map).end();
+}
 
 }  // namespace turbo

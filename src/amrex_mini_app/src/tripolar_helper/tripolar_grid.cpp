@@ -8,7 +8,6 @@
 #include <AMReX_MultiFab.H>
 
 #include "grid.h"
-#include "cartesian_grid.h"
 #include "field.h"
 #include "field_container.h"
 #include "tripolar_grid.h"
@@ -61,7 +60,7 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
 
 
     // Collections of MultiFabs for easier looping and testing
-    for (const auto& [key, field] : *field_container_) {
+    for (const auto& field : *field_container_) {
         all_multifabs.insert(field->multifab);
 
         if (field->multifab->nComp() == n_comp_scalar) {
@@ -137,7 +136,7 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
         grid_->WriteHDF5(file_id);
     }
 
-    for (const auto& [key, field] : *field_container_) {
+    for (const auto& field : *field_container_) {
         field->WriteHDF5(file_id);
     }
 

@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
         }
 
         // Loop over all the fields in the FieldContainer and print out their names, FieldGridStagger, and MultiFab pointer
-        for (const auto& [key, field] : field_container) {
+        for (const auto& field : field_container) {
             amrex::Print() << "Field name: " << field->name << ", FieldGridStagger: " << FieldGridStaggerToString(field->field_grid_stagger) << ", MultiFab pointer: " << field->multifab.get() << "\n";
         }
 

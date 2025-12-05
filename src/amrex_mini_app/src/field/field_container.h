@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <ranges>
+#include <utility>
 
 #include "field.h"
 #include "grid.h"
@@ -22,20 +24,13 @@ namespace turbo
  */
 class FieldContainer
 {
-    // Some private type aliases for convenience. For the underlying container used to store the fields.
+    //-----------------------------------------------------------------------//
+    // Some private type aliases for convenience.
+    //-----------------------------------------------------------------------//
     using FieldKey = std::tuple<Field::NameType, FieldGridStagger>;
     using FieldMap = std::map<FieldKey, std::shared_ptr<Field>>;
 
    public:
-    //-----------------------------------------------------------------------//
-    // Public Member Types
-    //-----------------------------------------------------------------------//
-
-    /**
-     * @brief Const iterator type for iterating over fields.
-     */
-    using const_iterator = FieldMap::const_iterator;
-
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
@@ -77,18 +72,20 @@ class FieldContainer
     std::shared_ptr<Field> Get(const Field::NameType& name, const FieldGridStagger stagger) const;
 
     /**
-     * @brief Get a const iterator to the beginning of the fields set.
-     * @return Const iterator to the first field.
+     * @brief Get an iterator to the beginning of the field values (C++20 views).
+     * @return Iterator to the first field.
      */
-    const_iterator begin() const;
+
+    auto begin() const -> decltype(std::views::values(std::declval<const FieldMap&>()).begin());
 
     /**
-     * @brief Get a const iterator to the end of the fields set.
-     * @return Const iterator to one past the last field.
+     * @brief Get an iterator to the end of the field values (C++20 views).
+     * @return Iterator to one past the last field.
      */
-    const_iterator end() const;
+    auto end() const -> decltype(std::views::values(std::declval<const FieldMap&>()).end());
 
    private:
+
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//

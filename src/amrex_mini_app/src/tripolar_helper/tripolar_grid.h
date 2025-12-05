@@ -98,7 +98,7 @@ void TripolarGrid::InitializeScalarMultiFabs(Func initializer_function) {
         "initializer_function must be callable as double(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is the function evaluated at that point."
     );
 
-    for (const auto& [key, field] : *field_container_) {
+    for (const auto& field : *field_container_) {
         if (field->multifab->nComp() == 1) {
             for (amrex::MFIter mfi(*field->multifab); mfi.isValid(); ++mfi) {
                 const amrex::Array4<amrex::Real>& array = field->multifab->array(mfi);
@@ -118,7 +118,7 @@ void TripolarGrid::InitializeVectorMultiFabs(Func initializer_function) {
         "initializer_function must be callable as std::array<double, 3>(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is an array of 3 doubles representing the vector function evaluated at that point."
     );
 
-    for (const auto& [key, field] : *field_container_) {
+    for (const auto& field : *field_container_) {
         if (field->multifab->nComp() == 3) {
             for (amrex::MFIter mfi(*field->multifab); mfi.isValid(); ++mfi) {
                 const amrex::Array4<amrex::Real>& array = field->multifab->array(mfi);
