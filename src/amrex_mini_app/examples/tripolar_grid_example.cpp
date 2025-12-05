@@ -1,23 +1,44 @@
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
+
+#include "geometry.h"
+#include "cartesian_grid.h"
 #include <tripolar_grid.h>
+#include "field.h"
+#include "field_container.h"
 
 int main(int argc, char* argv[])
 {
     amrex::Initialize(argc, argv);
     {
-        const std::size_t n_cell_x = 16;
-        const std::size_t n_cell_y = 8;
-        const std::size_t n_cell_z = 4;
 
-        TripolarGrid grid(n_cell_x, n_cell_y, n_cell_z);
+        std::shared_ptr<turbo::CartesianGeometry> geometry;
+        {
+            const double x_min = 0.0;
+            const double x_max = 1.0;
+            const double y_min = 0.0;
+            const double y_max = 1.0;
+            const double z_min = 0.0;
+            const double z_max = 1.0;
+            geometry = std::make_shared<turbo::CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max);
+        }
 
-        grid.InitializeScalarMultiFabs([](double x, double y, double z) { return x; });
 
-        grid.InitializeVectorMultiFabs([](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
+        std::shared_ptr<turbo::CartesianGrid> grid;
+        {
+            const std::size_t n_cell_x = 4;
+            const std::size_t n_cell_y = 8;
+            const std::size_t n_cell_z = 16;
+            grid = std::make_shared<turbo::CartesianGrid>(geometry, n_cell_x, n_cell_y, n_cell_z);
+        }
 
-        grid.WriteHDF5("tripolar_grid.h5");
+        turbo::TripolarGrid tripolar_grid(grid);
+
+        tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) { return x; });
+
+        tripolar_grid.InitializeVectorMultiFabs([](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
+        tripolar_grid.WriteHDF5("tripolar_grid.h5");
     }
     amrex::Finalize();
     return 0;
