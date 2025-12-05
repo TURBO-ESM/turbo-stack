@@ -20,7 +20,8 @@ namespace turbo
  * @brief Manages a collection of Field objects associated with a single Grid.
  *
  * FieldContainer provides insertion, lookup, and iteration for fields defined on a grid.
- * It ensures that all fields share the same grid and supports const-only iteration.
+ * It ensures that all fields in the container are on the same grid.
+ * Each field has a unique combination of name and stagger.
  */
 class FieldContainer
 {
@@ -49,12 +50,12 @@ class FieldContainer
     bool Contains(const Field::NameType& name, const FieldGridStagger stagger) const noexcept;
 
     /**
-     * @brief Insert a new field into the container.
+     * @brief Construct a new field and insert it into the container.
      * @param name Name of the field.
      * @param stagger Field grid staggering type.
      * @param n_component Number of components (e.g., 1 for scalar fields).
      * @param n_ghost Number of ghost cells.
-     * @return Shared pointer to the inserted Field.
+     * @return Shared pointer to the newly created field.
      * @throws std::invalid_argument if invalid input (name already exists in container, invalid number of components or
      * ghost cells, invalid stagger type, etc.).
      * @throws std::logic_error if the field cannot be inserted into the container given valid input.
