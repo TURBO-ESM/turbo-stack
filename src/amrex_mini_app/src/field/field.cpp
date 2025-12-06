@@ -114,10 +114,6 @@ void Field::WriteHDF5(const std::string& filename) const
 // Write the field data to an already open HDF5 file that you already have open.
 void Field::WriteHDF5(const hid_t file_id) const
 {
-    if (file_id < 0)
-    {
-        throw std::runtime_error("Field::WriteHDF5: Invalid HDF5 file_id passed to WriteHDF5.");
-    }
 
     // Copy the MultiFab to a single rank
     int destination_rank                      = amrex::ParallelDescriptor::IOProcessorNumber();
@@ -125,6 +121,11 @@ void Field::WriteHDF5(const hid_t file_id) const
 
     if (amrex::ParallelDescriptor::MyProc() == destination_rank)
     {
+        if (file_id < 0)
+        {
+            throw std::runtime_error("Field::WriteHDF5: Invalid HDF5 file_id passed to WriteHDF5.");
+        }
+
         AMREX_ASSERT(mf->boxArray().size() == 1);
         amrex::Box box = mf->boxArray()[0];  // We are assuming that there is only one box in the MultiFabs box array.
 

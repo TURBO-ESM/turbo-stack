@@ -482,13 +482,18 @@ ctest --test-dir "$build_dir"
 
 # Run the examples. 
 cd "$build_dir/examples"
-if [[ -x "./tripolar_grid" ]]; then
-    ./tripolar_grid
-    #python "$mini_app_root/postprocessing/plot_hdf5.py" tripolar_grid.h5
-else
-    echo "Error: tripolar_grid binary not found or not executable in $build_dir/examples." >&2
-    exit 1
-fi
+examples_to_run=("tripolar_grid" "initialization_mini_app")
+for example in "${examples_to_run[@]}"; do
+    if [[ -x "./$example" ]]; then
+        echo "Running example: $example"
+        #./"$example"
+        mpirun -n 4 ./"$example"
+        #python "$mini_app_root/postprocessing/plot_hdf5.py" "${example}.h5"
+    else
+        echo "Error: $example binary not found or not executable in $build_dir/examples." >&2
+        exit 1
+    fi
+done
 
 ###############################################################################
 # Build the Doxygen Documentation

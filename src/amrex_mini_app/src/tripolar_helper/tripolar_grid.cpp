@@ -90,16 +90,16 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
 
 void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
-    const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-    if (file_id < 0) {
-        throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
-    }
+    hid_t file_id;
 
     // Write the attributes and grid from rank 0
-    //if (amrex::ParallelDescriptor::MyProc() == amrex::ParallelDescriptor::IOProcessorNumber()) {
     if (amrex::ParallelDescriptor::IOProcessor()) {
 
+        hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+        if (file_id < 0) {
+            throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
+        }
 
         // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
         {
@@ -140,7 +140,9 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
         field->WriteHDF5(file_id);
     }
 
-    H5Fclose(file_id);
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+        H5Fclose(file_id);
+    }
 
     //WriteXDMF(filename, "test.xdmf");
 

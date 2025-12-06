@@ -16,3 +16,9 @@ target_link_libraries(tripolar_grid_example PRIVATE geometry grid field tripolar
 ###############################################################################
 add_executable(mini_app mini_app.cpp)
 target_link_libraries(mini_app PRIVATE geometry grid field AMReX::amrex_3d)
+
+###############################################################################
+# Initialization mini-App Example
+###############################################################################
+add_executable(initialization_mini_app initialization_mini_app.cpp)
+target_link_libraries(initialization_mini_app PRIVATE geometry grid field AMReX::amrex_3d hdf5::hdf5)
