@@ -7,6 +7,7 @@ TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 FMS_ROOT=${ROOTDIR}/submodules/FMS
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
+TIM_ROOT=${ROOTDIR}/src/amrex_interface
 
 # Default values for CLI arguments
 COMPILER="intel"
@@ -57,6 +58,13 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
+            shift ;;
+        --amrex)
+            AMREX_PATH="$2"
+            if [ ! -d "${AMREX_PATH}" ]; then
+              echo "--amrex path ${AMREX_PATH} not valid"
+              exit 1
+            fi
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
@@ -209,11 +217,16 @@ EOF
 MOM6_infra_framework_deps=$(echo ${MOM6_infra_framework_deps_list} | tr ' ' ',')
 # comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
 MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
-MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
+
+if [ "${INFRA}" == "FMS2" ]; then
+  FMS2_PATH=,config_src/infra/${INFRA}
+fi
+MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE}${FMS2_PATH},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
 # 1) Build Underlying Infrastructure Library
-if [ "${INFRA}" == "FMS2" ]; then
+if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
+  echo "Building FMS"
   cd ${BLD_PATH}
   mkdir -p FMS
   cd FMS
@@ -230,17 +243,36 @@ else
   exit 1
 fi
 
+# Check if AMREX_PATH was provided or if need to clone and build first
+if [[ "${INFRA}" == "TIM" && ! -v ${AMREX_PATH} ]]; then
+  echo "Path to AMReX not declared.  Building AMReX through submodule."
+  cd "${ROOTDIR}/submodules/amrex"
+  cmake -B./build -S. -DAMReX_FORTRAN_INTERFACES=YES -DAMReX_FORTRAN=YES -DCMAKE_INSTALL_PREFIX=./install
+  cd build
+  make
+  make install
+  AMREX_PATH="${ROOTDIR}/submodules/amrex/install"
+fi
+
 # 2) Build MOM6 infra
+echo "Building MOM6 infra"
 cd ${BLD_PATH}
 mkdir -p MOM6-infra
 cd MOM6-infra
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+if [ "${INFRA}" == "TIM" ]; then
+  AMREX_LINK_FLAGS="-L${AMREX_PATH}/lib -lamrex"
+  AMREX_INCLUDE_FLAGS="-I${AMREX_PATH}/include"
+  for file in $(eval echo "${TIM_ROOT}/*.F90"); do
+    echo ${file} >> path_names
+  done
+fi
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../FMS ${AMREX_INCLUDE_FLAGS}" -p ${LIBINFRA} -l "${AMREX_LINK_FLAGS}" -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
-if [ $UNIT_TESTS_ONLY -eq 1 ]; then
+if [ ${UNIT_TESTS_ONLY} -eq 1 ]; then
   echo "TODO: build unit tests here!"
 else
   cd ${BLD_PATH}
@@ -248,7 +280,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../FMS -I../MOM6-infra ${AMREX_INCLUDE_FLAGS}" -p MOM6 -l "${LINKING_FLAGS} ${AMREX_LINK_FLAGS} -lstdc++" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 

@@ -51,6 +51,16 @@ specifying the machine name and compiler, e.g.,
 ./build.sh --machine ubuntu --compiler gnu
 ```
 
+#### Building with different infrastructure backends:
+
+MOM6 can be built either with FMS2 or with the new Turbo Infrastructure for MOM (TIM) layer backed by AMReX.  The options to enable this are:
+
+```bash
+./build.sh ... --infra TIM --amrex path/to/amrex/install
+```
+
+This tells the build infrastructure to use the new TIM layer and passes the AMReX install path to the needed build components.  The AMReX install must be built with Fortran and Fortran interfaces (https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options).
+
 ### Running example experiments
 
 To run one of the lightweight examples, such as `double_gyre`, you can execute the `MOM6` executable directly:
