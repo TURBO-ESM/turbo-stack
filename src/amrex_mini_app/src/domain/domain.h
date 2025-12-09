@@ -18,7 +18,7 @@
 
 namespace turbo {
 
-class TripolarGrid {
+class Domain {
 
 public:
     //-----------------------------------------------------------------------//
@@ -31,7 +31,7 @@ public:
     //-----------------------------------------------------------------------//
 
     // Constructors
-    TripolarGrid(const std::shared_ptr<Grid>& grid);
+    Domain(const std::shared_ptr<Grid>& grid);
 
     // Convenience functions to initialize all the scalar and vector MultiFabs given a function 
     template <typename Func>
@@ -87,12 +87,10 @@ private:
     // Private Member Functions
     //-----------------------------------------------------------------------//
 
-    void WriteGeometryToHDF5(const hid_t file_id) const;
-
 };
 
 template <typename Func>
-void TripolarGrid::InitializeScalarMultiFabs(Func initializer_function) {
+void Domain::InitializeScalarMultiFabs(Func initializer_function) {
     static_assert(
         std::is_invocable_r_v<double, Func, double, double, double>,
         "initializer_function must be callable as double(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is the function evaluated at that point."
@@ -112,7 +110,7 @@ void TripolarGrid::InitializeScalarMultiFabs(Func initializer_function) {
 }
 
 template <typename Func>
-void TripolarGrid::InitializeVectorMultiFabs(Func initializer_function) {
+void Domain::InitializeVectorMultiFabs(Func initializer_function) {
     static_assert(
         std::is_invocable_r_v<std::array<double, 3>, Func, double, double, double>,
         "initializer_function must be callable as std::array<double, 3>(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is an array of 3 doubles representing the vector function evaluated at that point."

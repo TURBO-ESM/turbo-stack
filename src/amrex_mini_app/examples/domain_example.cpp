@@ -2,11 +2,12 @@
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
+
 #include "geometry.h"
 #include "cartesian_grid.h"
-#include <tripolar_grid.h>
 #include "field.h"
 #include "field_container.h"
+#include "domain.h"
 
 int main(int argc, char* argv[])
 {
@@ -33,12 +34,12 @@ int main(int argc, char* argv[])
             grid = std::make_shared<turbo::CartesianGrid>(geometry, n_cell_x, n_cell_y, n_cell_z);
         }
 
-        turbo::TripolarGrid tripolar_grid(grid);
+        turbo::Domain domain(grid);
 
-        tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) { return x; });
+        domain.InitializeScalarMultiFabs([](double x, double y, double z) { return x; });
+        domain.InitializeVectorMultiFabs([](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
 
-        tripolar_grid.InitializeVectorMultiFabs([](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
-        tripolar_grid.WriteHDF5("tripolar_grid.h5");
+        domain.WriteHDF5("domain.h5");
     }
     amrex::Finalize();
     return 0;

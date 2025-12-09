@@ -1,13 +1,11 @@
 #include <gtest/gtest.h>
 
-#include <map>
-
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
 #include <geometry.h>
 #include <cartesian_grid.h>
-#include <tripolar_grid.h>
+#include <domain.h>
 
 #include "amrex_test_environment.h"
 
@@ -16,7 +14,7 @@ using namespace turbo;
 ::testing::Environment* const amrex_env = ::testing::AddGlobalTestEnvironment(new AmrexEnvironment());
 
 
-class TripolarGridTest : public ::testing::Test {
+class DomainTest : public ::testing::Test {
 protected:
     std::shared_ptr<CartesianGeometry> geom;
     std::shared_ptr<CartesianGrid> grid;
@@ -37,22 +35,22 @@ protected:
     }
 };
 
-TEST_F(TripolarGridTest, Constructor) {
+TEST_F(DomainTest, Constructor) {
 
-    TripolarGrid tripolar_grid(grid);
+    Domain domain(grid);
 
-    EXPECT_THROW(TripolarGrid tripolar_grid(nullptr), std::invalid_argument);
+    EXPECT_THROW(Domain domain(nullptr), std::invalid_argument);
 }
 
-TEST_F(TripolarGridTest, Initialize_Multifabs) {
+TEST_F(DomainTest, Initialize_Multifabs) {
 
-    TripolarGrid tripolar_grid(grid);
+    Domain domain(grid);
 
-    tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) {
+    domain.InitializeScalarMultiFabs([](double x, double y, double z) {
         return 1.23;
     });
 
-    for (const std::shared_ptr<amrex::MultiFab>& mf : tripolar_grid.scalar_multifabs) {
+    for (const std::shared_ptr<amrex::MultiFab>& mf : domain.scalar_multifabs) {
         for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
             auto arr = mf->array(mfi);
             amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
@@ -61,11 +59,11 @@ TEST_F(TripolarGridTest, Initialize_Multifabs) {
         }
     }
 
-    tripolar_grid.InitializeVectorMultiFabs([](double x, double y, double z) {
+    domain.InitializeVectorMultiFabs([](double x, double y, double z) {
         return std::array<double, 3>{1.0, 2.0, 3.0};
     });
 
-    for (const std::shared_ptr<amrex::MultiFab>& mf : tripolar_grid.vector_multifabs) {
+    for (const std::shared_ptr<amrex::MultiFab>& mf : domain.vector_multifabs) {
         for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
             auto arr = mf->array(mfi);
             amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
@@ -78,18 +76,17 @@ TEST_F(TripolarGridTest, Initialize_Multifabs) {
 }
 
 
-TEST_F(TripolarGridTest, WriteHDF5) {
-    // For this test, use a smaller grid for faster I/O
+TEST_F(DomainTest, WriteHDF5) {
     grid = std::make_shared<CartesianGrid>(geom, 2, 2, 2);
-    TripolarGrid tripolar_grid(grid);
+    Domain domain(grid);
 
-    tripolar_grid.InitializeScalarMultiFabs([](double x, double y, double z) {
+    domain.InitializeScalarMultiFabs([](double x, double y, double z) {
         return x;
     });
 
-    tripolar_grid.InitializeVectorMultiFabs([](double x, double y, double z) {
+    domain.InitializeVectorMultiFabs([](double x, double y, double z) {
         return std::array<double, 3>{x, y, z};
     });
 
-    tripolar_grid.WriteHDF5("Test_Output_TripolarGrid_WriteHDF5.h5");
+    domain.WriteHDF5("Test_Output_Domain_WriteHDF5.h5");
 }

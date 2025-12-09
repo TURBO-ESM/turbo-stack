@@ -5,7 +5,7 @@
 ###############################################################################
 
 # Set the where the build directory will be created. You can change this to any location you prefer.
-build_dir=~/tripolar_grid_with_amrex_build
+build_dir=~/turbo_amrex_mini_app_build
 
 # You can also set the DEBUG environment variable to 1 to enable debugging features in this script.
 if [[ "${DEBUG:-0}" == "1" ]]; then
@@ -482,12 +482,12 @@ ctest --test-dir "$build_dir"
 
 # Run the examples. 
 cd "$build_dir/examples"
-examples_to_run=("tripolar_grid" "initialization_mini_app")
+examples_to_run=("domain_example" "initialization_mini_app")
 for example in "${examples_to_run[@]}"; do
     if [[ -x "./$example" ]]; then
         echo "Running example: $example"
         #./"$example"
-        mpirun -n 4 ./"$example"
+        mpiexec -n 4 ./"$example"
         #python "$mini_app_root/postprocessing/plot_hdf5.py" "${example}.h5"
     else
         echo "Error: $example binary not found or not executable in $build_dir/examples." >&2

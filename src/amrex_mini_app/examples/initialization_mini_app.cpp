@@ -13,48 +13,13 @@
 
 using namespace turbo;
 
-template <typename Func>
-void InitializeScalarMultiFab(std::shared_ptr<Field> field, Func initializer_function) {
-    static_assert(
-        std::is_invocable_r_v<double, Func, double, double, double>,
-        "initializer_function must be callable as double(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is the function evaluated at that point."
-    );
-
-    for (amrex::MFIter mfi(*field->multifab); mfi.isValid(); ++mfi) {
-        const amrex::Array4<amrex::Real>& array = field->multifab->array(mfi);
-        amrex::ParallelFor(mfi.validbox(), [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-            const Grid::Point location = field->GetGridPoint(i, j, k); 
-            array(i, j, k) = initializer_function(location.x, location.y, location.z);
-        });
-    }
-}
-
-template <typename Func>
-void InitializeVectorMultiFab(std::shared_ptr<Field> field, Func initializer_function) {
-    static_assert(
-        std::is_invocable_r_v<std::array<double, 3>, Func, double, double, double>,
-        "initializer_function must be callable as std::array<double, 3>(double, double, double). The arguments are the x, y, and z coordinates of the point and the return value is an array of 3 doubles representing the vector function evaluated at that point."
-    );
-
-    for (amrex::MFIter mfi(*field->multifab); mfi.isValid(); ++mfi) {
-        const amrex::Array4<amrex::Real>& array = field->multifab->array(mfi);
-        amrex::ParallelFor(mfi.validbox(), [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-            const Grid::Point location = field->GetGridPoint(i, j, k);
-            std::array<double, 3> initial_vector = initializer_function(location.x, location.y, location.z);
-            array(i, j, k, 0) = initial_vector[0];
-            array(i, j, k, 1) = initial_vector[1];
-            array(i, j, k, 2) = initial_vector[2];
-        });
-    }
-}
-
-
-void WriteHDF5(const std::string& filename, const std::shared_ptr<Grid>& grid, const std::shared_ptr<FieldContainer>& field_container) {
+void WriteHDF5(const std::string& filename, const std::shared_ptr<FieldContainer>& field_container) {
 
     hid_t file_id;
 
-    // Only the IOProcessor (usually rank 0) writes the grid information and metadata
+    // Only the IOProcessor writes the grid information and metadata
     if (amrex::ParallelDescriptor::IOProcessor()) {
+
         file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
         if (file_id < 0) {
@@ -95,7 +60,11 @@ void WriteHDF5(const std::string& filename, const std::shared_ptr<Grid>& grid, c
             H5Sclose(attr_space_id);
         }
 
-        grid->WriteHDF5(file_id);
+        for (auto field :*field_container) {
+            // Kind of hacky but we know that all the fields in the container share the same grid, so we can just take the first one.
+            field->grid->WriteHDF5(file_id);
+            break; 
+        }
     }
 
     // Fields know how to write themselves to HDF5. Will automatically choose the right process to write based on AMReX parallel settings.
@@ -161,20 +130,50 @@ int main(int argc, char* argv[])
 
         // Loop over all the fields in the FieldContainer and print out their names, FieldGridStagger, and MultiFab pointer
         for (const auto& field : *field_container) {
-            amrex::Print() << "Field name: " << field->name << ", FieldGridStagger: " << FieldGridStaggerToString(field->field_grid_stagger) << ", MultiFab pointer: " << field->multifab.get() << "\n";
+            amrex::Print() << "Field name: " << field->name << ", FieldGridStagger: " << FieldGridStaggerToString(field->field_grid_stagger) << "\n";
         }
 
+        // Initialize scalar and vector MultiFabs with some example data
         for (const auto& field : *field_container) {
             if (field->multifab->nComp() == n_comp_scalar) {
-                InitializeScalarMultiFab(field, [](double x, double y, double z) { return x; });
+
+                // Can be replaced with any other initializer function that takes (double x, double y, double z) and returns a double value.
+                auto scalar_initializer_function = [](double x, double y, double z) {
+                    return x; 
+                };
+
+                for (amrex::MFIter mfi(*field->multifab); mfi.isValid(); ++mfi) {
+                    const amrex::Array4<amrex::Real>& array = field->multifab->array(mfi);
+                    amrex::ParallelFor(mfi.validbox(), [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                        const Grid::Point grid_point = field->GetGridPoint(i, j, k); 
+                        array(i, j, k) = scalar_initializer_function(grid_point.x, grid_point.y, grid_point.z);
+                    });
+                }
             }
             else if (field->multifab->nComp() == n_comp_vector) {
-                InitializeVectorMultiFab(field, [](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
+
+                // Can be replaced with any other initializer function that takes (double x, double y, double z) and returns a std::array<double, 3>.
+                auto vector_initializer_function = [](double x, double y, double z) {
+                    return std::array<double, 3>{x, y, z}; // Example initializer function
+                };
+
+                for (amrex::MFIter mfi(*field->multifab); mfi.isValid(); ++mfi) {
+                    const amrex::Array4<amrex::Real>& array = field->multifab->array(mfi);
+                    amrex::ParallelFor(mfi.validbox(), [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                        const Grid::Point grid_point = field->GetGridPoint(i, j, k);
+                        std::array<double, 3> initial_vector = vector_initializer_function(grid_point.x, grid_point.y, grid_point.z);
+                        array(i, j, k, 0) = initial_vector[0];
+                        array(i, j, k, 1) = initial_vector[1];
+                        array(i, j, k, 2) = initial_vector[2];
+                    });
+                }
             }
             else {
                 amrex::Abort("MultiFab has an unexpected number of components.");
             }
         }
+    
+        WriteHDF5("test.h5",field_container);
 
     }
 

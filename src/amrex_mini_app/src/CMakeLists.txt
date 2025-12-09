@@ -1,5 +1,5 @@
 add_subdirectory(geometry)
 add_subdirectory(grid)
 add_subdirectory(field)
-add_subdirectory(tripolar_helper)
+add_subdirectory(domain)
 add_subdirectory(testing_utils)

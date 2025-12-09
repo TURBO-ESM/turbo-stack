@@ -10,11 +10,11 @@
 #include "grid.h"
 #include "field.h"
 #include "field_container.h"
-#include "tripolar_grid.h"
+#include "domain.h"
 
 namespace turbo {
 
-TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
+Domain::Domain(const std::shared_ptr<Grid>& grid)
     : grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
 
 {
@@ -24,7 +24,7 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
     );
 
     if (!grid_) {
-        throw std::invalid_argument("TripolarGrid constructor: grid pointer is null");
+        throw std::invalid_argument("Domain constructor: grid pointer is null");
     }
 
     // number of ghost cells
@@ -88,14 +88,16 @@ TripolarGrid::TripolarGrid(const std::shared_ptr<Grid>& grid)
 
 }
 
-void TripolarGrid::WriteHDF5(const std::string& filename) const {
+void Domain::WriteHDF5(const std::string& filename) const {
 
     hid_t file_id;
 
-    // Write the attributes and grid from rank 0
+    // Only the IOProcessor writes the grid information and metadata
     if (amrex::ParallelDescriptor::IOProcessor()) {
 
-        hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        amrex::AllPrint() << "Going to create HDF5 file: " << filename <<  " from IOProcessor " << amrex::ParallelDescriptor::IOProcessorNumber() << std::endl; 
+
+        file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
         if (file_id < 0) {
             throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
@@ -134,6 +136,7 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
         }
 
         grid_->WriteHDF5(file_id);
+
     }
 
     for (const auto& field : *field_container_) {
@@ -148,7 +151,7 @@ void TripolarGrid::WriteHDF5(const std::string& filename) const {
 
 }
 
-//void TripolarGrid::WriteXDMF(const std::string& h5_filename,
+//void Domain::WriteXDMF(const std::string& h5_filename,
 //                             const std::string& xdmf_filename) const {
 //
 //    if (amrex::ParallelDescriptor::MyProc() == 0) {
