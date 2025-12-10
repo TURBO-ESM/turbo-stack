@@ -134,6 +134,20 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const
             throw std::runtime_error("Failed to create HDF5 dataset '" + name + "'.");
         }
 
+        {
+            // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
+            std::string data_layout_str = "row_major";
+            hid_t attr_type = H5Tcopy(H5T_C_S1);
+            H5Tset_size(attr_type, data_layout_str.size());
+            hid_t attr_space = H5Screate(H5S_SCALAR);
+            hid_t attr_id =
+                H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, attr_type, data_layout_str.c_str());
+            H5Aclose(attr_id);
+            H5Sclose(attr_space);
+            H5Tclose(attr_type);
+        }
+
         std::vector<double> data(nx * ny * nz * n_component);
         std::size_t idx = 0;
         for (std::size_t i = 0; i < nx; ++i)
