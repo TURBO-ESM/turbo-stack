@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
             FieldPtr z_face_vector_field = field_container->Insert("z_face_vector", FieldGridStagger::KFace,        n_comp_vector, n_ghost);
         }
 
-        // Loop over all the fields in the FieldContainer and print out their names, FieldGridStagger, and MultiFab pointer
+        // Loop over all the fields in the FieldContainer and print out their names and FieldGridStagger
         for (const auto& field : *field_container) {
             amrex::Print() << "Field name: " << field->name << ", FieldGridStagger: " << FieldGridStaggerToString(field->field_grid_stagger) << "\n";
         }
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
             }
         }
     
-        WriteHDF5("test.h5",field_container);
+        WriteHDF5("initialization_mini_app.h5", field_container);
 
     }
 

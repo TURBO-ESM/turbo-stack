@@ -14,14 +14,30 @@
 
 namespace turbo {
 
+//Domain::Domain(double x_min, double x_max,
+//               double y_min, double y_max,
+//               double z_min, double z_max,
+//               std::size_t n_cell_x,
+//               std::size_t n_cell_y,
+//               std::size_t n_cell_z)
+//    : Domain(std::make_shared<CartesianGrid>(
+//          std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max),
+//          n_cell_x, n_cell_y, n_cell_z)) 
+//{
+//}
+
 Domain::Domain(const std::shared_ptr<Grid>& grid)
-    : grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
+    :  grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
 
 {
     static_assert(
         amrex::SpaceDim == 3,
         "Only supports 3D grids."
     );
+
+    //if (!geometry_) {
+    //    throw std::invalid_argument("Domain constructor: geometry pointer is null");
+    //}
 
     if (!grid_) {
         throw std::invalid_argument("Domain constructor: grid pointer is null");

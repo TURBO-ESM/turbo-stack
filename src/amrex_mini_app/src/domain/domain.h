@@ -12,6 +12,7 @@
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
+#include "geometry.h"
 #include "grid.h"
 #include "field.h"
 #include "field_container.h"
@@ -24,13 +25,19 @@ public:
     //-----------------------------------------------------------------------//
     // Public Types
     //-----------------------------------------------------------------------//
-    using ValueType = amrex::Real;
 
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
 
     // Constructors
+    //Domain(double x_min, double x_max,
+    //       double y_min, double y_max,
+    //       double z_min, double z_max,
+    //       std::size_t n_cell_x,
+    //       std::size_t n_cell_y,
+    //       std::size_t n_cell_z);
+
     Domain(const std::shared_ptr<Grid>& grid);
 
     // Convenience functions to initialize all the scalar and vector MultiFabs given a function 
@@ -80,6 +87,7 @@ private:
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
+    //const std::shared_ptr<Geometry> geometry_; // Geometry object describing the domain. Probably want a way to add a way to store this later?
     const std::shared_ptr<Grid> grid_;
     const std::shared_ptr<FieldContainer> field_container_;
 

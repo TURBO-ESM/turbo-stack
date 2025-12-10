@@ -495,12 +495,15 @@ for example in "${examples_to_run[@]}"; do
     fi
 done
 
+#spack env deactivate
+#python3 "$mini_app_root/postprocessing/plot_hdf5.py" initialization_mini_app.h5
+
 ###############################################################################
 # Build the Doxygen Documentation
 ###############################################################################
 
-if [[ "$build_doxygen_documentation" == "1" ]]; then
-    echo "Building Doxygen documentation..."
-    cd "$mini_app_root/doc"
-    doxygen Doxyfile
-fi
+#if [[ "$build_doxygen_documentation" == "1" ]]; then
+#    echo "Building Doxygen documentation..."
+#    cd "$mini_app_root/doc"
+#    doxygen Doxyfile
+#fi

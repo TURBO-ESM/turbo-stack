@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
         domain.InitializeScalarMultiFabs([](double x, double y, double z) { return x; });
         domain.InitializeVectorMultiFabs([](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
 
-        domain.WriteHDF5("domain.h5");
+        domain.WriteHDF5("domain_example.h5");
     }
     amrex::Finalize();
     return 0;
