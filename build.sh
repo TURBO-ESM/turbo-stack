@@ -61,7 +61,7 @@ while [[ "$#" -gt 0 ]]; do
             shift ;;
         --amrex)
             AMREX_INSTALL_PATH="$2"
-            if [ ! -d "${AMREX_PATH}" ]; then
+            if [ ! -d "${AMREX_INSTALL_PATH}" ]; then
               echo "--amrex path ${AMREX_PATH} not valid"
               exit 1
             fi
