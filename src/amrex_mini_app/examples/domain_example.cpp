@@ -7,7 +7,8 @@
 #include "cartesian_grid.h"
 #include "field.h"
 #include "field_container.h"
-#include "domain.h"
+
+#include "cartesian_domain.h"
 
 int main(int argc, char* argv[])
 {

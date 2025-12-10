@@ -3,9 +3,9 @@
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
-#include <geometry.h>
+#include <geometry.h> // Replace with cartesian_geometry.h when it is seperated out of geometry.h
 #include <cartesian_grid.h>
-#include <domain.h>
+#include <cartesian_domain.h>
 
 #include "amrex_test_environment.h"
 
@@ -35,7 +35,6 @@ protected:
 };
 
 TEST_F(CartesianDomainTest, Constructor) {
-
     
     CartesianDomain cartesian_domain(x_min, x_max,
                                      y_min, y_max,

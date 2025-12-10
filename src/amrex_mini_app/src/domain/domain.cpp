@@ -1,20 +1,14 @@
-#include <cstddef> // for std::size_t
 #include <string>
-#include <fstream>
 
 #include <hdf5.h>
 
 #include <AMReX.H>
-#include <AMReX_MultiFab.H>
 
+#include "domain.h"
+#include "geometry.h"
 #include "grid.h"
 #include "field.h"
 #include "field_container.h"
-#include "domain.h"
-
-// for cartesian domain
-//#include "cartesian_geometry.h"
-#include "cartesian_grid.h"
 
 namespace turbo {
 
@@ -29,7 +23,7 @@ void Domain::WriteHDF5(const std::string& filename) const {
     // Only the IOProcessor writes the grid information and metadata
     if (amrex::ParallelDescriptor::IOProcessor()) {
 
-        amrex::AllPrint() << "Going to create HDF5 file: " << filename <<  " from IOProcessor " << amrex::ParallelDescriptor::IOProcessorNumber() << std::endl; 
+        //amrex::AllPrint() << "Going to create HDF5 file: " << filename <<  " from IOProcessor " << amrex::ParallelDescriptor::IOProcessorNumber() << std::endl; 
 
         file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -145,51 +139,5 @@ void Domain::WriteHDF5(const std::string& filename) const {
 //    }
 //}
 
-
-CartesianDomain::CartesianDomain(double x_min, double x_max,
-               double y_min, double y_max,
-               double z_min, double z_max,
-               std::size_t n_cell_x,
-               std::size_t n_cell_y,
-               std::size_t n_cell_z)
-    :  Domain(
-        std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max),
-        std::make_shared<CartesianGrid>(
-            std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max),
-            n_cell_x,
-            n_cell_y,
-            n_cell_z)
-      )
-{
-}
-
-
-
-//Domain::Domain(const std::shared_ptr<Grid>& grid)
-//    : geometry_(grid->geometry()), grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
-//
-//{
-//    static_assert(
-//        amrex::SpaceDim == 3,
-//        "Only supports 3D grids."
-//    );
-//
-//    if (!geometry_) {
-//        throw std::invalid_argument("Domain constructor: geometry pointer is null");
-//    }
-//
-//    if (!grid_) {
-//        throw std::invalid_argument("Domain constructor: grid pointer is null");
-//    }
-//
-//    // number of ghost cells
-//    const int n_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
-//
-//    // number of components for each type of MultiFab
-//    const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
-//    const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
-//
-//
-//}
 
 } // namespace turbo
