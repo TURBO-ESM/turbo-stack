@@ -12,97 +12,15 @@
 #include "field_container.h"
 #include "domain.h"
 
+// for cartesian domain
+//#include "cartesian_geometry.h"
+#include "cartesian_grid.h"
+
 namespace turbo {
 
-//Domain::Domain(double x_min, double x_max,
-//               double y_min, double y_max,
-//               double z_min, double z_max,
-//               std::size_t n_cell_x,
-//               std::size_t n_cell_y,
-//               std::size_t n_cell_z)
-//    : Domain(std::make_shared<CartesianGrid>(
-//          std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max),
-//          n_cell_x, n_cell_y, n_cell_z)) 
-//{
-//}
-
-Domain::Domain(const std::shared_ptr<Grid>& grid)
-    :  grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
-
-{
-    static_assert(
-        amrex::SpaceDim == 3,
-        "Only supports 3D grids."
-    );
-
-    //if (!geometry_) {
-    //    throw std::invalid_argument("Domain constructor: geometry pointer is null");
-    //}
-
-    if (!grid_) {
-        throw std::invalid_argument("Domain constructor: grid pointer is null");
-    }
-
-    // number of ghost cells
-    const int n_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
-
-    // number of components for each type of MultiFab
-    const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
-    const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
-
-    // Create scalar and vector fields at all locations in the grid
-    field_container_->Insert("cell_scalar",   FieldGridStagger::CellCentered, n_comp_scalar, n_ghost);
-    field_container_->Insert("cell_vector",   FieldGridStagger::CellCentered, n_comp_vector, n_ghost);
-    field_container_->Insert("node_scalar",   FieldGridStagger::Nodal,        n_comp_scalar, n_ghost);
-    field_container_->Insert("node_vector",   FieldGridStagger::Nodal,        n_comp_vector, n_ghost);  
-    field_container_->Insert("x_face_scalar", FieldGridStagger::IFace,        n_comp_scalar, n_ghost);
-    field_container_->Insert("x_face_vector", FieldGridStagger::IFace,        n_comp_vector, n_ghost);
-    field_container_->Insert("y_face_scalar", FieldGridStagger::JFace,        n_comp_scalar, n_ghost);
-    field_container_->Insert("y_face_vector", FieldGridStagger::JFace,        n_comp_vector, n_ghost);
-    field_container_->Insert("z_face_scalar", FieldGridStagger::KFace,        n_comp_scalar, n_ghost);
-    field_container_->Insert("z_face_vector", FieldGridStagger::KFace,        n_comp_vector, n_ghost);
-
-    // Setup the pointers to the MultiFabs for easier access outside this class
-    cell_scalar   = field_container_->Get("cell_scalar", FieldGridStagger::CellCentered)->multifab;
-    cell_vector   = field_container_->Get("cell_vector", FieldGridStagger::CellCentered)->multifab;
-    node_scalar   = field_container_->Get("node_scalar", FieldGridStagger::Nodal)->multifab;
-    node_vector   = field_container_->Get("node_vector", FieldGridStagger::Nodal)->multifab;
-    x_face_scalar = field_container_->Get("x_face_scalar", FieldGridStagger::IFace)->multifab;
-    x_face_vector = field_container_->Get("x_face_vector", FieldGridStagger::IFace)->multifab;
-    y_face_scalar = field_container_->Get("y_face_scalar", FieldGridStagger::JFace)->multifab;
-    y_face_vector = field_container_->Get("y_face_vector", FieldGridStagger::JFace)->multifab;
-    z_face_scalar = field_container_->Get("z_face_scalar", FieldGridStagger::KFace)->multifab;
-    z_face_vector = field_container_->Get("z_face_vector", FieldGridStagger::KFace)->multifab;
-
-
-    // Collections of MultiFabs for easier looping and testing
-    for (const auto& field : *field_container_) {
-        all_multifabs.insert(field->multifab);
-
-        if (field->multifab->nComp() == n_comp_scalar) {
-            scalar_multifabs.insert(field->multifab);
-        } else if (field->multifab->nComp() == n_comp_vector) {
-            vector_multifabs.insert(field->multifab);
-        } else {
-            amrex::Abort("MultiFab has an unexpected number of components.");
-        }
-
-        if (field->IsCellCentered()) {
-            cell_multifabs.insert(field->multifab);
-        } else if (field->IsIFaceCentered()) {
-            x_face_multifabs.insert(field->multifab);
-        } else if (field->IsJFaceCentered()) {
-            y_face_multifabs.insert(field->multifab);
-        } else if (field->IsKFaceCentered()) {
-            z_face_multifabs.insert(field->multifab);
-        } else if (field->IsNodal()) {
-            node_multifabs.insert(field->multifab);
-        } else {
-            amrex::Abort("MultiFab has an unexpected topology.");
-        }
-    }
-
-}
+Domain::Domain(const std::shared_ptr<Geometry>& geometry,
+            const std::shared_ptr<Grid>& grid)
+                : geometry_(geometry), grid_(grid), fields_(std::make_shared<FieldContainer>(grid_)) {}
 
 void Domain::WriteHDF5(const std::string& filename) const {
 
@@ -117,20 +35,6 @@ void Domain::WriteHDF5(const std::string& filename) const {
 
         if (file_id < 0) {
             throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
-        }
-
-        // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
-        {
-            const char* layout = "row-major";
-            const hid_t str_type = H5Tcopy(H5T_C_S1);
-            H5Tset_size(str_type, strlen(layout) + 1); // +1 for the null terminator
-    
-            const hid_t attr_space_id = H5Screate(H5S_SCALAR);
-            const hid_t attr_id = H5Acreate(file_id, "data_layout", str_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
-            H5Awrite(attr_id, str_type, layout);
-            H5Aclose(attr_id);
-            H5Sclose(attr_space_id);
-            H5Tclose(str_type);        
         }
 
         {
@@ -155,7 +59,7 @@ void Domain::WriteHDF5(const std::string& filename) const {
 
     }
 
-    for (const auto& field : *field_container_) {
+    for (const auto& field : *fields_) {
         field->WriteHDF5(file_id);
     }
 
@@ -239,6 +143,53 @@ void Domain::WriteHDF5(const std::string& filename) const {
 //        xdmf << "</Xdmf>\n";
 //        xdmf.close();
 //    }
+//}
+
+
+CartesianDomain::CartesianDomain(double x_min, double x_max,
+               double y_min, double y_max,
+               double z_min, double z_max,
+               std::size_t n_cell_x,
+               std::size_t n_cell_y,
+               std::size_t n_cell_z)
+    :  Domain(
+        std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max),
+        std::make_shared<CartesianGrid>(
+            std::make_shared<CartesianGeometry>(x_min, x_max, y_min, y_max, z_min, z_max),
+            n_cell_x,
+            n_cell_y,
+            n_cell_z)
+      )
+{
+}
+
+
+
+//Domain::Domain(const std::shared_ptr<Grid>& grid)
+//    : geometry_(grid->geometry()), grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
+//
+//{
+//    static_assert(
+//        amrex::SpaceDim == 3,
+//        "Only supports 3D grids."
+//    );
+//
+//    if (!geometry_) {
+//        throw std::invalid_argument("Domain constructor: geometry pointer is null");
+//    }
+//
+//    if (!grid_) {
+//        throw std::invalid_argument("Domain constructor: grid pointer is null");
+//    }
+//
+//    // number of ghost cells
+//    const int n_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
+//
+//    // number of components for each type of MultiFab
+//    const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
+//    const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
+//
+//
 //}
 
 } // namespace turbo
