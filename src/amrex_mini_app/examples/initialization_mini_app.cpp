@@ -26,20 +26,6 @@ void WriteHDF5(const std::string& filename, const std::shared_ptr<FieldContainer
             throw std::runtime_error("Invalid HDF5 file_id passed to WriteHDF5.");
         }
 
-        // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
-        {
-            const char* layout = "row-major";
-            const hid_t str_type = H5Tcopy(H5T_C_S1);
-            H5Tset_size(str_type, strlen(layout) + 1); // +1 for the null terminator
-    
-            const hid_t attr_space_id = H5Screate(H5S_SCALAR);
-            const hid_t attr_id = H5Acreate(file_id, "data_layout", str_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
-            H5Awrite(attr_id, str_type, layout);
-            H5Aclose(attr_id);
-            H5Sclose(attr_space_id);
-            H5Tclose(str_type);        
-        }
-
         // Example test double value, can be set to any value you want... might be useful for to attach time step size, current time, etc.
         {
             double test_double_value = 1.0; 

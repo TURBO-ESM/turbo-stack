@@ -14,7 +14,46 @@ namespace turbo {
 
 Domain::Domain(const std::shared_ptr<Geometry>& geometry,
             const std::shared_ptr<Grid>& grid)
-                : geometry_(geometry), grid_(grid), fields_(std::make_shared<FieldContainer>(grid_)) {}
+                : geometry_(geometry), grid_(grid), field_container_(std::make_shared<FieldContainer>(grid_)) {}
+
+std::shared_ptr<Geometry> Domain::GetGeometry() const noexcept { return geometry_; }
+
+std::shared_ptr<Grid> Domain::GetGrid() const noexcept { return grid_; }
+
+std::set<std::shared_ptr<Field>> Domain::GetFields() const noexcept 
+{ 
+    return std::set<std::shared_ptr<Field>>(field_container_->begin(), field_container_->end());
+}
+
+std::shared_ptr<Field> Domain::CreateField(const Field::NameType& name, const FieldGridStagger stagger,
+                                       const std::size_t n_component, const std::size_t n_ghost)
+{
+    return field_container_->Insert(name, stagger, n_component, n_ghost);
+}
+
+std::shared_ptr<Field> Domain::GetField(const Field::NameType& name) const 
+{
+    return field_container_->Get(name);
+}
+
+bool Domain::HasField(const Field::NameType& field_name) const 
+{
+    // Implementation relying on FieldContainer's Contains method
+    return field_container_->Contains(field_name);
+
+    // Alternative implementation using exception handling
+    //try {
+    //    GetField(field_name);
+    //    return true;
+    //} catch (const std::invalid_argument&) {
+    //    return false;
+    //}
+
+    // Alternative implementation using ranges and lambda
+    //std::ranges::any_of(GetFields(), [field_name](const std::shared_ptr<Field>& field) {
+    //    return field->name == field_name;
+    //});
+}
 
 void Domain::WriteHDF5(const std::string& filename) const {
 
@@ -53,7 +92,7 @@ void Domain::WriteHDF5(const std::string& filename) const {
 
     }
 
-    for (const auto& field : *fields_) {
+    for (const auto& field : *field_container_) {
         field->WriteHDF5(file_id);
     }
 

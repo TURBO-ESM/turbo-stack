@@ -3,9 +3,15 @@
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
-#include <geometry.h> // Replace with cartesian_geometry.h when it is seperated out of geometry.h
-#include <cartesian_grid.h>
-#include <cartesian_domain.h>
+#include <memory>
+#include <set>
+#include <string>
+#include <stdexcept>
+#include <algorithm>
+
+#include "cartesian_geometry.h" // Replace with cartesian_geometry.h when it is seperated out of geometry.h
+#include "cartesian_grid.h"
+#include "cartesian_domain.h"
 
 #include "amrex_test_environment.h"
 
@@ -44,6 +50,71 @@ TEST_F(CartesianDomainTest, Constructor) {
                                      n_cell_z);
 
 }
+
+TEST_F(CartesianDomainTest, Getters) {
+    
+    CartesianDomain cartesian_domain(x_min, x_max,
+                                     y_min, y_max,
+                                     z_min, z_max,
+                                     n_cell_x,
+                                     n_cell_y,
+                                     n_cell_z);
+
+    std::shared_ptr<CartesianGeometry> geometry = cartesian_domain.GetGeometry();
+    EXPECT_NE(geometry, nullptr);
+    EXPECT_DOUBLE_EQ(geometry->XMin(), x_min);
+    EXPECT_DOUBLE_EQ(geometry->XMax(), x_max);
+    EXPECT_DOUBLE_EQ(geometry->YMin(), y_min);
+    EXPECT_DOUBLE_EQ(geometry->YMax(), y_max);
+    EXPECT_DOUBLE_EQ(geometry->ZMin(), z_min);
+    EXPECT_DOUBLE_EQ(geometry->ZMax(), z_max);
+    EXPECT_DOUBLE_EQ(geometry->LX(), x_max - x_min);
+    EXPECT_DOUBLE_EQ(geometry->LY(), y_max - y_min);
+    EXPECT_DOUBLE_EQ(geometry->LZ(), z_max - z_min);
+
+    std::shared_ptr<CartesianGrid> grid = cartesian_domain.GetGrid();
+    EXPECT_NE(grid, nullptr);
+    EXPECT_EQ(grid->NCellI(), n_cell_x);
+    EXPECT_EQ(grid->NCellJ(), n_cell_y);
+    EXPECT_EQ(grid->NCellK(), n_cell_z);
+
+    std::set<std::shared_ptr<Field>> fields = cartesian_domain.GetFields();
+    EXPECT_TRUE(fields.empty());
+
+}
+
+TEST_F(CartesianDomainTest, CreateField) {
+    
+    CartesianDomain cartesian_domain(x_min, x_max,
+                                     y_min, y_max,
+                                     z_min, z_max,
+                                     n_cell_x,
+                                     n_cell_y,
+                                     n_cell_z);
+    
+    EXPECT_TRUE(cartesian_domain.GetFields().empty());
+
+    const std::string field_name = "test_field";
+    const std::size_t n_ghost = 2;
+    const std::size_t n_component = 1;
+    std::shared_ptr<Field> field = cartesian_domain.CreateField(field_name, FieldGridStagger::CellCentered, n_component, n_ghost);
+
+    EXPECT_EQ(cartesian_domain.GetFields().size(), 1);
+
+    EXPECT_TRUE(cartesian_domain.HasField(field_name));
+
+    // Verify the field is included in the return value from GetFields
+    EXPECT_TRUE(std::ranges::any_of(cartesian_domain.GetFields(), [field_name](const std::shared_ptr<Field>& field) {
+        return field->name == field_name;
+    }));
+
+    EXPECT_EQ(cartesian_domain.GetField(field_name), field);
+
+    // Attempting to create a field with the same name should throw an exception
+    EXPECT_THROW(cartesian_domain.CreateField(field_name, FieldGridStagger::CellCentered, n_component, n_ghost), std::invalid_argument);
+
+}
+
 
 //TEST_F(CartesianDomainTest, Initialize_Multifabs) {
 //
@@ -87,6 +158,7 @@ TEST_F(CartesianDomainTest, WriteHDF5) {
                                      n_cell_x,
                                      n_cell_y,
                                      n_cell_z);
+    
 
     //cartesian_domain.InitializeScalarMultiFabs([](double x, double y, double z) {
     //    return x;

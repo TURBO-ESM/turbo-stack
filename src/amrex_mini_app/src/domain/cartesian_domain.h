@@ -39,8 +39,6 @@ public:
         return std::static_pointer_cast<CartesianGrid>(grid_);
     }
 
-    std::shared_ptr<FieldContainer> GetFields() const noexcept { return fields_; }
-
     //// Convenience functions to initialize all the scalar and vector MultiFabs given a function 
     //template <typename Func>
     //void InitializeScalarMultiFabs(Func initialization_function);

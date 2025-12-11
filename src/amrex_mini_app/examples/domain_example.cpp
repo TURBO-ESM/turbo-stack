@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 
         std::shared_ptr<turbo::CartesianGeometry> geometry = domain.GetGeometry();
         std::shared_ptr<turbo::CartesianGrid> grid = domain.GetGrid();
-        std::shared_ptr<turbo::FieldContainer> fields = domain.GetFields();
+        std::set<std::shared_ptr<turbo::Field>> fields = domain.GetFields();
 
         //domain.InitializeScalarMultiFabs([](double x, double y, double z) { return x; });
         //domain.InitializeVectorMultiFabs([](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
