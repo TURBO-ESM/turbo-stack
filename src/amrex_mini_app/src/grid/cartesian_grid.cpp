@@ -1,11 +1,10 @@
+#include "cartesian_geometry.h"
 #include "cartesian_grid.h"
 
 #include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include "geometry.h"
 
 namespace turbo
 {
