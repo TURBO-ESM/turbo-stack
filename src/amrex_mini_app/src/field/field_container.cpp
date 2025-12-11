@@ -21,22 +21,21 @@ FieldContainer::FieldContainer(const std::shared_ptr<Grid>& grid) : grid_(grid)
     }
 }
 
-bool FieldContainer::Contains(const Field::NameType& name, const FieldGridStagger stagger) const noexcept
+bool FieldContainer::Contains(const Field::NameType& name) const noexcept
 {
-    return field_map.contains(std::make_tuple(name, stagger));
+    return field_map.contains(name);
 }
 
 std::shared_ptr<Field> FieldContainer::Insert(const Field::NameType& name, const FieldGridStagger field_grid_stagger,
                                               const std::size_t n_component, const std::size_t n_ghost)
 {
-    if (Contains(name, field_grid_stagger))
+    if (Contains(name))
     {
-        throw std::invalid_argument("FieldContainer::Insert: Field with name '" + name + "' and stagger '" +
-                                    FieldGridStaggerToString(field_grid_stagger) + "' already exists.");
+        throw std::invalid_argument("FieldContainer::Insert: Field with name '" + name + "' already exists.");
     }
 
     const std::shared_ptr<Field> field = std::make_shared<Field>(name, grid_, field_grid_stagger, n_component, n_ghost);
-    auto [iter, inserted]              = field_map.insert({std::make_tuple(name, field_grid_stagger), field});
+    auto [iter, inserted]              = field_map.insert({name, field});
     if (!inserted)
     {
         // Since we already checked that no value with this same key exist in the map, we should never reach this point.
@@ -49,16 +48,15 @@ std::shared_ptr<Field> FieldContainer::Insert(const Field::NameType& name, const
     return field;
 }
 
-std::shared_ptr<Field> FieldContainer::Get(const Field::NameType& name, const FieldGridStagger stagger) const
+std::shared_ptr<Field> FieldContainer::Get(const Field::NameType& name) const
 {
-    auto it = field_map.find(std::make_tuple(name, stagger));
+    auto it = field_map.find(name);
     if (it != field_map.end())
     {
         return it->second;
     }
     // Maybe we want to do something else instead of throwing an exception here?
-    throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' and stagger '" +
-                                FieldGridStaggerToString(stagger) + "' does not exist.");
+    throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' does not exist.");
 }
 
 auto FieldContainer::begin() const -> decltype(std::views::values(std::declval<const FieldMap&>()).begin()) 

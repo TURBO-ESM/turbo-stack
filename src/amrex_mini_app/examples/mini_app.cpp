@@ -59,17 +59,17 @@ int main(int argc, char* argv[])
         }
 
         // After we are out of the scope where a field was created and returned by FieldContainer::Insert we can use the FieldContainer::Get function to get that field as long as we know the name.
-        std::shared_ptr<Field> temperature_field = field_container.Get("temperature", FieldGridStagger::CellCentered);
+        std::shared_ptr<Field> temperature_field = field_container.Get("temperature");
 
         // However if you were somewhere else in the program and you were not sure if a field exists, I recommend using Contains() to check if the field exists before calling Get() to avoid potential exceptions.
-        if ( field_container.Contains("temperature", FieldGridStagger::CellCentered) ) {
-            std::shared_ptr<Field> also_temperature_field = field_container.Get("temperature", FieldGridStagger::CellCentered);
+        if ( field_container.Contains("temperature") ) {
+            std::shared_ptr<Field> also_temperature_field = field_container.Get("temperature");
         } else {
             // In this example we should never get here since we just explicitly added a field named "temperature" above.
             // But in a real user program or application maybe they are using fields that were created somewhere else in the call stack in another scope.
             // I assume people would handle this sort of set up and getting in a way that makes sense for their application. Like maintain a list of valid field names, or use Contains() to check before calling Get() like we do here and creating the needed field if it does not already exist, etc.
             // But in this example I don't handle anything and just throw an exception to bail here.
-            throw std::runtime_error("FieldContainer does NOT contain a field named 'temperature'");
+            throw std::runtime_error("FieldContainer does not contain a field named 'temperature'");
         }
 
     }

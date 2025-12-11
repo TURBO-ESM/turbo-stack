@@ -28,8 +28,7 @@ class FieldContainer
     //-----------------------------------------------------------------------//
     // Some private type aliases for convenience.
     //-----------------------------------------------------------------------//
-    using FieldKey = std::tuple<Field::NameType, FieldGridStagger>;
-    using FieldMap = std::map<FieldKey, std::shared_ptr<Field>>;
+    using FieldMap = std::map<Field::NameType, std::shared_ptr<Field>>;
 
    public:
     //-----------------------------------------------------------------------//
@@ -47,7 +46,7 @@ class FieldContainer
      * @param name Name of the field to check.
      * @return true if the field exists, false otherwise.
      */
-    bool Contains(const Field::NameType& name, const FieldGridStagger stagger) const noexcept;
+    bool Contains(const Field::NameType& name) const noexcept;
 
     /**
      * @brief Construct a new field and insert it into the container.
@@ -64,13 +63,12 @@ class FieldContainer
                                   const std::size_t n_component, const std::size_t n_ghost);
 
     /**
-     * @brief Get a field by name and stagger.
+     * @brief Get a field by name.
      * @param name Name of the field to retrieve.
-     * @param stagger Field grid staggering type.
      * @return Shared pointer to the Field.
      * @throws std::invalid_argument if the field does not exist in the container.
      */
-    std::shared_ptr<Field> Get(const Field::NameType& name, const FieldGridStagger stagger) const;
+    std::shared_ptr<Field> Get(const Field::NameType& name) const;
 
     /**
      * @brief Get an iterator to the beginning of the field values (C++20 views).
