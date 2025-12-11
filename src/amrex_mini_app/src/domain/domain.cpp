@@ -1,4 +1,7 @@
 #include <string>
+#include <memory>
+#include <stdexcept>
+#include <ranges>
 
 #include <hdf5.h>
 
@@ -19,11 +22,6 @@ Domain::Domain(const std::shared_ptr<Geometry>& geometry,
 std::shared_ptr<Geometry> Domain::GetGeometry() const noexcept { return geometry_; }
 
 std::shared_ptr<Grid> Domain::GetGrid() const noexcept { return grid_; }
-
-std::set<std::shared_ptr<Field>> Domain::GetFields() const noexcept 
-{ 
-    return std::set<std::shared_ptr<Field>>(field_container_->begin(), field_container_->end());
-}
 
 std::shared_ptr<Field> Domain::CreateField(const Field::NameType& name, const FieldGridStagger stagger,
                                        const std::size_t n_component, const std::size_t n_ghost)

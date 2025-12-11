@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <string>
-#include <set>
+#include <ranges>
 
 #include "geometry.h"
 #include "grid.h"
@@ -32,7 +32,9 @@ public:
     // Accessors
     std::shared_ptr<Geometry> GetGeometry() const noexcept;
     std::shared_ptr<Grid> GetGrid() const noexcept;
-    std::set<std::shared_ptr<Field>> GetFields() const noexcept;
+
+    // Have to do this inline so that the return type can be deduced properly by auto
+    auto GetFields() const noexcept { return field_container_->Fields(); }
 
     /**
      * @brief Create a field to the domain's field container.

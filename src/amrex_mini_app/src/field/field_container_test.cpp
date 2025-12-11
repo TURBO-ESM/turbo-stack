@@ -99,3 +99,47 @@ TEST_F(FieldContainerTest, Get)
     std::shared_ptr<Field> field_returned_from_get    = fields.Get(name);
     EXPECT_EQ(field_returned_from_insert, field_returned_from_get);
 }
+
+TEST_F(FieldContainerTest, Iterators)
+{
+    FieldContainer fields(grid);
+
+    auto fields_view = fields.Fields();
+    EXPECT_TRUE(std::ranges::empty(fields_view));
+
+    Field::NameType name1         = "first_field";
+    FieldGridStagger stagger1     = FieldGridStagger::Nodal;
+    const std::size_t n_component1 = 1;
+    const std::size_t n_ghost1     = 0;
+    std::shared_ptr<Field> field1  = fields.Insert(name1, stagger1, n_component1, n_ghost1);
+
+    EXPECT_EQ(std::ranges::size(fields_view), 1);
+
+    Field::NameType name2         = "second_field";
+    FieldGridStagger stagger2     = FieldGridStagger::CellCentered;
+    const std::size_t n_component2 = 3;
+    const std::size_t n_ghost2     = 2;
+    std::shared_ptr<Field> field2  = fields.Insert(name2, stagger2, n_component2, n_ghost2);
+
+    EXPECT_EQ(std::ranges::size(fields_view), 2);
+
+    {
+        std::set<std::shared_ptr<Field>> field_set;
+        for (const auto& field : fields)
+        {
+            field_set.insert(field);
+        }
+        EXPECT_EQ(field_set.size(), 2);
+        EXPECT_TRUE(field_set.contains(field1));
+        EXPECT_TRUE(field_set.contains(field2));
+    }
+
+    {
+        for (const auto& field : fields_view)
+        {
+            EXPECT_TRUE(field == field1 || field == field2);
+        }
+    }
+
+
+}

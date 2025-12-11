@@ -4,7 +4,6 @@
 #include <AMReX_MultiFab.H>
 
 #include <memory>
-#include <set>
 #include <string>
 #include <stdexcept>
 #include <algorithm>
@@ -78,7 +77,7 @@ TEST_F(CartesianDomainTest, Getters) {
     EXPECT_EQ(grid->NCellJ(), n_cell_y);
     EXPECT_EQ(grid->NCellK(), n_cell_z);
 
-    std::set<std::shared_ptr<Field>> fields = cartesian_domain.GetFields();
+    auto fields = cartesian_domain.GetFields();
     EXPECT_TRUE(fields.empty());
 
 }
@@ -92,19 +91,20 @@ TEST_F(CartesianDomainTest, CreateField) {
                                      n_cell_y,
                                      n_cell_z);
     
-    EXPECT_TRUE(cartesian_domain.GetFields().empty());
+    auto fields = cartesian_domain.GetFields();
+    EXPECT_TRUE(fields.empty());
 
     const std::string field_name = "test_field";
     const std::size_t n_ghost = 2;
     const std::size_t n_component = 1;
     std::shared_ptr<Field> field = cartesian_domain.CreateField(field_name, FieldGridStagger::CellCentered, n_component, n_ghost);
 
-    EXPECT_EQ(cartesian_domain.GetFields().size(), 1);
+    EXPECT_EQ(fields.size(), 1);
 
     EXPECT_TRUE(cartesian_domain.HasField(field_name));
 
     // Verify the field is included in the return value from GetFields
-    EXPECT_TRUE(std::ranges::any_of(cartesian_domain.GetFields(), [field_name](const std::shared_ptr<Field>& field) {
+    EXPECT_TRUE(std::ranges::any_of(fields, [field_name](const std::shared_ptr<Field>& field) {
         return field->name == field_name;
     }));
 

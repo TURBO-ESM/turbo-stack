@@ -150,6 +150,9 @@ class Field
      */
     auto operator<=>(const Field& other) const = default;
 
+    // Support the ostream operator for easy printing of field information
+    friend std::ostream& operator<<(std::ostream& os, const Field& field);
+
     //-----------------------------------------------------------------------//
     // Public Data Members
     //-----------------------------------------------------------------------//

@@ -70,11 +70,14 @@ class FieldContainer
      */
     std::shared_ptr<Field> Get(const Field::NameType& name) const;
 
+    auto Fields() const noexcept {
+        return std::views::values(field_map);
+    }
+
     /**
      * @brief Get an iterator to the beginning of the field values (C++20 views).
      * @return Iterator to the first field.
      */
-
     auto begin() const -> decltype(std::views::values(std::declval<const FieldMap&>()).begin());
 
     /**

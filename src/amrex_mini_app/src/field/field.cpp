@@ -1,4 +1,5 @@
 #include "field.h"
+#include "grid.h"
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
@@ -8,8 +9,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-
-#include "grid.h"
 
 namespace turbo
 {
@@ -69,6 +68,15 @@ Field::Field(const Field::NameType& name, const std::shared_ptr<Grid>& grid, con
     multifab = std::make_shared<amrex::MultiFab>(box_array, distribution_mapping, n_component, n_ghost);
 }
 
+std::ostream& operator<<(std::ostream& os, const Field& field)
+{
+    os << "Field Name: " << field.name << std::endl;
+    os << "Field Grid Stagger: " << FieldGridStaggerToString(field.field_grid_stagger) << std::endl;
+    os << "Number of Components: " << field.multifab->nComp() << std::endl;
+    os << "Number of Ghost Cells: " << field.multifab->nGrow() << std::endl;
+    return os;
+}
+
 bool Field::IsCellCentered() const noexcept { return (field_grid_stagger == FieldGridStagger::CellCentered); }
 
 bool Field::IsIFaceCentered() const noexcept { return (field_grid_stagger == FieldGridStagger::IFace); }
@@ -78,6 +86,7 @@ bool Field::IsJFaceCentered() const noexcept { return (field_grid_stagger == Fie
 bool Field::IsKFaceCentered() const noexcept { return (field_grid_stagger == FieldGridStagger::KFace); }
 
 bool Field::IsNodal() const noexcept { return (field_grid_stagger == FieldGridStagger::Nodal); }
+
 
 // This is where the coupling between the Field and Grid classes happens
 Grid::Point Field::GetGridPoint(int i, int j, int k) const
