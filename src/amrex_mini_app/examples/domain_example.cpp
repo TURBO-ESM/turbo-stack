@@ -117,6 +117,37 @@ int main(int argc, char* argv[])
             field->Initialize(vector_initializer_function);
         }
 
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //  Initialize all the scalar and vector MultiFabs in the domain - Alternative approach without using Field::Initialize
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+
+        for (const auto& field : scalar_fields) {
+            amrex::MultiFab& mf = *(field->multifab);
+            for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi) {
+                const amrex::Array4<amrex::Real>& array = mf.array(mfi);
+                amrex::ParallelFor(mfi.validbox(), [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                    const turbo::Grid::Point grid_point = field->GetGridPoint(i, j, k); 
+                    array(i, j, k) = grid_point.x; // Example: initialize scalar field with x-coordinate
+                });
+            }
+        }
+
+        for (const auto& field : vector_fields) {
+            amrex::MultiFab& mf = *(field->multifab);
+            for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi) {
+                const amrex::Array4<amrex::Real>& array = mf.array(mfi);
+                amrex::ParallelFor(mfi.validbox(), [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                    const turbo::Grid::Point grid_point = field->GetGridPoint(i, j, k); 
+                    array(i, j, k, 0) = grid_point.x; // Example: initialize vector field component 0 with x-coordinate
+                    array(i, j, k, 1) = grid_point.y; // Example: initialize vector field component 1 with y-coordinate
+                    array(i, j, k, 2) = grid_point.z; // Example: initialize vector field component 2 with z-coordinate
+                });
+            }
+        }
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //  Write output
+        /////////////////////////////////////////////////////////////////////////////////////////////////
         domain.WriteHDF5("domain_example.h5");
     }
     amrex::Finalize();
