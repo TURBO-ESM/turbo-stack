@@ -17,7 +17,7 @@ namespace turbo {
 
 Domain::Domain(const std::shared_ptr<Geometry>& geometry,
             const std::shared_ptr<Grid>& grid)
-                : geometry_(geometry), grid_(grid), field_container_(std::make_shared<FieldContainer>(grid_)) {}
+                : geometry_(geometry), grid_(grid), field_container_({}) {}
 
 std::shared_ptr<Geometry> Domain::GetGeometry() const noexcept { return geometry_; }
 
@@ -26,18 +26,40 @@ std::shared_ptr<Grid> Domain::GetGrid() const noexcept { return grid_; }
 std::shared_ptr<Field> Domain::CreateField(const Field::NameType& name, const FieldGridStagger stagger,
                                        const std::size_t n_component, const std::size_t n_ghost)
 {
-    return field_container_->Insert(name, stagger, n_component, n_ghost);
+    if (field_container_.contains(name))
+    {
+        throw std::invalid_argument("FieldContainer::Insert: Field with name '" + name + "' already exists.");
+    }
+
+    const std::shared_ptr<Field> field = std::make_shared<Field>(name, grid_, stagger, n_component, n_ghost);
+    auto [iter, inserted]              = field_container_.insert({name, field});
+    if (!inserted)
+    {
+        // Since we already checked that no value with this key exist in the map and created the field pointer,
+        //  the insert should always succeed and we should never reach this point.
+        throw std::logic_error(
+            "FieldContainer::Insert: Failed to insert field. Somehow it was not inserted into the map used under the "
+            "hood of Domain. This should never happen.");
+    }
+
+    return field;
 }
 
 std::shared_ptr<Field> Domain::GetField(const Field::NameType& name) const 
 {
-    return field_container_->Get(name);
+    auto it = field_container_.find(name);
+    if (it != field_container_.end())
+    {
+        return it->second;
+    }
+    // Maybe we want to do something else instead of throwing an exception here?
+    throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' does not exist.");
 }
 
 bool Domain::HasField(const Field::NameType& field_name) const 
 {
     // Implementation relying on FieldContainer's Contains method
-    return field_container_->Contains(field_name);
+    return field_container_.contains(field_name);
 
     // Alternative implementation using exception handling
     //try {
@@ -90,7 +112,7 @@ void Domain::WriteHDF5(const std::string& filename) const {
 
     }
 
-    for (const auto& field : *field_container_) {
+    for (const auto& field : GetFields()) {
         field->WriteHDF5(file_id);
     }
 

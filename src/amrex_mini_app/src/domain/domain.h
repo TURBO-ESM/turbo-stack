@@ -29,12 +29,25 @@ public:
      */
     virtual ~Domain() = default;
 
-    // Accessors
+    /**
+     * @brief Get the geometry associated with the domain.
+     * @return Shared pointer to the Geometry.
+     */
     std::shared_ptr<Geometry> GetGeometry() const noexcept;
+
+    /**
+     * @brief Get the grid associated with the domain.
+     * @return Shared pointer to the Grid.
+     */
     std::shared_ptr<Grid> GetGrid() const noexcept;
 
+    /**
+     * @brief Get a view of all fields in the domain's field container.
+     * @return A range view of shared pointers to Fields.
+     */
     // Have to do this inline so that the return type can be deduced properly by auto
-    auto GetFields() const noexcept { return field_container_->Fields(); }
+    auto GetFields() const noexcept { return std::views::values(field_container_); }
+    //decltype(fields_) GetFields() const noexcept { return fields_; }
 
     /**
      * @brief Create a field to the domain's field container.
@@ -87,9 +100,15 @@ protected:
     const std::shared_ptr<Grid> grid_;
 
     /**
-     * @brief Shared pointer to the field container holding the domain's fields.
+     * @brief Container to the fields defined on the domain.
      */
-    const std::shared_ptr<FieldContainer> field_container_;
+    std::map<Field::NameType, std::shared_ptr<Field>> field_container_;
+
+    //using FieldContainer = std::map<Field::NameType, std::shared_ptr<Field>>;
+    //FieldContainer field_container_;
+    //using FieldView = std::ranges::views::values<FieldContainer>;
+    //FieldView fields_;
+
 
 private:
 
