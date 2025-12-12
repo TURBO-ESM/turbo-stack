@@ -47,7 +47,7 @@ public:
      */
     // Have to do this inline so that the return type can be deduced properly by auto
     auto GetFields() const noexcept { return std::views::values(field_container_); }
-    //decltype(fields_) GetFields() const noexcept { return fields_; }
+    //std::ranges::views auto GetFields() const noexcept { return fields_; }
 
     /**
      * @brief Create a field to the domain's field container.

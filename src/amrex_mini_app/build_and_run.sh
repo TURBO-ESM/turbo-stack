@@ -482,7 +482,7 @@ ctest --test-dir "$build_dir"
 
 # Run the examples. 
 cd "$build_dir/examples"
-examples_to_run=("domain_example" "initialization_mini_app")
+examples_to_run=("domain_example")
 for example in "${examples_to_run[@]}"; do
     if [[ -x "./$example" ]]; then
         echo "Running example: $example"

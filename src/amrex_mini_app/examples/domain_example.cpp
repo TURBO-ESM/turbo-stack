@@ -40,11 +40,10 @@ int main(int argc, char* argv[])
                                      n_cell_y,
                                      n_cell_z);
 
-        // Access the geometry, grid, and fields from the domain
+        // Accessors for the domain's geometry, grid, and fields
         std::shared_ptr<turbo::CartesianGeometry> geometry = domain.GetGeometry();
         std::shared_ptr<turbo::CartesianGrid> grid = domain.GetGrid();
-        // Fields is a non owning view so it will automatically update when we add fields to the domain
-        auto fields = domain.GetFields();
+        auto fields = domain.GetFields(); // fields is a non owning view so it will automatically update when we add fields to the domain
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //  Add a bunch of Fields to the Domain
@@ -100,13 +99,13 @@ int main(int argc, char* argv[])
 
         for (const auto& field : scalar_fields) {
             field->Initialize(scalar_initializer_function);
-
-            //// Lambda function version
-            //field->Initialize([](double x, double y, double z) -> std::vector<turbo::Field::ValueType> {
-            //    return {x};
-            //});
         }
 
+        for (const auto& field : scalar_fields) {
+            field->Initialize([](double x, double y, double z) -> std::vector<turbo::Field::ValueType> {
+                return {x};
+            });
+        }
         
         auto vector_initializer_function = [](double x, double y, double z) -> std::vector<turbo::Field::ValueType>
         {
