@@ -1,22 +1,25 @@
 #include <cstddef>
-#include <iostream>
 #include <memory>
 #include <string>
+#include <ranges>
+#include <vector>
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
-#include "geometry.h"
+#include "cartesian_domain.h"
+#include "cartesian_geometry.h"
 #include "cartesian_grid.h"
 #include "field.h"
-#include "field_container.h"
-
-#include "cartesian_domain.h"
 
 int main(int argc, char* argv[])
 {
     amrex::Initialize(argc, argv);
     {
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //  Crete a Cartesian Domain
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+
         // I imagine this setup will be done by some high level thing like a simulation class eventually.
         // In it's own scope to prevent namespace pollution. 
         const double x_min = 0.0;
@@ -43,11 +46,14 @@ int main(int argc, char* argv[])
         // Fields is a non owning view so it will automatically update when we add fields to the domain
         auto fields = domain.GetFields();
 
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //  Add a bunch of Fields to the Domain
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        std::size_t n_component_scalar = 1;
+        std::size_t n_component_vector = 3;
         {
             // I imagine this will be done by some high level thing like a simulation class eventually.
             // In it's own scope to prevent namespace pollution. 
-            std::size_t n_component_scalar = 1;
-            std::size_t n_component_vector = 3;
             std::size_t n_ghost = 1;
 
             std::shared_ptr<turbo::Field> cell_scalar = domain.CreateField("cell_scalar", turbo::FieldGridStagger::CellCentered, n_component_scalar, n_ghost);
@@ -67,14 +73,49 @@ int main(int argc, char* argv[])
         }
 
 
-        // Print some stats about the domain and its fields
+        // Print some stats about the domain and its fields. Note that fields is a non-owning view and is lazy evaluated so it was automatically updated when we added fields to the domain.
         amrex::Print() << "Number of fields: " << fields.size() << std::endl; 
         for (const auto& field : fields) {
             amrex::Print() << *field << std::endl;
         }
 
-        //domain.InitializeScalarMultiFabs([](double x, double y, double z) { return x; });
-        //domain.InitializeVectorMultiFabs([](double x, double y, double z) { return std::array<double, 3>{x, y, z}; });
+        // Create views of the fields with certain properties for easy access later
+        using FieldPtr = std::shared_ptr<turbo::Field>;
+        auto scalar_fields        = std::views::filter(fields, [n_component_scalar](const FieldPtr& field) { return field->multifab->nComp() == n_component_scalar; });
+        auto vector_fields        = std::views::filter(fields, [n_component_vector](const FieldPtr& field) { return field->multifab->nComp() == n_component_vector; });
+        auto nodal_fields         = std::views::filter(fields, [](const FieldPtr& field) { return field->IsNodal(); });
+        auto cell_centered_fields = std::views::filter(fields, [](const FieldPtr& field) { return field->IsCellCentered(); });
+        auto i_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsIFaceCentered(); });
+        auto j_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsJFaceCentered(); });
+        auto k_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsKFaceCentered(); });
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //  Initialize all the scalar and vector MultiFabs in the domain
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+
+        auto scalar_initializer_function = [](double x, double y, double z) -> std::vector<turbo::Field::ValueType>
+        {
+            return {x};
+        };
+
+        for (const auto& field : scalar_fields) {
+            field->Initialize(scalar_initializer_function);
+
+            //// Lambda function version
+            //field->Initialize([](double x, double y, double z) -> std::vector<turbo::Field::ValueType> {
+            //    return {x};
+            //});
+        }
+
+        
+        auto vector_initializer_function = [](double x, double y, double z) -> std::vector<turbo::Field::ValueType>
+        {
+            return {x, y, z};
+        };
+
+        for (const auto& field : vector_fields) {
+            field->Initialize(vector_initializer_function);
+        }
 
         domain.WriteHDF5("domain_example.h5");
     }

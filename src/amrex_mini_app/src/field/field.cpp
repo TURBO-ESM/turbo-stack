@@ -108,6 +108,64 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const
     }
 }
 
+void Field::Initialize(std::function<std::vector<Field::ValueType>(double, double, double)> initializer_function) 
+{
+    //static_assert(std::is_invocable_r_v<std::array<double, multifab->nComp()>, Func, double, double, double>,
+    //              "initializer_function must be callable as std::array<double, >(double, double, double). The "
+    //              "arguments are the x, y, and z coordinates of the point and the return value is an array of 3 "
+    //              "doubles representing the vector function evaluated at that point.");
+
+    if (!initializer_function)
+    {
+        throw std::invalid_argument("Field::Initialize: Initializer function cannot be null.");
+    }
+
+    //// If the size of the vector returned by the initializer function does not match the number of components in the MultiFab,
+    //// throw an exception.
+    //// Technically we should check this for every grid point just using the first as a check.
+    //// But in general the the initializer function given by a user could be returning a different size vector for each grid point.
+    //// Might want to switch the return type of the function to a std::array<double, multifab->nComp()> instead of a std::vector, but then we get into the argument type of this function depending on
+    //// on the number of components in the MultiFab which is determined at runtime.
+    //{
+    //    Grid::Point test_point = GetGridPoint(0, 0, 0);
+    //    if (initializer_function(test_point.x, test_point.y, test_point.z).size() != multifab->nComp())
+    //    {
+    //        throw std::invalid_argument("Field::Initialize: Initializer function must return a vector of size equal to the number of components in the MultiFab.");
+    //    }
+    //}
+
+    for (amrex::MFIter mfi(*multifab); mfi.isValid(); ++mfi)
+    {
+        const amrex::Array4<amrex::Real>& array = multifab->array(mfi);
+        amrex::ParallelFor(mfi.validbox(),
+                           [=, this] AMREX_GPU_DEVICE(int i, int j, int k)
+                           {
+                               const Grid::Point grid_point = GetGridPoint(i, j, k);
+
+                               const std::vector<ValueType> initialized_vector =
+                                   initializer_function(grid_point.x, grid_point.y, grid_point.z);
+
+                                // Just to be super safe check that the size of the returned vector matches the number of components.
+                                if (initialized_vector.size() != multifab->nComp())
+                                {
+                                    throw std::invalid_argument("Field::Initialize: Initializer function must return a vector of size equal to the number of components in the MultiFab.");
+                                }
+                            
+                               for (std::size_t comp = 0; comp < multifab->nComp(); ++comp)
+                               {
+                                   array(i, j, k, comp) = initialized_vector[comp];
+                               }
+
+                               // Alternative using ranges (requires C++20)
+                               //std::ranges::for_each(initialized_vector | std::views::enumerate,
+                               //              [=, &array, i, j, k](int component_index, double value)
+                               //              {
+                               //                  array(i, j, k, component_index) = value;
+                               //              });
+                           });
+    }
+}
+
 // Write the field data to an HDF5 file. This will overwrite the file if it already exists.
 void Field::WriteHDF5(const std::string& filename) const
 {

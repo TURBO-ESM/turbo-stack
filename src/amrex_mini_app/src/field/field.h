@@ -9,6 +9,8 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <ranges>
+#include <vector>
 
 #include "grid.h"
 
@@ -130,6 +132,8 @@ class Field
      */
     Grid::Point GetGridPoint(int i, int j, int k) const;
 
+    void Initialize(std::function<std::vector<ValueType>(double, double, double)> initializer_function);
+
     /**
      * @brief Write the field data to an HDF5 file (overwrites file if exists).
      * @param filename Name of the HDF5 file to write.
@@ -198,5 +202,7 @@ class Field
     std::shared_ptr<amrex::MultiFab> CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf,
                                                               int dest_rank) const;
 };
+
+
 
 }  // namespace turbo

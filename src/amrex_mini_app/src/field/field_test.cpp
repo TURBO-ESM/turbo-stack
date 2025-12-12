@@ -304,6 +304,37 @@ TEST_F(FieldTest, GetGridPoint)
     }
 }
 
+TEST_F(FieldTest, Initialize)
+{
+    Field::NameType name     = "test_field";
+    FieldGridStagger stagger = FieldGridStagger::Nodal;
+    std::size_t n_component  = 2;
+    std::size_t n_ghost      = 0;
+    Field field(name, grid, stagger, n_component, n_ghost);
+
+    // Define an initializer function that initializes a vector field with two components
+    auto initializer_function = [](double x, double y, double z) -> std::vector<Field::ValueType>
+    {
+        return {x + y + z, x * y * z};
+    };
+
+    field.Initialize(initializer_function);
+
+    // Verify that the field data has been initialized correctly
+    std::shared_ptr<amrex::MultiFab> multifab = field.multifab;
+    for (amrex::MFIter mfi(*multifab); mfi.isValid(); ++mfi)
+    {
+        const amrex::Array4<amrex::Real>& array = multifab->array(mfi);
+        amrex::ParallelFor(mfi.validbox(),
+                           [=, this] AMREX_GPU_DEVICE(int i, int j, int k)
+                           {
+                               Grid::Point grid_point = field.GetGridPoint(i, j, k);
+                               EXPECT_EQ(array(i, j, k, 0), grid_point.x + grid_point.y + grid_point.z);
+                               EXPECT_EQ(array(i, j, k, 1), grid_point.x * grid_point.y * grid_point.z);
+                           });
+    }
+}
+
 TEST_F(FieldTest, WriteHDF5)
 {
     Field::NameType name     = "test_field";
