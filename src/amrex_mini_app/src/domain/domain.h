@@ -44,9 +44,9 @@ public:
      * @brief Get a view of all fields in the domain's field container.
      * @return A range view of shared pointers to Fields.
      */
-    // Have to do this inline so that the return type can be deduced properly by auto
-    auto GetFields() const noexcept { return std::views::values(field_container_); }
-    //std::ranges::views auto GetFields() const noexcept { return fields_; }
+    // Have to inline the definition in the header file so that the return type can be deduced properly by auto
+    //auto GetFields() const noexcept { return std::views::values(field_container_); }
+    std::ranges::view auto GetFields() const noexcept { return std::views::values(field_container_); }
 
     /**
      * @brief Create a field to the domain's field container.
