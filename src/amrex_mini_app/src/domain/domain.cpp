@@ -57,21 +57,7 @@ std::shared_ptr<Field> Domain::GetField(const Field::NameType& name) const
 
 bool Domain::HasField(const Field::NameType& field_name) const 
 {
-    // Implementation relying on FieldContainer's Contains method
     return field_container_.contains(field_name);
-
-    // Alternative implementation using exception handling
-    //try {
-    //    GetField(field_name);
-    //    return true;
-    //} catch (const std::invalid_argument&) {
-    //    return false;
-    //}
-
-    // Alternative implementation using ranges and lambda
-    //std::ranges::any_of(GetFields(), [field_name](const std::shared_ptr<Field>& field) {
-    //    return field->name == field_name;
-    //});
 }
 
 void Domain::WriteHDF5(const std::string& filename) const {

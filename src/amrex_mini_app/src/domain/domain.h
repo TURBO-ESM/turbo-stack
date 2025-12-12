@@ -103,12 +103,6 @@ protected:
      */
     std::map<Field::NameType, std::shared_ptr<Field>> field_container_;
 
-    //using FieldContainer = std::map<Field::NameType, std::shared_ptr<Field>>;
-    //FieldContainer field_container_;
-    //using FieldView = std::ranges::views::values<FieldContainer>;
-    //FieldView fields_;
-
-
 private:
 
     //-----------------------------------------------------------------------//
