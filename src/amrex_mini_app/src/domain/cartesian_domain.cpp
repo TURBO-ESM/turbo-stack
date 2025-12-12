@@ -1,16 +1,15 @@
 #include <cstddef>
+#include <memory>
 
 #include <AMReX.H>
 
-#include "geometry.h" // TODO: Replace with cartesian_geometry.h when it is seperated out of geometry.h
+#include "cartesian_domain.h"
+#include "domain.h"
+#include "cartesian_geometry.h" 
 #include "cartesian_grid.h"
 #include "field.h"
-#include "field_container.h"
-#include "domain.h"
-#include "cartesian_domain.h"
 
 namespace turbo {
-
 
 CartesianDomain::CartesianDomain(double x_min, double x_max,
                double y_min, double y_max,
@@ -27,39 +26,7 @@ CartesianDomain::CartesianDomain(double x_min, double x_max,
             n_cell_z)
       )
 {
-    // Constructor body (if needed)
-}
 
-    //Domain::Domain(const std::shared_ptr<Grid>& grid)
-    //    : geometry_(grid->geometry()), grid_(grid), field_container_(std::make_shared<FieldContainer>(grid))
-    //{
-    //    static_assert(
-    //        amrex::SpaceDim == 3,
-    //        "Only supports 3D grids."
-    //    );
-    //
-    //    if (!geometry_) {
-    //        throw std::invalid_argument("Domain constructor: geometry pointer is null");
-    //    }
-    //
-    //    if (!grid_) {
-    //        throw std::invalid_argument("Domain constructor: grid pointer is null");
-    //    }
-    //
-    //    // number of ghost cells
-    //    const int n_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
-    //
-    //    // number of components for each type of MultiFab
-    //    const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
-    //    const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
-    //}
-//    const int n_ghost = 1; // Maybe we dont want ghost elements for some of the MultiFabs, or only in certain directions, but I just setting it the same for all of them for now.
-//
-//    // number of components for each type of MultiFab
-//    const int n_comp_scalar = 1; // Scalar field, e.g., temperature or pressure
-//    const int n_comp_vector = 3; // Vector field, e.g., velocity (u, v, w)
-//
-//
-//}
+}
 
 } // namespace turbo
