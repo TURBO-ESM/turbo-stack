@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "domain.h"
-#include "cartesian_domain.h"
 #include "cartesian_geometry.h" 
 #include "cartesian_grid.h"
 
