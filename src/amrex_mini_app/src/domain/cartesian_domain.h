@@ -30,7 +30,8 @@ public:
 
     // Accessors
     std::shared_ptr<CartesianGeometry> GetGeometry() const noexcept { 
-        return std::static_pointer_cast<CartesianGeometry>(geometry_);
+        //return std::static_pointer_cast<CartesianGeometry>(geometry_);
+        return std::static_pointer_cast<CartesianGeometry>(grid_->GetGeometry());
     }
 
     std::shared_ptr<CartesianGrid> GetGrid() const noexcept { 

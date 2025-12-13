@@ -96,11 +96,6 @@ protected:
     const std::shared_ptr<Grid> grid_;
 
     /**
-     * @brief Shared pointer to the geometry associated with the domain.
-     */
-    const std::shared_ptr<Geometry> geometry_;
-
-    /**
      * @brief Container to the fields defined on the domain.
      */
     std::map<Field::NameType, std::shared_ptr<Field>> field_container_;
