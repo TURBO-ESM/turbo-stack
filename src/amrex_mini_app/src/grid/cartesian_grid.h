@@ -32,6 +32,14 @@ class CartesianGrid : public Grid
     CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, const std::size_t n_cell_x, const std::size_t n_cell_y,
                   const std::size_t n_cell_z);
 
+    /**
+     * @brief Get the geometry associated with the grid.
+     * @return Shared pointer to CartesianGeometry object
+     */
+    std::shared_ptr<CartesianGeometry> GetGeometry() const noexcept { 
+        return std::static_pointer_cast<CartesianGeometry>(geometry_);
+    }
+
     std::size_t NCell() const noexcept override;
     std::size_t NCellI() const noexcept override;
     std::size_t NCellJ() const noexcept override;
@@ -173,9 +181,6 @@ class CartesianGrid : public Grid
     //-----------------------------------------------------------------------//
     // Private Member Functions
     //-----------------------------------------------------------------------//
-    std::shared_ptr<CartesianGeometry> GetGeometry() const noexcept { 
-        return std::static_pointer_cast<CartesianGeometry>(geometry_);
-    }
 };
 
 }  // namespace turbo
