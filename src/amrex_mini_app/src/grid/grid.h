@@ -4,6 +4,9 @@
 
 #include <cstddef>
 #include <string>
+#include <memory>
+
+#include "geometry.h"
 
 namespace turbo
 {
@@ -17,6 +20,7 @@ namespace turbo
  */
 class Grid
 {
+   friend class Domain;
    public:
     //-----------------------------------------------------------------------//
     // Public Types
@@ -56,6 +60,19 @@ class Grid
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
+
+    /**
+     * @brief Construct a Grid with the given geometry.
+     * @param geometry Shared pointer to Geometry object
+     */
+    Grid(const std::shared_ptr<Geometry>& geometry) : geometry_(geometry)
+    {
+        if (!geometry_)
+        {
+            throw std::invalid_argument("Null geometry pointer passed to Grid constructor.");
+        }
+    }
+    
     /**
      * @brief Virtual destructor for Grid.
      */
@@ -215,6 +232,9 @@ class Grid
     //-----------------------------------------------------------------------//
     // Protected Member Functions
     //-----------------------------------------------------------------------//
+    std::shared_ptr<Geometry> GetGeometry() const noexcept { return geometry_; };
+    const std::shared_ptr<Geometry> geometry_;
+
 };
 
 }  // namespace turbo

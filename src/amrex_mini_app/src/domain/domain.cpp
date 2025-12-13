@@ -14,9 +14,12 @@
 
 namespace turbo {
 
-Domain::Domain(const std::shared_ptr<Geometry>& geometry,
-            const std::shared_ptr<Grid>& grid)
-                : geometry_(geometry), grid_(grid), field_container_({}) {}
+//Domain::Domain(const std::shared_ptr<Geometry>& geometry,
+//            const std::shared_ptr<Grid>& grid)
+//                : geometry_(geometry), grid_(grid), field_container_({}) {}
+
+Domain::Domain(const std::shared_ptr<Grid>& grid)
+                : grid_(grid), geometry_(grid_->GetGeometry()), field_container_({}) {}
 
 std::shared_ptr<Geometry> Domain::GetGeometry() const noexcept { return geometry_; }
 

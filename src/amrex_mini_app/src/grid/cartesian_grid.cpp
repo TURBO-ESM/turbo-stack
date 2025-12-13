@@ -9,23 +9,19 @@
 namespace turbo
 {
 
-CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, std::size_t n_cell_x,
-                             std::size_t n_cell_y, std::size_t n_cell_z)
-    : geometry_(geometry), dx_(0.0), dy_(0.0), dz_(0.0), n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
+CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, const std::size_t n_cell_x,
+                             const std::size_t n_cell_y, const std::size_t n_cell_z)
+    : Grid(geometry), dx_(0.0), dy_(0.0), dz_(0.0), n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
 {
-    if (!geometry_)
-    {
-        throw std::invalid_argument("Null geometry pointer passed to CartesianGrid constructor.");
-    }
 
     if (n_cell_x == 0 || n_cell_y == 0 || n_cell_z == 0)
     {
         throw std::invalid_argument("Number of cells in each direction must be greater than zero.");
     }
 
-    dx_ = static_cast<double>(geometry_->LX()) / n_cell_x_;
-    dy_ = static_cast<double>(geometry_->LY()) / n_cell_y_;
-    dz_ = static_cast<double>(geometry_->LZ()) / n_cell_z_;
+    dx_ = static_cast<double>(GetGeometry()->LX()) / n_cell_x_;
+    dy_ = static_cast<double>(GetGeometry()->LY()) / n_cell_y_;
+    dz_ = static_cast<double>(GetGeometry()->LZ()) / n_cell_z_;
 }
 
 std::size_t CartesianGrid::NCell() const noexcept { return NCellX() * NCellY() * NCellZ(); }
@@ -44,7 +40,7 @@ CartesianGrid::Point CartesianGrid::Node(const Index i, const Index j, const Ind
     {
         throw std::out_of_range("Node index out of bounds");
     }
-    return Point({geometry_->XMin() + i * dx_, geometry_->YMin() + j * dy_, geometry_->ZMin() + k * dz_});
+    return Point({GetGeometry()->XMin() + i * dx_, GetGeometry()->YMin() + j * dy_, GetGeometry()->ZMin() + k * dz_});
 }
 
 CartesianGrid::Point CartesianGrid::CellCenter(const Index i, const Index j, const Index k) const

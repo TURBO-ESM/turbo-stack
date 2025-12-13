@@ -29,8 +29,8 @@ class CartesianGrid : public Grid
      * @param n_cell_y Number of cells in Y direction
      * @param n_cell_z Number of cells in Z direction
      */
-    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, std::size_t n_cell_x, std::size_t n_cell_y,
-                  std::size_t n_cell_z);
+    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, const std::size_t n_cell_x, const std::size_t n_cell_y,
+                  const std::size_t n_cell_z);
 
     std::size_t NCell() const noexcept override;
     std::size_t NCellI() const noexcept override;
@@ -155,10 +155,10 @@ class CartesianGrid : public Grid
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
-    /**
-     * @brief Geometry object describing the Cartesian domain.
-     */
-    const std::shared_ptr<CartesianGeometry> geometry_;
+    ///**
+    // * @brief Geometry object describing the Cartesian domain.
+    // */
+    //const std::shared_ptr<CartesianGeometry> geometry_;
 
     /**
      * @brief Grid spacing in X, Y, Z directions.
@@ -173,6 +173,9 @@ class CartesianGrid : public Grid
     //-----------------------------------------------------------------------//
     // Private Member Functions
     //-----------------------------------------------------------------------//
+    std::shared_ptr<CartesianGeometry> GetGeometry() const noexcept { 
+        return std::static_pointer_cast<CartesianGeometry>(geometry_);
+    }
 };
 
 }  // namespace turbo

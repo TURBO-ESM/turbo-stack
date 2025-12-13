@@ -21,7 +21,8 @@ public:
     //-----------------------------------------------------------------------//
     // Constructors
     // There should be a way to get the geometry from the grid, so maybe only pass in the grid when we get that worked out.
-    Domain(const std::shared_ptr<Geometry>& geometry, const std::shared_ptr<Grid>& grid);
+    //Domain(const std::shared_ptr<Geometry>& geometry, const std::shared_ptr<Grid>& grid);
+    Domain(const std::shared_ptr<Grid>& grid);
 
     /**
      * @brief Virtual destructor for Domain.
@@ -88,15 +89,16 @@ public:
     //-----------------------------------------------------------------------//
 
 protected:
-    /**
-     * @brief Shared pointer to the geometry associated with the domain.
-     */
-    const std::shared_ptr<Geometry> geometry_;
 
     /**
      * @brief Shared pointer to the grid associated with the domain.
      */
     const std::shared_ptr<Grid> grid_;
+
+    /**
+     * @brief Shared pointer to the geometry associated with the domain.
+     */
+    const std::shared_ptr<Geometry> geometry_;
 
     /**
      * @brief Container to the fields defined on the domain.
