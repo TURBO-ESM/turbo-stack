@@ -33,7 +33,8 @@ public:
      * @brief Get the geometry associated with the domain.
      * @return Shared pointer to the Geometry.
      */
-    std::shared_ptr<Geometry> GetGeometry() const noexcept;
+    std::shared_ptr<Geometry> GetGeometry() const noexcept;  // TODO: Maybe dont need this function if we can always get the geometry from the grid?
+    // Maybe have grid not be commited to supporting geometry at some point in the future? That way some grids could not tied to a geometry object?
 
     /**
      * @brief Get the grid associated with the domain.
