@@ -132,6 +132,11 @@ class Field
      */
     Grid::Point GetGridPoint(int i, int j, int k) const;
 
+    /**
+     * @brief Initialize the field data using a user-defined function.
+     * @param initializer_function Function that takes (x, y, z) coordinates and returns a vector of values for each
+     * component of the field.
+     */
     void Initialize(std::function<std::vector<ValueType>(double, double, double)> initializer_function);
 
     /**
@@ -154,7 +159,12 @@ class Field
      */
     auto operator<=>(const Field& other) const = default;
 
-    // Support the ostream operator for easy printing of field information
+    /**
+     * @brief Output stream operator for Field.
+     * @param os Output stream.
+     * @param field Field to output.
+     * @return Reference to the output stream.
+     */
     friend std::ostream& operator<<(std::ostream& os, const Field& field);
 
     //-----------------------------------------------------------------------//

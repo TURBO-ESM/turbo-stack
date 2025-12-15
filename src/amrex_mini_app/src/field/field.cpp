@@ -59,8 +59,8 @@ Field::Field(const Field::NameType& name, const std::shared_ptr<Grid>& grid, con
     amrex::BoxArray box_array(box);
 
     // Break up boxarray "cell_box_array" into chunks no larger than "max_chunk_size" along a direction
-    const int max_chunk_size =
-        32;  // Hardcoded for now, but could be a parameter for the user to set via the constructor arguments.
+    // Hardcoded for now, but could be a parameter for the user to set via the constructor arguments.
+    const int max_chunk_size = 32;
     box_array.maxSize(max_chunk_size);
 
     const amrex::DistributionMapping distribution_mapping(box_array);

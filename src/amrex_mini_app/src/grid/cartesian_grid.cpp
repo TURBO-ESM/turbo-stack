@@ -24,12 +24,12 @@ CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry,
     dz_ = static_cast<double>(GetGeometry()->LZ()) / n_cell_z_;
 }
 
-std::size_t CartesianGrid::NCell() const noexcept { return NCellX() * NCellY() * NCellZ(); }
+std::size_t CartesianGrid::NCell() const noexcept { return NCellI() * NCellJ() * NCellK(); }
 std::size_t CartesianGrid::NCellI() const noexcept { return n_cell_x_; }
 std::size_t CartesianGrid::NCellJ() const noexcept { return n_cell_y_; }
 std::size_t CartesianGrid::NCellK() const noexcept { return n_cell_z_; }
 
-std::size_t CartesianGrid::NNode() const noexcept { return NNodeX() * NNodeY() * NNodeZ(); }
+std::size_t CartesianGrid::NNode() const noexcept { return NNodeI() * NNodeJ() * NNodeK(); }
 std::size_t CartesianGrid::NNodeI() const noexcept { return n_cell_x_ + 1; }
 std::size_t CartesianGrid::NNodeJ() const noexcept { return n_cell_y_ + 1; }
 std::size_t CartesianGrid::NNodeK() const noexcept { return n_cell_z_ + 1; }

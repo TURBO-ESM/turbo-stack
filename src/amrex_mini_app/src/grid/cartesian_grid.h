@@ -155,10 +155,6 @@ class CartesianGrid : public Grid
      */
     bool ValidZFace(const Index i, const Index j, const Index k) const noexcept;
 
-    //-----------------------------------------------------------------------//
-    // Public Data Members
-    //-----------------------------------------------------------------------//
-
    private:
     //-----------------------------------------------------------------------//
     // Private Data Members
@@ -178,9 +174,6 @@ class CartesianGrid : public Grid
      */
     const std::size_t n_cell_x_, n_cell_y_, n_cell_z_;
 
-    //-----------------------------------------------------------------------//
-    // Private Member Functions
-    //-----------------------------------------------------------------------//
 };
 
 }  // namespace turbo
