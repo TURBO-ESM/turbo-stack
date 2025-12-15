@@ -34,8 +34,8 @@ protected:
         z_max = 1.0;
 
         // Default grid size for most tests
-        n_cell_x = 8;
-        n_cell_y = 16;
+        n_cell_x = 2;
+        n_cell_y = 3;
         n_cell_z = 4;
 
         cartesian_domain = std::make_unique<CartesianDomain>(x_min, x_max,
@@ -115,7 +115,7 @@ TEST(CartesianDomainConstructorTest, Constructor) {
 
 }
 
-TEST_F(CartesianDomainTest, Getters) {
+TEST_F(CartesianDomainTest, Getters_and_Initial_State) {
 
     std::shared_ptr<CartesianGeometry> geometry = cartesian_domain->GetGeometry();
     EXPECT_NE(geometry, nullptr);
@@ -140,7 +140,7 @@ TEST_F(CartesianDomainTest, Getters) {
 
 }
 
-TEST_F(CartesianDomainTest, CreateField) {
+TEST_F(CartesianDomainTest, Create_and_Get_Field) {
 
     const std::string field_name = "test_field";
     const std::size_t n_ghost = 2;
@@ -172,49 +172,17 @@ TEST_F(CartesianDomainTest, FieldView) {
     EXPECT_EQ(fields.size(), 2);
 }
 
-//TEST_F(CartesianDomainTest, Initialize_Multifabs) {
-//
-//    Domain domain(grid);
-//
-//    domain.InitializeScalarMultiFabs([](double x, double y, double z) {
-//        return 1.23;
-//    });
-//
-//    for (const std::shared_ptr<amrex::MultiFab>& mf : domain.scalar_multifabs) {
-//        for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
-//            auto arr = mf->array(mfi);
-//            amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
-//                EXPECT_EQ(arr(i, j, k), 1.23);
-//            });
-//        }
-//    }
-//
-//    domain.InitializeVectorMultiFabs([](double x, double y, double z) {
-//        return std::array<double, 3>{1.0, 2.0, 3.0};
-//    });
-//
-//    for (const std::shared_ptr<amrex::MultiFab>& mf : domain.vector_multifabs) {
-//        for (amrex::MFIter mfi(*mf); mfi.isValid(); ++mfi) {
-//            auto arr = mf->array(mfi);
-//            amrex::ParallelFor(mfi.validbox(), [=,this] AMREX_GPU_DEVICE(int i, int j, int k) {
-//                EXPECT_EQ(arr(i, j, k, 0), 1.0);
-//                EXPECT_EQ(arr(i, j, k, 1), 2.0);
-//                EXPECT_EQ(arr(i, j, k, 2), 3.0);
-//            });
-//        }
-//    }
-//}
-
-
 TEST_F(CartesianDomainTest, WriteHDF5) {
+    const std::string field_name = "test_field";
+    const std::size_t n_ghost = 2;
+    const std::size_t n_component = 1;
+    cartesian_domain->CreateField(field_name, FieldGridStagger::CellCentered, n_component, n_ghost);
 
-    //cartesian_domain.InitializeScalarMultiFabs([](double x, double y, double z) {
-    //    return x;
-    //});
+    for (auto& field : cartesian_domain->GetFields()) {
+        field->Initialize([](double x, double y, double z) {
+            return std::vector<turbo::Field::ValueType>{x + y + z};
+        });
+    }
 
-    //cartesian_domain.InitializeVectorMultiFabs([](double x, double y, double z) {
-    //    return std::array<double, 3>{x, y, z};
-    //});
-
-    cartesian_domain->WriteHDF5("Test_Output_Domain_WriteHDF5.h5");
+    cartesian_domain->WriteHDF5("Test_Output_CartesianDomain_WriteHDF5.h5");
 }

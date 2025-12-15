@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     amrex::Initialize(argc, argv);
     {
         /////////////////////////////////////////////////////////////////////////////////////////////////
-        //  Crete a Cartesian Domain
+        //  Create a Cartesian Domain
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
         // I imagine this setup will be done by some high level thing like a simulation class eventually.
@@ -71,8 +71,7 @@ int main(int argc, char* argv[])
             std::shared_ptr<turbo::Field> z_face_vector = domain.CreateField("z_face_vector", turbo::FieldGridStagger::KFace, n_component_vector, n_ghost);
         }
 
-
-        // Print some stats about the domain and its fields. Note that fields is a non-owning view and is lazy evaluated so it was automatically updated when we added fields to the domain.
+        // Print some stats about the domain and it's fields. Note that fields is a non-owning view and is lazy evaluated so it was automatically updated when we added fields to the domain.
         amrex::Print() << "Number of fields: " << fields.size() << std::endl; 
         for (const auto& field : fields) {
             amrex::Print() << *field << std::endl;
@@ -89,7 +88,7 @@ int main(int argc, char* argv[])
         auto k_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsKFaceCentered(); });
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
-        //  Initialize all the scalar and vector MultiFabs in the domain
+        //  Initialize all the scalar and vector MultiFabs in the Domain
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
         auto scalar_initializer_function = [](double x, double y, double z) -> std::vector<turbo::Field::ValueType>
@@ -117,7 +116,7 @@ int main(int argc, char* argv[])
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
-        //  Initialize all the scalar and vector MultiFabs in the domain - Alternative approach without using Field::Initialize
+        //  Initialize all the scalar and vector MultiFabs in the Domain - Alternative approach without using Field::Initialize
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
         for (const auto& field : scalar_fields) {

@@ -11,17 +11,16 @@
 namespace turbo {
 
 class Domain {
-public:
-    //-----------------------------------------------------------------------//
-    // Public Types
-    //-----------------------------------------------------------------------//
+ public:
 
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
-    // Constructors
-    // There should be a way to get the geometry from the grid, so maybe only pass in the grid when we get that worked out.
-    //Domain(const std::shared_ptr<Geometry>& geometry, const std::shared_ptr<Grid>& grid);
+
+    /**
+     * @brief Constructor for Domain.
+     * @param grid Shared pointer to the Grid associated with the domain.
+     */
     Domain(const std::shared_ptr<Grid>& grid);
 
     /**
@@ -85,11 +84,7 @@ public:
      */
     void WriteHDF5(const std::string& filename) const ;
 
-    //-----------------------------------------------------------------------//
-    // Public Data Members
-    //-----------------------------------------------------------------------//
-
-protected:
+ protected:
 
     /**
      * @brief Shared pointer to the grid associated with the domain.
@@ -101,17 +96,6 @@ protected:
      */
     std::map<Field::NameType, std::shared_ptr<Field>> field_container_;
 
-private:
-
-    //-----------------------------------------------------------------------//
-    // Private Data Members
-    //-----------------------------------------------------------------------//
-
-    //-----------------------------------------------------------------------//
-    // Private Member Functions
-    //-----------------------------------------------------------------------//
-
 };
-
 
 } // namespace turbo

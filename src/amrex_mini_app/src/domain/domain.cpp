@@ -14,10 +14,6 @@
 
 namespace turbo {
 
-//Domain::Domain(const std::shared_ptr<Geometry>& geometry,
-//            const std::shared_ptr<Grid>& grid)
-//                : geometry_(geometry), grid_(grid), field_container_({}) {}
-
 Domain::Domain(const std::shared_ptr<Grid>& grid)
                 : grid_(grid), field_container_({}) {}
 
@@ -54,7 +50,6 @@ std::shared_ptr<Field> Domain::GetField(const Field::NameType& name) const
     {
         return it->second;
     }
-    // Maybe we want to do something else instead of throwing an exception here?
     throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' does not exist.");
 }
 
@@ -96,7 +91,7 @@ void Domain::WriteHDF5(const std::string& filename) const {
             H5Sclose(attr_space_id);
         }
 
-        grid_->WriteHDF5(file_id);
+        GetGrid()->WriteHDF5(file_id);
 
     }
 
@@ -108,83 +103,6 @@ void Domain::WriteHDF5(const std::string& filename) const {
         H5Fclose(file_id);
     }
 
-    //WriteXDMF(filename, "test.xdmf");
-
 }
-
-//void Domain::WriteXDMF(const std::string& h5_filename,
-//                             const std::string& xdmf_filename) const {
-//
-//    if (amrex::ParallelDescriptor::MyProc() == 0) {
-//
-//        std::ofstream xdmf(xdmf_filename);
-//        xdmf << "<?xml version=\"1.0\" ?>\n";
-//        xdmf << "<Xdmf Version=\"3.0\">\n";
-//        xdmf << "  <Domain>\n";
-//
-//        struct GridInfo {
-//            std::string name;
-//            std::vector<int> dims;
-//            std::string geometry_dataset;
-//            std::string scalar_dataset;
-//            std::string vector_dataset;
-//            std::string scalar_name;
-//            std::string vector_name;
-//            std::string center;
-//        };
-//
-//        const int nx = NCellX();
-//        const int ny = NCellY();
-//        const int nz = NCellZ();
-//
-//        std::vector<GridInfo> grids = {
-//            {"cell_center", {nz, ny, nx}, "cell_center", "cell_scalar", "cell_vector", "Cell Scalar", "Cell Vector", "Cell"},
-//            {"node", {nz+1, ny+1, nx+1}, "node", "node_scalar", "node_vector", "Node Scalar", "Node Vector", "Node"},
-//            {"x_face", {nz, ny, nx+1}, "x_face", "x_face_scalar", "x_face_vector", "X-Face Scalar", "X-Face Vector", "Face"},
-//            {"y_face", {nz, ny+1, nx}, "y_face", "y_face_scalar", "y_face_vector", "Y-Face Scalar", "Y-Face Vector", "Face"},
-//            {"z_face", {nz+1, ny, nx}, "z_face", "z_face_scalar", "z_face_vector", "Z-Face Scalar", "Z-Face Vector", "Face"}
-//        };
-//
-//        auto WriteXDMFDataItem = [&xdmf, &h5_filename](const std::string& dataset,
-//                                     const std::vector<int>& dims,
-//                                     int n_comp) {
-//            xdmf << "        <DataItem Dimensions=\"";
-//            for (size_t i = 0; i < dims.size(); ++i) xdmf << dims[i] << " ";
-//            if (n_comp > 1) xdmf << n_comp;
-//            xdmf << "\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">\n";
-//            xdmf << "          " << h5_filename << ":/" << dataset << "\n";
-//            xdmf << "        </DataItem>\n";
-//        };
-//
-//        for (const auto& grid : grids) {
-//            xdmf << "    <Grid Name=\"" << grid.name << "\" GridType=\"Uniform\">\n";
-//
-//            xdmf << "      <Topology TopologyType=\"3DRectMesh\" Dimensions=\"";
-//            for (size_t i = 0; i < grid.dims.size(); ++i) xdmf << grid.dims[i] << " ";
-//            xdmf << "\"/>\n";
-//
-//            xdmf << "      <Geometry GeometryType=\"XYZ\">\n";
-//            WriteXDMFDataItem(grid.geometry_dataset, grid.dims, 3);
-//            xdmf << "      </Geometry>\n";
-//
-//            // Scalar field
-//            xdmf << "      <Attribute Name=\"" << grid.scalar_name << "\" AttributeType=\"Scalar\" Center=\"" << grid.center << "\">\n";
-//            WriteXDMFDataItem(grid.scalar_dataset, grid.dims, 1);
-//            xdmf << "      </Attribute>\n";
-//
-//            // Vector field
-//            xdmf << "      <Attribute Name=\"" << grid.vector_name << "\" AttributeType=\"Vector\" Center=\"" << grid.center << "\">\n";
-//            WriteXDMFDataItem(grid.vector_dataset, grid.dims, 3);
-//            xdmf << "      </Attribute>\n";
-//
-//            xdmf << "    </Grid>\n";
-//        }
-//
-//        xdmf << "  </Domain>\n";
-//        xdmf << "</Xdmf>\n";
-//        xdmf.close();
-//    }
-//}
-
 
 } // namespace turbo
