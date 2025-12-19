@@ -7,6 +7,7 @@ TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 FMS_ROOT=${ROOTDIR}/submodules/FMS
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
+AMREX_ROOT=${ROOTDIR}/submodules/amrex
 
 # Default values for CLI arguments
 COMPILER="intel"
@@ -57,6 +58,18 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
+            shift ;;
+        --amrex)
+            AMREX_INSTALL_PATH="$2"
+            if [ ! -d "${AMREX_INSTALL_PATH}" ]; then
+              echo "--amrex path ${AMREX_INSTALL_PATH} not valid"
+              exit 1
+            fi
+            if [[ ! -d "${AMREX_INSTALL_PATH}/include" && ! -d "${AMREX_INSTALL_PATH}/lib" ]]; then
+              echo "${AMREX_INSTALL_PATH} is valid but not built/installed (include and lib directories missing."
+              echo "Please follow the AMReX instructions and re-run the TURBO build."
+              exit 1
+            fi
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
@@ -212,8 +225,31 @@ MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
 MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
+# 0) Build AMReX if needed
+if [[ "${INFRA}" == "TIM" ]]; then
+  # Check if AMREX_INSTALL_PATH was provided or if need to build from submodule first.
+  if [[ -z "${AMREX_INSTALL_PATH}" ]]; then
+    echo "Path to AMReX not declared.  Building AMReX through submodule."
+    cd "${BLD_PATH}"
+    mkdir -p amrex
+    cd amrex
+
+    AMREX_INSTALL_PATH="$(pwd)/install"
+
+    # Redeclaring variables needed because they are not exported
+    TEMPLATE=${TEMPLATE}                     \
+    JOBS=${JOBS}                             \
+    AMREX_ROOT=${AMREX_ROOT}                 \
+    BLD_PATH=$(pwd)/build                    \
+    AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH} \
+       make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
+  fi
+  AMREX_LINK_FLAGS="-L${AMREX_INSTALL_PATH}/lib -lamrex"
+  AMREX_INCLUDE_FLAGS="-I${AMREX_INSTALL_PATH}/include"
+fi
+
 # 1) Build Underlying Infrastructure Library
-if [ "${INFRA}" == "FMS2" ]; then
+if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
   cd ${BLD_PATH}
   mkdir -p FMS
   cd FMS
@@ -226,7 +262,7 @@ if [ "${INFRA}" == "FMS2" ]; then
   LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms"
 else
   echo "ERROR: Unknown infrastructure ('${INFRA}' is not supported choice)"
-  echo "       Valid option is 'FMS2'"
+  echo "       Valid options are 'FMS2' or 'TIM'"
   exit 1
 fi
 
