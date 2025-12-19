@@ -149,8 +149,9 @@ if [[ $OFFLOAD -eq 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; t
   exit 1
 fi
 
+# Check if JOBS was defined by the user, if not then set according to machine specs.
 if [ -z "${JOBS}"  ]; then
-    # Set -j option based on the MACHINE argument
+    # Set -j option based on the MACHINE argument.
     case $MACHINE in
         "homebrew" )
             JOBS=2
