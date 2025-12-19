@@ -69,7 +69,7 @@ To leverage a pre-existing AMReX install, do:
 
  The AMReX path should be the top level install directory which contains `lib`, `include`, etc.  The AMReX install must be built with Fortran and Fortran interfaces activated which are currently not the default (see [the customization options here](https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options) for more options).
 
-See the TURBO specific [Makefile](build-utils/amrex-uitls/Makefile) that builds AMReX with the current needed options.
+See the TURBO specific [Makefile](build-utils/amrex-utils/Makefile) that builds AMReX with the current needed options.
 
 ### Running example experiments
 
