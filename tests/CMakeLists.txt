@@ -33,7 +33,7 @@ set_target_properties(NetCDF_Fortran PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES $ENV{NetCDF_Fortran_DIR}/include
 )
 
-add_pfunit_ctest (infra_tests
+add_pfunit_ctest(infra_tests
   TEST_SOURCES mom_init.pf
   LINK_LIBRARIES NetCDF_Fortran NetCDF FMS_Infra FMS AMReX::amrex
 )

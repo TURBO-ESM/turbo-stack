@@ -1,4 +1,4 @@
-module my_tests
+module mom_init
    use funit
    use MOM_coms_infra
    implicit none
@@ -12,4 +12,4 @@ contains
       call MOM_infra_end()
    end subroutine test_comms_init
 
-end module my_tests
+end module mom_init
