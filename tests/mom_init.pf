@@ -1,0 +1,15 @@
+module my_tests
+   use funit
+   use MOM_coms_infra
+   implicit none
+
+contains
+
+   @test
+   subroutine test_comms_init()
+      ! This requires input.nml in the current working directory for FMS.
+      call MOM_infra_init()
+      call MOM_infra_end()
+   end subroutine test_comms_init
+
+end module my_tests
