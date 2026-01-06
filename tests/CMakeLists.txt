@@ -2,9 +2,13 @@ cmake_minimum_required(VERSION 3.15)
 
 project(TIMUnitTests LANGUAGES Fortran CXX C)
 
-find_package(AMReX REQUIRED)
 find_package(PFUNIT REQUIRED)
 find_package(MPI REQUIRED)
+
+if("$ENV{INFRA}" STREQUAL "TIM")
+  find_package(AMReX REQUIRED)
+  set(AMREX_LIB AMReX::amrex)
+endif()
 
 enable_testing()
 
@@ -16,7 +20,7 @@ set_target_properties(FMS PROPERTIES
 )
 add_library(FMS_Infra STATIC IMPORTED)
 set_target_properties(FMS_Infra PROPERTIES
-  IMPORTED_LOCATION $ENV{BLD_PATH}/MOM6-infra/libinfra-TIM.a
+  IMPORTED_LOCATION $ENV{BLD_PATH}/MOM6-infra/libinfra-$ENV{INFRA}.a
   INTERFACE_INCLUDE_DIRECTORIES $ENV{BLD_PATH}/MOM6-infra
 )
 
@@ -35,7 +39,7 @@ set_target_properties(NetCDF_Fortran PROPERTIES
 
 add_pfunit_ctest(infra_tests
   TEST_SOURCES mom_init.pf
-  LINK_LIBRARIES NetCDF_Fortran NetCDF FMS_Infra FMS AMReX::amrex
+  LINK_LIBRARIES NetCDF_Fortran NetCDF FMS_Infra FMS ${AMREX_LIB}
 )
 
 # Copy namelist file to output directory to satisfy FMS requirement

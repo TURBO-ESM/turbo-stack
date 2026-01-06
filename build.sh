@@ -322,6 +322,7 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   NETCDFF_PREFIX=$(nf-config --prefix)       \
   NETCDF_PREFIX=$(nc-config --prefix)        \
   BLD_PATH_ROOT=${BLD_PATH}                  \
+  LIBINFRA=${INFRA}                          \
     make -j${JOBS} -C ${UNIT_TEST_UTIL_DIR} build_unit_tests
 else
   cd ${BLD_PATH}
