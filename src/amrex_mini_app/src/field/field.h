@@ -133,13 +133,6 @@ class Field
     Grid::Point GetGridPoint(int i, int j, int k) const;
 
     /**
-     * @brief Initialize the field data using a user-defined function.
-     * @param initializer_function Function that takes (x, y, z) coordinates and returns a vector of values for each
-     * component of the field.
-     */
-    void Initialize(std::function<std::vector<ValueType>(double, double, double)> initializer_function);
-
-    /**
      * @brief Write the field data to an HDF5 file (overwrites file if exists).
      * @param filename Name of the HDF5 file to write.
      */

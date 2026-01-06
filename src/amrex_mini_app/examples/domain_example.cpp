@@ -41,8 +41,8 @@ int main(int argc, char* argv[])
                                      n_cell_z);
 
         // Accessors for the domain's geometry, grid, and fields
-        std::shared_ptr<turbo::CartesianGeometry> geometry = domain.GetGeometry();
-        std::shared_ptr<turbo::CartesianGrid> grid = domain.GetGrid();
+        const std::shared_ptr<turbo::CartesianGeometry> geometry = domain.GetGeometry();
+        const std::shared_ptr<turbo::CartesianGrid> grid = domain.GetGrid();
         auto fields = domain.GetFields(); // fields is a non owning view so it will automatically update when we add fields to the domain
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,34 +86,6 @@ int main(int argc, char* argv[])
         auto i_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsIFaceCentered(); });
         auto j_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsJFaceCentered(); });
         auto k_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsKFaceCentered(); });
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////
-        //  Initialize all the scalar and vector MultiFabs in the Domain
-        /////////////////////////////////////////////////////////////////////////////////////////////////
-
-        auto scalar_initializer_function = [](double x, double y, double z) -> std::vector<turbo::Field::ValueType>
-        {
-            return {x};
-        };
-
-        for (const auto& field : scalar_fields) {
-            field->Initialize(scalar_initializer_function);
-        }
-
-        for (const auto& field : scalar_fields) {
-            field->Initialize([](double x, double y, double z) -> std::vector<turbo::Field::ValueType> {
-                return {x};
-            });
-        }
-        
-        auto vector_initializer_function = [](double x, double y, double z) -> std::vector<turbo::Field::ValueType>
-        {
-            return {x, y, z};
-        };
-
-        for (const auto& field : vector_fields) {
-            field->Initialize(vector_initializer_function);
-        }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //  Initialize all the scalar and vector MultiFabs in the Domain - Alternative approach without using Field::Initialize

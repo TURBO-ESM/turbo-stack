@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include "cartesian_geometry.h" // Replace with cartesian_geometry.h when it is seperated out of geometry.h
+#include "cartesian_geometry.h" 
 #include "cartesian_grid.h"
 #include "cartesian_domain.h"
 
@@ -179,9 +179,19 @@ TEST_F(CartesianDomainTest, WriteHDF5) {
     cartesian_domain->CreateField(field_name, FieldGridStagger::CellCentered, n_component, n_ghost);
 
     for (auto& field : cartesian_domain->GetFields()) {
-        field->Initialize([](double x, double y, double z) {
-            return std::vector<turbo::Field::ValueType>{x + y + z};
-        });
+        //field->Initialize([](double x, double y, double z) {
+        //    return std::vector<turbo::Field::ValueType>{x + y + z};
+        //});
+
+        amrex::MultiFab& mf = *(field->multifab);
+        for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi) {
+            const amrex::Array4<amrex::Real>& array = mf.array(mfi);
+            amrex::ParallelFor(mfi.validbox(), [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                const turbo::Grid::Point grid_point = field->GetGridPoint(i, j, k); 
+                array(i, j, k) = grid_point.x; // Example: initialize scalar field with x-coordinate
+            });
+        }
+
     }
 
     cartesian_domain->WriteHDF5("Test_Output_CartesianDomain_WriteHDF5.h5");
