@@ -151,10 +151,10 @@ case $MACHINE in
         JOBS=4
         ;;
     "ncar")
-        JOBS=1
+        JOBS=8
         ;;
     *)
-	JOBS=1
+	JOBS=4
 	echo "Unknown machine type for make -j option: ${MACHINE}; defaulting to JOBS=${JOBS}"
         ;;
 esac
