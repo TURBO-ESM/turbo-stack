@@ -101,3 +101,20 @@ To clean up an example directory, i.e., to remove all untracked output files (ex
 ```bash
 make clean
 ```
+
+### Running unit tests
+To build and run the unit tests instead of building MOM6, you can add `--unit-tests-only` to the build command.
+
+This will run the unit tests in the test directory and will produce output similar to:
+
+```
+Test project /path/to/turbo/unit-tests
+    Start 1: infra_tests
+1/1 Test #1: infra_tests ......................   Passed    0.54 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.54 sec
+make: Leaving directory '/path/to/turbo/unit-tests'
+Finished build at Mon Jan  1 00:00:00 PM MST 1970
+```
