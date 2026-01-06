@@ -64,6 +64,10 @@ while [[ "$#" -gt 0 ]]; do
             shift ;;
         --amrex)
             AMREX_INSTALL_PATH="$2"
+            if [ ! -d "${AMREX_INSTALL_PATH}" ]; then
+              echo "--amrex path ${AMREX_INSTALL_PATH} not valid"
+              exit 1
+            fi
             if [[ ! -d "${AMREX_INSTALL_PATH}/include" && ! -d "${AMREX_INSTALL_PATH}/lib" ]]; then
               echo "${AMREX_INSTALL_PATH} is valid but not built/installed (include and lib directories missing."
               echo "Please follow the AMReX instructions and re-run the TURBO build."
