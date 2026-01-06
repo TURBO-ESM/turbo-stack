@@ -5,7 +5,7 @@ project(TIMUnitTests LANGUAGES Fortran CXX C)
 find_package(AMReX REQUIRED)
 find_package(PFUNIT REQUIRED)
 find_package(MPI REQUIRED)
-# find_package(CURL REQUIRED)
+
 enable_testing()
 
 # Load external dependencies not provided by modules.
