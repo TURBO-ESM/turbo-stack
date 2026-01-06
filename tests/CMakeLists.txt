@@ -41,7 +41,8 @@ add_pfunit_ctest(infra_tests
   TEST_SOURCES mom_init.pf
   LINK_LIBRARIES NetCDF_Fortran NetCDF FMS_Infra FMS ${AMREX_LIB}
 )
-if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
+if(("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel") OR
+   ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "IntelLLVM"))
   target_link_options(infra_tests PRIVATE -fortlib)
 endif()
 
