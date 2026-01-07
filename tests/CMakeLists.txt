@@ -37,14 +37,14 @@ set_target_properties(NetCDF_Fortran PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES $ENV{NetCDF_Fortran_DIR}/include
 )
 
-add_pfunit_ctest(infra_tests
-  TEST_SOURCES mom_init.pf
-  LINK_LIBRARIES NetCDF_Fortran NetCDF FMS_Infra FMS ${AMREX_LIB}
-)
+# Add -fortlib to link command line
+# (pfunit uses the c++ compiler, not fortran compiler for linking)
 if(("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel") OR
    ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "IntelLLVM"))
-  target_link_options(infra_tests PRIVATE -fortlib)
+  add_link_options(-fortlib)
 endif()
 
-# Copy namelist file to output directory to satisfy FMS requirement
-configure_file(config/input.nml input.nml COPYONLY)
+# Add path variable to config directory for use by tests in relative directories.
+file(REAL_PATH config CONFIG_FILES)
+
+add_subdirectory(interface)
