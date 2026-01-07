@@ -37,6 +37,7 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
             echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
             echo "  --unit-tests-only            Build infrastructure unit tests rather than MOM6 executable (default: false)"
+            echo "  --jobs <num_jobs>            Sets the number of jobs to use for make/cmake calls."
             echo "Examples:"
             echo "  $0 --compiler nvhpc --machine ncar"
             echo "  $0 --memory-mode dynamic_nonsymmetric"
@@ -61,6 +62,17 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
+            shift ;;
+        --jobs)
+            JOBS="$2"
+            if [[ ! "${JOBS}" =~ ^[0-9]+$ ]]; then
+                echo "--jobs option ${JOBS} not a valid positive integer."
+                exit 1
+            fi
+            if [[ ! "${JOBS}" -gt 0 ]]; then
+                echo "--jobs option ${JOBS} not greater than 0."
+                exit 1
+            fi
             shift ;;
         --amrex)
             AMREX_INSTALL_PATH="$2"
@@ -147,23 +159,26 @@ if [[ $OFFLOAD -eq 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; t
   exit 1
 fi
 
-# Set -j option based on the MACHINE argument
-case $MACHINE in
-    "homebrew" )
-        JOBS=2
-        ;;
-    "ubuntu" )
-        JOBS=4
-        ;;
-    "ncar")
-        JOBS=8
-        ;;
-    *)
-	JOBS=4
-	echo "Unknown machine type for make -j option: ${MACHINE}; defaulting to JOBS=${JOBS}"
-        ;;
-esac
-
+# Check if JOBS was defined by the user, if not then set according to machine specs.
+if [ -z "${JOBS}"  ]; then
+    # Set -j option based on the MACHINE argument.
+    case $MACHINE in
+        "homebrew" )
+            JOBS=2
+            ;;
+        "ubuntu" )
+            JOBS=4
+            ;;
+        "ncar")
+            JOBS=8
+            ;;
+        *)
+            JOBS=4
+            echo "Unknown machine type for make -j option: ${MACHINE}; defaulting to JOBS=${JOBS}"
+            ;;
+    esac
+fi
+echo "Using ${JOBS} jobs"
 
 BLD_PATH=${ROOTDIR}/bin/${COMPILER}
 
