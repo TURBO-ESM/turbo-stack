@@ -50,7 +50,7 @@ std::shared_ptr<Field> Domain::GetField(const Field::NameType& name) const
     {
         return it->second;
     }
-    throw std::invalid_argument("FieldContainer::Get: Field with name '" + name + "' does not exist.");
+    throw std::invalid_argument("Domain::GetField: Field with name '" + name + "' does not exist.");
 }
 
 bool Domain::HasField(const Field::NameType& field_name) const 
