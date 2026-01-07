@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(TIMUnitTests LANGUAGES Fortran CXX C)
+project(TURBOUnitTests LANGUAGES Fortran CXX C)
 
 find_package(PFUNIT REQUIRED)
 find_package(MPI REQUIRED)
