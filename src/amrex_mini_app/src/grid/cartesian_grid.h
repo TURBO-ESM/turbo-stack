@@ -159,11 +159,6 @@ class CartesianGrid : public Grid
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
-    ///**
-    // * @brief Geometry object describing the Cartesian domain.
-    // */
-    //const std::shared_ptr<CartesianGeometry> geometry_;
-
     /**
      * @brief Grid spacing in X, Y, Z directions.
      */
