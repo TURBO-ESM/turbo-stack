@@ -26,7 +26,7 @@ std::shared_ptr<Field> Domain::CreateField(const Field::NameType& name, const Fi
 {
     if (field_container_.contains(name))
     {
-        throw std::invalid_argument("FieldContainer::Insert: Field with name '" + name + "' already exists.");
+        throw std::invalid_argument("Domain::CreateField: Field with name '" + name + "' already exists.");
     }
 
     const std::shared_ptr<Field> field = std::make_shared<Field>(name, grid_, stagger, n_component, n_ghost);
