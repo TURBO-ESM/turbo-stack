@@ -9,8 +9,6 @@
 #include <set>
 #include <stdexcept>
 #include <string>
-#include <ranges>
-#include <vector>
 
 #include "grid.h"
 
