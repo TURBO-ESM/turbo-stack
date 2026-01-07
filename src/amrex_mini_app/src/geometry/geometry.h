@@ -33,7 +33,7 @@ class Geometry
      * @brief Constructor for Geometry.
      * @param boundaries Set of boundary names for the geometry.
      */
-    Geometry(std::set<Boundary> boundaries = {}) : boundaries_(boundaries) {};
+    Geometry(std::set<Boundary> boundaries = {}) : boundaries_(boundaries) {}
 
     /**
      * @brief Virtual destructor for Geometry. Needed because this is an abstract base class.
