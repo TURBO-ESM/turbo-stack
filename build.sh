@@ -315,7 +315,6 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   TEMPLATE=${TEMPLATE}                       \
   JOBS=${JOBS}                               \
   CRAY_MPICH_PREFIX=${CRAY_MPICH_PREFIX}     \
-  UNIT_TEST_ROOT=${UNIT_TEST_ROOT}           \
   TEST_BUILD_DIR=$(pwd)                      \
   PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
   AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}   \
@@ -323,7 +322,7 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   NETCDF_PREFIX=$(nc-config --prefix)        \
   BLD_PATH_ROOT=${BLD_PATH}                  \
   LIBINFRA=${INFRA}                          \
-    make -j${JOBS} -C ${UNIT_TEST_UTIL_DIR} build_unit_tests
+    make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
   cd ${BLD_PATH}
   mkdir -p MOM6
