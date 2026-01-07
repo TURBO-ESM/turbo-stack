@@ -481,19 +481,19 @@ cmake --build "$build_dir"
 ctest --test-dir "$build_dir"
 
 # Run the examples. 
-cd "$build_dir/examples"
-examples_to_run=("domain_example")
-for example in "${examples_to_run[@]}"; do
-    if [[ -x "./$example" ]]; then
-        echo "Running example: $example"
-        #./"$example"
-        mpiexec -n 4 ./"$example"
-        #python "$mini_app_root/postprocessing/plot_hdf5.py" "${example}.h5"
-    else
-        echo "Error: $example binary not found or not executable in $build_dir/examples." >&2
-        exit 1
-    fi
-done
+#cd "$build_dir/examples"
+#examples_to_run=("domain_example")
+#for example in "${examples_to_run[@]}"; do
+#    if [[ -x "./$example" ]]; then
+#        echo "Running example: $example"
+#        #./"$example"
+#        mpiexec -n 4 ./"$example"
+#        #python "$mini_app_root/postprocessing/plot_hdf5.py" "${example}.h5"
+#    else
+#        echo "Error: $example binary not found or not executable in $build_dir/examples." >&2
+#        exit 1
+#    fi
+#done
 
 #spack env deactivate
 #python3 "$mini_app_root/postprocessing/plot_hdf5.py" initialization_mini_app.h5
