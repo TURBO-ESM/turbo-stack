@@ -65,8 +65,6 @@ void Domain::WriteHDF5(const std::string& filename) const {
     // Only the IOProcessor writes the grid information and metadata
     if (amrex::ParallelDescriptor::IOProcessor()) {
 
-        //amrex::AllPrint() << "Going to create HDF5 file: " << filename <<  " from IOProcessor " << amrex::ParallelDescriptor::IOProcessorNumber() << std::endl; 
-
         file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
         if (file_id < 0) {
