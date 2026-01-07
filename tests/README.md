@@ -19,11 +19,13 @@ add_pfunit_ctest(new_interface_tests
 
 This will create a new target called `new_interface_tests`, create a test binary incorporating the tests in `new_module_tests.pf` and allow that to be runnable under ctest.
 
-The `LINK_LIBRARIES` line might have to be changed depending on your testing needs and if you are testing multiple fortran modules, you should create a unique `*.pf` unit test file per module and have those be the values passed to the `TEST_SOURCES` list: `TEST_SOURCES module1_tests.pf module2.pf ...`.
+The `LINK_LIBRARIES` line might have to be changed depending on your testing needs and if you are testing multiple fortran modules, you should create a unique `*.pf` unit test file per module and have those be the values passed to the `TEST_SOURCES` list: `TEST_SOURCES module1_tests.pf module2_tests.pf ...`.
+
+Lastly, you will need to add the directory to the main CMakeLists.txt file in the `tests` directory: `add_subdirectory(new_interface)`.  This tells CMake to evaluate the `new_interface` directory for its own `CMakeLists.txt` file created above.
 
 To add another unit test file, simply add the appropriate file (for example, `test_module.pf`) to the needed directory.  Then in the `CMakeLists.txt` file, find the `add_pfunit_ctest` call and add the file to the end of the `TEST_SOURCES` list:
 
-```cMake
+```cmake
 add_pfunit_ctest(test_target_name
   TEST SOURCES module1.pf your_new_module.pf
   ...
