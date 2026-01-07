@@ -26,7 +26,7 @@ std::shared_ptr<Field> Domain::CreateField(const Field::NameType& name, const Fi
 {
     if (field_container_.contains(name))
     {
-        throw std::invalid_argument("Domain::CreateField: Field with name '" + name + "' already exists.");
+        throw std::invalid_argument("Domain::CreateField failed because field with name '" + name + "' already exists.");
     }
 
     const std::shared_ptr<Field> field = std::make_shared<Field>(name, grid_, stagger, n_component, n_ghost);
@@ -36,7 +36,7 @@ std::shared_ptr<Field> Domain::CreateField(const Field::NameType& name, const Fi
         // Since we already checked that no value with this key exist in the map and created the field pointer,
         //  the insert should always succeed and we should never reach this point.
         throw std::logic_error(
-            "FieldContainer::Insert: Failed to insert field. Somehow it was not inserted into the map used under the "
+            "Domain::CreateField failed to insert field. Somehow it was not inserted into the map used under the "
             "hood of Domain. This should never happen.");
     }
 
