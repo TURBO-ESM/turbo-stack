@@ -118,3 +118,5 @@ Total Test time (real) =   0.54 sec
 make: Leaving directory '/path/to/turbo/unit-tests'
 Finished build at Mon Jan  1 00:00:00 PM MST 1970
 ```
+
+Currently, unit tests only test the interface and TIM source, not MOM6 or FMS.
