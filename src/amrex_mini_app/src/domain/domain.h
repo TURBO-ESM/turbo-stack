@@ -91,7 +91,7 @@ class Domain {
     const std::shared_ptr<Grid> grid_;
 
     /**
-     * @brief Container to the fields defined on the domain.
+     * @brief Container for the fields defined on the domain.
      */
     std::map<Field::NameType, std::shared_ptr<Field>> field_container_;
 
