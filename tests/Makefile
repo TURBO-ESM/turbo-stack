@@ -13,4 +13,4 @@ build_unit_tests:
 	cmake -S . -B ${TEST_BUILD_DIR} -DCMAKE_INSTALL_PREFIX="${AMREX_INSTALL_PATH};${PFUNIT_INSTALL_PATH};${CRAY_MPICH_PREFIX}" -DCMAKE_Fortran_COMPILER=$(FC) -DCMAKE_CXX_COMPILER=$(CXX) -DCMAKE_C_COMPILER=$(CC); \
 	cd ${TEST_BUILD_DIR}; \
 	make -j${JOBS}; \
-	ctest
+	ctest --output-on-failure
