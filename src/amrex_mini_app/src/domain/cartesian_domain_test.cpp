@@ -179,10 +179,6 @@ TEST_F(CartesianDomainTest, WriteHDF5) {
     cartesian_domain->CreateField(field_name, FieldGridStagger::CellCentered, n_component, n_ghost);
 
     for (auto& field : cartesian_domain->GetFields()) {
-        //field->Initialize([](double x, double y, double z) {
-        //    return std::vector<turbo::Field::ValueType>{x + y + z};
-        //});
-
         amrex::MultiFab& mf = *(field->multifab);
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi) {
             const amrex::Array4<amrex::Real>& array = mf.array(mfi);
@@ -191,7 +187,6 @@ TEST_F(CartesianDomainTest, WriteHDF5) {
                 array(i, j, k) = grid_point.x; // Example: initialize scalar field with x-coordinate
             });
         }
-
     }
 
     cartesian_domain->WriteHDF5("Test_Output_CartesianDomain_WriteHDF5.h5");
