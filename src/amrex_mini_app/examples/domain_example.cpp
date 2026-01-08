@@ -2,7 +2,6 @@
 #include <memory>
 #include <string>
 #include <ranges>
-#include <vector>
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>

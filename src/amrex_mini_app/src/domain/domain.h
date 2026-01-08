@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <ranges>
+#include <map>
+#include <stdexcept>
 
 #include "geometry.h"
 #include "grid.h"

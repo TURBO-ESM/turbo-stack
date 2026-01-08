@@ -9,6 +9,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <ostream>
+#include <vector>
 
 namespace turbo
 {
