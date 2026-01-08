@@ -62,7 +62,8 @@ class Grid
 
     /**
      * @brief Construct a Grid with the given geometry.
-     * @param geometry Shared pointer to Geometry object
+     * @param geometry Shared pointer to Geometry object.
+     * @throws std::invalid_argument if a null pointer is passed for geometry.
      */
     Grid(const std::shared_ptr<Geometry>& geometry) : geometry_(geometry)
     {

@@ -46,7 +46,6 @@ class Domain {
      * @return A range view of shared pointers to Fields.
      */
     // Have to inline the definition in the header file so that the return type can be deduced properly by auto
-    //auto GetFields() const noexcept { return std::views::values(field_container_); }
     std::ranges::view auto GetFields() const noexcept { return std::views::values(field_container_); }
 
     /**
