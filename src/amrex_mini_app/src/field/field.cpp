@@ -239,7 +239,7 @@ void Field::WriteHDF5(const hid_t file_id) const
             // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
             std::string data_layout_str = "row_major";
             hid_t attr_type = H5Tcopy(H5T_C_S1);
-            H5Tset_size(attr_type, data_layout_str.size());
+            H5Tset_size(attr_type, data_layout_str.size() + 1);
             hid_t attr_space = H5Screate(H5S_SCALAR);
             hid_t attr_id =
                 H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
