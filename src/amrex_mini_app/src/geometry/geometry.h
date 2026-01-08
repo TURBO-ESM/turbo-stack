@@ -44,7 +44,7 @@ class Geometry
      * @brief Get the set of boundaries for the geometry.
      * @return Set of boundary names.
      */
-    std::set<Boundary> Boundaries() const noexcept { return boundaries_; }
+    const std::set<Boundary>& Boundaries() const noexcept { return boundaries_; }
 
    protected:
     //-----------------------------------------------------------------------//
