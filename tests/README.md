@@ -15,11 +15,14 @@ add_pfunit_ctest(new_interface_tests
   TEST_SOURCES new_module_tests.pf
   LINK_LIBRARIES NetCDF_Fortran NetCDF FMS_Infra FMS ${AMREX_LIB}
 )
+set_property(TARGET new_interface_tests PROPERTY LINKER_LANGUAGE Fortran)
 ```
 
 This will create a new target called `new_interface_tests`, create a test binary incorporating the tests in `new_module_tests.pf` and allow that to be runnable under ctest.
 
 The `LINK_LIBRARIES` line might have to be changed depending on your testing needs and if you are testing multiple fortran modules, you should create a unique `*.pf` unit test file per module and have those be the values passed to the `TEST_SOURCES` list: `TEST_SOURCES module1_tests.pf module2_tests.pf ...`.
+
+The `set_property` call is a temporary (but required for each target created with `add_pfunit_ctest`) to force cmake to use the Fortran linker instead of the C++ linker.  Once the cause of this bug is fixed, this should no longer be required.
 
 Lastly, you will need to add the directory to the main CMakeLists.txt file in the `tests` directory: `add_subdirectory(new_interface)`.  This tells CMake to evaluate the `new_interface` directory for its own `CMakeLists.txt` file created above.
 
