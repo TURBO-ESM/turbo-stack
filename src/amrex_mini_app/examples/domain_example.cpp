@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
         // I imagine this setup will be done by some high level thing like a simulation class eventually.
-        // In it's own scope to prevent namespace pollution. 
+        // In its own scope to prevent namespace pollution. 
         const double x_min = 0.0;
         const double x_max = 1.0;
         const double y_min = 0.0;
