@@ -195,7 +195,7 @@ void Field::WriteHDF5(const hid_t file_id) const
             // Add string attribute to this dataset for field_grid_stagger
             std::string stagger_str = FieldGridStaggerToString(field_grid_stagger);
             hid_t attr_type         = H5Tcopy(H5T_C_S1);
-            H5Tset_size(attr_type, stagger_str.size());
+            H5Tset_size(attr_type, stagger_str.size() + 1);
             hid_t attr_space = H5Screate(H5S_SCALAR);
             hid_t attr_id =
                 H5Acreate2(dataset_id, "field_grid_stagger", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
