@@ -6,7 +6,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -150,6 +149,14 @@ class Field
      */
     auto operator<=>(const Field& other) const = default;
 
+    /**
+     * @brief Output stream operator for Field.
+     * @param os Output stream.
+     * @param field Field to output.
+     * @return Reference to the output stream.
+     */
+    friend std::ostream& operator<<(std::ostream& os, const Field& field);
+
     //-----------------------------------------------------------------------//
     // Public Data Members
     //-----------------------------------------------------------------------//
@@ -195,5 +202,7 @@ class Field
     std::shared_ptr<amrex::MultiFab> CopyMultiFabToSingleRank(const std::shared_ptr<amrex::MultiFab>& source_mf,
                                                               int dest_rank) const;
 };
+
+
 
 }  // namespace turbo

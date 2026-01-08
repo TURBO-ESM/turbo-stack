@@ -5,7 +5,7 @@
 ###############################################################################
 
 # Set the where the build directory will be created. You can change this to any location you prefer.
-build_dir=~/tripolar_grid_with_amrex_build
+build_dir=~/turbo_amrex_mini_app_build
 
 # You can also set the DEBUG environment variable to 1 to enable debugging features in this script.
 if [[ "${DEBUG:-0}" == "1" ]]; then
@@ -481,21 +481,29 @@ cmake --build "$build_dir"
 ctest --test-dir "$build_dir"
 
 # Run the examples. 
-cd "$build_dir/examples"
-if [[ -x "./tripolar_grid" ]]; then
-    ./tripolar_grid
-    #python "$mini_app_root/postprocessing/plot_hdf5.py" tripolar_grid.h5
-else
-    echo "Error: tripolar_grid binary not found or not executable in $build_dir/examples." >&2
-    exit 1
-fi
+#cd "$build_dir/examples"
+#examples_to_run=("domain_example")
+#for example in "${examples_to_run[@]}"; do
+#    if [[ -x "./$example" ]]; then
+#        echo "Running example: $example"
+#        #./"$example"
+#        mpiexec -n 4 ./"$example"
+#        #python "$mini_app_root/postprocessing/plot_hdf5.py" "${example}.h5"
+#    else
+#        echo "Error: $example binary not found or not executable in $build_dir/examples." >&2
+#        exit 1
+#    fi
+#done
+
+#spack env deactivate
+#python3 "$mini_app_root/postprocessing/plot_hdf5.py" initialization_mini_app.h5
 
 ###############################################################################
 # Build the Doxygen Documentation
 ###############################################################################
 
-if [[ "$build_doxygen_documentation" == "1" ]]; then
-    echo "Building Doxygen documentation..."
-    cd "$mini_app_root/doc"
-    doxygen Doxyfile
-fi
+#if [[ "$build_doxygen_documentation" == "1" ]]; then
+#    echo "Building Doxygen documentation..."
+#    cd "$mini_app_root/doc"
+#    doxygen Doxyfile
+#fi
