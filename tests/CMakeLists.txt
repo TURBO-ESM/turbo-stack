@@ -42,6 +42,8 @@ set_target_properties(NetCDF_Fortran PROPERTIES
 if(("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel") OR
    ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "IntelLLVM"))
   add_link_options(-fortlib)
+elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "NVHPC")
+  add_link_options(-lvnf)
 endif()
 
 # Add path variable to config directory for use by tests in relative directories.
