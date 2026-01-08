@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(TURBOUnitTests LANGUAGES Fortran CXX C)
+project(TURBOUnitTests LANGUAGES Fortran)
 
+enable_language(CXX C)
 find_package(PFUNIT REQUIRED)
 find_package(MPI REQUIRED)
 
@@ -36,13 +37,6 @@ set_target_properties(NetCDF_Fortran PROPERTIES
   IMPORTED_LOCATION $ENV{NetCDF_Fortran_DIR}/lib/libnetcdff.so
   INTERFACE_INCLUDE_DIRECTORIES $ENV{NetCDF_Fortran_DIR}/include
 )
-
-# Add -fortlib to link command line
-# (pfunit uses the c++ compiler, not fortran compiler for linking)
-if(("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel") OR
-   ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "IntelLLVM"))
-  add_link_options(-fortlib)
-endif()
 
 # Add path variable to config directory for use by tests in relative directories.
 file(REAL_PATH config CONFIG_FILES)
