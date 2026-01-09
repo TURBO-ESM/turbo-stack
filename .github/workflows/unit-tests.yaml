@@ -1,0 +1,75 @@
+name: Run TIM unit tests
+
+# See the following link for more information on the NCAR HPC development containers:
+# https://hub.docker.com/u/ncarcisl
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "ci-tests", "container-ci"]
+  pull_request:
+    branches: ["main", "ci-tests", "container-ci"]
+
+jobs:
+
+  run-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ nvhpc, oneapi, gcc14, clang ]
+        mpi:      [ openmpi, mpich ]
+        #gpu:      [ nogpu, cuda ]
+        gpu:      [ nogpu ]
+        arch:     [ x86_64 ]
+        runner:   [ ubuntu-latest, gha-runner-turbo ]
+        include:
+          - mpi: openmpi
+            extra_mpiexec_args: '--allow-run-as-root'
+
+        exclude:
+          # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
+          - compiler: nvhpc
+            mpi: openmpi
+
+
+
+    name: Build
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash -elo pipefail {0}
+
+    container:
+      image: ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Interrogate Runtime Environment
+        run: |
+          cat /container/config_env.sh
+          lscpu
+          echo && echo && echo
+          echo '----------------------------------------------------------------'
+          echo && echo && echo
+          echo "CC=${CC}"
+          echo "CXX=${CXX}"
+          echo "FC=${FC}"
+          echo "F77=${F77}"
+          echo
+          echo "CFLAGS=${CFLAGS}"
+          echo "CPPFLAGS=${CPPFLAGS}"
+          echo "CXXFLAGS=${CXXFLAGS}"
+          echo "FCFLAGS=${FCFLAGS}"
+          echo "F77FLAGS=${F77FLAGS}"
+          export CC CXX FC F77 CFLAGS CXXFLAGS FCFLAGS F77FLAGS CPPFLAGS
+          conda --version 2>/dev/null || echo " --> no conda in this container"
+          which mpicc
+          mpicc --version 2>/dev/null || true
+
+      - name: Build/run ctest
+        run: |
+          ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra TIM --unit-tests-only
