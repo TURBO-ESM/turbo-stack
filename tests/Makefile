@@ -7,10 +7,9 @@ build_unit_tests: export BLD_PATH=$(BLD_PATH_ROOT)
 build_unit_tests: export NetCDF_Fortran_DIR=$(NETCDFF_PREFIX)
 build_unit_tests: export NetCDF_DIR=$(NETCDF_PREFIX)
 build_unit_tests: export INFRA=$(LIBINFRA)
-build_unit_tests: export VERBOSE=1
 
 build_unit_tests:
-	cmake -S . -B ${TEST_BUILD_DIR} -DCMAKE_INSTALL_PREFIX="${AMREX_INSTALL_PATH};${PFUNIT_INSTALL_PATH};${CRAY_MPICH_PREFIX}" -DCMAKE_Fortran_COMPILER=$(FC) -DCMAKE_CXX_COMPILER=$(CXX) -DCMAKE_C_COMPILER=$(CC); \
+	cmake -S . -B ${TEST_BUILD_DIR} -DCMAKE_PREFIX_PATH="${AMREX_INSTALL_PATH};${PFUNIT_INSTALL_PATH};${CRAY_MPICH_PREFIX}" -DCMAKE_Fortran_COMPILER=$(FC) -DCMAKE_CXX_COMPILER=$(CXX) -DCMAKE_C_COMPILER=$(CC); \
 	cd ${TEST_BUILD_DIR}; \
 	make -j${JOBS}; \
 	ctest --output-on-failure
