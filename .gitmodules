@@ -16,3 +16,6 @@
 [submodule "submodules/amrex"]
 	path = submodules/amrex
 	url = https://github.com/AMReX-Codes/amrex.git
+[submodule "submodules/TIM"]
+	path = submodules/TIM
+	url = https://github.com/TURBO-ESM/TIM
