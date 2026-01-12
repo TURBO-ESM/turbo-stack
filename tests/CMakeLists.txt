@@ -29,7 +29,7 @@ set_target_properties(FMS_Infra PROPERTIES
 # called from makefile
 add_library(NetCDF SHARED IMPORTED)
 set_target_properties(NetCDF PROPERTIES
-  IMPORTED_LOCATION $ENV{NetCDF_DIR}/lib/libnetcdf.so
+  IMPORTED_LOCATION $ENV{NetCDF_LIB_DIR}/libnetcdf.so
   INTERFACE_INCLUDE_DIRECTORIES $ENV{NetCDF_DIR}/include
 )
 add_library(NetCDF_Fortran SHARED IMPORTED)
