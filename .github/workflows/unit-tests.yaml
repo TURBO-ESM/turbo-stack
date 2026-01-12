@@ -32,7 +32,7 @@ jobs:
 
 
 
-    name: Build
+    name: Unit Test
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
