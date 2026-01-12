@@ -284,10 +284,10 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
     PFUNIT_INSTALL_PATH="$(pwd)/install"
 
     # Redeclaring variables needed because they are not exported
-    TEMPLATE=${TEMPLATE}                     \
-    JOBS=${JOBS}                             \
+    TEMPLATE=${TEMPLATE}                       \
+    JOBS=${JOBS}                               \
     PFUNIT_ROOT=${PFUNIT_ROOT}                 \
-    BLD_PATH=$(pwd)/build                    \
+    BLD_PATH=$(pwd)/build                      \
     PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
        make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
   fi
