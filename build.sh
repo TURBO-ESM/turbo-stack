@@ -7,6 +7,7 @@ TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
+INFRA_ROOT=${ROOTDIR}/submodules/FMS
 
 # Default values for CLI arguments
 COMPILER="intel"
@@ -58,6 +59,9 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
+            if [[ "${INFRA}" == "TIM" ]]; then
+              INFRA_ROOT=${ROOTDIR}/submodules/TIM
+            fi
             shift ;;
         --jobs)
             JOBS="$2"
@@ -264,10 +268,6 @@ fi
 
 # 1) Build Underlying Infrastructure Library
 if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
-  INFRA_ROOT=${ROOTDIR}/submodules/FMS
-  if [[ "${INFRA}" == "TIM" ]]; then
-    INFRA_ROOT=${ROOTDIR}/submodules/TIM
-  fi
   cd ${BLD_PATH}
   mkdir -p ${INFRA}
   cd ${INFRA}
