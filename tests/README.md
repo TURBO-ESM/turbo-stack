@@ -133,14 +133,16 @@ The additional components are:
 
 > [!WARNING]
 > There is a bug in MOM infra where we are not deallocating data on finalize preventing reuse of test cases with multiple PEs and multiple test methods within a single pfunit module:
-```
-Fortran runtime error: Attempting to allocate already allocated variable 'nonblock_data'
-
-Error termination. Backtrace:
-At line 82 of file /glade/u/home/mwaxmonsky/source/turbo-mwaxmonsky-temp/submodules/FMS/mpp/include/mpp_domains_misc.inc
-...
-```
-So it is not possible at this time to have more than one test or multiple PEs tested within the same file.
-So for the time being, each test must have its own file and cmake target until this cen be mitigated.
+> 
+> ```
+> Fortran runtime error: Attempting to allocate already allocated variable 'nonblock_data'
+> 
+> Error termination. Backtrace:
+> At line 82 of file /glade/u/home/mwaxmonsky/source/turbo-mwaxmonsky-temp/submodules/FMS/mpp/include/mpp_domains_misc.inc
+> ...
+> ```
+> 
+> So it is not possible at this time to have more than one test or multiple PEs tested within the same file.
+> So for the time being, each test must have its own file and cmake target until this cen be mitigated.
 
 2) The subroutine signature changes to `subroutine test_functionality(this)` and a variable declaration `class (module_under_test_case), intent(inout) :: this` are needed to satisfy pfunit and to allow the developer to access MPI intrinsics from within the test case (see the [pfunit MPI test case class](https://github.com/Goddard-Fortran-Ecosystem/pFUnit/blob/main/src/pfunit/core/MpiTestParameter.F90) for more functions.)
