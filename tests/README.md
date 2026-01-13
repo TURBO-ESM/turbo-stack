@@ -131,8 +131,8 @@ The additional components are:
 
 1) `@test(npes=[4])` tells pfunit to run the test on different levels of PEs.  This parameter can be a list of PE's as well (`@test(npes=[1,2,4,8])`) and pfunit will run the test for each configuration of PEs so long as they are less than or equal to the `MAX_PES` parameter provided to the cmake target from above.
 
-[!WARNING]
-There is a bug in MOM infra where we are not deallocating data on finalize preventing reuse of test cases with multiple PEs and multiple test methods within a single pfunit module:
+> [!WARNING]
+> There is a bug in MOM infra where we are not deallocating data on finalize preventing reuse of test cases with multiple PEs and multiple test methods within a single pfunit module:
 ```
 Fortran runtime error: Attempting to allocate already allocated variable 'nonblock_data'
 
