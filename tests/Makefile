@@ -10,7 +10,7 @@ build_unit_tests: export NetCDF_DIR=$(NETCDF_PREFIX)
 build_unit_tests: export INFRA=$(LIBINFRA)
 
 build_unit_tests:
-	@set -e -o pipefail; \
+	set -e -o pipefail; \
 	cmake -S . -B ${TEST_BUILD_DIR} -DCMAKE_PREFIX_PATH="${AMREX_INSTALL_PATH};${PFUNIT_INSTALL_PATH};${CRAY_MPICH_PREFIX}" -DCMAKE_Fortran_COMPILER=$(FC) -DCMAKE_CXX_COMPILER=$(CXX) -DCMAKE_C_COMPILER=$(CC); \
 	cd ${TEST_BUILD_DIR}; \
 	make -j${JOBS}; \
