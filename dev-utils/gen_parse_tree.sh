@@ -6,6 +6,7 @@ MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
+INFRA_ROOT=${ROOTDIR}/submodules/FMS
 
 # Default values for CLI arguments
 COMPILER="flang_ptree"
@@ -44,6 +45,9 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
+            if [[ "${INFRA}" == "TIM" ]]; then
+              INFRA_ROOT=${ROOTDIR}/submodules/TIM
+            fi
             shift ;;
         --jobs)
             JOBS="$2"
@@ -150,10 +154,6 @@ MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/
 
 # 1) Build Underlying Infrastructure Library
 if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
-  INFRA_ROOT=${ROOTDIR}/submodules/FMS
-  if [[ "${INFRA}" == "TIM" ]]; then
-    INFRA_ROOT=${ROOTDIR}/submodules/TIM
-  fi
   cd ${BLD_PATH}
   mkdir -p ${INFRA}
   cd ${INFRA}
@@ -177,19 +177,15 @@ cd MOM6-infra
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
 ${MKMF_ROOT}/mkmf --gen-ptree -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p ${LIBINFRA} path_names
-make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
+make -j${JOBS} DEBUG=${DEBUG} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
-if [ $UNIT_TESTS_ONLY -eq 1 ]; then
-  echo "TODO: build unit tests here!"
-else
-  cd ${BLD_PATH}
-  mkdir -p MOM6
-  cd MOM6
-  expanded=$(eval echo ${MOM6_src_files})
-  ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf --gen-ptree -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p MOM6 -l "${LINKING_FLAGS}" path_names
-  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
-fi
+cd ${BLD_PATH}
+mkdir -p MOM6
+cd MOM6
+expanded=$(eval echo ${MOM6_src_files})
+${MKMF_ROOT}/list_paths -l ${expanded}
+${MKMF_ROOT}/mkmf --gen-ptree -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p MOM6 -l "${LINKING_FLAGS}" path_names
+make -j${JOBS} DEBUG=${DEBUG} MOM6
 
 echo "Finished build at $(date)"
