@@ -18,4 +18,4 @@ target_link_libraries(amrex_example_main PUBLIC AMReX::amrex_3d)
 ###############################################################################
 
 add_executable(tripolar_grid tripolar_grid_example.cpp)
-target_link_libraries(tripolar_grid PRIVATE tripolar_grid_lib AMReX::amrex_3d)
+target_link_libraries(tripolar_grid PRIVATE tripolar_grid_lib)
