@@ -16,7 +16,7 @@ enable_testing()
 # Load external dependencies not provided by modules.
 add_library(FMS STATIC IMPORTED)
 set_target_properties(FMS PROPERTIES
-  IMPORTED_LOCATION $ENV{BLD_PATH}/TIM/libfms.a
+  IMPORTED_LOCATION $ENV{BLD_PATH}/TIM/libtim.a
   INTERFACE_INCLUDE_DIRECTORIES $ENV{BLD_PATH}/TIM
 )
 add_library(FMS_Infra STATIC IMPORTED)
