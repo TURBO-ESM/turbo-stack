@@ -1,0 +1,27 @@
+module MOM_test_case
+  use pFUnit
+  use MOM_coms_infra
+  implicit none
+
+  ! Template test case to auto init/finalize MOM infra for all inherited tests.
+  @testCase()
+  type, extends(MpiTestCase) :: MOM_MPI_test_case
+    contains
+    procedure :: setUp
+    procedure :: tearDown
+  end type MOM_MPI_test_case
+
+contains
+
+  ! Each call to init requires input.nml in the current working directory for FMS.
+  subroutine setUp(this)
+    class (MOM_MPI_test_case), intent(inout) :: this
+    call MOM_infra_init(this%getMpiCommunicator())
+  end subroutine setUp
+
+  subroutine teardown(this)
+    class (MOM_MPI_test_case), intent(inout) :: this
+    call MOM_infra_end()
+  end subroutine teardown
+
+end module MOM_test_case

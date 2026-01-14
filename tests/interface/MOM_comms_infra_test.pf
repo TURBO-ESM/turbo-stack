@@ -1,0 +1,26 @@
+module MOM_comms_infra_test
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: MOM_comms_infra_test_case
+  end type MOM_comms_infra_test_case
+
+contains
+
+  @test(npes=[4])
+  subroutine test_numPEs(this)
+    class (MOM_comms_infra_test_case), intent(inout) :: this
+    integer :: npesTIM
+    integer :: npes
+
+    npesTIM = num_PEs()
+
+    npes = this%getNumProcesses()
+
+    @assertEqual(npes, npesTIM)
+  end subroutine test_numPEs
+   
+end module MOM_comms_infra_test
