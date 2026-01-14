@@ -8,6 +8,9 @@ MOM_ROOT=${ROOTDIR}/submodules/MOM6
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
 INFRA_ROOT=${ROOTDIR}/submodules/FMS
+PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
+UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
+UNIT_TEST_ROOT=${ROOTDIR}/tests
 
 # Default values for CLI arguments
 COMPILER="intel"
@@ -83,6 +86,13 @@ while [[ "$#" -gt 0 ]]; do
             if [[ ! -d "${AMREX_INSTALL_PATH}/include" && ! -d "${AMREX_INSTALL_PATH}/lib" ]]; then
               echo "${AMREX_INSTALL_PATH} is valid but not built/installed (include and lib directories missing."
               echo "Please follow the AMReX instructions and re-run the TURBO build."
+              exit 1
+            fi
+            shift ;;
+        --pfunit)
+            PFUNIT_INSTALL_PATH="$2"
+            if [ ! -d "${PFUNIT_INSTALL_PATH}" ]; then
+              echo "--pfunit path ${PFUNIT_INSTALL_PATH} not valid"
               exit 1
             fi
             shift ;;
@@ -266,6 +276,26 @@ if [[ "${INFRA}" == "TIM" ]]; then
   AMREX_INCLUDE_FLAGS="-I${AMREX_INSTALL_PATH}/include"
 fi
 
+# 0a) Build pFUnit if needed
+if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
+  if [[ ! -v "${PFUNIT_INSTALL_PATH}" ]]; then
+    echo "Path to pFUnit not declared.  Building pFUnit through submodules."
+    cd "${BLD_PATH}"
+    mkdir -p pFUnit
+    cd pFUnit
+
+    PFUNIT_INSTALL_PATH="$(pwd)/install"
+
+    # Redeclaring variables needed because they are not exported
+    TEMPLATE=${TEMPLATE}                       \
+    JOBS=${JOBS}                               \
+    PFUNIT_ROOT=${PFUNIT_ROOT}                 \
+    BLD_PATH=$(pwd)/build                      \
+    PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
+       make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
+  fi
+fi
+
 # 1) Build Underlying Infrastructure Library
 if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
   cd ${BLD_PATH}
@@ -295,7 +325,23 @@ make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
 if [ $UNIT_TESTS_ONLY -eq 1 ]; then
-  echo "TODO: build unit tests here!"
+  cd ${BLD_PATH}
+  mkdir -p unit-tests
+  cd unit-tests
+
+  # Redeclaring variables needed because they are not exported
+  TEMPLATE=${TEMPLATE}                       \
+  JOBS=${JOBS}                               \
+  CRAY_MPICH_PREFIX=${CRAY_MPICH_PREFIX}     \
+  TEST_BUILD_DIR=$(pwd)                      \
+  PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
+  AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}   \
+  NETCDFF_PREFIX=$(nf-config --prefix)       \
+  NETCDF_LIB_DIR=$(nc-config --libdir)       \
+  NETCDF_PREFIX=$(nc-config --prefix)        \
+  BLD_PATH_ROOT=${BLD_PATH}                  \
+  LIBINFRA=${INFRA}                          \
+    make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
   cd ${BLD_PATH}
   mkdir -p MOM6
