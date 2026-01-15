@@ -30,6 +30,6 @@ function(add_mom_test TEST_TARGET_NAME)
   )
 
   # Temporary fix to force cmake to use the Fortran linker
-  set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
+  # set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
 
 endfunction()
