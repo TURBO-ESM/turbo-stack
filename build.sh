@@ -329,7 +329,6 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   # Redeclaring variables needed because they are not exported
   TEMPLATE=${TEMPLATE}                       \
   JOBS=${JOBS}                               \
-  CRAY_MPICH_PREFIX=${CRAY_MPICH_PREFIX}     \
   TEST_BUILD_DIR=$(pwd)                      \
   PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
   AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}   \
