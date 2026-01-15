@@ -29,4 +29,7 @@ function(add_mom_test TEST_TARGET_NAME)
     MAX_PES ${MOM_MAX_PES}
   )
 
+  # Temporary fix to force cmake to use the Fortran linker
+  set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
+
 endfunction()
