@@ -7,8 +7,10 @@ set -u  # Treat expanding empty variables as an error
 # User Input
 ###############################################################################
 
-# Set to 1 to enable debugging features in this script.
-export DEBUG=1
+# You can set the DEBUG environment variable to 1 to enable debugging features in this script.
+if [[ "${DEBUG:-0}" == "1" ]]; then
+    set -x  # Print each command before executing it
+fi
 
 ###############################################################################
 # Check Pre-requisites
@@ -32,19 +34,33 @@ fi
 ###############################################################################
 # Environment Setup
 ###############################################################################
-module purge
-module load gcc cray-mpich hdf5 cmake # had problems when also loading cmake and ncarcompilers module
-module list
 
+module purge
+module swap ncarenv/24.12
+module load gcc cray-mpich hdf5 cmake
 # Looks like the gcc module on derecho does not set CXX... so set it manually here.
 export CXX="$(which g++)"
 
-# Set the environment variables for the spack environment creation script. These should be consistent with the modules you loaded above.
+module list
+
+# Set environment variables based on the modules you loaded 
 export COMPILER_PACKAGE_NAME="gcc"
-export COMPILER_VERSION="12.4.0"
-#export COMPILER_VERSION=${GNU_VERSION}
+export COMPILER_VERSION=${GNU_VERSION}
+export COMPILER_ROOT=${NCAR_ROOT_COMPILER}
+
 export MPI_PACKAGE_NAME="cray-mpich"
-#export MPI_VERSION=${CRAY_MPICH_VERSION}
+export MPI_VERSION=${CRAY_MPICH_VERSION}
+export MPI_ROOT=${NCAR_ROOT_MPI}
+
+if [[ -z "${NCAR_ROOT_HDF5:-}" ]]; then
+    echo "Error: NCAR_ROOT_HDF5 environment variable is not set. It should have been set when you loaded the hdf5 module." >&2
+    exit 1
+fi
+
+if [[ -z "${NCAR_ROOT_CMAKE:-}" ]]; then
+    echo "Error: NCAR_ROOT_CMAKE environment variable is not set. It should have been set when you loaded the cmake module." >&2
+    exit 1
+fi
 
 ###############################################################################
 # Create the Spack Environment
@@ -65,4 +81,4 @@ fi
 
 spack env activate "$SPACK_ENVIRONMENT_NAME"
 
-${turbo_mini_app_root}/build_and_run.sh
+. ${turbo_mini_app_root}/build_and_run.sh

@@ -97,28 +97,31 @@ if [[ "$machine" == "generic" ]]; then
 
 elif [[ "$machine" == "derecho" ]]; then
 
-    for var in COMPILER_PACKAGE_NAME MPI_PACKAGE_NAME; do
-        if [[ -z "${!var:-}" ]]; then
-            echo "Error: $var environment variable is not set or is empty." >&2
+    for var in COMPILER_PACKAGE_NAME COMPILER_VERSION COMPILER_ROOT MPI_PACKAGE_NAME MPI_VERSION MPI_ROOT NCAR_ROOT_HDF5 NCAR_ROOT_CMAKE; do
+      if [[ -z "${!var:-}" ]]; then
+        echo "Error: $var environment variable is not set." >&2
+        exit 1
+      fi
+    done
+    
+    for path in COMPILER_ROOT MPI_ROOT NCAR_ROOT_HDF5 NCAR_ROOT_CMAKE; do
+        if [[ ! -d "${!path}" ]]; then
+            echo "Error: ${!path} does not exist. Expected that path to exist in the container." >&2
             exit 1
         fi
     done
 
     compiler_package_name=${COMPILER_PACKAGE_NAME}
-    if [[ -n "${COMPILER_VERSION:-}" ]]; then
-        compiler_version="${COMPILER_VERSION}"
-        compiler_spec="${compiler_package_name}@${compiler_version}"
-    else
-        compiler_spec="${compiler_package_name}"
-    fi
+    compiler_version=${COMPILER_VERSION}
+    compiler_root=${COMPILER_ROOT}
+
+    compiler_spec="${compiler_package_name}@${compiler_version}"
 
     mpi_package_name=${MPI_PACKAGE_NAME}
-    if [[ -n "${MPI_VERSION:-}" ]]; then
-        mpi_version="${MPI_VERSION}"
-        mpi_spec="${mpi_package_name}@${mpi_version}"
-    else
-        mpi_spec="${mpi_package_name}"
-    fi
+    mpi_version=${MPI_VERSION}
+    mpi_root=${MPI_ROOT}
+
+    mpi_spec="${mpi_package_name}@${mpi_version}"
 
 elif [[ "$machine" == "ci_container" ]]; then
 
@@ -234,41 +237,14 @@ if [[ "$machine" == "generic" ]]; then
 
 elif [[ "$machine" == "derecho" ]]; then
 
-    #spack external find --not-buildable --path $compiler_root $compiler_package_name
+    spack external find --not-buildable --path $compiler_root $compiler_package_name
+    spack external find --not-buildable --path $mpi_root $mpi_package_name
+    spack external find --not-buildable --path $NCAR_ROOT_HDF5 hdf5
+    spack external find --not-buildable --path $NCAR_ROOT_CMAKE cmake
 
-    #spack add /${NCAR_SPACK_HASH_GCC}
-
-    #spack add "$compiler_spec"
-
-    #spack external find --not-buildable $compiler_package_name
-    #spack external find --not-buildable cmake
-    #spack external find --not-buildable hdf5
-    #spack external find --not-buildable cray-mpich
-
-    #spack external find --not-buildable --path ${NCAR_ROOT_COMPILER} $compiler_package_name
-    #spack external find --not-buildable $compiler_spec
-    spack external find cmake
-    spack external find hdf5
-    spack external find mpich
-    #spack external find --not-buildable gcc-runtime
-
-    # Maybe a new way of doing this that uses hases 0
-    #spack add /$NCAR_SPACK_HASH_GCC
-    #spack remove cmake
-    #spack add /$NCAR_SPACK_HASH_CMAKE
-    #spack external find --path $NCAR_ROOT_MPI mpich
-
-    # Hard coded to gcc and cray-mpich for now on derecho
-    # Using older version of spack on derecho so use syntax that works there.
-    #spack config add packages:all:compiler:[gcc]
-    #spack config add packages:all:compiler:[${compiler_spec}]
-    #spack config add packages:all:providers:mpi:[cray-mpich]
-
-    # This would be more portable to newer versions of spack
-    #spack config add packages:mpi:require:${mpi_spec}
-    #spack config add packages:all:prefer:[\"%c=${compiler_spec}\"]
-    #spack config add packages:all:prefer:[\"%cxx=${compiler_spec}\"]
-    #spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
+    # Using older version of spack on derecho so this syntax to specifiy compiler and mpi
+    spack config add packages:all:compiler:[${compiler_spec}]
+    spack config add packages:all:providers:mpi:[${mpi_spec}]
 
 elif [[ "$machine" == "ci_container" ]]; then
 
@@ -331,7 +307,7 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
 
     if [[ "$machine" == "derecho" ]]; then
         # Older version of spack on derecho does not support --force
-        spack install --fresh
+        spack install --fresh --no-check-signature 
     else
         spack install --fresh --force
     fi
@@ -351,7 +327,7 @@ fi
 export SPACK_ENVIRONMENT_NAME=${spack_environment_name}
 
 ###############################################################################
-# Error Checking Pre-requisites... Should be true for all environments
+# Error Checking Post-requreiments
 ###############################################################################
 
 if [[ -z "${SPACK_ENVIRONMENT_NAME:-}" ]]; then
