@@ -22,6 +22,7 @@ DEBUG=0 # False
 CODECOV=0 # False
 OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
+CMAKE_BUILD_TYPE="RelWithDebInfo"
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -57,7 +58,8 @@ while [[ "$#" -gt 0 ]]; do
         --offload)
             OFFLOAD=1 ;;
         --debug)
-            DEBUG=1 ;;
+            DEBUG=1
+            CMAKE_BUILD_TYPE="Debug" ;;
         --override)
             OVERRIDE=1 ;;
         --infra)
@@ -157,6 +159,10 @@ fi
 if [[ $OFFLOAD -eq 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; then
   echo "ERROR: Offloading can only be enabled on NCAR machines with NVHPC compiler."
   exit 1
+fi
+
+if [[ $DEBUG -eq 1 ]]; then
+  CMAKE_BUILD_TYPE="Debug"
 fi
 
 # Check if JOBS was defined by the user, if not then set according to machine specs.
@@ -266,6 +272,7 @@ if [[ "${INFRA}" == "TIM" ]]; then
     JOBS=${JOBS}                             \
     AMREX_ROOT=${AMREX_ROOT}                 \
     BLD_PATH=$(pwd)/build                    \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}     \
     AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH} \
        make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
   fi
