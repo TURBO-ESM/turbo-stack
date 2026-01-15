@@ -161,10 +161,6 @@ if [[ $OFFLOAD -eq 1 && ( "$MACHINE" != "ncar" || "$COMPILER" != "nvhpc" ) ]]; t
   exit 1
 fi
 
-if [[ $DEBUG -eq 1 ]]; then
-  CMAKE_BUILD_TYPE="Debug"
-fi
-
 # Check if JOBS was defined by the user, if not then set according to machine specs.
 if [ -z "${JOBS}"  ]; then
     # Set -j option based on the MACHINE argument.
@@ -295,6 +291,7 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
     JOBS=${JOBS}                               \
     PFUNIT_ROOT=${PFUNIT_ROOT}                 \
     BLD_PATH=$(pwd)/build                      \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \
     PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
        make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
   fi
@@ -344,6 +341,7 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   NETCDF_PREFIX=$(nc-config --prefix)        \
   BLD_PATH_ROOT=${BLD_PATH}                  \
   LIBINFRA=${INFRA}                          \
+  CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
   cd ${BLD_PATH}
