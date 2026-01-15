@@ -41,6 +41,7 @@ This will copy the file from the `config` directory to the build directory where
 > [!NOTE]
 > While transitioning to AMReX, the backend **REQUIRES** an `input.nml` in the same directory as the target binary.
 > So for new test directories, this will be required otherwise the test will fail.
+> See [the config directory](config/) for example `input.nml` files currently being used.
 
 In this case, we are copying the file as is but CMake provides the ability to templatize source files and modify them per file as needed.  For more information, see the [CMake documentation](https://cmake.org/cmake/help/latest/command/configure_file.html#example).
 
