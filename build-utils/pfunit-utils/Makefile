@@ -1,5 +1,7 @@
 include $(TEMPLATE)
 
+# Need -DSKIP_OPENMP=YES to support clang compiler bug
+# not being able to find OpenMP through CMake when calling find_package(PFUNIT)
 build_pfunit:
 	cmake -S ${PFUNIT_ROOT} -B ${BLD_PATH}            \
 		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}        \
