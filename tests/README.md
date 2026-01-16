@@ -134,5 +134,6 @@ The additional components are:
 > 
 > So it is not possible at this time to have more than one test or multiple PEs tested within the same file.
 > So for the time being, each test must have its own file and cmake target until this cen be mitigated.
+> Follow [the associated GitHub issue](https://github.com/TURBO-ESM/FMS/issues/1) for updates.
 
 2) The subroutine signature changes to `subroutine test_functionality(this)` and a variable declaration `class (module_under_test_case), intent(inout) :: this` are needed to satisfy pfunit and to allow the developer to access MPI intrinsics from within the test case (see the [pfunit MPI test case class](https://github.com/Goddard-Fortran-Ecosystem/pFUnit/blob/main/src/pfunit/core/MpiTestParameter.F90) for more functions.)
