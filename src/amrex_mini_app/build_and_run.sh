@@ -12,6 +12,11 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
     set -x  # Print each command before executing it
 fi
 
+# You can also set the CODE_COVERAGE environment variable to 1 to enable generating code coverage reports.
+if [[ -z "${CODE_COVERAGE:-}" ]]; then
+    CODE_COVERAGE=0
+fi
+
 ###############################################################################
 # Error Checking Pre-requisites... Should be true for all environments
 ###############################################################################
@@ -107,10 +112,6 @@ if [[ "$machine" == "generic" ]]; then
         mpi_spec="${mpi_package_name}" # Just let spack pick whatever version it wants by not specifying a version in the spec.
         echo "You did not explicitly ask for a specific mpi implementation. Just going to use $mpi_spec as the default option."
     fi
-
-    # Find the path to the C and C++ compilers. Only take the first one in case there are multiple.
-    export CC=$( spack compiler info "$compiler_spec" | grep 'c: '   | awk '{print $NF}' | head -n 1)
-    export CXX=$(spack compiler info "$compiler_spec" | grep 'cxx: ' | awk '{print $NF}' | head -n 1)
 
     build_doxygen_documentation=1
 
@@ -323,7 +324,7 @@ fi
 
 if [[ "$machine" == "generic" ]]; then
 
-    spack external find "$compiler_spec"
+    spack add $compiler_spec
 
     spack config add packages:mpi:require:${mpi_spec}
 
@@ -435,6 +436,14 @@ else
     spack install
 fi
 
+if [[ "$machine" == "generic" ]]; then
+    ## Load the compiler module to make sure the compiler is in the path and gcc is set
+    spack load ${compiler_spec}
+
+    # This could work if you don't added the compiler package to to the spack environment above but it is not as robust.
+    #spack load --first ${compiler_spec}
+fi
+
 export SPACK_ENV_VIEW_DIR=$(spack location --env)/.spack-env/view
 
 ###############################################################################
@@ -461,6 +470,12 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
     echo "CXX compiler path is CXX=$CXX"
 fi
 
+# Turn off code coverage if you are not using gcc and give an error messsage.
+if [[ "${compiler_package_name}" != "gcc" && "$CODE_COVERAGE" == "1" ]]; then
+    echo "Warning: Code coverage is only supported when using gcc as the compiler. Disabling code coverage generation." >&2
+    export CODE_COVERAGE=0
+fi
+
 # Maybe also check for mpi compiler wrappers MPICC and MPICXX?
 
 cmake_options=()
@@ -470,12 +485,21 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
     cmake_options+=("-DCMAKE_BUILD_TYPE=Debug")
     cmake_options+=("--fresh")
 fi
+if [[ "$CODE_COVERAGE" == "1" ]]; then
+    cmake_options+=("-DCODE_COVERAGE=ON")
+fi
 
 # Generate the build directory. 
 cmake "${cmake_options[@]}" -S "$mini_app_root" -B "$build_dir"
 
 # Build the code. 
-cmake --build "$build_dir"
+cmake_build_options=()
+if [[ "${DEBUG:-0}" == "1" ]]; then
+    cmake_build_options+=("--clean-first")
+else
+    cmake_build_options+=("--parallel $(nproc)")
+fi
+cmake --build "$build_dir" "${cmake_build_options[@]}"
 
 # Test the code. 
 ctest --test-dir "$build_dir"
@@ -488,6 +512,32 @@ if [[ -x "./tripolar_grid" ]]; then
 else
     echo "Error: tripolar_grid binary not found or not executable in $build_dir/examples." >&2
     exit 1
+fi
+
+# Generate the code coverage report.
+if [[ "$CODE_COVERAGE" == "1" ]]; then
+    echo "Generating code coverage report..."
+
+    if ! command -v lcov &> /dev/null; then
+        echo "Error: lcov command not found. You need to have lcov installed and in your path to generate code coverage reports." >&2
+        exit 1
+    fi
+
+    # Generate the full coverage file
+    full_coverage_file="$build_dir/coverage.info"
+    lcov --capture --directory "$build_dir" --output-file "$full_coverage_file" --ignore-errors mismatch,unexecuted_blocks
+
+    # Only keep coverage for files in the mini_app_root directory
+    filtered_coverage_file="$build_dir/coverage.filtered.info"
+    lcov --extract "$full_coverage_file" "$mini_app_root/*" --output-file "$filtered_coverage_file"
+
+    # Generate the HTML report for the mini-app only
+    if ! command -v genhtml &> /dev/null; then
+        echo "Error: genhtml command not found. You need to have genhtml installed and in your path to generate code coverage HTML reports." >&2
+        exit 1
+    fi
+
+    genhtml "$filtered_coverage_file" --output-directory "$build_dir/coverage"
 fi
 
 ###############################################################################
