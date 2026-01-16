@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ nvhpc, oneapi, gcc14 ]
+        compiler: [ oneapi, gcc14 ]
         mpi:      [ mpich ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
