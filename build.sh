@@ -275,7 +275,7 @@ if [[ "${INFRA}" == "TIM" ]]; then
     TEMPLATE=${TEMPLATE}                     \
     JOBS=${JOBS}                             \
     AMREX_ROOT=${AMREX_ROOT}                 \
-    BLD_PATH=$(pwd)/build                    \
+    AMREX_BLD_PATH=$(pwd)/build              \
     CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}     \
     AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH} \
       make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
@@ -298,7 +298,7 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
     TEMPLATE=${TEMPLATE}                       \
     JOBS=${JOBS}                               \
     PFUNIT_ROOT=${PFUNIT_ROOT}                 \
-    BLD_PATH=$(pwd)/build                      \
+    PFUNIT_BLD_PATH=$(pwd)/build               \
     CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \
     PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
       make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
