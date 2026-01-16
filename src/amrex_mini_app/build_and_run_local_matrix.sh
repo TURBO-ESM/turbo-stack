@@ -7,14 +7,18 @@ set -u  # Treat expanding empty variables as an error
 # User Input
 ###############################################################################
 
-export DEBUG=1
+# You can set the DEBUG environment variable to 1 to enable debugging features in this script.
+if [[ "${DEBUG:-0}" == "1" ]]; then
+    set -x  # Print each command before executing it
+fi
 
-export DOXYGEN=1
+# You can set the DOXYGEN environment variable to 1 to build the doxygen documentation. You will need the doxygen executable installed and in your path to do this.
+if [[ "${DOXYGEN:-0}" == "1" ]]; then
+    echo "Will generate Doxygen documentation."
+fi
 
-#compiler_list="gcc"
 compiler_list="gcc llvm intel-oneapi-compilers"
 
-#mpi_list="openmpi"
 mpi_list="openmpi mpich"
 
 ###############################################################################
