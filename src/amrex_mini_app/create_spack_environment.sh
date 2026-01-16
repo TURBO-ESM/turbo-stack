@@ -327,7 +327,7 @@ fi
 export SPACK_ENVIRONMENT_NAME=${spack_environment_name}
 
 ###############################################################################
-# Error Checking Post-requreiments
+# Error Checking Post-requirements
 ###############################################################################
 
 if [[ -z "${SPACK_ENVIRONMENT_NAME:-}" ]]; then
