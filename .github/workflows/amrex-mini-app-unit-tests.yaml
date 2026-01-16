@@ -1,4 +1,4 @@
-name: AmREX Mini-App Unit Tests
+name: AMReX Mini-App Unit Tests
 
 # See the following link for more information on the NCAR HPC development containers:
 # https://hub.docker.com/u/ncarcisl
@@ -83,12 +83,49 @@ jobs:
           spack compiler list
           spack spec zlib # Just to test that spack is working. 
 
-      - name: Build and run amrex mini-app
+      - name: Modify default CI container environment
+        run: |
+
+          # Directory where you pulled the turbo stack repository
+          export TURBO_STACK_ROOT="${GITHUB_WORKSPACE}"
+          echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}" >> $GITHUB_ENV
+
+          # Path to the turbo mini-app that should be within the turbo stack repository
+          export TURBO_MINI_APP_ROOT=${TURBO_STACK_ROOT}/src/amrex_mini_app
+          echo "TURBO_MINI_APP_ROOT=${TURBO_STACK_ROOT}/src/amrex_mini_app" >> $GITHUB_ENV
+          if [ ! -d "${TURBO_MINI_APP_ROOT}" ]; then
+            echo "Error: TURBO_MINI_APP_ROOT=${TURBO_MINI_APP_ROOT} is not a valid directory."
+            exit 1
+          fi
+
+          # Sets a bunch of environment variables for compiler name and version, MPI name and version, etc...
+          . ${TURBO_MINI_APP_ROOT}/ncar_container_environment_variable_standardization.sh
+
+          # To control build and runtime behavior later
+          export DEBUG=1
+          echo "DEBUG=${DEBUG}" >> $GITHUB_ENV
+
+      - name: Install turbo mini-app dependencies in a spack environment
         run: |
 
           . spack/share/spack/setup-env.sh
 
-          echo "Building spack environment for turbo mini-app..."
-          export TURBO_STACK_ROOT=$(pwd)
-          echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}"
-          DEBUG=1 ${TURBO_STACK_ROOT}/src/amrex_mini_app/build_and_run.sh
+          unset SPACK_ENVIRONMENT_NAME
+
+          . ${TURBO_MINI_APP_ROOT}/create_spack_environment.sh
+
+          if [ -z "$SPACK_ENVIRONMENT_NAME" ]; then
+            echo "Error: SPACK_ENVIRONMENT_NAME is not set."
+            exit 1
+          fi
+
+          echo "SPACK_ENVIRONMENT_NAME=${SPACK_ENVIRONMENT_NAME}" >> $GITHUB_ENV
+
+      - name: Build and run turbo amrex mini-app
+        run: |
+
+          . spack/share/spack/setup-env.sh
+
+          spack env activate $SPACK_ENVIRONMENT_NAME
+
+          ${TURBO_MINI_APP_ROOT}/build_and_run.sh
