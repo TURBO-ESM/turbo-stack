@@ -5,7 +5,8 @@ build_pfunit:
 		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}        \
 		-DCMAKE_INSTALL_PREFIX=${PFUNIT_INSTALL_PATH} \
 		-DCMAKE_Fortran_COMPILER=$(shell which $(FC)) \
-		-DCMAKE_C_COMPILER=$(shell which $(CC));      \
+		-DCMAKE_C_COMPILER=$(shell which $(CC))       \
+		-DSKIP_OPENMP=YES;
 	cd ${BLD_PATH}; \
 	make -j${JOBS}; \
 	make install
