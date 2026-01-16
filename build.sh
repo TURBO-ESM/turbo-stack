@@ -102,7 +102,7 @@ while [[ "$#" -gt 0 ]]; do
             UNIT_TESTS_ONLY=1 ;;
         *) 
             echo "Unknown parameter passed: $1"
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override] [--pfunit <path_to_pfunit>] [--amrex <path_to_amrex>] [--unit-tests-only]"
             exit 1 ;;
     esac
     shift
