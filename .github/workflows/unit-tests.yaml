@@ -16,9 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ oneapi, gcc14 ]
+        compiler: [ nvhpc, oneapi, gcc14 ]
         mpi:      [ mpich ]
-        #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
         runner:   [ ubuntu-latest, gha-runner-turbo ]
