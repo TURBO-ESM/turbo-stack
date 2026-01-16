@@ -97,6 +97,11 @@ while [[ "$#" -gt 0 ]]; do
               echo "--pfunit path ${PFUNIT_INSTALL_PATH} not valid"
               exit 1
             fi
+            if [[ ! -d "${PFUNIT_INSTALL_PATH}/include" && ! -d "${PFUNIT_INSTALL_PATH}/lib" ]]; then
+              echo "${PFUNIT_INSTALL_PATH} is valid but not built/installed (include and lib directories missing."
+              echo "Please follow the pFUnit instructions and re-run the TURBO build."
+              exit 1
+            fi
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
