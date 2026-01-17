@@ -10,4 +10,4 @@ build_amrex:
 		-DCMAKE_CXX_COMPILER=$(shell which $(CXX))       \
 		-DCMAKE_C_COMPILER=$(shell which $(CC))       && \
 	cmake --build ${AMREX_BLD_PATH} -j ${JOBS}        && \
-	cmake --install ${AMREX_BLD_PATH};
+	cmake --install ${AMREX_BLD_PATH}

@@ -10,4 +10,4 @@ build_pfunit:
 		-DCMAKE_C_COMPILER=$(shell which $(CC))       \
 		-DSKIP_OPENMP=YES                          && \
 	cmake --build ${PFUNIT_BLD_PATH} -j ${JOBS}    && \
-	cmake --install ${PFUNIT_BLD_PATH};
+	cmake --install ${PFUNIT_BLD_PATH}
