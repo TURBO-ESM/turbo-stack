@@ -17,4 +17,7 @@ build_unit_tests:
 		-DCMAKE_CXX_COMPILER=$(shell which $(CXX))                            \
 		-DCMAKE_C_COMPILER=$(shell which $(CC))                            && \
 	cmake --build ${TEST_BUILD_DIR} -j ${JOBS}                             && \
-	ctest --test-dir ${TEST_BUILD_DIR} --output-on-failure -VV
+	ctest --test-dir ${TEST_BUILD_DIR}                                        \
+		--output-on-failure -VV                                               \
+		--no-tests=error                                                      \
+		--output-log ${TEST_BUILD_DIR}/ctest.log
