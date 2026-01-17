@@ -8,31 +8,22 @@ To run the unit tests, build TURBO following the [parent directory README](../RE
 ## Adding tests
 To add unit tests, first determine if you need to add another directory or another file.
 
-To create a new directory of tests, create a new directory in `tests` (for example, `new_interface`) and create a new `CMakeLists.txt` file in that directory.  The new `CMakeLists.txt` file should look like:
+To create a new directory of tests, create a new directory in `tests` (for example, `new_interface`) and create a new `CMakeLists.txt` file in that directory. 
+
+Once you have your test file (`test_subroutine.pf` for example), add the following line to the `CMakeLists.txt`:
 
 ```cmake
-add_pfunit_ctest(new_interface_tests
-  TEST_SOURCES MOM_test_case.pf new_module_tests.pf
-  LINK_LIBRARIES NetCDF_Fortran NetCDF FMS_Infra FMS ${AMREX_LIB}
-)
-set_property(TARGET new_interface_tests PROPERTY LINKER_LANGUAGE Fortran)
+add_mom_test(test_module PFUNIT_FILE test_module.pf)
 ```
 
-This will create a new target called `new_interface_tests`, create a test binary incorporating the tests in `new_module_tests.pf` and allow that to be runnable under ctest.
-
-The `LINK_LIBRARIES` line might have to be changed depending on your testing needs and if you are testing multiple fortran modules, you should create a unique `*.pf` unit test file per module and have those be the values passed to the `TEST_SOURCES` list: `TEST_SOURCES module1_tests.pf module2_tests.pf ...`.
-
-The `set_property` call is a temporary (but required for each target created with `add_pfunit_ctest`) to force cmake to use the Fortran linker instead of the C++ linker.  Once the cause of this bug is fixed, this should no longer be required.
+This creates a cmake target called test_module and adds the pfunit file `test_module.pf` to the target binary.
 
 Lastly, you will need to add the directory to the main CMakeLists.txt file in the `tests` directory: `add_subdirectory(new_interface)`.  This tells CMake to evaluate the `new_interface` directory for its own `CMakeLists.txt` file created above.
 
-To add another unit test file, simply add the appropriate file (for example, `test_module.pf`) to the needed directory.  Then in the `CMakeLists.txt` file, find the `add_pfunit_ctest` call and add the file to the end of the `TEST_SOURCES` list:
+To add another unit test file, simply add the appropriate file (for example, `test_module.pf`) to the needed directory.  Then in the `CMakeLists.txt` file, add the following line below the other `add_mom_test` calls:
 
 ```cmake
-add_pfunit_ctest(test_target_name
-  TEST SOURCES module1.pf your_new_module.pf
-  ...
-)
+add_mom_test(test_module PFUNIT_FILE test_module.pf)
 ```
 
 ### Runtime file requirements
@@ -40,7 +31,17 @@ CMake provides the utility to add runtime files to the test directory.  For exam
 
 To add a small file to the test runtime directory, add the source file needed (for example, `input.nl` ) to the `tests/config` directory.
 
-Then in the CMakeLists.txt for that test, add the following line: `configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)`.  This will copy the file from the `config` directory to the build directory where the test resides making it available at runtime to the tests.
+Then in the CMakeLists.txt for that test, add the following line:
+```cmake
+configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
+```
+
+This will copy the file from the `config` directory to the build directory where the test resides making it available at runtime to the tests.
+
+> [!NOTE]
+> While transitioning to AMReX, the backend **REQUIRES** an `input.nml` in the same directory as the target binary.
+> So for new test directories, this will be required otherwise the test will fail.
+> See [the config directory](config/) for example `input.nml` files currently being used.
 
 In this case, we are copying the file as is but CMake provides the ability to templatize source files and modify them per file as needed.  For more information, see the [CMake documentation](https://cmake.org/cmake/help/latest/command/configure_file.html#example).
 
@@ -82,22 +83,10 @@ For basic examples, see the [pFUnit examples repository](https://github.com/Godd
 
 ### MPI based tests
 
-For MPI enabled tests, the setup requires some additional plumbing.  The `CMakeLists.txt` requires an additional flag:
-
-```cmake
-add_pfunit_ctest(test_target_name
-  TEST SOURCES module1.pf your_new_module.pf
-  MAX_PES 4
-  ...
-)
-```
-
-The parameter `MAX_PES` must be set to a valid value that you deem appropriate for your target (`4` is the current preffered value but this will vary on a case by case basis).
-
-Next, in your pfunit test file, you need a few changes as well:
+As most of the testing for MOM will require MPI, there will need to be a few changes in your pfunit test file:
 
 ```fortran
-module module_tests
+module subroutine_tests
   use pfunit
   use MOM_coms_infra
   use MOM_test_case
@@ -125,6 +114,7 @@ contains
 
     ! @assert* calls
   end subroutine test_functionality
+end module subroutine_tests
 ```
 
 The additional components are:
@@ -144,5 +134,6 @@ The additional components are:
 > 
 > So it is not possible at this time to have more than one test or multiple PEs tested within the same file.
 > So for the time being, each test must have its own file and cmake target until this cen be mitigated.
+> Follow [the associated GitHub issue](https://github.com/TURBO-ESM/FMS/issues/1) for updates.
 
 2) The subroutine signature changes to `subroutine test_functionality(this)` and a variable declaration `class (module_under_test_case), intent(inout) :: this` are needed to satisfy pfunit and to allow the developer to access MPI intrinsics from within the test case (see the [pfunit MPI test case class](https://github.com/Goddard-Fortran-Ecosystem/pFUnit/blob/main/src/pfunit/core/MpiTestParameter.F90) for more functions.)
