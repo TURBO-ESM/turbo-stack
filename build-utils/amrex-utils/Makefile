@@ -2,7 +2,7 @@ include $(TEMPLATE)
 
 build_amrex:
 	cmake -S ${AMREX_ROOT} -B ${AMREX_BLD_PATH}          \
-	    --install-prefix ${AMREX_INSTALL_PATH}           \
+		--install-prefix ${AMREX_INSTALL_PATH}           \
 		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}           \
 		-DAMReX_FORTRAN_INTERFACES=YES                   \
 		-DAMReX_FORTRAN=YES                              \
