@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [ oneapi, gcc14, clang ]
-        mpi:      [ mpich ]
+        mpi:      [ openmpi, mpich ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
         runner:   [ ubuntu-latest, gha-runner-turbo ]
