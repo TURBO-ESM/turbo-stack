@@ -83,6 +83,12 @@ for compiler in $compiler_list; do
                 ;;
         esac
 
+        if [[ "${COMPILER}" == "llvm" && "${MPI}" == "mpich" ]]; then
+            # mpich has issues when built with flang. Skipping this case for now to avoid mixed compiler toolchains.
+            echo "Skipping unsupported combination: COMPILER=${COMPILER} with MPI=${MPI}" 
+            continue
+        fi
+
         # Check that spack knows about the compiler that we are going to try to use
         spack_compiler_list=$(spack compiler list)
         if echo "$spack_compiler_list" | grep -q "${COMPILER_PACKAGE_NAME}@${COMPILER_VERSION}"; then
@@ -104,6 +110,8 @@ for compiler in $compiler_list; do
         fi
 
         spack env activate "$SPACK_ENVIRONMENT_NAME"
+
+        spack load $COMPILER@$COMPILER_VERSION
 
         ${turbo_mini_app_root}/build_and_run.sh
 

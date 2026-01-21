@@ -215,25 +215,11 @@ fi
 
 if [[ "$machine" == "generic" ]]; then
 
-    spack add "$compiler_spec"
-    export compiler_root=$( spack compiler info "$compiler_spec" | grep 'prefix: '   | awk '{print $NF}' | head -n 1)
-    spack external find --not-buildable --path "$compiler_root" "$compiler_package_name"
-
     spack config add packages:mpi:require:${mpi_spec}
-
-    if [[ "${compiler_spec}" == *"llvm"* ]]; then
-        # HDF5 complains about position-independent code when built with clang/llvm for c/c++ and gcc for fortran...  So add pic flags.
-        spack add hdf5 cflags="-fPIC" cxxflags="-fPIC" fflags="-fPIC"
-    fi
 
     spack config add packages:all:prefer:[\"%c=${compiler_spec}\"]
     spack config add packages:all:prefer:[\"%cxx=${compiler_spec}\"]
-    if [[ "${compiler_spec}" == *"llvm"* ]]; then
-        # Assume we dont have a Fortran compiler with llvm/clang... so use gcc to compile Fortran.
-        spack config add packages:all:prefer:[\"%fortran=gcc\"]
-    else
-        spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
-    fi
+    spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
 
 elif [[ "$machine" == "derecho" ]]; then
 
