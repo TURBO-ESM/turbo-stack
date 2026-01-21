@@ -17,7 +17,6 @@ find_package(HDF5 REQUIRED COMPONENTS C)
 # Enable code coverage flags if requested
 option(CODE_COVERAGE "Enable code coverage flags" OFF)
 if(CODE_COVERAGE)
-    #if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         message(STATUS "Code coverage enabled")
         add_compile_options(--coverage)
