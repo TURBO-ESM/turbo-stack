@@ -286,7 +286,7 @@ fi
 
 # 0a) Build pFUnit if needed
 if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
-  if [[ ! -v "${PFUNIT_INSTALL_PATH}" ]]; then
+  if [[ -z "${PFUNIT_INSTALL_PATH}" ]]; then
     echo "Path to pFUnit not declared.  Building pFUnit through submodules."
     cd "${BLD_PATH}"
     mkdir -p pFUnit
