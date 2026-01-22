@@ -22,7 +22,7 @@ DEBUG=0 # False
 CODECOV=0 # False
 OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
-CMAKE_BUILD_TYPE="RelWithDebInfo"
+CMAKE_BUILD_TYPE="Release"
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
