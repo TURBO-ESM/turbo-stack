@@ -244,9 +244,6 @@ elif [[ "$machine" == "ci_container" ]]; then
     spack config add packages:all:prefer:[\"%fortran=${compiler_spec}\"]
 
     if [[ ${compiler_spec} == *"llvm"* ]]; then
-        # HDF5 complains about position-independent code when built with clang/llvm for c/c++ and gcc for fortran...  So add pic flags.
-        #spack add amrex+pic
-
         # Still use gcc for Fortran when using llvm/clang
         spack config remove packages:all:prefer:[\"%fortran=${compiler_spec}\"]
         spack config add    packages:all:prefer:[\"%fortran=gcc\"]
