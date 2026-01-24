@@ -7,7 +7,7 @@ namespace turbo
 {
 
 CartesianGeometry::CartesianGeometry(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
-    : Geometry({"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"}),
+    : Geometry("x_low_boundary", "x_high_boundary", "y_low_boundary", "y_high_boundary", "z_low_boundary", "z_high_boundary"),
       x_min_(x_min),
       x_max_(x_max),
       y_min_(y_min),

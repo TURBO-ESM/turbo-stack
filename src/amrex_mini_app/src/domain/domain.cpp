@@ -15,7 +15,26 @@
 namespace turbo
 {
 
-Domain::Domain(const std::shared_ptr<Grid>& grid) : grid_(grid), field_container_({}) {}
+//Domain::Domain(const std::shared_ptr<Grid>& grid)
+//                : grid_(grid), field_container_({}), boundary_conditions_({
+//                    {grid_->GetGeometry()->i_low_boundary_name_, BoundaryCondition::None},
+//                    {grid_->GetGeometry()->i_high_boundary_name_, BoundaryCondition::None},
+//                    {grid_->GetGeometry()->j_low_boundary_name_, BoundaryCondition::None},
+//                    {grid_->GetGeometry()->j_high_boundary_name_, BoundaryCondition::None},
+//                    {grid_->GetGeometry()->k_low_boundary_name_, BoundaryCondition::None},
+//                    {grid_->GetGeometry()->k_high_boundary_name_, BoundaryCondition::None}
+//                }) {}
+
+Domain::Domain(const std::shared_ptr<Grid>& grid)
+                : grid_(grid), field_container_({}), boundary_conditions_({})
+{ 
+    // Initialize all boundary conditions for all geometry boundaries to None
+    for (const auto& boundary_name : grid_->GetGeometry()->GetBoundaryNames()) {
+        boundary_conditions_[boundary_name] = BoundaryCondition::None;
+    }
+    
+}
+
 
 std::shared_ptr<Geometry> Domain::GetGeometry() const noexcept { return grid_->GetGeometry(); }
 

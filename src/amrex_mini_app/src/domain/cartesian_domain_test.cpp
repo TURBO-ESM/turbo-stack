@@ -160,3 +160,19 @@ TEST_F(CartesianDomainTest, WriteHDF5)
 
     cartesian_domain->WriteHDF5("Test_Output_CartesianDomain_WriteHDF5.h5");
 }
+
+TEST_F(CartesianDomainTest, SetBoundaryConditions) {
+    
+    const std::size_t n_ghost = 2;
+    const std::size_t n_component = 1;
+    cartesian_domain->CreateField("test_field", FieldGridStagger::CellCentered, n_component, n_ghost);
+
+    cartesian_domain->SetILowBoundaryCondition(BoundaryCondition::Dirichlet);
+    cartesian_domain->SetIHighBoundaryCondition(BoundaryCondition::Neumann);
+
+    //cartesian_domain->SetBoundaryCondition(Boundary::ILow , BoundaryCondition::Dirichlet);
+    //cartesian_domain->SetBoundaryCondition(Boundary::IHigh, BoundaryCondition::Neumann);
+
+    //cartesian_domain->SetBoundaryCondition("x_low_boundary", BoundaryCondition::Dirichlet);
+
+}
