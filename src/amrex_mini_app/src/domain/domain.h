@@ -13,6 +13,24 @@
 
 namespace turbo {
 
+//enum class Boundary
+//{
+//   ILow,
+//   IHigh,
+//   JLow,
+//   JHigh,
+//   KLow,
+//   KHigh
+//};
+
+enum class BoundaryCondition
+{
+  None,
+  Periodic,
+  Dirichlet,
+  Neumann,
+};
+
 class Domain {
  public:
 
@@ -86,6 +104,38 @@ class Domain {
      */
     void WriteHDF5(const std::string& filename) const ;
 
+    void SetILowBoundaryCondition(const BoundaryCondition boundary_condition) {
+      SetBoundaryCondition(GetGeometry()->i_low_boundary_name_, boundary_condition);
+    };
+    void SetIHighBoundaryCondition(const BoundaryCondition boundary_condition) {
+      SetBoundaryCondition(GetGeometry()->i_high_boundary_name_, boundary_condition);
+    };
+    void SetJLowBoundaryCondition(const BoundaryCondition boundary_condition) {
+      SetBoundaryCondition(GetGeometry()->j_low_boundary_name_, boundary_condition);
+    };
+    void SetJHighBoundaryCondition(const BoundaryCondition boundary_condition) {
+      SetBoundaryCondition(GetGeometry()->j_high_boundary_name_, boundary_condition);
+    };
+    void SetKLowBoundaryCondition(const BoundaryCondition boundary_condition) {
+      SetBoundaryCondition(GetGeometry()->k_low_boundary_name_, boundary_condition);
+    };
+    void SetKHighBoundaryCondition(const BoundaryCondition boundary_condition) {
+      SetBoundaryCondition(GetGeometry()->k_high_boundary_name_, boundary_condition);
+    };
+
+    /**
+     * @brief Set the boundary condition for a given boundary name.
+     * @param boundary_name Name of the boundary.
+     * @param boundary_condition Boundary condition to set.
+     * @throws std::invalid_argument if the boundary name is invalid.
+     */
+    void SetBoundaryCondition(const Geometry::Boundary& boundary_name, const BoundaryCondition boundary_condition) {
+      if (!boundary_conditions_.contains(boundary_name)) {
+          throw std::invalid_argument("Invalid boundary name passed to SetBoundaryCondition: " + boundary_name);
+      }
+         boundary_conditions_[boundary_name] = boundary_condition;
+    };
+
  protected:
 
     /**
@@ -98,6 +148,7 @@ class Domain {
      */
     std::map<Field::NameType, std::shared_ptr<Field>> field_container_;
 
+    std::map<Geometry::Boundary, BoundaryCondition> boundary_conditions_;
 };
 
 } // namespace turbo

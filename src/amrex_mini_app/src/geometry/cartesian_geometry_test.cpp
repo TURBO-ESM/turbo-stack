@@ -32,8 +32,8 @@ TEST(CartesianGeometry, Constructor)
     EXPECT_DOUBLE_EQ(geom.ZMax(), z_max);
 
     // Check that boundaries are set correctly
-    std::set<Geometry::Boundary> boundary_expected = {"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"};
-    EXPECT_EQ(boundary_expected, geom.Boundaries());
+    std::set<Geometry::Boundary> boundary_expected = {"x_low_boundary", "x_high_boundary", "y_low_boundary", "y_high_boundary", "z_low_boundary", "z_high_boundary"};
+    EXPECT_EQ(boundary_expected, geom.GetBoundaryNames());
 }
 
 TEST(CartesianGeometry, DomainLengths)
