@@ -203,6 +203,4 @@ class Field
                                                               int dest_rank) const;
 };
 
-
-
 }  // namespace turbo
