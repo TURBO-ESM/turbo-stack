@@ -84,7 +84,7 @@ class Domain {
      * @brief Write the domain data to an HDF5 file.
      * @param filename Name of the HDF5 file to write.
      */
-    void WriteHDF5(const std::string& filename) const ;
+    void WriteHDF5(const std::string& filename) const;
 
     /**
      * @brief Write the domain data to an HDF5 file.
