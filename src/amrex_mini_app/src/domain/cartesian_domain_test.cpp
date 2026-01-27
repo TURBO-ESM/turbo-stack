@@ -175,7 +175,7 @@ TEST_F(CartesianDomainTest, WriteHDF5) {
     const std::size_t n_component = 1;
     cartesian_domain->CreateField(field_name, FieldGridStagger::CellCentered, n_component, n_ghost);
 
-    for (auto& field : cartesian_domain->GetFields()) {
+    for (const auto& field : cartesian_domain->GetFields()) {
         amrex::MultiFab& mf = *(field->multifab);
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi) {
             const amrex::Array4<amrex::Real>& array = mf.array(mfi);
