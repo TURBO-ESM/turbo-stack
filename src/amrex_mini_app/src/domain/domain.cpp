@@ -65,7 +65,7 @@ void Domain::WriteHDF5(const std::string& filename) const {
         file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
         if (file_id < 0)
         {
-            throw std::runtime_error("Field::WriteHDF5: Failed to create HDF5 file: " + filename);
+            throw std::runtime_error("Domain::WriteHDF5: Failed to create HDF5 file: " + filename);
         }
     }
 
