@@ -114,7 +114,7 @@ TEST(CartesianDomainConstructorTest, Constructor) {
 
 }
 
-TEST_F(CartesianDomainTest, Getters_and_Initial_State) {
+TEST_F(CartesianDomainTest, GettersAndInitialState) {
 
     std::shared_ptr<CartesianGeometry> geometry = cartesian_domain->GetGeometry();
     EXPECT_NE(geometry, nullptr);
@@ -139,7 +139,7 @@ TEST_F(CartesianDomainTest, Getters_and_Initial_State) {
 
 }
 
-TEST_F(CartesianDomainTest, Create_and_Get_Field) {
+TEST_F(CartesianDomainTest, CreateAndGetField) {
 
     const std::string field_name = "test_field";
     const std::size_t n_ghost = 2;
