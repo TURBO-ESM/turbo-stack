@@ -86,6 +86,12 @@ class Domain {
      */
     void WriteHDF5(const std::string& filename) const ;
 
+    /**
+     * @brief Write the domain data to an HDF5 file.
+     * @param file_id HDF5 file identifier.
+     */
+    void WriteHDF5(const hid_t file_id) const;
+
  protected:
 
     /**

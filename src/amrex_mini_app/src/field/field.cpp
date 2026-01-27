@@ -113,13 +113,20 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const
 // Write the field data to an HDF5 file. This will overwrite the file if it already exists.
 void Field::WriteHDF5(const std::string& filename) const
 {
-    const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    if (file_id < 0)
-    {
-        throw std::runtime_error("Field::WriteHDF5: Failed to create HDF5 file: " + filename);
+    hid_t file_id;
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+        file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        if (file_id < 0)
+        {
+            throw std::runtime_error("Field::WriteHDF5: Failed to create HDF5 file: " + filename);
+        }
     }
+
     WriteHDF5(file_id);
-    H5Fclose(file_id);
+
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+       H5Fclose(file_id);
+    }
 }
 
 // Write the field data to an already open HDF5 file that you already have open.

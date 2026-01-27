@@ -61,44 +61,32 @@ bool Domain::HasField(const Field::NameType& field_name) const
 void Domain::WriteHDF5(const std::string& filename) const {
 
     hid_t file_id;
-
-    // Only the IOProcessor writes the grid information and metadata
     if (amrex::ParallelDescriptor::IOProcessor()) {
-
         file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-        if (file_id < 0) {
-            throw std::runtime_error("Failed to create HDF5 file: " + filename);
-        }
-
+        if (file_id < 0)
         {
-            double test_double_value = 1.0; // Example test double value, can be set to any value you want
-            const hid_t attr_space_id = H5Screate(H5S_SCALAR);
-            const hid_t attr_id = H5Acreate(file_id, "double_test_value", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
-            H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &test_double_value);
-            H5Aclose(attr_id);
-            H5Sclose(attr_space_id);
+            throw std::runtime_error("Field::WriteHDF5: Failed to create HDF5 file: " + filename);
         }
-
-        {
-            int test_int_value = 1; // Example test value, can be set to any value you want
-            const hid_t attr_space_id = H5Screate(H5S_SCALAR);
-            const hid_t attr_id = H5Acreate(file_id, "int_test_value", H5T_NATIVE_INT, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
-            H5Awrite(attr_id, H5T_NATIVE_INT, &test_int_value);
-            H5Aclose(attr_id);
-            H5Sclose(attr_space_id);
-        }
-
-        GetGrid()->WriteHDF5(file_id);
-
     }
 
-    for (const auto& field : GetFields()) {
-        field->WriteHDF5(file_id);
-    }
+    // All ranks need to call because fields will require passing data between ranks.
+    WriteHDF5(file_id);
 
     if (amrex::ParallelDescriptor::IOProcessor()) {
         H5Fclose(file_id);
+    }
+}
+
+
+void Domain::WriteHDF5(const hid_t file_id) const {
+    // Only the IO processor needs to write the grid
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+        GetGrid()->WriteHDF5(file_id);
+    }
+
+    // All ranks need to call WriteHDF5 becase this passes data between ranks
+    for (const auto& field : GetFields()) {
+        field->WriteHDF5(file_id);
     }
 
 }
