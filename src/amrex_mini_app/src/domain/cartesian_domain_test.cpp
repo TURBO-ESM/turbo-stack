@@ -6,7 +6,6 @@
 #include <memory>
 #include <string>
 #include <stdexcept>
-#include <algorithm>
 
 #include "cartesian_geometry.h" 
 #include "cartesian_grid.h"
