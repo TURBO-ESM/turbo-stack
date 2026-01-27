@@ -40,7 +40,7 @@ CartesianGrid::Point CartesianGrid::Node(const Index i, const Index j, const Ind
     {
         throw std::out_of_range("Node index out of bounds");
     }
-    return Point({GetGeometry()->XMin() + (i*dx_), GetGeometry()->YMin() + (j*dy_), GetGeometry()->ZMin() + (k*dz_)});
+    return Point({GetGeometry()->XMin() + i * dx_, GetGeometry()->YMin() + j * dy_, GetGeometry()->ZMin() + k * dz_});
 }
 
 CartesianGrid::Point CartesianGrid::CellCenter(const Index i, const Index j, const Index k) const
