@@ -1,8 +1,6 @@
 #include <cstddef>
 #include <memory>
 
-#include <AMReX.H>
-
 #include "cartesian_domain.h"
 #include "cartesian_geometry.h" 
 #include "cartesian_grid.h"
