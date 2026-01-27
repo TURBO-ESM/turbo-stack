@@ -44,6 +44,18 @@ int main(int argc, char* argv[])
         const std::shared_ptr<turbo::CartesianGrid> grid = domain.GetGrid();
         auto fields = domain.GetFields(); // fields is a non owning view so it will automatically update when we add fields to the domain
 
+        // Now have access to geometry and grid information if needed... TODO: move this print functionality gird and fild into an overload of operator<< later
+        amrex::Print() << "Geometry Summary:" << std::endl;
+        amrex::Print() << "  X: [" << geometry->XMin() << ", " << geometry->XMax() << "]" << std::endl;
+        amrex::Print() << "  Y: [" << geometry->YMin() << ", " << geometry->YMax() << "]" << std::endl;
+        amrex::Print() << "  Z: [" << geometry->ZMin() << ", " << geometry->ZMax() << "]" << std::endl;
+        amrex::Print() << std::endl;
+
+        amrex::Print() << "Grid Summary:" << std::endl;
+        amrex::Print() << "  Number of Cells: (" << grid->NCellI() << ", " << grid->NCellJ() << ", " << grid->NCellK() << ")" << std::endl;
+        amrex::Print() << "  Number of Nodes: (" << grid->NNodeI() << ", " << grid->NNodeJ() << ", " << grid->NNodeK() << ")" << std::endl;
+        amrex::Print() << std::endl;
+
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //  Add a bunch of Fields to the Domain
         /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,15 +80,26 @@ int main(int argc, char* argv[])
 
             std::shared_ptr<turbo::Field> z_face_scalar = domain.CreateField("z_face_scalar", turbo::FieldGridStagger::KFace, n_component_scalar, n_ghost);
             std::shared_ptr<turbo::Field> z_face_vector = domain.CreateField("z_face_vector", turbo::FieldGridStagger::KFace, n_component_vector, n_ghost);
+
+            // You can use the fields directly after creating them. Here we just print out some info about them.
+            amrex::Print() << "Use references returned from CreateField():" << std::endl;
+            for (const auto& field : {cell_scalar, cell_vector, 
+                                      node_scalar, node_vector,
+                                      x_face_scalar, x_face_vector,
+                                      y_face_scalar, y_face_vector,
+                                      z_face_scalar, z_face_vector}) {
+                amrex::Print() << *field << std::endl;
+            }
         }
 
-        // Print some stats about the domain and it's fields. Note that fields is a non-owning view and is lazy evaluated so it was automatically updated when we added fields to the domain.
-        amrex::Print() << "Number of fields: " << fields.size() << std::endl; 
+        // You can also access the fields via the non-owning view of the fields in the domain that we cretated earlier.
+        // We can print the same info about all the fields again here to demonstrate.
+        amrex::Print() << "Use references returned from view via GetFields():" << std::endl;
         for (const auto& field : fields) {
             amrex::Print() << *field << std::endl;
         }
 
-        // Create views of the fields with certain properties for easy access later
+        // Create filtered views of the fields with certain properties for easy access later
         using FieldPtr = std::shared_ptr<turbo::Field>;
         auto scalar_fields        = std::views::filter(fields, [n_component_scalar](const FieldPtr& field) { return field->multifab->nComp() == n_component_scalar; });
         auto vector_fields        = std::views::filter(fields, [n_component_vector](const FieldPtr& field) { return field->multifab->nComp() == n_component_vector; });
@@ -85,6 +108,16 @@ int main(int argc, char* argv[])
         auto i_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsIFaceCentered(); });
         auto j_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsJFaceCentered(); });
         auto k_face_fields        = std::views::filter(fields, [](const FieldPtr& field) { return field->IsKFaceCentered(); });
+
+        // Example of using the filtered views to access fields with specific properties. 
+        amrex::Print() << "Number of fields: " << fields.size() << std::endl; 
+        amrex::Print() << "Number of scalar fields: " << std::ranges::distance(scalar_fields) << std::endl;
+        amrex::Print() << "Number of vector fields: " << std::ranges::distance(vector_fields) << std::endl;
+        amrex::Print() << "Number of nodal fields: " << std::ranges::distance(nodal_fields) << std::endl;
+        amrex::Print() << "Number of cell centered fields: " << std::ranges::distance(cell_centered_fields) << std::endl;
+        amrex::Print() << "Number of x-face fields: " << std::ranges::distance(i_face_fields) << std::endl;
+        amrex::Print() << "Number of y-face fields: " << std::ranges::distance(j_face_fields) << std::endl;
+        amrex::Print() << "Number of z-face fields: " << std::ranges::distance(k_face_fields) << std::endl;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //  Initialize all the scalar and vector MultiFabs in the Domain - Alternative approach without using Field::Initialize
