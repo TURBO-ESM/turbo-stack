@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
         const std::shared_ptr<turbo::CartesianGrid> grid = domain.GetGrid();
         auto fields = domain.GetFields(); // fields is a non owning view so it will automatically update when we add fields to the domain
 
-        // Now have access to geometry and grid information if needed... TODO: move this print functionality gird and fild into an overload of operator<< later
+        // Now have access to geometry and grid information if needed... TODO: move this print functionality grid and field into an overload of operator<< later
         amrex::Print() << "Geometry Summary:" << std::endl;
         amrex::Print() << "  X: [" << geometry->XMin() << ", " << geometry->XMax() << "]" << std::endl;
         amrex::Print() << "  Y: [" << geometry->YMin() << ", " << geometry->YMax() << "]" << std::endl;
