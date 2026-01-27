@@ -31,6 +31,10 @@ function(add_mom_test TEST_TARGET_NAME)
 
   # Temporary fix to force cmake to use the Fortran linker when using Intel OneAPI.
   set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
+
+  # Add real data type flags and support multiple options being passed
+  # (ex. when `FC_AUTO_R8 = -fdefault-real-8 -fdefault-double-8` needs
+  # to be passed as two seperate string arguments and not one string)
   separate_arguments(R8_FLAGS_EXPANDED UNIX_COMMAND "$ENV{Fortran_REAL_FLAG}")
   target_compile_options(${TEST_TARGET_NAME} PRIVATE ${R8_FLAGS_EXPANDED})
 
