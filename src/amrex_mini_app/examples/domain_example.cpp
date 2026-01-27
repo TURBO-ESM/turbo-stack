@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        // You can also access the fields via the non-owning view of the fields in the domain that we cretated earlier.
+        // You can also access the fields via the non-owning view of the fields in the domain that we created earlier.
         // We can print the same info about all the fields again here to demonstrate.
         amrex::Print() << "Use references returned from view via GetFields():" << std::endl;
         for (const auto& field : fields) {
