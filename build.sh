@@ -344,9 +344,6 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   TEST_BUILD_DIR=$(pwd)                      \
   PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
   AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}   \
-  NETCDFF_PREFIX=$(nf-config --prefix)       \
-  NETCDF_LIB_DIR=$(nc-config --libdir)       \
-  NETCDF_PREFIX=$(nc-config --prefix)        \
   BLD_PATH_ROOT=${BLD_PATH}                  \
   LIBINFRA=${INFRA}                          \
   CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \

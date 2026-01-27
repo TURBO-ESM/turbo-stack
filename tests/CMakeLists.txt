@@ -7,6 +7,19 @@ enable_language(CXX C)
 find_package(PFUNIT REQUIRED)
 find_package(MPI REQUIRED)
 
+# Temporary fix to support NetCDF builds that don't support cmake.
+find_package(NetCDF COMPONENTS C Fortran)
+if(NOT NetCDF_FOUND)
+  find_package(PkgConfig REQUIRED)
+
+  # Try to find with pkgconfig which is more common.
+  pkg_search_module(NetCDF_C REQUIRED IMPORTED_TARGET netcdf)
+  add_library(NetCDF::NetCDF_C ALIAS PkgConfig::NetCDF_C)
+
+  pkg_search_module(NetCDF_Fortran REQUIRED IMPORTED_TARGET netcdf-fortran)
+  add_library(NetCDF::NetCDF_Fortran ALIAS PkgConfig::NetCDF_Fortran)
+endif()
+
 # Only set AMREX_LIB if needed; else keep undefined
 if("$ENV{INFRA}" STREQUAL "TIM")
   find_package(AMReX REQUIRED)
@@ -27,23 +40,6 @@ add_library(BACKEND_Infra STATIC IMPORTED)
 set_target_properties(BACKEND_Infra PROPERTIES
   IMPORTED_LOCATION $ENV{BLD_PATH}/MOM6-infra/libinfra-$ENV{INFRA}.a
   INTERFACE_INCLUDE_DIRECTORIES $ENV{BLD_PATH}/MOM6-infra
-)
-
-# Load NetCDF/NetCDF_Fortran libraries due to variable dropped from being
-# called from makefile
-## Need to manuall find NetCDF libraries as CMake does not come with a built-in
-## module for NetCDF (though does for HDF5:
-## https://cmake.org/cmake/help/latest/manual/cmake-modules.7.html#manual:cmake-modules(7)).
-## This will need to be updated to support installs that only provide static libraries.
-add_library(NetCDF SHARED IMPORTED)
-set_target_properties(NetCDF PROPERTIES
-  IMPORTED_LOCATION $ENV{NetCDF_LIB_DIR}/libnetcdf.so
-  INTERFACE_INCLUDE_DIRECTORIES $ENV{NetCDF_DIR}/include
-)
-add_library(NetCDF_Fortran SHARED IMPORTED)
-set_target_properties(NetCDF_Fortran PROPERTIES
-  IMPORTED_LOCATION $ENV{NetCDF_Fortran_DIR}/lib/libnetcdff.so
-  INTERFACE_INCLUDE_DIRECTORIES $ENV{NetCDF_Fortran_DIR}/include
 )
 
 # Store template pFUnit test as BASE_MOM_PFUNIT_INFRA

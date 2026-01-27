@@ -4,9 +4,6 @@ include $(TEMPLATE)
 # make does not allow VAR=VAL cmake ...
 # (thinks VR=VAL is the command and results in a command not found exception)
 build_unit_tests: export BLD_PATH=$(BLD_PATH_ROOT)
-build_unit_tests: export NetCDF_Fortran_DIR=$(NETCDFF_PREFIX)
-build_unit_tests: export NetCDF_LIB_DIR=$(NETCDF_LIB_DIR)
-build_unit_tests: export NetCDF_DIR=$(NETCDF_PREFIX)
 build_unit_tests: export INFRA=$(LIBINFRA)
 build_unit_tests: export Fortran_REAL_FLAG=$(FC_AUTO_R8)
 
