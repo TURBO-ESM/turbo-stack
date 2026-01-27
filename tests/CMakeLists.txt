@@ -31,6 +31,10 @@ set_target_properties(BACKEND_Infra PROPERTIES
 
 # Load NetCDF/NetCDF_Fortran libraries due to variable dropped from being
 # called from makefile
+## Need to manuall find NetCDF libraries as CMake does not come with a built-in
+## module for NetCDF (though does for HDF5:
+## https://cmake.org/cmake/help/latest/manual/cmake-modules.7.html#manual:cmake-modules(7)).
+## This will need to be updated to support installs that only provide static libraries.
 add_library(NetCDF SHARED IMPORTED)
 set_target_properties(NetCDF PROPERTIES
   IMPORTED_LOCATION $ENV{NetCDF_LIB_DIR}/libnetcdf.so
