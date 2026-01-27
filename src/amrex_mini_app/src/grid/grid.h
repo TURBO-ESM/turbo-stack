@@ -239,6 +239,10 @@ class Grid
     //-----------------------------------------------------------------------//
     // Protected Member Functions
     //-----------------------------------------------------------------------//
+
+    /**
+     * @brief Shared pointer to the geometry associated with the grid.
+     */
     const std::shared_ptr<Geometry> geometry_;
 
 };
