@@ -31,5 +31,6 @@ function(add_mom_test TEST_TARGET_NAME)
 
   # Temporary fix to force cmake to use the Fortran linker when using Intel OneAPI.
   set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
+  target_compile_options(${TEST_TARGET_NAME} PRIVATE $ENV{Fortran_REAL_FLAG})
 
 endfunction()

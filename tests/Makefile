@@ -8,6 +8,7 @@ build_unit_tests: export NetCDF_Fortran_DIR=$(NETCDFF_PREFIX)
 build_unit_tests: export NetCDF_LIB_DIR=$(NETCDF_LIB_DIR)
 build_unit_tests: export NetCDF_DIR=$(NETCDF_PREFIX)
 build_unit_tests: export INFRA=$(LIBINFRA)
+build_unit_tests: export Fortran_REAL_FLAG=$(FC_AUTO_R8)
 
 build_unit_tests:
 	cmake -S . -B ${TEST_BUILD_DIR}                                           \
