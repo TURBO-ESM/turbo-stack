@@ -84,7 +84,7 @@ void Domain::WriteHDF5(const hid_t file_id) const {
         GetGrid()->WriteHDF5(file_id);
     }
 
-    // All ranks need to call WriteHDF5 becase this passes data between ranks
+    // All ranks need to call WriteHDF5 because this passes data between ranks
     for (const auto& field : GetFields()) {
         field->WriteHDF5(file_id);
     }
