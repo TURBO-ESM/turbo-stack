@@ -1,0 +1,41 @@
+module MOM_field_checksum
+  use iso_fortran_env, only : int32, int64
+
+  use pfunit
+
+  use MOM_coms_infra, only: field_chksum
+  use MOM_test_case
+
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: MOM_comms_infra_test_case
+  end type MOM_comms_infra_test_case
+
+contains
+
+  @test(npes=[4])
+  subroutine test_field_checksum(this)
+    class (MOM_comms_infra_test_case), intent(inout) :: this
+    real                :: field
+    integer(kind=int64) :: checksum
+    
+    field = 0.5
+    checksum = field_chksum(field)
+
+    @assertEqual(-36028797018963968, checksum)
+  end subroutine test_field_checksum
+
+end module MOM_field_checksum
+
+! #include <iostream>
+! #include <cstdint>
+! #include <bit>
+
+! int main()
+! {
+!     double a = 0.5;
+!     auto a_int = std::bit_cast<long long>(a);
+!     a_int *= 4;
+!     std::cout << a_int << std::endl;
+! }
