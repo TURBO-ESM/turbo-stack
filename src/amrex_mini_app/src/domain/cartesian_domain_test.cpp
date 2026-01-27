@@ -158,18 +158,16 @@ TEST_F(CartesianDomainTest, Create_and_Get_Field) {
 
 TEST_F(CartesianDomainTest, FieldView) {
     
-    auto fields = cartesian_domain->GetFields();
-    
-    EXPECT_TRUE(fields.empty());
+    EXPECT_TRUE(cartesian_domain->GetFields().empty());
 
     const std::size_t n_ghost = 2;
     const std::size_t n_component = 1;
 
     cartesian_domain->CreateField("test_field_1", FieldGridStagger::CellCentered, n_component, n_ghost);
-    EXPECT_EQ(fields.size(), 1);
+    EXPECT_EQ(cartesian_domain->GetFields().size(), 1);
 
     cartesian_domain->CreateField("test_field_2", FieldGridStagger::CellCentered, n_component, n_ghost);
-    EXPECT_EQ(fields.size(), 2);
+    EXPECT_EQ(cartesian_domain->GetFields().size(), 2);
 }
 
 TEST_F(CartesianDomainTest, WriteHDF5) {
