@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
         std::size_t n_component_vector = 3;
         {
             // I imagine this will be done by some high level thing like a simulation class eventually.
-            // In it's own scope to prevent namespace pollution. 
+            // In its own scope to prevent namespace pollution. 
             std::size_t n_ghost = 1;
 
             std::shared_ptr<turbo::Field> cell_scalar = domain.CreateField("cell_scalar", turbo::FieldGridStagger::CellCentered, n_component_scalar, n_ghost);
