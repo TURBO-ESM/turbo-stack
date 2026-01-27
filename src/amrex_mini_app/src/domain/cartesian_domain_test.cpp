@@ -78,15 +78,15 @@ TEST(CartesianDomainConstructorTest, Constructor) {
                                  n_cell_z), std::invalid_argument);
 
     EXPECT_THROW(CartesianDomain(x_min, x_max,
-                                 y_min, y_max,
                                  1.0, -1.0,
+                                 z_min, z_max,
                                  n_cell_x,
                                  n_cell_y,
                                  n_cell_z), std::invalid_argument);
 
     EXPECT_THROW(CartesianDomain(x_min, x_max,
+                                 y_min, y_max,
                                  1.0, -1.0,
-                                 z_min, z_max,
                                  n_cell_x,
                                  n_cell_y,
                                  n_cell_z), std::invalid_argument);
