@@ -57,5 +57,4 @@ class Geometry
     std::set<Boundary> boundaries_;
 };
 
-
 }  // namespace turbo

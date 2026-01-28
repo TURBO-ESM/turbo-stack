@@ -1,21 +1,22 @@
 #pragma once
 
 #include <cstddef>
-#include <memory>
-#include <string>
-#include <ranges>
 #include <map>
+#include <memory>
+#include <ranges>
 #include <stdexcept>
+#include <string>
 
+#include "field.h"
 #include "geometry.h"
 #include "grid.h"
-#include "field.h"
 
-namespace turbo {
+namespace turbo
+{
 
-class Domain {
- public:
-
+class Domain
+{
+   public:
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
@@ -35,8 +36,10 @@ class Domain {
      * @brief Get the geometry associated with the domain.
      * @return Shared pointer to the Geometry.
      */
-    std::shared_ptr<Geometry> GetGeometry() const noexcept;  // TODO: Maybe dont need this function if we can always get the geometry from the grid?
-    // Maybe have grid not be commited to supporting geometry at some point in the future? That way some grids could not tied to a geometry object?
+    std::shared_ptr<Geometry> GetGeometry()
+        const noexcept;  // TODO: Maybe dont need this function if we can always get the geometry from the grid?
+    // Maybe have grid not be commited to supporting geometry at some point in the future? That way some grids could not
+    // tied to a geometry object?
 
     /**
      * @brief Get the grid associated with the domain.
@@ -60,7 +63,7 @@ class Domain {
      * @return Shared pointer to the newly created field.
      * @throws std::invalid_argument if invalid input (name already exists in container, invalid number of components or
      * ghost cells, invalid stagger type, etc.).
-     * @throws std::logic_error if the field cannot be inserted into the container given valid input.   
+     * @throws std::logic_error if the field cannot be inserted into the container given valid input.
      */
     std::shared_ptr<Field> CreateField(const Field::NameType& field_name, const FieldGridStagger stagger,
                                        const std::size_t n_component, const std::size_t n_ghost);
@@ -92,8 +95,7 @@ class Domain {
      */
     void WriteHDF5(const hid_t file_id) const;
 
- protected:
-
+   protected:
     /**
      * @brief Shared pointer to the grid associated with the domain.
      */
@@ -103,7 +105,6 @@ class Domain {
      * @brief Container for the fields defined on the domain.
      */
     std::map<Field::NameType, std::shared_ptr<Field>> field_container_;
-
 };
 
-} // namespace turbo
+}  // namespace turbo

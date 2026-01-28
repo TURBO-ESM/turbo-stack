@@ -1,10 +1,11 @@
-#include "cartesian_geometry.h"
 #include "cartesian_grid.h"
 
 #include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include "cartesian_geometry.h"
 
 namespace turbo
 {
@@ -13,7 +14,6 @@ CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry,
                              const std::size_t n_cell_y, const std::size_t n_cell_z)
     : Grid(geometry), dx_(0.0), dy_(0.0), dz_(0.0), n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
 {
-
     if (n_cell_x == 0 || n_cell_y == 0 || n_cell_z == 0)
     {
         throw std::invalid_argument("Number of cells in each direction must be greater than zero.");
@@ -132,11 +132,10 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const
         {
             // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
             std::string data_layout_str = "row_major";
-            hid_t attr_type = H5Tcopy(H5T_C_S1);
+            hid_t attr_type             = H5Tcopy(H5T_C_S1);
             H5Tset_size(attr_type, data_layout_str.size() + 1);
             hid_t attr_space = H5Screate(H5S_SCALAR);
-            hid_t attr_id =
-                H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+            hid_t attr_id    = H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
             H5Awrite(attr_id, attr_type, data_layout_str.c_str());
             H5Aclose(attr_id);
             H5Sclose(attr_space);

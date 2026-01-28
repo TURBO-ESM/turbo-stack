@@ -3,15 +3,16 @@
 #include <cstddef>
 #include <memory>
 
-#include "domain.h"
-#include "cartesian_geometry.h" 
+#include "cartesian_geometry.h"
 #include "cartesian_grid.h"
+#include "domain.h"
 
-namespace turbo {
+namespace turbo
+{
 
-class CartesianDomain : public Domain {
-
-public:
+class CartesianDomain : public Domain
+{
+   public:
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
@@ -28,12 +29,8 @@ public:
      * @param n_cell_y Number of cells in Y direction
      * @param n_cell_z Number of cells in Z direction
      */
-    CartesianDomain(double x_min, double x_max,
-           double y_min, double y_max,
-           double z_min, double z_max,
-           std::size_t n_cell_x,
-           std::size_t n_cell_y,
-           std::size_t n_cell_z);
+    CartesianDomain(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max,
+                    std::size_t n_cell_x, std::size_t n_cell_y, std::size_t n_cell_z);
 
     /**
      * @brief Get the geometry associated with the Cartesian domain.
@@ -46,7 +43,6 @@ public:
      * @return Shared pointer to CartesianGrid.
      */
     std::shared_ptr<CartesianGrid> GetGrid() const noexcept;
-
 };
 
-} // namespace turbo
+}  // namespace turbo

@@ -3,8 +3,8 @@
 #include <hdf5.h>
 
 #include <cstddef>
-#include <string>
 #include <memory>
+#include <string>
 
 #include "geometry.h"
 
@@ -78,7 +78,7 @@ class Grid
      * @return Shared pointer to Geometry object
      */
     std::shared_ptr<Geometry> GetGeometry() const noexcept { return geometry_; }
-    
+
     /**
      * @brief Virtual destructor for Grid.
      */
@@ -234,7 +234,6 @@ class Grid
      */
     virtual void WriteHDF5(const hid_t file_id) const = 0;
 
-
    protected:
     //-----------------------------------------------------------------------//
     // Protected Member Functions
@@ -244,7 +243,6 @@ class Grid
      * @brief Shared pointer to the geometry associated with the grid.
      */
     const std::shared_ptr<Geometry> geometry_;
-
 };
 
 }  // namespace turbo
