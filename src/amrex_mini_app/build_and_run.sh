@@ -324,7 +324,7 @@ fi
 
 if [[ "$machine" == "generic" ]]; then
 
-    spack add $compiler_spec
+    spack add "$compiler_spec"
 
     spack config add packages:mpi:require:${mpi_spec}
 
