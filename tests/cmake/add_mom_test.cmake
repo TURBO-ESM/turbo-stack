@@ -29,6 +29,11 @@ function(add_mom_test TEST_TARGET_NAME)
     MAX_PES ${MOM_MAX_PES}
   )
 
+  # Potential temporary fix for flang linker issue with netcdf.
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "LLVMFlang")
+    target_link_libraries(${TEST_TARGET_NAME} PRIVATE FortranRuntime FortranDecimal)
+  endif()
+
   # Temporary fix to force cmake to use the Fortran linker when using Intel OneAPI.
   set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
 
