@@ -1,4 +1,5 @@
 #include "field.h"
+#include "grid.h"
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
@@ -8,8 +9,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-
-#include "grid.h"
+#include <ostream>
+#include <vector>
 
 namespace turbo
 {
@@ -60,13 +61,22 @@ Field::Field(const Field::NameType& name, const std::shared_ptr<Grid>& grid, con
     amrex::BoxArray box_array(box);
 
     // Break up boxarray "cell_box_array" into chunks no larger than "max_chunk_size" along a direction
-    const int max_chunk_size =
-        32;  // Hardcoded for now, but could be a parameter for the user to set via the constructor arguments.
+    // Hardcoded for now, but could be a parameter for the user to set via the constructor arguments.
+    const int max_chunk_size = 32;
     box_array.maxSize(max_chunk_size);
 
     const amrex::DistributionMapping distribution_mapping(box_array);
 
     multifab = std::make_shared<amrex::MultiFab>(box_array, distribution_mapping, n_component, n_ghost);
+}
+
+std::ostream& operator<<(std::ostream& os, const Field& field)
+{
+    os << "Field Name: " << field.name << std::endl;
+    os << "Field Grid Stagger: " << FieldGridStaggerToString(field.field_grid_stagger) << std::endl;
+    os << "Number of Components: " << field.multifab->nComp() << std::endl;
+    os << "Number of Ghost Cells: " << field.multifab->nGrow() << std::endl;
+    return os;
 }
 
 bool Field::IsCellCentered() const noexcept { return (field_grid_stagger == FieldGridStagger::CellCentered); }
@@ -78,6 +88,7 @@ bool Field::IsJFaceCentered() const noexcept { return (field_grid_stagger == Fie
 bool Field::IsKFaceCentered() const noexcept { return (field_grid_stagger == FieldGridStagger::KFace); }
 
 bool Field::IsNodal() const noexcept { return (field_grid_stagger == FieldGridStagger::Nodal); }
+
 
 // This is where the coupling between the Field and Grid classes happens
 Grid::Point Field::GetGridPoint(int i, int j, int k) const
@@ -102,22 +113,25 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const
 // Write the field data to an HDF5 file. This will overwrite the file if it already exists.
 void Field::WriteHDF5(const std::string& filename) const
 {
-    const hid_t file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    if (file_id < 0)
-    {
-        throw std::runtime_error("Field::WriteHDF5: Failed to create HDF5 file: " + filename);
+    hid_t file_id;
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+        file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        if (file_id < 0)
+        {
+            throw std::runtime_error("Field::WriteHDF5: Failed to create HDF5 file: " + filename);
+        }
     }
+
     WriteHDF5(file_id);
-    H5Fclose(file_id);
+
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+       H5Fclose(file_id);
+    }
 }
 
 // Write the field data to an already open HDF5 file that you already have open.
 void Field::WriteHDF5(const hid_t file_id) const
 {
-    if (file_id < 0)
-    {
-        throw std::runtime_error("Field::WriteHDF5: Invalid HDF5 file_id passed to WriteHDF5.");
-    }
 
     // Copy the MultiFab to a single rank
     int destination_rank                      = amrex::ParallelDescriptor::IOProcessorNumber();
@@ -125,6 +139,11 @@ void Field::WriteHDF5(const hid_t file_id) const
 
     if (amrex::ParallelDescriptor::MyProc() == destination_rank)
     {
+        if (file_id < 0)
+        {
+            throw std::runtime_error("Field::WriteHDF5: Invalid HDF5 file_id passed to WriteHDF5.");
+        }
+
         AMREX_ASSERT(mf->boxArray().size() == 1);
         amrex::Box box = mf->boxArray()[0];  // We are assuming that there is only one box in the MultiFabs box array.
 
@@ -168,10 +187,24 @@ void Field::WriteHDF5(const hid_t file_id) const
         }
 
         {
+            // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
+            std::string data_layout_str = "row_major";
+            hid_t attr_type = H5Tcopy(H5T_C_S1);
+            H5Tset_size(attr_type, data_layout_str.size() + 1);
+            hid_t attr_space = H5Screate(H5S_SCALAR);
+            hid_t attr_id =
+                H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, attr_type, data_layout_str.c_str());
+            H5Aclose(attr_id);
+            H5Sclose(attr_space);
+            H5Tclose(attr_type);
+        }
+
+        {
             // Add string attribute to this dataset for field_grid_stagger
             std::string stagger_str = FieldGridStaggerToString(field_grid_stagger);
             hid_t attr_type         = H5Tcopy(H5T_C_S1);
-            H5Tset_size(attr_type, stagger_str.size());
+            H5Tset_size(attr_type, stagger_str.size() + 1);
             hid_t attr_space = H5Screate(H5S_SCALAR);
             hid_t attr_id =
                 H5Acreate2(dataset_id, "field_grid_stagger", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
