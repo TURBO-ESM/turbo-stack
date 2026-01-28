@@ -440,7 +440,7 @@ if [[ "$machine" == "generic" ]]; then
     ## Load the compiler module to make sure the compiler is in the path and gcc is set
     spack load ${compiler_spec}
 
-    # This could work if you don't added the compiler package to to the spack environment above but it is not as robust.
+    # This could work if you don't add the compiler package to the spack environment above but it is not as robust.
     #spack load --first ${compiler_spec}
 fi
 
