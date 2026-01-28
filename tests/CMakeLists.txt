@@ -12,8 +12,10 @@ find_package(NetCDF COMPONENTS C Fortran)
 if(NOT NetCDF_FOUND)
   find_package(PkgConfig REQUIRED)
 
-  # Try to find with pkgconfig which is more common.
+  ## Most older installs of NetCDF usually have a pkgconfig directory with .pc files
   pkg_search_module(NetCDF_C REQUIRED IMPORTED_TARGET netcdf)
+  # Add an alias to match the official NetCDF CMake target.  This allows for linking
+  # against the same target without changing the source code.
   add_library(NetCDF::NetCDF_C ALIAS PkgConfig::NetCDF_C)
 
   pkg_search_module(NetCDF_Fortran REQUIRED IMPORTED_TARGET netcdf-fortran)
