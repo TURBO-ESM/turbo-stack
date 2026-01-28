@@ -9,7 +9,7 @@ function(add_gtest source_file)
   add_executable(${target_name} ${source_file})
   # Assumes that any additional libraries to link are passed after the source file... hence ${ARGN}.
   # This could be improved later to use named arguments if we need to pass in other things that are not libraries to link against.
-  target_link_libraries(${target_name} PRIVATE GTest::gtest_main ${ARGN})
+  target_link_libraries(${target_name} PRIVATE GTest::gtest_main testing_utils ${ARGN})
   gtest_discover_tests(${target_name})
 
 endfunction()

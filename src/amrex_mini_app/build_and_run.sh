@@ -86,14 +86,22 @@ cmake --build "$build_dir"
 ctest --test-dir "$build_dir"
 
 # Run the examples. 
-cd "$build_dir/examples"
-if [[ -x "./tripolar_grid" ]]; then
-    ./tripolar_grid
-    #python "$mini_app_root/postprocessing/plot_hdf5.py" tripolar_grid.h5
-else
-    echo "Error: tripolar_grid binary not found or not executable in $build_dir/examples." >&2
-    exit 1
-fi
+#cd "$build_dir/examples"
+#examples_to_run=("domain_example")
+#for example in "${examples_to_run[@]}"; do
+#    if [[ -x "./$example" ]]; then
+#        echo "Running example: $example"
+#        #./"$example"
+#        mpiexec -n 4 ./"$example"
+#        #python "$mini_app_root/postprocessing/plot_hdf5.py" "${example}.h5"
+#    else
+#        echo "Error: $example binary not found or not executable in $build_dir/examples." >&2
+#        exit 1
+#    fi
+#done
+
+#spack env deactivate
+#python3 "$mini_app_root/postprocessing/plot_hdf5.py" initialization_mini_app.h5
 
 ###############################################################################
 # Build the Doxygen Documentation

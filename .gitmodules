@@ -13,3 +13,9 @@
 [submodule "dev-utils/gcovlens"]
 	path = dev-utils/gcovlens
 	url = https://github.com/alperaltuntas/gcovlens.git
+[submodule "submodules/amrex"]
+	path = submodules/amrex
+	url = https://github.com/AMReX-Codes/amrex.git
+[submodule "submodules/pFUnit"]
+	path = submodules/pFUnit
+	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
