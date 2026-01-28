@@ -344,7 +344,7 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   TEST_BUILD_DIR=$(pwd)                                  \
   PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH}             \
   AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}               \
-  NetCDF_C_PREFIX_PATH=$(nc-config --lidbir)             \
+  NetCDF_C_PREFIX_PATH=$(nc-config --libdir)             \
   NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)/lib   \
   BLD_PATH_ROOT=${BLD_PATH}                              \
   LIBINFRA=${INFRA}                                      \
