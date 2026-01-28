@@ -344,8 +344,8 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   TEST_BUILD_DIR=$(pwd)                                  \
   PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH}             \
   AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}               \
-  NetCDF_C_PREFIX_PATH=$(shell nc-config --lidbir)       \
-  NetCDF_Fortran_PREFIX_PATH=$(shell nf-config --prefix)/lib \
+  NetCDF_C_PREFIX_PATH=$(nc-config --lidbir)             \
+  NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)/lib   \
   BLD_PATH_ROOT=${BLD_PATH}                              \
   LIBINFRA=${INFRA}                                      \
   CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
