@@ -339,14 +339,16 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   cd unit-tests
 
   # Redeclaring variables needed because they are not exported
-  TEMPLATE=${TEMPLATE}                       \
-  JOBS=${JOBS}                               \
-  TEST_BUILD_DIR=$(pwd)                      \
-  PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
-  AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}   \
-  BLD_PATH_ROOT=${BLD_PATH}                  \
-  LIBINFRA=${INFRA}                          \
-  CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \
+  TEMPLATE=${TEMPLATE}                                   \
+  JOBS=${JOBS}                                           \
+  TEST_BUILD_DIR=$(pwd)                                  \
+  PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH}             \
+  AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}               \
+  NetCDF_C_PREFIX_PATH=$(shell nc-config --prefix)       \
+  NetCDF_Fortran_PREFIX_PATH=$(shell nf-config --prefix) \
+  BLD_PATH_ROOT=${BLD_PATH}                              \
+  LIBINFRA=${INFRA}                                      \
+  CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
   cd ${BLD_PATH}

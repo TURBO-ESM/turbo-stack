@@ -6,16 +6,18 @@ include $(TEMPLATE)
 build_unit_tests: export BLD_PATH=$(BLD_PATH_ROOT)
 build_unit_tests: export INFRA=$(LIBINFRA)
 build_unit_tests: export Fortran_REAL_FLAG=$(FC_AUTO_R8)
+build_unit_tests: export NETCDF_C_PREFIX=$(NetCDF_C_PREFIX_PATH)
+build_unit_tests: export NETCDF_Fortran_PREFIX=$(NetCDF_Fortran_PREFIX_PATH)
 
 build_unit_tests:
-	cmake -S . -B ${TEST_BUILD_DIR}                                           \
-		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                                \
-		-DCMAKE_PREFIX_PATH="${AMREX_INSTALL_PATH};${PFUNIT_INSTALL_PATH}"    \
-		-DCMAKE_Fortran_COMPILER=$(shell which $(FC))                         \
-		-DCMAKE_CXX_COMPILER=$(shell which $(CXX))                            \
-		-DCMAKE_C_COMPILER=$(shell which $(CC))                            && \
-	cmake --build ${TEST_BUILD_DIR} -j ${JOBS}                             && \
-	ctest --test-dir ${TEST_BUILD_DIR}                                        \
-		--output-on-failure -VV                                               \
-		--no-tests=error                                                      \
+	cmake -S . -B ${TEST_BUILD_DIR}                                                                                    \
+		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                                                                         \
+		-DCMAKE_PREFIX_PATH="${AMREX_INSTALL_PATH};${PFUNIT_INSTALL_PATH};${NETCDF_C_PREFIX};${NETCDF_Fortran_PREFIX}" \
+		-DCMAKE_Fortran_COMPILER=$(shell which $(FC))                                                                  \
+		-DCMAKE_CXX_COMPILER=$(shell which $(CXX))                                                                     \
+		-DCMAKE_C_COMPILER=$(shell which $(CC))  && \
+	cmake --build ${TEST_BUILD_DIR} -j ${JOBS}   && \
+	ctest --test-dir ${TEST_BUILD_DIR}              \
+		--output-on-failure -VV                     \
+		--no-tests=error                            \
 		--output-log ${TEST_BUILD_DIR}/ctest.log
