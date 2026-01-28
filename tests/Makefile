@@ -14,7 +14,7 @@ build_unit_tests:
 		-DCMAKE_Fortran_COMPILER=$(shell which $(FC))                                                                  \
 		-DCMAKE_CXX_COMPILER=$(shell which $(CXX))                                                                     \
 		-DCMAKE_C_COMPILER=$(shell which $(CC))  && \
-	cmake --build ${TEST_BUILD_DIR} -j ${JOBS}   && \
+	cmake --build ${TEST_BUILD_DIR} -j ${JOBS} --verbose  && \
 	ctest --test-dir ${TEST_BUILD_DIR}              \
 		--output-on-failure -VV                     \
 		--no-tests=error                            \
