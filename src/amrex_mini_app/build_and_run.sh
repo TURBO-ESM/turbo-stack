@@ -470,7 +470,7 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
     echo "CXX compiler path is CXX=$CXX"
 fi
 
-# Turn off code coverage if you are not using gcc and give an error messsage.
+# Turn off code coverage if you are not using gcc and give an error message.
 if [[ "${compiler_package_name}" != "gcc" && "$CODE_COVERAGE" == "1" ]]; then
     echo "Warning: Code coverage is only supported when using gcc as the compiler. Disabling code coverage generation." >&2
     export CODE_COVERAGE=0
