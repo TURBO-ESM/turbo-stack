@@ -1,7 +1,7 @@
+#include "cartesian_geometry.h"
+
 #include <stdexcept>
 #include <string>
-
-#include "cartesian_geometry.h"
 
 namespace turbo
 {

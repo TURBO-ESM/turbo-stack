@@ -29,14 +29,15 @@ class CartesianGrid : public Grid
      * @param n_cell_y Number of cells in Y direction
      * @param n_cell_z Number of cells in Z direction
      */
-    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, const std::size_t n_cell_x, const std::size_t n_cell_y,
-                  const std::size_t n_cell_z);
+    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, const std::size_t n_cell_x,
+                  const std::size_t n_cell_y, const std::size_t n_cell_z);
 
     /**
      * @brief Get the geometry associated with the grid.
      * @return Shared pointer to CartesianGeometry object
      */
-    std::shared_ptr<CartesianGeometry> GetGeometry() const noexcept { 
+    std::shared_ptr<CartesianGeometry> GetGeometry() const noexcept
+    {
         return std::static_pointer_cast<CartesianGeometry>(geometry_);
     }
 
@@ -168,7 +169,6 @@ class CartesianGrid : public Grid
      * @brief Number of cells in X, Y, Z directions.
      */
     const std::size_t n_cell_x_, n_cell_y_, n_cell_z_;
-
 };
 
 }  // namespace turbo

@@ -1,5 +1,4 @@
 #include "field.h"
-#include "grid.h"
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
@@ -7,10 +6,12 @@
 
 #include <cstddef>
 #include <memory>
+#include <ostream>
 #include <stdexcept>
 #include <string>
-#include <ostream>
 #include <vector>
+
+#include "grid.h"
 
 namespace turbo
 {
@@ -89,7 +90,6 @@ bool Field::IsKFaceCentered() const noexcept { return (field_grid_stagger == Fie
 
 bool Field::IsNodal() const noexcept { return (field_grid_stagger == FieldGridStagger::Nodal); }
 
-
 // This is where the coupling between the Field and Grid classes happens
 Grid::Point Field::GetGridPoint(int i, int j, int k) const
 {
@@ -114,7 +114,8 @@ Grid::Point Field::GetGridPoint(int i, int j, int k) const
 void Field::WriteHDF5(const std::string& filename) const
 {
     hid_t file_id;
-    if (amrex::ParallelDescriptor::IOProcessor()) {
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
         file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
         if (file_id < 0)
         {
@@ -124,15 +125,15 @@ void Field::WriteHDF5(const std::string& filename) const
 
     WriteHDF5(file_id);
 
-    if (amrex::ParallelDescriptor::IOProcessor()) {
-       H5Fclose(file_id);
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        H5Fclose(file_id);
     }
 }
 
 // Write the field data to an already open HDF5 file that you already have open.
 void Field::WriteHDF5(const hid_t file_id) const
 {
-
     // Copy the MultiFab to a single rank
     int destination_rank                      = amrex::ParallelDescriptor::IOProcessorNumber();
     const std::shared_ptr<amrex::MultiFab> mf = CopyMultiFabToSingleRank(multifab, destination_rank);
@@ -189,11 +190,10 @@ void Field::WriteHDF5(const hid_t file_id) const
         {
             // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
             std::string data_layout_str = "row_major";
-            hid_t attr_type = H5Tcopy(H5T_C_S1);
+            hid_t attr_type             = H5Tcopy(H5T_C_S1);
             H5Tset_size(attr_type, data_layout_str.size() + 1);
             hid_t attr_space = H5Screate(H5S_SCALAR);
-            hid_t attr_id =
-                H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+            hid_t attr_id    = H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
             H5Awrite(attr_id, attr_type, data_layout_str.c_str());
             H5Aclose(attr_id);
             H5Sclose(attr_space);
