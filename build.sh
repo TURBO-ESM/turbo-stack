@@ -347,7 +347,7 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   NetCDF_C_PREFIX_PATH=$(nc-config --prefix)             \
   NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)       \
   BLD_PATH_ROOT=${BLD_PATH}                              \
-  LIBINFRA=${INFRA}                                      \
+  LIB_INFRA=${INFRA}                                      \
   CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
