@@ -5,9 +5,9 @@ ROOTDIR=$(pwd -P)
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
-FMS_ROOT=${ROOTDIR}/submodules/FMS
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
+INFRA_ROOT=${ROOTDIR}/submodules/FMS
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
 UNIT_TEST_ROOT=${ROOTDIR}/tests
@@ -27,15 +27,15 @@ UNIT_TESTS_ONLY=0 # False
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --help)
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov] [--offload] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--infra <infra>] [--codecov] [--offload] [--debug] [--override]"
             echo "Build script for MOM6 with FMS."
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
             echo "  --unit-tests-only            Build infrastructure unit tests rather than MOM6 executable (default: false)"
             echo "  --jobs <num_jobs>            Sets the number of jobs to use for make/cmake calls."
             echo "Examples:"
@@ -43,10 +43,10 @@ while [[ "$#" -gt 0 ]]; do
             echo "  $0 --memory-mode dynamic_nonsymmetric"
             echo "  $0 --compiler gnu --codecov"
             exit 0 ;;
-        --compiler) 
+        --compiler)
             COMPILER="$2"
             shift ;;
-        --machine) 
+        --machine)
             MACHINE="$2"
             shift ;;
         --memory-mode)
@@ -62,6 +62,12 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
+            if [[ "${INFRA}" == "TIM" ]]; then
+              INFRA_ROOT=${ROOTDIR}/submodules/TIM
+            elif [[ "${INFRA}" != "FMS2" ]]; then
+              echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
+              exit 1
+            fi
             shift ;;
         --jobs)
             JOBS="$2"
@@ -95,7 +101,7 @@ while [[ "$#" -gt 0 ]]; do
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
-        *) 
+        *)
             echo "Unknown parameter passed: $1"
             echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
             exit 1 ;;
@@ -294,22 +300,16 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
 fi
 
 # 1) Build Underlying Infrastructure Library
-if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
-  cd ${BLD_PATH}
-  mkdir -p FMS
-  cd FMS
-  ${MKMF_ROOT}/list_paths ${FMS_ROOT}
-  # We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-  echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-  echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
-  LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms"
-else
-  echo "ERROR: Unknown infrastructure ('${INFRA}' is not supported choice)"
-  echo "       Valid options are 'FMS2' or 'TIM'"
-  exit 1
-fi
+cd ${BLD_PATH}
+mkdir -p ${INFRA}
+cd ${INFRA}
+${MKMF_ROOT}/list_paths ${INFRA_ROOT}
+# We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
+echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
+echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
+LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 
 # 2) Build MOM6 infra
 cd ${BLD_PATH}
@@ -317,7 +317,7 @@ mkdir -p MOM6-infra
 cd MOM6-infra
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
@@ -345,7 +345,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
