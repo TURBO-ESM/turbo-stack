@@ -43,10 +43,10 @@ while [[ "$#" -gt 0 ]]; do
             echo "  $0 --memory-mode dynamic_nonsymmetric"
             echo "  $0 --compiler gnu --codecov"
             exit 0 ;;
-        --compiler) 
+        --compiler)
             COMPILER="$2"
             shift ;;
-        --machine) 
+        --machine)
             MACHINE="$2"
             shift ;;
         --memory-mode)
@@ -64,6 +64,9 @@ while [[ "$#" -gt 0 ]]; do
             INFRA="$2"
             if [[ "${INFRA}" == "TIM" ]]; then
               INFRA_ROOT=${ROOTDIR}/submodules/TIM
+            elif [[ "${INFRA}" != "FMS2" ]]; then
+              echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
+              exit 1
             fi
             shift ;;
         --jobs)
@@ -98,7 +101,7 @@ while [[ "$#" -gt 0 ]]; do
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
-        *) 
+        *)
             echo "Unknown parameter passed: $1"
             echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
             exit 1 ;;
@@ -297,22 +300,16 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
 fi
 
 # 1) Build Underlying Infrastructure Library
-if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
-  cd ${BLD_PATH}
-  mkdir -p ${INFRA}
-  cd ${INFRA}
-  ${MKMF_ROOT}/list_paths ${INFRA_ROOT}
-  # We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-  echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-  echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
-  LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
-else
-  echo "ERROR: Unknown infrastructure ('${INFRA}' is not supported choice)"
-  echo "       Valid options are 'FMS2' or 'TIM'"
-  exit 1
-fi
+cd ${BLD_PATH}
+mkdir -p ${INFRA}
+cd ${INFRA}
+${MKMF_ROOT}/list_paths ${INFRA_ROOT}
+# We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
+echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
+echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
+LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 
 # 2) Build MOM6 infra
 cd ${BLD_PATH}
