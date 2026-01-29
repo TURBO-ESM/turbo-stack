@@ -4,8 +4,14 @@
 # User Input
 ###############################################################################
 
-# Set the where the build directory will be created. You can change this to any location you prefer.
-build_dir=~/turbo_amrex_mini_app_build
+# You can set the BUILD_DIR environment variable to specify a custom build directory. Assumes a default location if not set.
+if [[ -z "${BUILD_DIR:-}" ]]; then
+    build_dir="${HOME}/turbo_amrex_mini_app_build"
+    echo "BUILD_DIR environment variable is not set. Using default build directory location: $build_dir"
+else
+    build_dir="$BUILD_DIR"
+    echo "Using build directory from BUILD_DIR environment variable: $build_dir"
+fi
 
 # You can set the DEBUG environment variable to 1 to enable debugging features in this script.
 if [[ "${DEBUG:-0}" == "1" ]]; then
@@ -13,14 +19,15 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
 fi
 
 # You can set the CODE_COVERAGE environment variable to 1 to enable generating code coverage reports. You will need gcov and lcov installed and in your path to do this.
-if [[ -z "${CODE_COVERAGE:-}" ]]; then
-    CODE_COVERAGE=0
+if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
+    echo "Will generate code coverage report."
 fi
 
 # You can set the DOXYGEN environment variable to 1 to build the doxygen documentation. You will need the doxygen executable installed and in your path to do this.
 if [[ "${DOXYGEN:-0}" == "1" ]]; then
     echo "Will generate Doxygen documentation."
 fi
+
 
 ###############################################################################
 # Error Checking Pre-requisites... Should be true for all environments
@@ -69,30 +76,24 @@ if [[ "${DEBUG:-0}" == "1" ]]; then
     echo "CXX compiler path is CXX=$CXX"
 fi
 
-# Turn off code coverage if you are not using gcc and give an error message.
-#if [[ "${compiler_package_name}" != "gcc" && "$CODE_COVERAGE" == "1" ]]; then
-#    echo "Warning: Code coverage is only supported when using gcc as the compiler. Disabling code coverage generation." >&2
-#    export CODE_COVERAGE=0
-#fi
-
 
 ###############################################################################
 # Build, Test, and Run the Code
 ###############################################################################
 
-cmake_options=()
-cmake_options+=("-DCMAKE_C_COMPILER=$CC")
-cmake_options+=("-DCMAKE_CXX_COMPILER=$CXX")
+cmake_generate_options=()
+cmake_generate_options+=("-DCMAKE_C_COMPILER=$CC")
+cmake_generate_options+=("-DCMAKE_CXX_COMPILER=$CXX")
 if [[ "${DEBUG:-0}" == "1" ]]; then
-    cmake_options+=("-DCMAKE_BUILD_TYPE=Debug")
-    cmake_options+=("--fresh")
+    cmake_generate_options+=("-DCMAKE_BUILD_TYPE=Debug")
+    cmake_generate_options+=("--fresh")
 fi
-if [[ "$CODE_COVERAGE" == "1" ]]; then
-    cmake_options+=("-DCODE_COVERAGE=ON")
+if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
+    cmake_generate_options+=("-DCODE_COVERAGE=ON")
 fi
 
 # Generate the build directory. 
-cmake "${cmake_options[@]}" -S "$mini_app_root" -B "$build_dir"
+cmake "${cmake_generate_options[@]}" -S "$mini_app_root" -B "$build_dir"
 
 # Build the code. 
 cmake_build_options=()
@@ -128,7 +129,7 @@ ctest --test-dir "$build_dir"
 ###############################################################################
 # Generate the code coverage report
 ###############################################################################
-if [[ "$CODE_COVERAGE" == "1" ]]; then
+if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
     echo "Generating code coverage report..."
 
     if ! command -v lcov &> /dev/null; then
