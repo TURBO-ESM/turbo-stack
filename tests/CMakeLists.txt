@@ -32,10 +32,10 @@ include(cmake/add_mom_test.cmake)
 
 enable_testing()
 
-# Load external dependencies not provided by modules.
+# Load external dependencies not provided by cmake modules.
 add_library(BACKEND_lib STATIC IMPORTED)
 set_target_properties(BACKEND_lib PROPERTIES
-  IMPORTED_LOCATION $ENV{BLD_PATH}/FMS/libfms.a
+  IMPORTED_LOCATION $ENV{BLD_PATH}/$ENV{INFRA}/lib$ENV{INFRA}.a
   INTERFACE_INCLUDE_DIRECTORIES $ENV{BLD_PATH}/FMS
 )
 add_library(BACKEND_Infra STATIC IMPORTED)

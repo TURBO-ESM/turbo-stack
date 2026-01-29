@@ -6,7 +6,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -149,6 +148,14 @@ class Field
      * This allows storage in ordered containers (e.g., std::set).
      */
     auto operator<=>(const Field& other) const = default;
+
+    /**
+     * @brief Output stream operator for Field.
+     * @param os Output stream.
+     * @param field Field to output.
+     * @return Reference to the output stream.
+     */
+    friend std::ostream& operator<<(std::ostream& os, const Field& field);
 
     //-----------------------------------------------------------------------//
     // Public Data Members

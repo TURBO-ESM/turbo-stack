@@ -5,36 +5,31 @@
 #include <string>
 #include <vector>
 
-#include "geometry.h"
+#include "cartesian_geometry.h"
 
 namespace turbo
 {
 
-CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, std::size_t n_cell_x,
-                             std::size_t n_cell_y, std::size_t n_cell_z)
-    : geometry_(geometry), dx_(0.0), dy_(0.0), dz_(0.0), n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
+CartesianGrid::CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, const std::size_t n_cell_x,
+                             const std::size_t n_cell_y, const std::size_t n_cell_z)
+    : Grid(geometry), dx_(0.0), dy_(0.0), dz_(0.0), n_cell_x_(n_cell_x), n_cell_y_(n_cell_y), n_cell_z_(n_cell_z)
 {
-    if (!geometry_)
-    {
-        throw std::invalid_argument("Null geometry pointer passed to CartesianGrid constructor.");
-    }
-
     if (n_cell_x == 0 || n_cell_y == 0 || n_cell_z == 0)
     {
         throw std::invalid_argument("Number of cells in each direction must be greater than zero.");
     }
 
-    dx_ = static_cast<double>(geometry_->LX()) / n_cell_x_;
-    dy_ = static_cast<double>(geometry_->LY()) / n_cell_y_;
-    dz_ = static_cast<double>(geometry_->LZ()) / n_cell_z_;
+    dx_ = static_cast<double>(GetGeometry()->LX()) / n_cell_x_;
+    dy_ = static_cast<double>(GetGeometry()->LY()) / n_cell_y_;
+    dz_ = static_cast<double>(GetGeometry()->LZ()) / n_cell_z_;
 }
 
-std::size_t CartesianGrid::NCell() const noexcept { return NCellX() * NCellY() * NCellZ(); }
+std::size_t CartesianGrid::NCell() const noexcept { return NCellI() * NCellJ() * NCellK(); }
 std::size_t CartesianGrid::NCellI() const noexcept { return n_cell_x_; }
 std::size_t CartesianGrid::NCellJ() const noexcept { return n_cell_y_; }
 std::size_t CartesianGrid::NCellK() const noexcept { return n_cell_z_; }
 
-std::size_t CartesianGrid::NNode() const noexcept { return NNodeX() * NNodeY() * NNodeZ(); }
+std::size_t CartesianGrid::NNode() const noexcept { return NNodeI() * NNodeJ() * NNodeK(); }
 std::size_t CartesianGrid::NNodeI() const noexcept { return n_cell_x_ + 1; }
 std::size_t CartesianGrid::NNodeJ() const noexcept { return n_cell_y_ + 1; }
 std::size_t CartesianGrid::NNodeK() const noexcept { return n_cell_z_ + 1; }
@@ -45,7 +40,7 @@ CartesianGrid::Point CartesianGrid::Node(const Index i, const Index j, const Ind
     {
         throw std::out_of_range("Node index out of bounds");
     }
-    return Point({geometry_->XMin() + i * dx_, geometry_->YMin() + j * dy_, geometry_->ZMin() + k * dz_});
+    return Point({GetGeometry()->XMin() + i * dx_, GetGeometry()->YMin() + j * dy_, GetGeometry()->ZMin() + k * dz_});
 }
 
 CartesianGrid::Point CartesianGrid::CellCenter(const Index i, const Index j, const Index k) const
@@ -132,6 +127,19 @@ void CartesianGrid::WriteHDF5(const hid_t file_id) const
         {
             H5Sclose(dataspace_id);
             throw std::runtime_error("Failed to create HDF5 dataset '" + name + "'.");
+        }
+
+        {
+            // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
+            std::string data_layout_str = "row_major";
+            hid_t attr_type             = H5Tcopy(H5T_C_S1);
+            H5Tset_size(attr_type, data_layout_str.size() + 1);
+            hid_t attr_space = H5Screate(H5S_SCALAR);
+            hid_t attr_id    = H5Acreate2(dataset_id, "data_layout", attr_type, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, attr_type, data_layout_str.c_str());
+            H5Aclose(attr_id);
+            H5Sclose(attr_space);
+            H5Tclose(attr_type);
         }
 
         std::vector<double> data(nx * ny * nz * n_component);

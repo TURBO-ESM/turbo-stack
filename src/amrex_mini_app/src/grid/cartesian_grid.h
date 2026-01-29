@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <memory>
 
-#include "geometry.h"
+#include "cartesian_geometry.h"
 #include "grid.h"
 
 namespace turbo
@@ -29,8 +29,17 @@ class CartesianGrid : public Grid
      * @param n_cell_y Number of cells in Y direction
      * @param n_cell_z Number of cells in Z direction
      */
-    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, std::size_t n_cell_x, std::size_t n_cell_y,
-                  std::size_t n_cell_z);
+    CartesianGrid(const std::shared_ptr<CartesianGeometry>& geometry, const std::size_t n_cell_x,
+                  const std::size_t n_cell_y, const std::size_t n_cell_z);
+
+    /**
+     * @brief Get the geometry associated with the grid.
+     * @return Shared pointer to CartesianGeometry object
+     */
+    std::shared_ptr<CartesianGeometry> GetGeometry() const noexcept
+    {
+        return std::static_pointer_cast<CartesianGeometry>(geometry_);
+    }
 
     std::size_t NCell() const noexcept override;
     std::size_t NCellI() const noexcept override;
@@ -42,11 +51,11 @@ class CartesianGrid : public Grid
     std::size_t NNodeJ() const noexcept override;
     std::size_t NNodeK() const noexcept override;
 
-    Point Node(const Index i, const Index j, const Index k) const override;
-    Point CellCenter(const Index i, const Index j, const Index k) const override;
-    Point IFace(const Index i, const Index j, const Index k) const override;
-    Point JFace(const Index i, const Index j, const Index k) const override;
-    Point KFace(const Index i, const Index j, const Index k) const override;
+    Grid::Point Node(const Index i, const Index j, const Index k) const override;
+    Grid::Point CellCenter(const Index i, const Index j, const Index k) const override;
+    Grid::Point IFace(const Index i, const Index j, const Index k) const override;
+    Grid::Point JFace(const Index i, const Index j, const Index k) const override;
+    Grid::Point KFace(const Index i, const Index j, const Index k) const override;
 
     bool ValidNode(const Index i, const Index j, const Index k) const noexcept override;
     bool ValidCell(const Index i, const Index j, const Index k) const noexcept override;
@@ -100,7 +109,7 @@ class CartesianGrid : public Grid
      * @param k Face K index
      * @return Grid point location of the X-face center
      */
-    Point XFace(const Index i, const Index j, const Index k) const;
+    Grid::Point XFace(const Index i, const Index j, const Index k) const;
 
     /**
      * @brief Get the location of the Y-face center.
@@ -109,7 +118,7 @@ class CartesianGrid : public Grid
      * @param k Face K index
      * @return Grid point location of the Y-face center
      */
-    Point YFace(const Index i, const Index j, const Index k) const;
+    Grid::Point YFace(const Index i, const Index j, const Index k) const;
 
     /**
      * @brief Get the location of the Z-face center.
@@ -118,7 +127,7 @@ class CartesianGrid : public Grid
      * @param k Face K index
      * @return Grid point location of the Z-face center
      */
-    Point ZFace(const Index i, const Index j, const Index k) const;
+    Grid::Point ZFace(const Index i, const Index j, const Index k) const;
 
     /**
      * @brief Check if the given indices are valid for an X-face.
@@ -147,19 +156,10 @@ class CartesianGrid : public Grid
      */
     bool ValidZFace(const Index i, const Index j, const Index k) const noexcept;
 
-    //-----------------------------------------------------------------------//
-    // Public Data Members
-    //-----------------------------------------------------------------------//
-
    private:
     //-----------------------------------------------------------------------//
     // Private Data Members
     //-----------------------------------------------------------------------//
-    /**
-     * @brief Geometry object describing the Cartesian domain.
-     */
-    const std::shared_ptr<CartesianGeometry> geometry_;
-
     /**
      * @brief Grid spacing in X, Y, Z directions.
      */
@@ -169,10 +169,6 @@ class CartesianGrid : public Grid
      * @brief Number of cells in X, Y, Z directions.
      */
     const std::size_t n_cell_x_, n_cell_y_, n_cell_z_;
-
-    //-----------------------------------------------------------------------//
-    // Private Member Functions
-    //-----------------------------------------------------------------------//
 };
 
 }  // namespace turbo
