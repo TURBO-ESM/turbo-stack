@@ -45,7 +45,7 @@ if(NOT NetCDF_FOUND)
 endif()
 
 # Only set AMREX_LIB if needed; else keep undefined
-if("$ENV{INFRA}" STREQUAL "TIM")
+if("${INFRA}" STREQUAL "TIM")
   find_package(AMReX REQUIRED)
   set(AMREX_LIB AMReX::amrex)
 endif()
