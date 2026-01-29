@@ -346,8 +346,9 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}               \
   NetCDF_C_PREFIX_PATH=$(nc-config --prefix)             \
   NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)       \
-  BLD_PATH_ROOT=${BLD_PATH}                              \
-  LIB_INFRA=${INFRA}                                      \
+  PATH_TO_BACKEND_LIB="${BLD_PATH}/${INFRA}"             \
+  PATH_TO_LIBINFRA="${BLD_PATH}/MOM6-infra"              \
+  LIB_INFRA=${INFRA}                                     \
   CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
