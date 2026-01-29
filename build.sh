@@ -22,6 +22,7 @@ DEBUG=0 # False
 CODECOV=0 # False
 OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
+CMAKE_BUILD_TYPE="Release"
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -37,6 +38,9 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
             echo "  --unit-tests-only            Build infrastructure unit tests rather than MOM6 executable (default: false)"
+            echo "  --offload                    Enable GPU offload instead of host only CPU mode (default: false)"
+            echo "  --amrex <path_to_amrex>      Specifies the path to search for a pre-installed build of amrex"
+            echo "  --pfunit <path_to_pfunit>    Specified the path to search for a pre-installed build of pfunit"
             echo "  --jobs <num_jobs>            Sets the number of jobs to use for make/cmake calls."
             echo "Examples:"
             echo "  $0 --compiler nvhpc --machine ncar"
@@ -57,7 +61,8 @@ while [[ "$#" -gt 0 ]]; do
         --offload)
             OFFLOAD=1 ;;
         --debug)
-            DEBUG=1 ;;
+            DEBUG=1
+            CMAKE_BUILD_TYPE="Debug" ;;
         --override)
             OVERRIDE=1 ;;
         --infra)
@@ -98,12 +103,17 @@ while [[ "$#" -gt 0 ]]; do
               echo "--pfunit path ${PFUNIT_INSTALL_PATH} not valid"
               exit 1
             fi
+            if [[ ! -d "${PFUNIT_INSTALL_PATH}/include" && ! -d "${PFUNIT_INSTALL_PATH}/lib" ]]; then
+              echo "${PFUNIT_INSTALL_PATH} is valid but not built/installed (include and lib directories missing."
+              echo "Please follow the pFUnit instructions and re-run the TURBO build."
+              exit 1
+            fi
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
         *)
             echo "Unknown parameter passed: $1"
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override] [--pfunit <path_to_pfunit>] [--amrex <path_to_amrex>] [--unit-tests-only]"
             exit 1 ;;
     esac
     shift
@@ -271,9 +281,10 @@ if [[ "${INFRA}" == "TIM" ]]; then
     TEMPLATE=${TEMPLATE}                     \
     JOBS=${JOBS}                             \
     AMREX_ROOT=${AMREX_ROOT}                 \
-    BLD_PATH=$(pwd)/build                    \
+    AMREX_BLD_PATH=$(pwd)/build              \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}     \
     AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH} \
-       make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
+      make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
   fi
   AMREX_LINK_FLAGS="-L${AMREX_INSTALL_PATH}/lib -lamrex"
   AMREX_INCLUDE_FLAGS="-I${AMREX_INSTALL_PATH}/include"
@@ -281,7 +292,7 @@ fi
 
 # 0a) Build pFUnit if needed
 if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
-  if [[ ! -v "${PFUNIT_INSTALL_PATH}" ]]; then
+  if [[ -z "${PFUNIT_INSTALL_PATH}" ]]; then
     echo "Path to pFUnit not declared.  Building pFUnit through submodules."
     cd "${BLD_PATH}"
     mkdir -p pFUnit
@@ -293,9 +304,10 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
     TEMPLATE=${TEMPLATE}                       \
     JOBS=${JOBS}                               \
     PFUNIT_ROOT=${PFUNIT_ROOT}                 \
-    BLD_PATH=$(pwd)/build                      \
+    PFUNIT_BLD_PATH=$(pwd)/build               \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \
     PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
-       make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
+      make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
   fi
 fi
 
@@ -327,17 +339,16 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   cd unit-tests
 
   # Redeclaring variables needed because they are not exported
-  TEMPLATE=${TEMPLATE}                       \
-  JOBS=${JOBS}                               \
-  CRAY_MPICH_PREFIX=${CRAY_MPICH_PREFIX}     \
-  TEST_BUILD_DIR=$(pwd)                      \
-  PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
-  AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}   \
-  NETCDFF_PREFIX=$(nf-config --prefix)       \
-  NETCDF_LIB_DIR=$(nc-config --libdir)       \
-  NETCDF_PREFIX=$(nc-config --prefix)        \
-  BLD_PATH_ROOT=${BLD_PATH}                  \
-  LIBINFRA=${INFRA}                          \
+  TEMPLATE=${TEMPLATE}                                   \
+  JOBS=${JOBS}                                           \
+  TEST_BUILD_DIR=$(pwd)                                  \
+  PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH}             \
+  AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}               \
+  NetCDF_C_PREFIX_PATH=$(nc-config --prefix)             \
+  NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)       \
+  BLD_PATH_ROOT=${BLD_PATH}                              \
+  LIB_INFRA=${INFRA}                                      \
+  CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
   cd ${BLD_PATH}

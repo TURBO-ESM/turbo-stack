@@ -18,7 +18,6 @@ jobs:
       matrix:
         compiler: [ oneapi, gcc14 ]
         mpi:      [ mpich ]
-        #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
         runner:   [ ubuntu-latest, gha-runner-turbo ]
