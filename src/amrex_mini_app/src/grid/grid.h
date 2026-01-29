@@ -3,7 +3,10 @@
 #include <hdf5.h>
 
 #include <cstddef>
+#include <memory>
 #include <string>
+
+#include "geometry.h"
 
 namespace turbo
 {
@@ -56,6 +59,26 @@ class Grid
     //-----------------------------------------------------------------------//
     // Public Member Functions
     //-----------------------------------------------------------------------//
+
+    /**
+     * @brief Construct a Grid with the given geometry.
+     * @param geometry Shared pointer to Geometry object.
+     * @throws std::invalid_argument if a null pointer is passed for geometry.
+     */
+    Grid(const std::shared_ptr<Geometry>& geometry) : geometry_(geometry)
+    {
+        if (!geometry_)
+        {
+            throw std::invalid_argument("Null geometry pointer passed to Grid constructor.");
+        }
+    }
+
+    /**
+     * @brief Get the geometry associated with the grid.
+     * @return Shared pointer to Geometry object
+     */
+    std::shared_ptr<Geometry> GetGeometry() const noexcept { return geometry_; }
+
     /**
      * @brief Virtual destructor for Grid.
      */
@@ -215,6 +238,11 @@ class Grid
     //-----------------------------------------------------------------------//
     // Protected Member Functions
     //-----------------------------------------------------------------------//
+
+    /**
+     * @brief Shared pointer to the geometry associated with the grid.
+     */
+    const std::shared_ptr<Geometry> geometry_;
 };
 
 }  // namespace turbo
