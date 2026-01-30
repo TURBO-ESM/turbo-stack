@@ -30,7 +30,7 @@ contains
     call broadcast(value,len1)
 
     actual = value(5)
-    @assertEqual(actual, zero)
+    @assertEqual(zero, actual)
 
     value = rank
     !---------------------------------
@@ -40,7 +40,7 @@ contains
     call broadcast(value,len1,from_PE=1)
 
     actual = value(5)
-    @assertEqual(actual, one)
+    @assertEqual(one, actual)
     deallocate(value)
 
   end subroutine test_bcast_int1D

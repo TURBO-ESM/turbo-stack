@@ -27,17 +27,17 @@ contains
     call broadcast(value)
 
     actual = value
-    @assertEqual(actual, zero)
+    @assertEqual(zero, actual)
 
     value = rank
     !---------------------------------
     ! Broadcast from non-default rank
     ! using optional argument from_PE
     !---------------------------------
-    call broadcast(value,from_PE=1)
+    call broadcast(value, from_PE=1)
 
     actual = value
-    @assertEqual(actual, one)
+    @assertEqual(one, actual)
 
   end subroutine test_bcast_int64_0D
 

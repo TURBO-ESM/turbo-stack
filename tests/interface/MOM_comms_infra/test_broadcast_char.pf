@@ -30,7 +30,7 @@ contains
     length = strlen
     call broadcast(value,length)
 
-    @assertEqual(trim(value(1)), trim(truth))
+    @assertEqual(trim(truth),trim(value(1)))
 
     !---------------------------------
     ! Broadcast from non-default rank
@@ -45,7 +45,7 @@ contains
     length = strlen
     call broadcast(value,length,from_PE=1)
 
-    @assertEqual(trim(value(1)), trim(truth))
+    @assertEqual(trim(truth),trim(value(1)))
 
   end subroutine test_bcast_char
 

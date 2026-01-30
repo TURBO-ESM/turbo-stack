@@ -19,7 +19,7 @@ contains
 
     integer(kind=int32), parameter :: len1 = 20
     real(kind=real64), parameter :: one = 1.0, zero = 0.0
-    real(kind=real64) :: rank,actual
+    real(kind=real64) :: rank, actual
 
     rank = dble(this%getProcessRank())
 
@@ -32,7 +32,7 @@ contains
     call broadcast(value,len1)
 
     actual = value(5)
-    @assertEqual(actual, zero)
+    @assertEqual(zero, actual)
 
     value = rank
     !--------------------------------------
@@ -41,7 +41,7 @@ contains
     call broadcast(value,len1,from_PE=1)
 
     actual = value(5)
-    @assertEqual(actual, one)
+    @assertEqual(one, actual)
 
     deallocate(value)
 
