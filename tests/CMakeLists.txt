@@ -48,27 +48,31 @@ endif()
 
 # Only set AMREX_LIB if needed; else keep undefined
 if("${INFRA}" STREQUAL "TIM")
-  find_package(AMReX REQUIRED)
-  set(AMREX_LIB AMReX::amrex)
+  # Even if AMReX is installed, need to explicitly require Fortran API installed.
+  find_package(AMReX REQUIRED COMPONENTS FORTRAN)
+  set(AMREX_LIB AMReX::Flags_Fortran)
 endif()
 
 include(cmake/add_mom_test.cmake)
 
 enable_testing()
 
-# Load external dependencies not provided by cmake modules.
+# Load and configure external dependencies not provided by cmake modules.
 add_library(BACKEND_lib STATIC IMPORTED)
 set_target_properties(BACKEND_lib PROPERTIES
   IMPORTED_LOCATION ${PATH_TO_BACKEND_LIB}/lib${INFRA}.a
-  INTERFACE_INCLUDE_DIRECTORIES ${PATH_TO_BACKEND_LIB}
+  LINKER_LANGUAGE Fortran # Need to force the linker language due to intel thinking this
+                          # is a C library from linking against NetCDF_C and tries to
+                          # link with the incorrect linker.
 )
+target_include_directories(BACKEND_lib INTERFACE ${PATH_TO_BACKEND_LIB})
 target_link_libraries(BACKEND_lib INTERFACE NetCDF::NetCDF_Fortran NetCDF::NetCDF_C ${AMREX_LIB})
 
 add_library(MOM_Infra STATIC IMPORTED)
 set_target_properties(MOM_Infra PROPERTIES
   IMPORTED_LOCATION ${PATH_TO_LIBINFRA}/libinfra-${INFRA}.a
-  INTERFACE_INCLUDE_DIRECTORIES ${PATH_TO_LIBINFRA}
 )
+target_include_directories(MOM_Infra INTERFACE ${PATH_TO_LIBINFRA})
 target_link_libraries(MOM_Infra INTERFACE BACKEND_lib)
 
 # Store template pFUnit test as BASE_MOM_PFUNIT_INFRA
