@@ -8,12 +8,9 @@ function(find_mom_dependencies)
   include(CMakeParseArguments)
   cmake_parse_arguments(${prefix} "${optionalValues}" "${singleValues}" "${multiValues}" ${ARGN})
 
-  if(NOT DEFINED TEMP_INFRA_TYPE)
-    
-  elseif(NOT DEFINED TEMP_BACKEND_PATH)
-
-  elseif(NOT DEFINED TEMP_INFRA_PATH)
-
+  set(SUPPORTED_INFRAS "TIM" "FMS2")
+  if(NOT TEMP_INFRA IN_LISTS SUPPORTED_INFRAS)
+    message(FATAL_ERROR "In ${CMAKE_CURRENT_FUNCTION}, INFRA parameter given is ${TEMP_INFRA}.  Expected one of ${SUPPORTED_INFRAS}")
   endif()
 
   # Support NetCDF builds that don't provide cmake configs.
