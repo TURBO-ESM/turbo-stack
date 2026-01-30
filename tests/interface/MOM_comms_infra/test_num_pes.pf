@@ -5,22 +5,25 @@ module test_num_pes
   implicit none
 
   @testCase()
-  type, extends(MOM_MPI_test_case) :: MOM_num_pes_test_case
-  end type MOM_num_pes_test_case
+  type, extends(MOM_MPI_test_case) :: testcase_num_pes
+  end type testcase_num_pes
 
 contains
 
   @test(npes=[4])
   subroutine test_numPEs(this)
-    class (MOM_num_pes_test_case), intent(inout) :: this
+    class (testcase_num_pes), intent(inout) :: this
     integer :: npesTIM
     integer :: npes
+
 
     npesTIM = num_PEs()
 
     npes = this%getNumProcesses()
 
     @assertEqual(npes, npesTIM)
+
+
   end subroutine test_numPEs
    
 end module test_num_pes
