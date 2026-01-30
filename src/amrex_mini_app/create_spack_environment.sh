@@ -213,6 +213,10 @@ if [[ "${DOXYGEN:-0}" == "1" ]]; then
     spack add doxygen %gcc
 fi
 
+if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
+   spack add lcov
+fi
+
 if [[ "$machine" == "generic" ]]; then
 
     spack config add packages:mpi:require:${mpi_spec}

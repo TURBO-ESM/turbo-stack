@@ -14,6 +14,22 @@ enable_testing()
 
 find_package(HDF5 REQUIRED COMPONENTS C)
 
+# Enable code coverage flags if requested
+option(CODE_COVERAGE "Enable code coverage flags" OFF)
+if(CODE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        message(STATUS "Code coverage for gnu compiler enabled")
+        add_compile_options(--coverage)
+        add_link_options(--coverage)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(STATUS "Code coverage flor clang compiler enabled")
+        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+    else()
+        message(STATUS "Code coverage not enabled. Only supported for GCC and Clang.")
+    endif()
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(GTestHelpers)
 
