@@ -321,15 +321,20 @@ echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
 echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
-LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 
+LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
+INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
+if [[ "${INFRA}" == "TIM" ]]; then
+  INCLUDE_OPTS="${INCLUDE_OPTS} -I../amrex/install/include"
+  LINKING_FLAGS="${LINKING_FLAGS} -L../amrex/install/lib -lamrex"
+fi
 # 2) Build MOM6 infra
 cd ${BLD_PATH}
 mkdir -p MOM6-infra
 cd MOM6-infra
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
@@ -356,7 +361,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
