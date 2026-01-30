@@ -37,7 +37,7 @@ contains
     call broadcast(value,from_PE=1)
 
     actual = value
-    @assertEqual(value, one)
+    @assertEqual(actual, one)
 
   end subroutine test_bcast_real_0D
 
