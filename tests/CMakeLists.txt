@@ -5,7 +5,6 @@ project(TURBOUnitTests LANGUAGES Fortran)
 enable_language(CXX C)
 
 find_package(PFUNIT REQUIRED)
-find_package(MPI REQUIRED)
 
 # Required variables needed to be set by user.
 set(INFRA "" CACHE STRING "High level name of infrastructure library to use for linking.")
@@ -42,6 +41,8 @@ if(NOT NetCDF_FOUND)
 
   pkg_search_module(NetCDF_Fortran REQUIRED IMPORTED_TARGET netcdf-fortran)
   add_library(NetCDF::NetCDF_Fortran ALIAS PkgConfig::NetCDF_Fortran)
+else()
+  message(STATUS "")
 endif()
 
 # Only set AMREX_LIB if needed; else keep undefined
