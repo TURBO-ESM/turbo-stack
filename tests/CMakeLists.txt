@@ -11,7 +11,7 @@ set(INFRA "" CACHE STRING "High level name of infrastructure library to use for 
 set(PATH_TO_BACKEND_LIB "" CACHE STRING "Path to MOM6 backend library that conatins lib${INFRA}.a and needed *.mod files")
 set(PATH_TO_LIBINFRA "" CACHE STRING "Path to MOM6 infra library that contains libinfra-${INFRA}.a and needed *.mod files")
 
-# Check if required inputs are set.
+# Check if required variables are set.
 if(NOT INFRA)
   message(FATAL_ERROR "INFRA not set.  Please reconfigure ${CMAKE_PROJECT_NAME} setting -DINFRA={FMS2,TIM}")
 endif()
@@ -50,7 +50,7 @@ endif()
 if("${INFRA}" STREQUAL "TIM")
   # Even if AMReX is installed, need to explicitly require Fortran API installed.
   find_package(AMReX REQUIRED COMPONENTS FORTRAN)
-  set(AMREX_LIB AMReX::Flags_Fortran)
+  set(AMREX_LIB AMReX::amrex)
 endif()
 
 include(cmake/add_mom_test.cmake)
