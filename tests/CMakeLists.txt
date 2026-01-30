@@ -26,14 +26,15 @@ message(STATUS "INFRA = ${INFRA}")
 message(STATUS "PATH_TO_BACKEND_LIB = ${PATH_TO_BACKEND_LIB}")
 message(STATUS "PATH_TO_LIBINFRA = ${PATH_TO_LIBINFRA}")
 
-# Temporary fix to support NetCDF builds that don't support cmake.
+# Support NetCDF builds that don't provide cmake configs.
 message(STATUS "Detecting NetCDF install via find_package")
 find_package(NetCDF QUIET COMPONENTS C Fortran)
 if(NOT NetCDF_FOUND)
   message(STATUS "Unable to detect NetCDF install via find_package.  Re-trying with pkg-config.")
   find_package(PkgConfig REQUIRED)
 
-  ## Most older installs of NetCDF usually have a pkgconfig directory with .pc files
+  # Most older installs of NetCDF usually have a pkgconfig directory with .pc files
+  # Scans the same prefix directories as find_package().
   pkg_search_module(NetCDF_C REQUIRED IMPORTED_TARGET netcdf)
   message(STATUS "Found NetCDF_C via pkg-config")
   # Add an alias to match the official NetCDF CMake target.  This allows for linking
@@ -60,11 +61,13 @@ add_library(BACKEND_lib STATIC IMPORTED)
 set_target_properties(BACKEND_lib PROPERTIES
   IMPORTED_LOCATION ${PATH_TO_BACKEND_LIB}/lib${INFRA}.a
   INTERFACE_INCLUDE_DIRECTORIES ${PATH_TO_BACKEND_LIB}
+  INTERFACE_LINK_LIBRARIES NetCDF::NetCDF_Fortran NetCDF::NetCDF_C ${AMREX_LIB}
 )
-add_library(BACKEND_Infra STATIC IMPORTED)
-set_target_properties(BACKEND_Infra PROPERTIES
+add_library(MOM_Infra STATIC IMPORTED)
+set_target_properties(MOM_Infra PROPERTIES
   IMPORTED_LOCATION ${PATH_TO_LIBINFRA}/libinfra-${INFRA}.a
   INTERFACE_INCLUDE_DIRECTORIES ${PATH_TO_LIBINFRA}
+  INTERFACE_LINK_LIBRARIES BACKEND_lib
 )
 
 # Store template pFUnit test as BASE_MOM_PFUNIT_INFRA
