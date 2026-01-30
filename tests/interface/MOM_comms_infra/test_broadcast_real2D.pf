@@ -17,9 +17,9 @@ contains
 
     real(kind=real64),allocatable :: value(:,:)
 
-    integer(kind=int32), parameter :: len1 = 20, len2=7
+    integer(kind=int32), parameter :: len1 = 20, len2 = 7
     real(kind=real64), parameter :: one=1.0, zero=0.0
-    real(kind=real64) :: rank,actual
+    real(kind=real64) :: rank, actual
 
     rank = dble(this%getProcessRank())
 

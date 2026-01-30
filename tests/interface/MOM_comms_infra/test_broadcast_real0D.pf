@@ -16,7 +16,7 @@ contains
     class (testcase_broadcast), intent(inout) :: this
     real(kind=real64) :: value
     real(kind=real64) :: rank, actual
-    real(kind=real64), parameter :: zero = 0.0, one=1.0
+    real(kind=real64), parameter :: zero = 0.0, one = 1.0
 
     rank = dble(this%getProcessRank())
 

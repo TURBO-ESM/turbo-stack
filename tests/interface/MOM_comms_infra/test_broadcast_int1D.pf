@@ -16,8 +16,8 @@ contains
     class (testcase_broadcast), intent(inout) :: this
     integer(kind=int32),allocatable :: value(:)
     integer(kind=int32), parameter :: len1 = 20
-    integer(kind=int32) :: rank,actual
-    integer(kind=int32), parameter :: zero=0, one=1
+    integer(kind=int32) :: rank, actual
+    integer(kind=int32), parameter :: zero = 0, one = 1
 
     allocate(value(len1))
 

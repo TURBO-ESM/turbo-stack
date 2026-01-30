@@ -17,7 +17,7 @@ contains
 
     real(kind=real64),allocatable :: value(:,:,:)
 
-    integer(kind=int32), parameter :: len1 = 20, len2=7, len3=5
+    integer(kind=int32), parameter :: len1 = 20, len2 = 7, len3=5
     real(kind=real64), parameter :: one=1.0,zero=0.0
     real(kind=real64) :: rank,actual
 
