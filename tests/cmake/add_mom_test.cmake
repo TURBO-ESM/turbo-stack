@@ -29,7 +29,10 @@ function(add_mom_test TEST_TARGET_NAME)
     MAX_PES ${MOM_MAX_PES}
   )
 
-  # Temporary fix to force cmake to use the Fortran linker when using Intel OneAPI.
+  # Fix to force cmake to use the Fortran linker when using Intel compilers
+  # even when all dependencies are marked as Fortran dependencies.
+  # Is not needed with non-namespaced dependencies (ie, BACKEND_Lib vs MOM::BACKEND_Lib)
+  # when those dependencies are marked as Fortran projects.
   set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
 
   # Add real data type flags and support multiple options being passed
