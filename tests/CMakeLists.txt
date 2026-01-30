@@ -35,14 +35,14 @@ if(NOT NetCDF_FOUND)
 
   ## Most older installs of NetCDF usually have a pkgconfig directory with .pc files
   pkg_search_module(NetCDF_C REQUIRED IMPORTED_TARGET netcdf)
+  message(STATUS "Found NetCDF_C via pkg-config")
   # Add an alias to match the official NetCDF CMake target.  This allows for linking
   # against the same target without changing the source code.
   add_library(NetCDF::NetCDF_C ALIAS PkgConfig::NetCDF_C)
 
   pkg_search_module(NetCDF_Fortran REQUIRED IMPORTED_TARGET netcdf-fortran)
+  message(STATUS "Found NetCDF_Fortran via pkg-config")
   add_library(NetCDF::NetCDF_Fortran ALIAS PkgConfig::NetCDF_Fortran)
-else()
-  message(STATUS "")
 endif()
 
 # Only set AMREX_LIB if needed; else keep undefined
