@@ -24,10 +24,13 @@ function(add_mom_test TEST_TARGET_NAME)
 
   add_pfunit_ctest(${TEST_TARGET_NAME}
     TEST_SOURCES "${MOM_PFUNIT_FILE}"
-    LINK_LIBRARIES MOM_Infra
+    LINK_LIBRARIES MOM::Interface
     OTHER_SOURCES "${BASE_MOM_PFUNIT_INFRA}"
     MAX_PES ${MOM_MAX_PES}
   )
+
+  # Temporary fix to force cmake to use the Fortran linker when using Intel OneAPI.
+  set_property(TARGET ${TEST_TARGET_NAME} PROPERTY LINKER_LANGUAGE Fortran)
 
   # Add real data type flags and support multiple options being passed
   # (ex. when `FC_AUTO_R8 = -fdefault-real-8 -fdefault-double-8` needs
