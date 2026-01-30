@@ -1,4 +1,5 @@
 add_mom_test(test_num_pes PFUNIT_FILE test_num_pes.pf)
+add_mom_test(test_root_pe PFUNIT_FILE test_root_pe.pf)
 add_mom_test(test_broadcast_int320D PFUNIT_FILE test_broadcast_int320D.pf)
 add_mom_test(test_broadcast_int640D PFUNIT_FILE test_broadcast_int640D.pf)
 add_mom_test(test_broadcast_char PFUNIT_FILE test_broadcast_char.pf)
