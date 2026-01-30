@@ -53,10 +53,6 @@ if("${INFRA}" STREQUAL "TIM")
   set(AMREX_LIB AMReX::amrex)
 endif()
 
-include(cmake/add_mom_test.cmake)
-
-enable_testing()
-
 # Load and configure external dependencies not provided by cmake modules.
 add_library(BACKEND_lib STATIC IMPORTED)
 set_target_properties(BACKEND_lib PROPERTIES
@@ -74,6 +70,10 @@ set_target_properties(MOM_Infra PROPERTIES
 )
 target_include_directories(MOM_Infra INTERFACE ${PATH_TO_LIBINFRA})
 target_link_libraries(MOM_Infra INTERFACE BACKEND_lib)
+
+include(cmake/add_mom_test.cmake)
+
+enable_testing()
 
 # Store template pFUnit test as BASE_MOM_PFUNIT_INFRA
 file(REAL_PATH MOM_test_case.F90 BASE_MOM_PFUNIT_INFRA)
