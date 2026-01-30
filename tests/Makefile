@@ -1,10 +1,5 @@
 include $(TEMPLATE)
 
-# make does not allow cyclical variables so need to create temporary copies
-# make does not allow VAR=VAL cmake ...
-# (thinks VR=VAL is the command and results in a command not found exception)
-build_unit_tests: export Fortran_REAL_FLAG=$(FC_AUTO_R8)
-
 # Constructs cmake prefix paths to be broken across multiple smaller lines.
 # CMake breaks when trying to pass multiple lines into CMAKE_PREFIX_PATH
 # via Makefiles, ex:
@@ -21,6 +16,7 @@ build_unit_tests:
 		-DINFRA=${LIB_INFRA}                             \
 		-DPATH_TO_BACKEND_LIB="${PATH_TO_BACKEND_LIB}"   \
 		-DPATH_TO_LIBINFRA="${PATH_TO_LIBINFRA}"         \
+		-DCOMPILER_REAL_FLAGS="$(FC_AUTO_R8)"            \
 		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}           \
 		-DCMAKE_PREFIX_PATH="$(CMAKE_PREFIX_PATHS)"      \
 		-DCMAKE_Fortran_COMPILER=$(shell which $(FC))    \
