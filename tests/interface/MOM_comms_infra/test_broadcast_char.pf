@@ -39,7 +39,7 @@ contains
     if(this%getProcessRank() .eq. 1) then
        value = truth
     else
-       value = '   '
+       value = ''
     endif
 
     length = strlen
