@@ -61,7 +61,7 @@ TEST_F(CartesianGridTest, Constructor)
     EXPECT_THROW(CartesianGrid grid(geom, n_cell_x, n_cell_y, 0), std::invalid_argument);
 }
 
-TEST_F(CartesianGridTest, Valid_Indices)
+TEST_F(CartesianGridTest, ValidIndices)
 {
     // Grid with 2 cells in each direction
     const std::size_t n_cell_x = 2;
@@ -145,7 +145,7 @@ TEST_F(CartesianGridTest, Valid_Indices)
     EXPECT_FALSE(grid.ValidKFace(0, 0, grid.NNodeZ()));
 }
 
-TEST_F(CartesianGridTest, Grid_Locations)
+TEST_F(CartesianGridTest, GridLocations)
 {
     // Grid with 2 cells in each direction
     const std::size_t n_cell_x = 2;

@@ -16,6 +16,9 @@
 [submodule "submodules/amrex"]
 	path = submodules/amrex
 	url = https://github.com/AMReX-Codes/amrex.git
+[submodule "submodules/TIM"]
+	path = submodules/TIM
+	url = https://github.com/TURBO-ESM/TIM
 [submodule "submodules/pFUnit"]
 	path = submodules/pFUnit
 	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git

@@ -5,9 +5,9 @@ ROOTDIR=$(pwd -P)
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
-FMS_ROOT=${ROOTDIR}/submodules/FMS
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
+INFRA_ROOT=${ROOTDIR}/submodules/FMS
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
 UNIT_TEST_ROOT=${ROOTDIR}/tests
@@ -22,31 +22,35 @@ DEBUG=0 # False
 CODECOV=0 # False
 OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
+CMAKE_BUILD_TYPE="Release"
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --help)
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov] [--offload] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--infra <infra>] [--codecov] [--offload] [--debug] [--override]"
             echo "Build script for MOM6 with FMS."
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
             echo "  --unit-tests-only            Build infrastructure unit tests rather than MOM6 executable (default: false)"
+            echo "  --offload                    Enable GPU offload instead of host only CPU mode (default: false)"
+            echo "  --amrex <path_to_amrex>      Specifies the path to search for a pre-installed build of amrex"
+            echo "  --pfunit <path_to_pfunit>    Specified the path to search for a pre-installed build of pfunit"
             echo "  --jobs <num_jobs>            Sets the number of jobs to use for make/cmake calls."
             echo "Examples:"
             echo "  $0 --compiler nvhpc --machine ncar"
             echo "  $0 --memory-mode dynamic_nonsymmetric"
             echo "  $0 --compiler gnu --codecov"
             exit 0 ;;
-        --compiler) 
+        --compiler)
             COMPILER="$2"
             shift ;;
-        --machine) 
+        --machine)
             MACHINE="$2"
             shift ;;
         --memory-mode)
@@ -57,11 +61,18 @@ while [[ "$#" -gt 0 ]]; do
         --offload)
             OFFLOAD=1 ;;
         --debug)
-            DEBUG=1 ;;
+            DEBUG=1
+            CMAKE_BUILD_TYPE="Debug" ;;
         --override)
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
+            if [[ "${INFRA}" == "TIM" ]]; then
+              INFRA_ROOT=${ROOTDIR}/submodules/TIM
+            elif [[ "${INFRA}" != "FMS2" ]]; then
+              echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
+              exit 1
+            fi
             shift ;;
         --jobs)
             JOBS="$2"
@@ -92,12 +103,17 @@ while [[ "$#" -gt 0 ]]; do
               echo "--pfunit path ${PFUNIT_INSTALL_PATH} not valid"
               exit 1
             fi
+            if [[ ! -d "${PFUNIT_INSTALL_PATH}/include" && ! -d "${PFUNIT_INSTALL_PATH}/lib" ]]; then
+              echo "${PFUNIT_INSTALL_PATH} is valid but not built/installed (include and lib directories missing."
+              echo "Please follow the pFUnit instructions and re-run the TURBO build."
+              exit 1
+            fi
             shift ;;
         --unit-tests-only)
             UNIT_TESTS_ONLY=1 ;;
-        *) 
+        *)
             echo "Unknown parameter passed: $1"
-            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override]"
+            echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--codecov]  [--offload] [--debug] [--override] [--pfunit <path_to_pfunit>] [--amrex <path_to_amrex>] [--unit-tests-only]"
             exit 1 ;;
     esac
     shift
@@ -265,9 +281,10 @@ if [[ "${INFRA}" == "TIM" ]]; then
     TEMPLATE=${TEMPLATE}                     \
     JOBS=${JOBS}                             \
     AMREX_ROOT=${AMREX_ROOT}                 \
-    BLD_PATH=$(pwd)/build                    \
+    AMREX_BLD_PATH=$(pwd)/build              \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}     \
     AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH} \
-       make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
+      make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
   fi
   AMREX_LINK_FLAGS="-L${AMREX_INSTALL_PATH}/lib -lamrex"
   AMREX_INCLUDE_FLAGS="-I${AMREX_INSTALL_PATH}/include"
@@ -275,7 +292,7 @@ fi
 
 # 0a) Build pFUnit if needed
 if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
-  if [[ ! -v "${PFUNIT_INSTALL_PATH}" ]]; then
+  if [[ -z "${PFUNIT_INSTALL_PATH}" ]]; then
     echo "Path to pFUnit not declared.  Building pFUnit through submodules."
     cd "${BLD_PATH}"
     mkdir -p pFUnit
@@ -287,29 +304,24 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
     TEMPLATE=${TEMPLATE}                       \
     JOBS=${JOBS}                               \
     PFUNIT_ROOT=${PFUNIT_ROOT}                 \
-    BLD_PATH=$(pwd)/build                      \
+    PFUNIT_BLD_PATH=$(pwd)/build               \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \
     PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
-       make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
+      make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
   fi
 fi
 
 # 1) Build Underlying Infrastructure Library
-if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
-  cd ${BLD_PATH}
-  mkdir -p FMS
-  cd FMS
-  ${MKMF_ROOT}/list_paths ${FMS_ROOT}
-  # We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-  echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-  echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p libfms.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
-  make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} libfms.a
-  LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../FMS -lfms"
-else
-  echo "ERROR: Unknown infrastructure ('${INFRA}' is not supported choice)"
-  echo "       Valid options are 'FMS2' or 'TIM'"
-  exit 1
-fi
+cd ${BLD_PATH}
+mkdir -p ${INFRA}
+cd ${INFRA}
+${MKMF_ROOT}/list_paths ${INFRA_ROOT}
+# We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
+echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
+echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
+LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 
 # 2) Build MOM6 infra
 cd ${BLD_PATH}
@@ -317,7 +329,7 @@ mkdir -p MOM6-infra
 cd MOM6-infra
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS' -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} ${LIBINFRA}
 
 # 3) Build unit tests or MOM6
@@ -327,17 +339,16 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   cd unit-tests
 
   # Redeclaring variables needed because they are not exported
-  TEMPLATE=${TEMPLATE}                       \
-  JOBS=${JOBS}                               \
-  CRAY_MPICH_PREFIX=${CRAY_MPICH_PREFIX}     \
-  TEST_BUILD_DIR=$(pwd)                      \
-  PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
-  AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}   \
-  NETCDFF_PREFIX=$(nf-config --prefix)       \
-  NETCDF_LIB_DIR=$(nc-config --libdir)       \
-  NETCDF_PREFIX=$(nc-config --prefix)        \
-  BLD_PATH_ROOT=${BLD_PATH}                  \
-  LIBINFRA=${INFRA}                          \
+  TEMPLATE=${TEMPLATE}                                   \
+  JOBS=${JOBS}                                           \
+  TEST_BUILD_DIR=$(pwd)                                  \
+  PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH}             \
+  AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}               \
+  NetCDF_C_PREFIX_PATH=$(nc-config --prefix)             \
+  NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)       \
+  BLD_PATH_ROOT=${BLD_PATH}                              \
+  LIB_INFRA=${INFRA}                                      \
+  CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
   cd ${BLD_PATH}
@@ -345,7 +356,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o '-I../FMS -I../MOM6-infra' -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "-I../${INFRA} -I../MOM6-infra" -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
