@@ -18,8 +18,7 @@ contains
     real(kind=real64),allocatable :: value(:,:)
 
     integer(kind=int32), parameter :: len1 = 20, len2 = 7
-    real(kind=real64), parameter :: one = 1.0, zero = 0.0
-    real(kind=real64) :: rank, actual
+    real(kind=real64) :: rank, actual, expected
 
     rank = dble(this%getProcessRank())
 
@@ -31,8 +30,9 @@ contains
     !--------------------------------------
     call broadcast(value,len1*len2)
 
-    actual = value(5,5)
-    @assertEqual(zero, actual)
+    actual = count(value .ne. 0.0)
+    expected = 0
+    @assertEqual(expected, actual)
 
     value = rank
     !--------------------------------------
@@ -40,8 +40,9 @@ contains
     !--------------------------------------
     call broadcast(value,len1*len2, from_PE=1)
 
-    actual = value(5,5)
-    @assertEqual(one, actual)
+    actual = count(value .ne. 1.0)
+    expected = 0
+    @assertEqual(expected, actual)
 
     deallocate(value)
 

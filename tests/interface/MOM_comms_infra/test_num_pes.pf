@@ -14,15 +14,13 @@ contains
   subroutine test_numPEs(this)
     class (testcase_num_pes), intent(inout) :: this
     integer :: npesTIM
-    integer :: npes
-
+    integer :: expected 
 
     npesTIM = num_PEs()
 
-    npes = this%getNumProcesses()
+    expected = this%getNumProcesses()
 
-    @assertEqual(npes, npesTIM)
-
+    @assertEqual(expected, npesTIM)
 
   end subroutine test_numPEs
    

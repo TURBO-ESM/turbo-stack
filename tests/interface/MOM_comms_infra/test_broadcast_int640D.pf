@@ -14,9 +14,8 @@ contains
   @test(npes=[4])
   subroutine test_bcast_int64_0D(this)
     class (testcase_broadcast), intent(inout) :: this
-    integer(kind=int64) :: value 
-    integer(kind=int64) :: rank, actual
-    integer(kind=int64), parameter :: zero = 0, one = 1
+    integer(kind=int64) :: value, expected 
+    integer(kind=int64) :: rank
 
     rank = this%getProcessRank()
 
@@ -26,8 +25,8 @@ contains
     !--------------------------------------
     call broadcast(value)
 
-    actual = value
-    @assertEqual(zero, actual)
+    expected = 0
+    @assertEqual(expected, value)
 
     value = rank
     !---------------------------------
@@ -36,8 +35,8 @@ contains
     !---------------------------------
     call broadcast(value, from_PE=1)
 
-    actual = value
-    @assertEqual(one, actual)
+    expected = 1
+    @assertEqual(expected, value)
 
   end subroutine test_bcast_int64_0D
 

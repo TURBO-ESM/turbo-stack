@@ -16,8 +16,7 @@ contains
     class (testcase_broadcast), intent(inout) :: this
     integer(kind=int32),allocatable :: value(:)
     integer(kind=int32), parameter :: len1 = 20
-    integer(kind=int32) :: rank, actual
-    integer(kind=int32), parameter :: zero = 0, one = 1
+    integer(kind=int32) :: rank, actual, expected
 
     allocate(value(len1))
 
@@ -29,8 +28,9 @@ contains
     !--------------------------------------
     call broadcast(value,len1)
 
-    actual = value(5)
-    @assertEqual(zero, actual)
+    actual = count(value .ne. 0)
+    expected = 0
+    @assertEqual(expected, actual)
 
     value = rank
     !---------------------------------
@@ -39,8 +39,9 @@ contains
     !---------------------------------
     call broadcast(value,len1,from_PE=1)
 
-    actual = value(5)
-    @assertEqual(one, actual)
+    actual = count(value .ne. 1)
+    expected = 0
+    @assertEqual(expected, actual)
     deallocate(value)
 
   end subroutine test_bcast_int1D

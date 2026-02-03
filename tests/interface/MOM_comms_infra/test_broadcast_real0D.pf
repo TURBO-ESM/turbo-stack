@@ -14,9 +14,7 @@ contains
   @test(npes=[4])
   subroutine test_bcast_real_0D(this)
     class (testcase_broadcast), intent(inout) :: this
-    real(kind=real64) :: value
-    real(kind=real64) :: rank, actual
-    real(kind=real64), parameter :: zero = 0.0, one = 1.0
+    real(kind=real64) :: value, expected, rank
 
     rank = dble(this%getProcessRank())
 
@@ -26,8 +24,8 @@ contains
     !--------------------------------------
     call broadcast(value)
 
-    actual = value
-    @assertEqual(zero, actual)
+    expected = 0.0
+    @assertEqual(expected, value)
 
     value = rank
     !---------------------------------
@@ -36,8 +34,8 @@ contains
     !---------------------------------
     call broadcast(value, from_PE=1)
 
-    actual = value
-    @assertEqual(one, actual)
+    expected = 1.0
+    @assertEqual(expected, value)
 
   end subroutine test_bcast_real_0D
 

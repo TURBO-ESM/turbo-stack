@@ -15,14 +15,14 @@ contains
     class (testcase_broadcast), intent(inout) :: this
     integer, parameter :: strlen=20
     character(len=strlen) :: value (1)
-    character(len=strlen), parameter :: truth = 'hello'
+    character(len=strlen), parameter :: expected = 'hello'
     integer :: length
 
     !--------------------------------------
     ! Broadcast from the default root rank
     !--------------------------------------
     if(this%getProcessRank() .eq. 0) then
-       value = truth
+       value = expected
     else
        value = ''
     endif
@@ -30,14 +30,14 @@ contains
     length = strlen
     call broadcast(value,length)
 
-    @assertEqual(trim(truth),trim(value(1)))
+    @assertEqual(trim(expected),trim(value(1)))
 
     !---------------------------------
     ! Broadcast from non-default rank
     ! using optional argument from_PE
     !---------------------------------
     if(this%getProcessRank() .eq. 1) then
-       value = truth
+       value = expected
     else
        value = ''
     endif
@@ -45,7 +45,7 @@ contains
     length = strlen
     call broadcast(value,length,from_PE=1)
 
-    @assertEqual(trim(truth),trim(value(1)))
+    @assertEqual(trim(expected),trim(value(1)))
 
   end subroutine test_bcast_char
 
