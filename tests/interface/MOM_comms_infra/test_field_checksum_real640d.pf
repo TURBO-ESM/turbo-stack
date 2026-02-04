@@ -16,7 +16,7 @@ contains
     class (testcase_broadcast), intent(inout) :: this
 
     real,                parameter :: field             = 0.5
-    integer(kind=int64), parameter :: expected_checksum = -36028797018963968
+    integer(kind=int64), parameter :: expected_checksum = -36028797018963968_int64
     integer(kind=int64)            :: actual_checksum
     
     actual_checksum = field_chksum(field)
