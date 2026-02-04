@@ -1,0 +1,34 @@
+module test_sum_across_pes_int32_0d
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  use iso_fortran_env, only : int32
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: MOM_sum_across_pes_test_case
+  end type MOM_sum_across_pes_test_case
+
+contains
+
+  @test(npes=[4])
+  subroutine test_SumAcrossPEs(this)
+    class (MOM_sum_across_pes_test_case), intent(inout) :: this
+    integer(kind=int32) :: initial_local_value = 1
+    integer(kind=int32) :: npes
+    integer(kind=int32) :: expected_global_sum
+    integer(kind=int32) :: actual_global_sum
+
+    npes = this%getNumProcesses()
+    expected_global_sum = npes * initial_local_value
+
+    actual_global_sum = initial_local_value
+    !sum_across_PEs_int32_0d(actual_global_sum)
+    call sum_across_PEs_int4_0d(actual_global_sum) ! The sum across PEs function for int32 is named int4. The implementation assumes that the value is a int32. 
+    !actual_global_sum = expected_global_sum ! Temporary bypass of the sum function while it is being debugged.
+
+
+    @assertEqual(expected_global_sum, actual_global_sum)
+  end subroutine test_SumAcrossPEs
+   
+end module test_sum_across_pes_int32_0d
