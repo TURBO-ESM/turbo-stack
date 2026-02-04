@@ -1,5 +1,10 @@
 include $(TEMPLATE)
 
+PATCH_NOT_APPLIED := $(shell git -C ${PFUNIT_ROOT} apply --quiet --reverse --check ${PATCH_FILE}; echo $$?)
+ifneq ($(PATCH_NOT_APPLIED), 0)
+	_ := $(shell git -C ${PFUNIT_ROOT} apply --quiet ${PATCH_FILE})
+endif
+
 # Need -DSKIP_OPENMP=YES to support clang compiler bug
 # not being able to find OpenMP through CMake when calling find_package(PFUNIT)
 build_pfunit:

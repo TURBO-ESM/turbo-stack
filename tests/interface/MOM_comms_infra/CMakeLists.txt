@@ -1,4 +1,10 @@
 add_mom_test(test_num_pes PFUNIT_FILE test_num_pes.pf)
 
+add_mom_test(test_field_checksum_real640d PFUNIT_FILE test_field_checksum_real640d.pf)
+add_mom_test(test_field_checksum_real641d PFUNIT_FILE test_field_checksum_real641d.pf)
+add_mom_test(test_field_checksum_real642d PFUNIT_FILE test_field_checksum_real642d.pf)
+add_mom_test(test_field_checksum_real643d PFUNIT_FILE test_field_checksum_real643d.pf)
+add_mom_test(test_field_checksum_real644d PFUNIT_FILE test_field_checksum_real644d.pf)
+
 # Copy namelist file to output directory to satisfy FMS requirement
 configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
