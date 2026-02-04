@@ -14,29 +14,29 @@ contains
   @test(npes=[4])
   subroutine test_bcast_int64_0D(this)
     class (testcase_broadcast), intent(inout) :: this
-    integer(kind=int64) :: value, expected 
+    integer(kind=int64) :: actual, expected 
     integer(kind=int64) :: rank
 
     rank = this%getProcessRank()
 
-    value = rank
+    actual = rank
     !--------------------------------------
     ! Broadcast from the default root rank 
     !--------------------------------------
-    call broadcast(value)
+    call broadcast(actual)
 
     expected = 0
-    @assertEqual(expected, value)
+    @assertEqual(expected, actual)
 
-    value = rank
+    actual = rank
     !---------------------------------
     ! Broadcast from non-default rank
     ! using optional argument from_PE
     !---------------------------------
-    call broadcast(value, from_PE=1)
+    call broadcast(actual, from_PE=1)
 
     expected = 1
-    @assertEqual(expected, value)
+    @assertEqual(expected, actual)
 
   end subroutine test_bcast_int64_0D
 

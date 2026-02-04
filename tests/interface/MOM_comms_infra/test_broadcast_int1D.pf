@@ -14,35 +14,34 @@ contains
   @test(npes=[4])
   subroutine test_bcast_int1D(this)
     class (testcase_broadcast), intent(inout) :: this
-    integer(kind=int32),allocatable :: value(:)
+    integer(kind=int32),allocatable :: actual(:), expected(:)
     integer(kind=int32), parameter :: len1 = 20
-    integer(kind=int32) :: rank, actual, expected
+    integer(kind=int32) :: rank
 
-    allocate(value(len1))
+    allocate(actual(len1))
+    allocate(expected(len1))
 
     rank = this%getProcessRank()
 
-    value = rank
+    actual= rank
     !--------------------------------------
     ! Broadcast from the default root rank
     !--------------------------------------
-    call broadcast(value,len1)
+    call broadcast(actual,len1)
 
-    actual = count(value .ne. 0)
     expected = 0
     @assertEqual(expected, actual)
 
-    value = rank
+    actual = rank
     !---------------------------------
     ! Broadcast from non-default rank
     ! using optional argument from_PE
     !---------------------------------
-    call broadcast(value,len1,from_PE=1)
+    call broadcast(actual,len1,from_PE=1)
 
-    actual = count(value .ne. 1)
-    expected = 0
+    expected = 1
     @assertEqual(expected, actual)
-    deallocate(value)
+    deallocate(actual,expected)
 
   end subroutine test_bcast_int1D
 

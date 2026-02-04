@@ -14,7 +14,7 @@ contains
   subroutine test_bcast_char(this)
     class (testcase_broadcast), intent(inout) :: this
     integer, parameter :: strlen=20
-    character(len=strlen) :: value (1)
+    character(len=strlen) :: actual(1)
     character(len=strlen), parameter :: expected = 'hello'
     integer :: length
 
@@ -22,30 +22,30 @@ contains
     ! Broadcast from the default root rank
     !--------------------------------------
     if(this%getProcessRank() .eq. 0) then
-       value = expected
+       actual = expected
     else
-       value = ''
+       actual = ''
     endif
 
     length = strlen
-    call broadcast(value,length)
+    call broadcast(actual,length)
 
-    @assertEqual(trim(expected),trim(value(1)))
+    @assertEqual(trim(expected),trim(actual(1)))
 
     !---------------------------------
     ! Broadcast from non-default rank
     ! using optional argument from_PE
     !---------------------------------
     if(this%getProcessRank() .eq. 1) then
-       value = expected
+       actual = expected
     else
-       value = ''
+       actual = ''
     endif
 
     length = strlen
-    call broadcast(value,length,from_PE=1)
+    call broadcast(actual,length,from_PE=1)
 
-    @assertEqual(trim(expected),trim(value(1)))
+    @assertEqual(trim(expected),trim(actual(1)))
 
   end subroutine test_bcast_char
 
