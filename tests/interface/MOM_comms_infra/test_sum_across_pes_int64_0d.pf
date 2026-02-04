@@ -1,22 +1,21 @@
-
 module test_sum_across_pes_int64_0d
   use pfunit
   use MOM_coms_infra, only : sum_across_PEs
   use MOM_test_case
-  use iso_fortran_env, only : int64
+  use iso_fortran_env, only : int32, int64
   implicit none
 
   @testCase()
-  type, extends(MOM_MPI_test_case) :: MOM_sum_across_pes_test_case
-  end type MOM_sum_across_pes_test_case
+  type, extends(MOM_MPI_test_case) :: test_case_sum_across_pes
+  end type test_case_sum_across_pes
 
 contains
 
   @test(npes=[4])
   subroutine test_SumAcrossPEs(this)
-    class (MOM_sum_across_pes_test_case), intent(inout) :: this
-    integer(kind=int64) :: initial_local_value = 1
-    integer(kind=int64) :: npes
+    class (test_case_sum_across_pes), intent(inout) :: this
+    integer(kind=int64), parameter :: initial_local_value = 1
+    integer(kind=int32) :: npes
     integer(kind=int64) :: expected_global_sum
     integer(kind=int64) :: actual_global_sum
 

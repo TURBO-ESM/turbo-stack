@@ -1,4 +1,4 @@
-module test_sum_across_pes_int32_0d
+module test_sum_across_pes_int32_1d
   use pfunit
   use MOM_coms_infra, only : sum_across_PEs
   use MOM_test_case
@@ -16,16 +16,22 @@ contains
     class (test_case_sum_across_pes), intent(inout) :: this
     integer(kind=int32), parameter :: initial_local_value = 1
     integer(kind=int32) :: npes
-    integer(kind=int32) :: expected_global_sum
-    integer(kind=int32) :: actual_global_sum
+    integer(kind=int32), dimension(:), allocatable :: expected_global_sum
+    integer(kind=int32), dimension(:), allocatable :: actual_global_sum
 
     npes = this%getNumProcesses()
+    allocate(expected_global_sum(npes))
     expected_global_sum = npes * initial_local_value
 
+    allocate(actual_global_sum(npes))
     actual_global_sum = initial_local_value
-    call sum_across_PEs(actual_global_sum)
+    call sum_across_PEs(actual_global_sum, size(actual_global_sum))
 
     @assertEqual(expected_global_sum, actual_global_sum)
+
+    deallocate(expected_global_sum)
+    deallocate(actual_global_sum)
+
   end subroutine test_SumAcrossPEs
    
-end module test_sum_across_pes_int32_0d
+end module test_sum_across_pes_int32_1d
