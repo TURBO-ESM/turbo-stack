@@ -21,7 +21,7 @@ contains
     
     actual_checksum = field_chksum(field)
 
-    @assertEqual(expected_checksum, checksum)
+    @assertEqual(expected_checksum, actual_checksum)
   end subroutine field_checksum_real640d
 
 end module test_field_checksum_real640d
