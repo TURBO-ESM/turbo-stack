@@ -1,6 +1,6 @@
 module test_sum_across_pes_int32_0d
   use pfunit
-  use MOM_coms_infra
+  use MOM_coms_infra, only : sum_across_PEs
   use MOM_test_case
   use iso_fortran_env, only : int32
   implicit none
@@ -23,10 +23,7 @@ contains
     expected_global_sum = npes * initial_local_value
 
     actual_global_sum = initial_local_value
-    !sum_across_PEs_int32_0d(actual_global_sum)
-    call sum_across_PEs_int4_0d(actual_global_sum) ! The sum across PEs function for int32 is named int4. The implementation assumes that the value is a int32. 
-    !actual_global_sum = expected_global_sum ! Temporary bypass of the sum function while it is being debugged.
-
+    call sum_across_PEs(actual_global_sum)
 
     @assertEqual(expected_global_sum, actual_global_sum)
   end subroutine test_SumAcrossPEs
