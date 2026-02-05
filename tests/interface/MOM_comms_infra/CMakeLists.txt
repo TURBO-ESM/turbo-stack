@@ -1,4 +1,12 @@
 add_mom_test(test_num_pes PFUNIT_FILE test_num_pes.pf)
+add_mom_test(test_broadcast_int320D PFUNIT_FILE test_broadcast_int320D.pf)
+add_mom_test(test_broadcast_int640D PFUNIT_FILE test_broadcast_int640D.pf)
+add_mom_test(test_broadcast_char PFUNIT_FILE test_broadcast_char.pf)
+add_mom_test(test_broadcast_real0D PFUNIT_FILE test_broadcast_real0D.pf)
+add_mom_test(test_broadcast_int1D PFUNIT_FILE test_broadcast_int1D.pf)
+add_mom_test(test_broadcast_real1D PFUNIT_FILE test_broadcast_real1D.pf)
+add_mom_test(test_broadcast_real2D PFUNIT_FILE test_broadcast_real2D.pf)
+add_mom_test(test_broadcast_real3D PFUNIT_FILE test_broadcast_real3D.pf)
 
 add_mom_test(test_field_checksum_real640d PFUNIT_FILE test_field_checksum_real640d.pf)
 add_mom_test(test_field_checksum_real641d PFUNIT_FILE test_field_checksum_real641d.pf)
