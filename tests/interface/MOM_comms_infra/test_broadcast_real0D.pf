@@ -1,0 +1,43 @@
+module test_broadcast_real0D
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  use iso_fortran_env, only : real64
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_broadcast
+  end type testcase_broadcast
+
+contains
+
+  @test(npes=[4])
+  subroutine test_bcast_real_0D(this)
+    class (testcase_broadcast), intent(inout) :: this
+    real(kind=real64) :: value, expected, rank
+
+    rank = dble(this%getProcessRank())
+
+    value=rank
+    !--------------------------------------
+    ! Broadcast from the default root rank
+    !--------------------------------------
+    call broadcast(value)
+
+    expected = 0.0
+    @assertEqual(expected, value)
+
+    value = rank
+    !---------------------------------
+    ! Broadcast from non-default rank
+    ! using optional argument from_PE
+    !---------------------------------
+    call broadcast(value, from_PE=1)
+
+    expected = 1.0
+    @assertEqual(expected, value)
+
+  end subroutine test_bcast_real_0D
+
+
+end module test_broadcast_real0D

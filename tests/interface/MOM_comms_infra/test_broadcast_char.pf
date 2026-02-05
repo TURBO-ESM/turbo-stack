@@ -1,0 +1,52 @@
+module test_broadcast_char
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_broadcast
+  end type testcase_broadcast
+
+contains
+
+  @test(npes=[4])
+  subroutine test_bcast_char(this)
+    class (testcase_broadcast), intent(inout) :: this
+    integer, parameter :: strlen=20
+    character(len=strlen) :: actual(1)
+    character(len=strlen), parameter :: expected = 'hello'
+    integer :: length
+
+    !--------------------------------------
+    ! Broadcast from the default root rank
+    !--------------------------------------
+    if(this%getProcessRank() .eq. 0) then
+       actual = expected
+    else
+       actual = ''
+    endif
+
+    length = strlen
+    call broadcast(actual,length)
+
+    @assertEqual(trim(expected),trim(actual(1)))
+
+    !---------------------------------
+    ! Broadcast from non-default rank
+    ! using optional argument from_PE
+    !---------------------------------
+    if(this%getProcessRank() .eq. 1) then
+       actual = expected
+    else
+       actual = ''
+    endif
+
+    length = strlen
+    call broadcast(actual,length,from_PE=1)
+
+    @assertEqual(trim(expected),trim(actual(1)))
+
+  end subroutine test_bcast_char
+
+end module test_broadcast_char
