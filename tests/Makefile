@@ -6,6 +6,7 @@ include $(TEMPLATE)
 build_unit_tests: export BLD_PATH=$(BLD_PATH_ROOT)
 build_unit_tests: export INFRA=$(LIB_INFRA)
 build_unit_tests: export Fortran_REAL_FLAG=$(FC_AUTO_R8)
+build_unit_tests: export Fortran_INT_FLAG=$(FC_AUTO_I4)
 
 build_unit_tests:
 	cmake -S . -B ${TEST_BUILD_DIR}                                                                                    \
