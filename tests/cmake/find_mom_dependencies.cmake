@@ -9,7 +9,7 @@ function(find_mom_dependencies)
   cmake_parse_arguments(${prefix} "${optionalValues}" "${singleValues}" "${multiValues}" ${ARGN})
 
   set(SUPPORTED_INFRAS "TIM" "FMS2")
-  if(NOT TEMP_INFRA IN_LISTS SUPPORTED_INFRAS)
+  if(NOT TEMP_INFRA IN_LIST SUPPORTED_INFRAS)
     message(FATAL_ERROR "In ${CMAKE_CURRENT_FUNCTION}, INFRA parameter given is ${TEMP_INFRA}.  Expected one of ${SUPPORTED_INFRAS}")
   endif()
 
