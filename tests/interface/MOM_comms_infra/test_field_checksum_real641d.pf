@@ -15,16 +15,12 @@ contains
   subroutine field_checksum_real641d(this)
     class (field_checksum_1d_testcase), intent(inout) :: this
 
-    real, dimension(:), allocatable :: field
-    integer(kind=int64), parameter   :: expected_checksum = -90071992547409920_int64
-    integer(kind=int64)              :: actual_checksum
+    real                           :: field(5)          = 1.0
+    integer(kind=int64), parameter :: expected_checksum = -90071992547409920_int64
+    integer(kind=int64)            :: actual_checksum
 
-    allocate(field(5))
-    field = 1.0
     actual_checksum = field_chksum(field)
 
     @assertEqual(expected_checksum, actual_checksum)
-
-    deallocate(field)
   end subroutine field_checksum_real641d
 end module test_field_checksum_real641d
