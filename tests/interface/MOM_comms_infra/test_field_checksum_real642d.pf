@@ -6,14 +6,14 @@ module test_field_checksum_real642d
   implicit none
 
   @testCase()
-  type, extends(MOM_MPI_test_case) :: testcase_broadcast
-  end type testcase_broadcast
+  type, extends(MOM_MPI_test_case) :: field_checksum_2d_testcase
+  end type field_checksum_2d_testcase
 
 contains
 
   @test(npes=[4])
   subroutine field_checksum_real642d(this)
-    class (testcase_broadcast), intent(inout) :: this
+    class (field_checksum_2d_testcase), intent(inout) :: this
 
     real,                parameter :: field(5,5)        = 1.0
     integer(kind=int64), parameter :: expected_checksum = -450359962737049600_int64
