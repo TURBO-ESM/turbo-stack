@@ -9,8 +9,8 @@ function(find_mom_dependencies)
   cmake_parse_arguments(${prefix} "${optionalValues}" "${singleValues}" "${multiValues}" ${ARGN})
 
   set(SUPPORTED_INFRAS "TIM" "FMS2")
-  if(NOT TEMP_INFRA IN_LIST SUPPORTED_INFRAS)
-    message(FATAL_ERROR "In ${CMAKE_CURRENT_FUNCTION}, INFRA parameter given is ${TEMP_INFRA}.  Expected one of ${SUPPORTED_INFRAS}")
+  if(NOT TEMP_INFRA_TYPE IN_LIST SUPPORTED_INFRAS)
+    message(FATAL_ERROR "In ${CMAKE_CURRENT_FUNCTION}, INFRA parameter given is ${TEMP_INFRA_TYPE}.  Expected one of ${SUPPORTED_INFRAS}")
   endif()
 
   # Support NetCDF builds that don't provide cmake configs.
@@ -34,7 +34,7 @@ function(find_mom_dependencies)
   endif()
 
   # Only set AMREX_LIB if needed; else keep undefined
-  if("${INFRA}" STREQUAL "TIM")
+  if("${TEMP_INFRA_TYPE}" STREQUAL "TIM")
     # Even if AMReX is installed, need to explicitly require Fortran API installed.
     find_package(AMReX REQUIRED COMPONENTS FORTRAN)
     set(AMREX_LIB AMReX::amrex)
