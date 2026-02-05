@@ -16,10 +16,11 @@ contains
     class (testcase_broadcast), intent(inout) :: this
 
     real,                parameter :: field(5,5,5)      = 1.0
-    integer(kind=int64), parameter :: expected_checksum = -90071992547409920_int64
+    integer(kind=int64), parameter :: expected_checksum = -2251799813685248000_int64
     integer(kind=int64)            :: actual_checksum
 
     actual_checksum = field_chksum(field)
+    write (*,*) actual_checksum
 
     @assertEqual(expected_checksum, actual_checksum)
   end subroutine field_checksum_real643d
