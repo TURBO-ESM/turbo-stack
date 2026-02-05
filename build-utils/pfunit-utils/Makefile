@@ -1,5 +1,7 @@
 include $(TEMPLATE)
 
+# Required temporary patch to update MAX_LEN_INT_AS_STRING to
+# prevent runtime crashes when writing too large of int64 values.
 PATCH_NOT_APPLIED := $(shell git -C ${PFUNIT_ROOT} apply --quiet --reverse --check ${PATCH_FILE}; echo $$?)
 ifneq ($(PATCH_NOT_APPLIED), 0)
 	_ := $(shell git -C ${PFUNIT_ROOT} apply --quiet ${PATCH_FILE})
