@@ -15,7 +15,7 @@ contains
   subroutine field_checksum_real640d(this)
     class (field_checksum_0d_testcase), intent(inout) :: this
 
-    real,                parameter :: field             = 0.5
+    real                           :: field             = 0.5
     integer(kind=int64), parameter :: expected_checksum = -36028797018963968_int64
     integer(kind=int64)            :: actual_checksum
     
@@ -23,5 +23,4 @@ contains
 
     @assertEqual(expected_checksum, actual_checksum)
   end subroutine field_checksum_real640d
-
 end module test_field_checksum_real640d

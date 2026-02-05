@@ -15,7 +15,7 @@ contains
   subroutine field_checksum_real642d(this)
     class (field_checksum_2d_testcase), intent(inout) :: this
 
-    real,                parameter :: field(*,*)        = reshape([1.0], [5,5], pad=[1.0])
+    real                           :: field(5,5)        = reshape([1.0], [5,5], pad=[1.0])
     integer(kind=int64), parameter :: expected_checksum = -450359962737049600_int64
     integer(kind=int64)            :: actual_checksum
 
