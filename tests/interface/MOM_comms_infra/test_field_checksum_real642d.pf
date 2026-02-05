@@ -17,7 +17,7 @@ contains
 
     real,                parameter :: field(*,*)        = reshape([1.0], [5,5], pad=[1.0])
     integer(kind=int64), parameter :: expected_checksum = -450359962737049600_int64
-    integer(kind=int64)             :: actual_checksum
+    integer(kind=int64)            :: actual_checksum
 
     actual_checksum = field_chksum(field)
 
