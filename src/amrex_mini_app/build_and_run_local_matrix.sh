@@ -28,9 +28,7 @@ if [[ "${FRESH_BUILD:-0}" == "1" ]]; then
     echo "Will delete the existing build directory before each build."
 fi
 
-#compiler_list="gcc"
-compiler_list="llvm"
-#compiler_list="gcc llvm intel-oneapi-compilers"
+compiler_list="gcc llvm intel-oneapi-compilers"
 
 mpi_list="openmpi mpich"
 
