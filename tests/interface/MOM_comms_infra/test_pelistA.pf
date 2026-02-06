@@ -17,7 +17,7 @@ contains
     integer, allocatable :: saveList(:), singleList(:)
 
     !--------------------------------------------------------
-    ! This unit test tests the ability to deactive and reactivate 
+    ! This unit test tests the ability to deactivate and reactivate 
     ! collective operators using the Get_PElist() and Set_PElist() 
     ! subroutines.  Specifically it tests max_across_PEs when the 
     ! communicators are either the full set of MPI ranks or a split 

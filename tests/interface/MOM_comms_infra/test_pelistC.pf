@@ -13,7 +13,7 @@ contains
   @test(npes=[4])
   subroutine test_GetPElist(this)
     class (testcase_pelist), intent(inout) :: this
-    integer :: i, npes, rank, value
+    integer :: i, npes
     integer, allocatable :: expected(:), actual(:)
 
     !--------------------------------------------------------
@@ -22,7 +22,6 @@ contains
     !----------------------------------------------------------
 
     npes = this%getNumProcesses()
-    rank = this%getProcessRank()
 
     allocate(expected(0:npes-1))
     allocate(actual(0:npes-1))

@@ -20,7 +20,7 @@ contains
     !--------------------------------------------------------
     ! This unit test tests the ability to split a communicator 
     ! into two groups using the Set_PElist() subroutine.
-    ! This is useful when spliting communicators to support 
+    ! This is useful when splitting communicators to support 
     ! ensemble modeling or a coupled model.
     !----------------------------------------------------------
 
