@@ -15,35 +15,35 @@ contains
   subroutine test_bcast_real3D(this)
     class (testcase_broadcast), intent(inout) :: this
 
-    real(kind=real64),allocatable :: value(:,:,:)
+    real(kind=real64),allocatable :: actual(:,:,:), expected(:,:,:)
 
-    integer(kind=int32), parameter :: len1 = 20, len2 = 7, len3=5
-    real(kind=real64), parameter :: one=1.0,zero=0.0
-    real(kind=real64) :: rank,actual
+    integer(kind=int32), parameter :: len1 = 20, len2 = 7, len3 = 5
+    real(kind=real64) :: rank
 
     rank = dble(this%getProcessRank())
 
-    allocate(value(len1,len2,len3))
+    allocate(actual(len1,len2,len3))
+    allocate(expected(len1,len2,len3))
 
-    value = rank
+    actual = rank
     !--------------------------------------
     ! Broadcast from the default root rank
     !--------------------------------------
-    call broadcast(value,len1*len2*len3)
+    call broadcast(actual,len1*len2*len3)
 
-    actual = value(5,5,5)
-    @assertEqual(actual, zero)
+    expected = 0.0
+    @assertEqual(expected, actual)
 
-    value = rank
+    actual = rank
     !--------------------------------------
     ! Broadcast from the non-default rank
     !--------------------------------------
-    call broadcast(value,len1*len2*len3,from_PE=1)
+    call broadcast(actual,len1*len2*len3, from_PE=1)
 
-    actual = value(5,5,5)
-    @assertEqual(actual, one)
+    expected = 1.0
+    @assertEqual(expected, actual)
 
-    deallocate(value)
+    deallocate(actual, expected)
 
   end subroutine test_bcast_real3D
 
