@@ -1,0 +1,48 @@
+module test_pelistC
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_pelist
+  end type testcase_pelist
+
+contains
+
+  @test(npes=[4])
+  subroutine test_GetPElist(this)
+    class (testcase_pelist), intent(inout) :: this
+    integer :: i, npes, rank, value
+    integer, allocatable :: expected(:), actual(:)
+
+    !--------------------------------------------------------
+    ! This unit test tests the Get_PElist() which returns a 
+    ! list of all MPI ranks within the current Group.  
+    !----------------------------------------------------------
+
+    npes = this%getNumProcesses()
+    rank = this%getProcessRank()
+
+    allocate(expected(0:npes-1))
+    allocate(actual(0:npes-1))
+
+    !-----------------------------------------
+    ! This is the expected list of MPI ranks
+    !-----------------------------------------
+    do i=0,npes-1
+       expected(i)=i
+    enddo
+
+    !-----------------------------------------------
+    ! Get the list of MPI ranks in the current group
+    !-----------------------------------------------
+    call get_PElist(actual)
+
+    @assertEqual(expected, actual)
+
+    deallocate(actual, expected)
+    
+  end subroutine test_GetPElist
+   
+end module test_pelistC

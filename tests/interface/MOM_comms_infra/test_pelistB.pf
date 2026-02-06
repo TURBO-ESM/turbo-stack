@@ -1,0 +1,71 @@
+module test_pelistB
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_pelist
+  end type testcase_pelist
+
+contains
+
+  @test(npes=[4])
+  subroutine test_SetPElist(this)
+    class (testcase_pelist), intent(inout) :: this
+    integer :: npes, npesSplit, rank, actual, expected
+    integer :: i
+    integer, allocatable :: List(:)
+
+    !--------------------------------------------------------
+    ! This unit test tests the ability to split a communicator 
+    ! into two groups using the Set_PElist() subroutine.
+    ! This is useful when spliting communicators to support 
+    ! ensemble modeling or a coupled model.
+    !----------------------------------------------------------
+
+    npes = this%getNumProcesses()
+    rank = this%getProcessRank()
+    npesSplit = npes/2
+
+    allocate(List(0:npesSplit-1))
+
+    !------------------------------
+    ! Split the communicator in two 
+    !------------------------------
+    if(rank < npesSplit) then
+       !----------------------
+       ! Ensemble #1 MPI ranks
+       !----------------------
+       do i=0,npesSplit-1
+         List(i)=i
+       enddo
+    else
+       !----------------------
+       ! Ensemble #2 MPI ranks
+       !----------------------
+       do i=0,npesSplit-1
+         List(i) = npesSplit+i
+       enddo
+    endif 
+    call set_PElist(List)
+
+    !---------------------------
+    ! Use max_across_PEs() 
+    !---------------------------
+    actual = rank
+    call max_across_PEs(actual)
+
+    if( rank < npesSplit) then 
+        expected = npesSplit-1
+        @assertEqual(expected,actual)
+    else
+        expected = npes-1
+        @assertEqual(expected,actual)
+    endif
+
+    deallocate(List)
+    
+  end subroutine test_SetPElist
+   
+end module test_pelistB
