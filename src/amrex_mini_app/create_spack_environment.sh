@@ -15,6 +15,10 @@ if [[ "${DOXYGEN:-0}" == "1" ]]; then
    echo "Doxygen will be included in the spack environment."
 fi
 
+# You can set the CODE_COVERAGE environment variable to 1 to add code coverage tools in your spack environment.
+# We are only supporting code coverage with gcc and llvm compilers. 
+# llvm comes with its own code coverage tools that work with clang, and lcov only works with gcc. So we only add lcov to the spack environment if we are using gcc.   
+
 ###############################################################################
 # Error Checking Pre-requisites... Should be true for all environments
 ###############################################################################
@@ -213,7 +217,7 @@ if [[ "${DOXYGEN:-0}" == "1" ]]; then
     spack add doxygen %gcc
 fi
 
-if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
+if [[ "${CODE_COVERAGE:-0}" == "1" && "${compiler_package_name}" == "gcc" ]]; then
    spack add lcov
 fi
 
