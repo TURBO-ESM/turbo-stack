@@ -1,6 +1,17 @@
 
 
-function(add_mom_test TEST_TARGET_NAME)
+function(add_mom_tests)
+  foreach(TEST_FILE IN LISTS ARGN)
+    add_mom_test("${TEST_FILE}")
+  endforeach()
+endfunction()
+
+function(add_mom_test TEST_FILE)
+  get_filename_component(TEST_TARGET ${TEST_FILE} NAME_WE)
+  add_mom_test_full(${TEST_TARGET} PFUNIT_FILE ${TEST_FILE})
+endfunction()
+
+function(add_mom_test_full TEST_TARGET_NAME)
   set(prefix MOM)
   set(optionalValues "")
   set(singleValues PFUNIT_FILE MAX_PES)
