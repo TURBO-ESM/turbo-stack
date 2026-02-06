@@ -8,6 +8,14 @@ add_mom_test(test_sum_across_pes_int64_2d PFUNIT_FILE test_sum_across_pes_int64_
 add_mom_test(test_sum_across_pes_real_0d PFUNIT_FILE test_sum_across_pes_real_0d.pf)
 add_mom_test(test_sum_across_pes_real_1d PFUNIT_FILE test_sum_across_pes_real_1d.pf)
 add_mom_test(test_sum_across_pes_real_2d PFUNIT_FILE test_sum_across_pes_real_2d.pf)
+add_mom_test(test_broadcast_int320D PFUNIT_FILE test_broadcast_int320D.pf)
+add_mom_test(test_broadcast_int640D PFUNIT_FILE test_broadcast_int640D.pf)
+add_mom_test(test_broadcast_char PFUNIT_FILE test_broadcast_char.pf)
+add_mom_test(test_broadcast_real0D PFUNIT_FILE test_broadcast_real0D.pf)
+add_mom_test(test_broadcast_int1D PFUNIT_FILE test_broadcast_int1D.pf)
+add_mom_test(test_broadcast_real1D PFUNIT_FILE test_broadcast_real1D.pf)
+add_mom_test(test_broadcast_real2D PFUNIT_FILE test_broadcast_real2D.pf)
+add_mom_test(test_broadcast_real3D PFUNIT_FILE test_broadcast_real3D.pf)
 
 # Copy namelist file to output directory to satisfy FMS requirement
 configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
