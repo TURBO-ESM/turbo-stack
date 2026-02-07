@@ -14,11 +14,11 @@ contains
   @test(npes=[4])
   subroutine test_SumAcrossPEs(this)
     class (test_case_sum_across_pes), intent(inout) :: this
-    real(kind=real64), parameter :: initial_local_value = 1.0
+    real(kind=real64), parameter :: initial_local_value = 1.0_real64
     integer(kind=int32) :: npes
     real(kind=real64) :: expected_global_sum
     real(kind=real64) :: actual_global_sum
-    real(kind=real64), parameter :: tolerance = 1.0e-12
+    real(kind=real64), parameter :: tolerance = 1.0e-12_real64
 
     npes = this%getNumProcesses()
     expected_global_sum = npes * initial_local_value
