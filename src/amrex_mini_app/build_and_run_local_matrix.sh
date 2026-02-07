@@ -131,20 +131,7 @@ for compiler in $compiler_list; do
             rm -rf "$BUILD_DIR"
         fi
 
-        # if code coverage is enabled and but we are using a compiler that does not support it, disable code coverage
-        if [[ "${CODE_COVERAGE:-0}" == "1" && ! " ${compiler_supports_code_coverage_list} " =~ " ${COMPILER} " ]]; then
-            CODE_COVERAGE=0
-            code_coverage_disabled_for_unsupported_compiler=1
-            echo "Disabling code coverage since compiler is not supported for $COMPILER."
-        fi
-
         ${turbo_mini_app_root}/build_and_run.sh
-
-        # Reenable code coverage for next iteration if it was originally enabled
-        if [[ "${code_coverage_disabled_for_unsupported_compiler:-0}" == "1" ]]; then
-            CODE_COVERAGE=1
-            unset code_coverage_disabled_for_unsupported_compiler
-        fi
 
     done
 done

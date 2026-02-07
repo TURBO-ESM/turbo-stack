@@ -20,7 +20,6 @@ fi
 
 # You can set the CODE_COVERAGE environment variable to 1 to enable generating code coverage reports. 
 if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
-    echo "Will generate code coverage report."
     coverage_output_dir="$build_dir/coverage"
 fi
 
