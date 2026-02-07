@@ -81,6 +81,7 @@ fi
 if [[ "${CODE_COVERAGE:-0}" == "1" && "$CXX" == *clang++* ]]; then
     # If code coverage is enabled, set LLVM_PROFILE_FILE to avoid .profraw overwrites
     # Use process ID and executable name for unique .profraw files
+    mkdir -p "$coverage_output_dir/profraw_files"
     export LLVM_PROFILE_FILE="$coverage_output_dir/profraw_files/coverage_%p.profraw"
     echo "LLVM_PROFILE_FILE set to $LLVM_PROFILE_FILE"
 fi
@@ -204,7 +205,7 @@ if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
         done
 
     else
-        echo "Code coverage report generation not implemented for compiler $COMPILER_PACKAGE_NAME."
+        echo "Code coverage report generation not implemented for compiler: $CXX"
     fi
 
 fi
