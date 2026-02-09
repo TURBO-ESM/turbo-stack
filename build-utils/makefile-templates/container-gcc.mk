@@ -17,7 +17,8 @@ MAKEFLAGS += --jobs=4
 
 FPPFLAGS :=
 
-FFLAGS := -fcray-pointer -fdefault-double-8 -fdefault-real-8 -Waliasing -ffree-line-length-none -fno-range-check
+FC_AUTO_R8 := -fdefault-double-8 -fdefault-real-8
+FFLAGS :=$(FC_AUTO_R8) -fcray-pointer  -Waliasing -ffree-line-length-none -fno-range-check
 
 CFLAGS := -D__IFC
 
