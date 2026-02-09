@@ -181,12 +181,16 @@ if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
 
         echo "Generating combined coverage report for all test executables..."
         combined_coverage_dir="$coverage_output_dir/ctest_coverage_combined"
+        object_args=()
+        for exe in "${test_executables[@]}"; do
+            object_args+=(-object "$exe")
+        done
         llvm-cov show \
             -instr-profile="$merged_profdata" \
             -format=html \
             -show-directory-coverage \
             -output-dir="$combined_coverage_dir" \
-            "${test_executables[@]}" "$mini_app_root"
+            "${object_args[@]}"
         echo "Combined HTML coverage report: $combined_coverage_dir/index.html"
 
         # Generate individual reports for each test executable
@@ -199,7 +203,7 @@ if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
                 -format=html \
                 -show-directory-coverage \
                 -output-dir="$test_coverage_dir" \
-                "$mini_app_root"
+                -object "$exe"
             echo "Individual HTML coverage report for $exe_name: $test_coverage_dir/index.html"
         done
 
