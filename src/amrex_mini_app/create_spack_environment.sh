@@ -17,8 +17,9 @@ fi
 
 # You can set the CODE_COVERAGE environment variable to 1 to add code coverage tools in your spack environment.
 # We are only supporting code coverage with gcc and llvm compilers. 
-#   when using gcc compilers we will add lcov to our spack environment.   
-#   llvm comes with its own code coverage tools so we don't need to add any additional packages to the spack environment.
+#   when using gcc compilers we will add lcov to our spack environment.
+#   when using llvm/clang for coverage, the workflow expects llvm-profdata and llvm-cov to be installed and available on PATH;
+#   this script does not add those tools to the spack environment, so they must be provided by your LLVM/Clang installation.
 
 ###############################################################################
 # Error Checking Pre-requisites... Should be true for all environments
