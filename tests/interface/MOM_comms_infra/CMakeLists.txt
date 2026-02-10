@@ -9,13 +9,12 @@ set(MOM_COMS_INFRA_TESTS
   test_broadcast_real1D.pf
   test_broadcast_real2D.pf
   test_broadcast_real3D.pf
+  test_pelistA.pf
+  test_pelistB.pf
+  test_pelistC.pf
 )
 
 add_mom_tests(${MOM_COMS_INFRA_TESTS})
-
-add_mom_test(test_pelistA PFUNIT_FILE test_pelistA.pf)
-add_mom_test(test_pelistB PFUNIT_FILE test_pelistB.pf)
-add_mom_test(test_pelistC PFUNIT_FILE test_pelistC.pf)
 
 # Copy namelist file to output directory to satisfy FMS requirement
 configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
