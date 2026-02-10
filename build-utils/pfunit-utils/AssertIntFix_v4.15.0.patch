@@ -7,7 +7,7 @@ index dcc38ee..e6fba92 100644
  
  
 -   integer, parameter :: MAX_LEN_INT_AS_STRING = 20
-+   integer, parameter :: MAX_LEN_INT_AS_STRING = 22
++   integer, parameter :: MAX_LEN_INT_AS_STRING = 45
  
  contains
  
