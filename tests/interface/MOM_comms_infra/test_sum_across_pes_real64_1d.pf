@@ -1,4 +1,4 @@
-module test_sum_across_pes_real_1d
+module test_sum_across_pes_real64_1d
   use pfunit
   use MOM_coms_infra, only : sum_across_PEs
   use MOM_test_case
@@ -37,4 +37,4 @@ contains
 
   end subroutine test_SumAcrossPEs
    
-end module test_sum_across_pes_real_1d
+end module test_sum_across_pes_real64_1d
