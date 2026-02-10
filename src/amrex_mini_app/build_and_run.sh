@@ -136,7 +136,7 @@ ctest --test-dir "$build_dir"
 if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
     echo "Generating code coverage report..."
 
-    if [[ $(basename "${CXX}") == g++ ]]; then
+    if [[ $(basename "${CXX}") == g++* ]]; then
 
         if ! command -v lcov &> /dev/null; then
             echo "Error: lcov command not found. You need to have lcov installed and in your path to generate code coverage reports." >&2
@@ -160,7 +160,7 @@ if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
 
         genhtml "$filtered_coverage_file" --output-directory "$coverage_output_dir"
 
-    elif [[ $(basename "${CXX}") == clang++ ]]; then
+    elif [[ $(basename "${CXX}") == clang++* ]]; then
 
         if ! command -v llvm-profdata &> /dev/null; then
             echo "Error: llvm-profdata command not found. You need to have llvm-profdata installed and in your path to generate code coverage reports." >&2
