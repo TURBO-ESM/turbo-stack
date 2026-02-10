@@ -209,7 +209,7 @@ if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
             exe_name=$(basename "$exe")
             echo "Generating individual coverage report for $exe_name..."
             test_coverage_dir="$coverage_output_dir/ctest_coverage_individual/${exe_name}_coverage"
-            llvm-cov show "$exe" \
+            llvm-cov show \
                 -instr-profile="$merged_profdata" \
                 -format=html \
                 -show-directory-coverage \

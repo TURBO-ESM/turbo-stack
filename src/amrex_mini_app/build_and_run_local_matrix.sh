@@ -10,7 +10,6 @@ set -u  # Treat expanding empty variables as an error
 # You can set the DEBUG environment variable to 1 to enable debugging features in this script.
 if [[ "${DEBUG:-0}" == "1" ]]; then
     set -x  # Print each command before executing it
-    FRESH_BUILD=1 # Always delete any existing build directory when running in debug mode.
 fi
 
 # You can set the DOXYGEN environment variable to 1 to build the doxygen documentation. You will need the doxygen executable installed and in your path to do this.
@@ -21,11 +20,6 @@ fi
 # You can set the CODE_COVERAGE environment variable to 1 to enable generating code coverage reports. You will need gcov and lcov installed and in your path to do this.
 if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
     echo "Will generate code coverage report."
-fi
-
-# Assume the default directory location... this default is set in the build_and_run.sh script. Might want to make this a user input or environment variable in the future.
-if [[ "${FRESH_BUILD:-0}" == "1" ]]; then
-    echo "Will delete the existing build directory before each build."
 fi
 
 compiler_list="gcc llvm intel-oneapi-compilers"
@@ -127,9 +121,6 @@ for compiler in $compiler_list; do
         spack load $COMPILER@$COMPILER_VERSION
 
         export BUILD_DIR="${HOME}/turbo_amrex_mini_app_builds/${COMPILER}_${MPI}"
-        if [[ "${FRESH_BUILD:-0}" == "1" ]]; then
-            rm -rf "$BUILD_DIR"
-        fi
 
         ${turbo_mini_app_root}/build_and_run.sh
 
