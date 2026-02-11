@@ -1,21 +1,31 @@
-add_mom_test(test_num_pes PFUNIT_FILE test_num_pes.pf)
-add_mom_test(test_sum_across_pes_int32_0d PFUNIT_FILE test_sum_across_pes_int32_0d.pf)
-add_mom_test(test_sum_across_pes_int32_1d PFUNIT_FILE test_sum_across_pes_int32_1d.pf)
-add_mom_test(test_sum_across_pes_int32_2d PFUNIT_FILE test_sum_across_pes_int32_2d.pf)
-add_mom_test(test_sum_across_pes_int64_0d PFUNIT_FILE test_sum_across_pes_int64_0d.pf)
-add_mom_test(test_sum_across_pes_int64_1d PFUNIT_FILE test_sum_across_pes_int64_1d.pf)
-add_mom_test(test_sum_across_pes_int64_2d PFUNIT_FILE test_sum_across_pes_int64_2d.pf)
-add_mom_test(test_sum_across_pes_real64_0d PFUNIT_FILE test_sum_across_pes_real64_0d.pf)
-add_mom_test(test_sum_across_pes_real64_1d PFUNIT_FILE test_sum_across_pes_real64_1d.pf)
-add_mom_test(test_sum_across_pes_real64_2d PFUNIT_FILE test_sum_across_pes_real64_2d.pf)
-add_mom_test(test_broadcast_int320D PFUNIT_FILE test_broadcast_int320D.pf)
-add_mom_test(test_broadcast_int640D PFUNIT_FILE test_broadcast_int640D.pf)
-add_mom_test(test_broadcast_char PFUNIT_FILE test_broadcast_char.pf)
-add_mom_test(test_broadcast_real0D PFUNIT_FILE test_broadcast_real0D.pf)
-add_mom_test(test_broadcast_int1D PFUNIT_FILE test_broadcast_int1D.pf)
-add_mom_test(test_broadcast_real1D PFUNIT_FILE test_broadcast_real1D.pf)
-add_mom_test(test_broadcast_real2D PFUNIT_FILE test_broadcast_real2D.pf)
-add_mom_test(test_broadcast_real3D PFUNIT_FILE test_broadcast_real3D.pf)
+
+set(MOM_COMS_INFRA_TESTS
+  test_num_pes.pf
+  test_broadcast_int1D.pf
+  test_broadcast_int320D.pf
+  test_broadcast_int640D.pf
+  test_broadcast_char.pf
+  test_broadcast_real0D.pf
+  test_broadcast_real1D.pf
+  test_broadcast_real2D.pf
+  test_broadcast_real3D.pf
+  test_field_checksum_real640d.pf
+  test_field_checksum_real641d.pf
+  test_field_checksum_real642d.pf
+  test_field_checksum_real643d.pf
+  test_field_checksum_real644d.pf
+  test_sum_across_pes_int32_0d
+  test_sum_across_pes_int32_1d
+  test_sum_across_pes_int32_2d
+  test_sum_across_pes_int64_0d
+  test_sum_across_pes_int64_1d
+  test_sum_across_pes_int64_2d
+  test_sum_across_pes_real64_0d
+  test_sum_across_pes_real64_1d
+  test_sum_across_pes_real64_2d
+)
+
+add_mom_tests(${MOM_COMS_INFRA_TESTS})
 
 # Copy namelist file to output directory to satisfy FMS requirement
 configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
