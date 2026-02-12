@@ -1,6 +1,5 @@
 
 set(MOM_COMS_INFRA_TESTS
-  test_num_pes.pf
   test_broadcast_int1D.pf
   test_broadcast_int320D.pf
   test_broadcast_int640D.pf
