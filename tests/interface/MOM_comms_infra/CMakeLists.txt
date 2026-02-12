@@ -12,6 +12,11 @@ set(MOM_COMS_INFRA_TESTS
   test_pelistA.pf
   test_pelistB.pf
   test_pelistC.pf
+  test_field_checksum_real640d.pf
+  test_field_checksum_real641d.pf
+  test_field_checksum_real642d.pf
+  test_field_checksum_real643d.pf
+  test_field_checksum_real644d.pf
 )
 
 add_mom_tests(${MOM_COMS_INFRA_TESTS})
