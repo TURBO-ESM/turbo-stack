@@ -5,8 +5,8 @@
 ############
 
 FC = mpif90
-CC = gcc
-CXX = g++
+CC = mpicc
+CXX = mpic++
 LD = mpif90 $(MAIN_PROGRAM)
 
 ############
