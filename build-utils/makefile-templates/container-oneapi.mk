@@ -6,7 +6,7 @@
 
 FC = mpif90
 CC = mpicc
-CXX = icpx
+CXX = mpicxx
 LD = mpif90
 
 ############

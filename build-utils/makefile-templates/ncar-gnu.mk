@@ -6,7 +6,7 @@
 
 FC = mpif90
 CC = mpicc
-CXX = mpic++
+CXX = mpicxx
 LD = mpif90 $(MAIN_PROGRAM)
 
 ############
