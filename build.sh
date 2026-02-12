@@ -307,6 +307,7 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
     PFUNIT_BLD_PATH=$(pwd)/build               \
     CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}       \
     PFUNIT_INSTALL_PATH=${PFUNIT_INSTALL_PATH} \
+    PATCH_FILE=${ROOTDIR}/build-utils/pfunit-utils/AssertIntFix_v4.15.0.patch \
       make -j${JOBS} -C ${ROOTDIR}/build-utils/pfunit-utils/ build_pfunit
   fi
 fi
@@ -351,8 +352,9 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH}               \
   NetCDF_C_PREFIX_PATH=$(nc-config --prefix)             \
   NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)       \
-  BLD_PATH_ROOT=${BLD_PATH}                              \
-  LIB_INFRA=${INFRA}                                      \
+  PATH_TO_BACKEND_LIB="${BLD_PATH}/${INFRA}"             \
+  PATH_TO_LIBINFRA="${BLD_PATH}/MOM6-infra"              \
+  LIB_INFRA=${INFRA}                                     \
   CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
 else
