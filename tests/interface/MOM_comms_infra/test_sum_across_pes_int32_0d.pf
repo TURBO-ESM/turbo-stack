@@ -22,7 +22,7 @@ contains
     comm_size = this%getNumProcesses()
     comm_rank = this%getProcessRank()
 
-    expected_global_sum = sum([(i, i=0,comm_size-1)])
+    expected_global_sum = sum([(i, i=0, comm_size-1)])
 
     actual_global_sum = comm_rank
     call sum_across_PEs(actual_global_sum)
