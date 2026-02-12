@@ -18,7 +18,9 @@ MAKEFLAGS += --jobs=2
 
 FPPFLAGS :=
 
-FFLAGS := -fcray-pointer -fdefault-double-8 -fdefault-real-8 -Waliasing -ffree-line-length-none -fno-range-check
+FC_AUTO_R8 = -fdefault-double-8 -fdefault-real-8
+FFLAGS := -fcray-pointer $(FC_AUTO_R8) -Waliasing -ffree-line-length-none -fno-range-check
+
 FFLAGS_REPRO = -O2 -fbounds-check
 FFLAGS_DEBUG = -O0 -g -W -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow
 

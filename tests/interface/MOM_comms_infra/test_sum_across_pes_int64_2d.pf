@@ -15,7 +15,7 @@ contains
   subroutine test_SumAcrossPEs(this)
     class (test_case_sum_across_pes), intent(inout) :: this
     integer(kind=int32) :: comm_size, comm_rank
-    integer(kind=int32) :: i
+    integer(kind=int64) :: i
     integer(kind=int64), dimension(:,:), allocatable :: expected_global_sum
     integer(kind=int64), dimension(:,:), allocatable :: actual_global_sum
 
