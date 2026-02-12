@@ -1,0 +1,29 @@
+module test_pe_here
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_pe_here
+  end type testcase_pe_here
+
+contains
+
+  @test(npes=[4])
+  subroutine test_PEhere(this)
+    class (testcase_pe_here), intent(inout) :: this
+    integer :: my_rank_TIM
+    integer :: my_rank
+
+
+    my_rank_TIM = PE_here()
+
+    my_rank = this%getProcessRank()
+
+    @assertEqual(my_rank, my_rank_TIM)
+
+
+  end subroutine test_PEhere
+   
+end module test_pe_here
