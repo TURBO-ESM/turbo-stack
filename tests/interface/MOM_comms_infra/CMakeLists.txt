@@ -1,6 +1,5 @@
 
 set(MOM_COMS_INFRA_TESTS
-  test_num_pes.pf
   test_broadcast_int1D.pf
   test_broadcast_int320D.pf
   test_broadcast_int640D.pf
@@ -23,9 +22,13 @@ set(MOM_COMS_INFRA_TESTS
   test_sum_across_pes_real64_0d.pf
   test_sum_across_pes_real64_1d.pf
   test_sum_across_pes_real64_2d.pf
+  test_num_pes.pf
+  test_root_pe.pf
+  test_pe_here.pf
 )
 
 add_mom_tests(${MOM_COMS_INFRA_TESTS})
+
 
 # Copy namelist file to output directory to satisfy FMS requirement
 configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)

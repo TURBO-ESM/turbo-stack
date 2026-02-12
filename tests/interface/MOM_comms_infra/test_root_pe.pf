@@ -1,0 +1,32 @@
+module test_root_pe
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_root_pe
+  end type testcase_root_pe
+
+contains
+
+  @test(npes=[4])
+  subroutine test_rootpe(this)
+    class (testcase_root_pe), intent(inout) :: this
+    integer :: rpe_TIM
+    integer :: rpe
+
+
+    rpe_TIM = root_PE()
+
+    ! Note: pfunit does not provide a function to expose root_PE
+    !       for now we assume it is zero, but this is not a
+    !       long-term solution
+    rpe = 0
+
+    @assertEqual(rpe, rpe_TIM)
+
+
+  end subroutine test_rootpe
+
+end module test_root_pe
