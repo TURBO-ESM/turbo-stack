@@ -1,0 +1,33 @@
+module test_sum_across_pes_int64_0d
+  use pfunit
+  use MOM_coms_infra, only : sum_across_PEs
+  use MOM_test_case
+  use iso_fortran_env, only : int32, int64
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: test_case_sum_across_pes
+  end type test_case_sum_across_pes
+
+contains
+
+  @test(npes=[4])
+  subroutine test_SumAcrossPEs(this)
+    class (test_case_sum_across_pes), intent(inout) :: this
+    integer(kind=int32) :: comm_size, comm_rank
+    integer(kind=int64) :: i
+    integer(kind=int64) :: expected_global_sum
+    integer(kind=int64) :: actual_global_sum
+
+    comm_size = this%getNumProcesses()
+    comm_rank = this%getProcessRank()
+
+    expected_global_sum = sum([(i, i=0, comm_size-1)])
+
+    actual_global_sum = comm_rank
+    call sum_across_PEs(actual_global_sum)
+
+    @assertEqual(expected_global_sum, actual_global_sum)
+  end subroutine test_SumAcrossPEs
+   
+end module test_sum_across_pes_int64_0d
