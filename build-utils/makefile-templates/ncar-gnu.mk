@@ -23,6 +23,8 @@ FPPFLAGS :=
 FFLAGS := $(FC_AUTO_R8) -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none -fallow-argument-mismatch  -fallow-invalid-boz -fcray-pointer
 CFLAGS := -std=gnu99
 
+CXXFLAGS := -std=c++17
+
 # Compilation Mode-specific flags
 ifeq ($(CODECOV),1)
 	FFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
