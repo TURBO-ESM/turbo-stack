@@ -1,4 +1,4 @@
-name: Build Inside NCAR HPC Development Containers
+name: MOM code coverage report
 
 # See the following link for more information on the NCAR HPC development containers:
 # https://hub.docker.com/u/ncarcisl
