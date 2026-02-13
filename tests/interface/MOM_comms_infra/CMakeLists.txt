@@ -8,6 +8,8 @@ set(MOM_COMS_INFRA_TESTS
   test_broadcast_real1D.pf
   test_broadcast_real2D.pf
   test_broadcast_real3D.pf
+  test_broadcast_IntArray.pf
+  test_broadcast_RealArray.pf
   test_field_checksum_real640d.pf
   test_field_checksum_real641d.pf
   test_field_checksum_real642d.pf
