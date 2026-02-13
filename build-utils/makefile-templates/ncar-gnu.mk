@@ -5,8 +5,8 @@
 ############
 
 FC = mpif90
-CC = gcc
-CXX = g++
+CC = mpicc
+CXX = mpicxx
 LD = mpif90 $(MAIN_PROGRAM)
 
 ############
@@ -22,6 +22,8 @@ FC_AUTO_R8 := -fdefault-real-8 -fdefault-double-8
 FPPFLAGS :=
 FFLAGS := $(FC_AUTO_R8) -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none -fallow-argument-mismatch  -fallow-invalid-boz -fcray-pointer
 CFLAGS := -std=gnu99
+
+CXXFLAGS := -std=c++17
 
 # Compilation Mode-specific flags
 ifeq ($(CODECOV),1)

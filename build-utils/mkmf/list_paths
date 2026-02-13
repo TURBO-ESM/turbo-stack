@@ -140,6 +140,7 @@ eval "find ${followSymLinks} $* \
            ${noIncludeTestDirs} \
            -type f \
            \( -name \*.c   \
+           -o -name \*.cpp \
            -o -name \*.C   \
            -o -name \*.f   \
            -o -name \*.fh  \

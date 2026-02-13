@@ -6,7 +6,7 @@
 
 FC = mpif90
 CC = mpicc
-CXX = icpx
+CXX = mpicxx
 LD = mpif90
 
 ############
@@ -26,6 +26,8 @@ FFLAGS_REPRO = -O2 -debug minimal
 CFLAGS := -qno-opt-dynamic-align -fp-model precise -std=gnu99  -no-fma -qopt-report -march=core-avx2
 CFLAGS_REPRO= -O2 -debug minimal
 CFLAGS_DEBUG = -O0 -g
+
+CXXFLAGS := -std=c++17
 
 ifeq ($(DEBUG),1)
   FFLAGS += $(FFLAGS_DEBUG)
