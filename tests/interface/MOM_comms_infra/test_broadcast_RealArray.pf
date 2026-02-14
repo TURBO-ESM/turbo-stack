@@ -1,0 +1,56 @@
+module test_broadcast_RealArray
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  use iso_fortran_env, only : int32, real64
+  use array_mod, only : RealArray_t
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_broadcast
+  end type testcase_broadcast
+
+contains
+
+  @test(npes=[4])
+  subroutine test_bcast_RealArray(this)
+    class (testcase_broadcast), intent(inout) :: this
+ 
+    real(kind=real64), pointer :: actual(:,:,:)       ! Pointer to data in array
+    type (RealArray_t) :: actual_c                    ! Container for array actual
+    real(kind=real64), allocatable :: expected(:,:,:) ! Expected value
+ 
+    integer(kind=int32), parameter :: len1 = 20, len2 = 7, len3 = 5
+    real(kind=real64) :: rank
+
+ 
+    rank = dble(this%getProcessRank())
+   
+    !------------------------------- 
+    ! allocate and initialize memory
+    !-------------------------------
+    call actual_c%alloc(actual,lb=[0,0,-1],ub=[len1,len2,len3])
+    allocate(expected(0:len1,0:len2,-1:len3))
+   
+    actual = rank
+    !--------------------------------------
+    ! Broadcast from the default root rank
+    !--------------------------------------
+    call broadcast(actual_c)
+   
+    expected = 0.0
+    @assertEqual(expected, actual)
+   
+    actual = rank
+    !--------------------------------------
+    ! Broadcast from the non-default rank
+    !--------------------------------------
+    call broadcast(actual_c,from_PE=1)
+   
+    expected = 1.0
+    @assertEqual(expected, actual)
+    call actual_c%free()
+   
+  end subroutine test_bcast_RealArray
+
+end module test_broadcast_RealArray
