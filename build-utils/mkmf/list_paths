@@ -141,6 +141,7 @@ eval "find ${followSymLinks} $* \
            -type f \
            \( -name \*.c   \
            -o -name \*.cpp \
+           -o -name \*.hpp \
            -o -name \*.C   \
            -o -name \*.f   \
            -o -name \*.fh  \
