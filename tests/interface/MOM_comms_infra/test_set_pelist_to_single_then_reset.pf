@@ -1,0 +1,73 @@
+module test_set_pelist_to_single_then_reset
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  use, intrinsic :: iso_fortran_env, only: int32
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_pelist
+  end type testcase_pelist
+
+contains
+
+  @test(npes=[4])
+  subroutine test_SetGetPElistA(this)
+    class (testcase_pelist), intent(inout) :: this
+    integer(kind=int32) :: npes, rank, actual, expected
+    integer(kind=int32), allocatable :: saveList(:), singleList(:)
+
+    !--------------------------------------------------------
+    ! This unit test tests the ability to deactivate and reactivate 
+    ! collective operators using the Get_PElist() and Set_PElist() 
+    ! subroutines.  Specifically it tests max_across_PEs when the 
+    ! communicators are either the full set of MPI ranks or a split 
+    ! communicator where each rank is its own MPI group
+    !----------------------------------------------------------
+
+    npes = this%getNumProcesses()
+    rank = this%getProcessRank()
+
+    allocate(saveList(0:npes-1))
+    allocate(singleList(1))
+
+    !--------------------------------------
+    !  Save the global PElist for later use
+    !--------------------------------------
+    call get_PElist(saveList)
+
+    !------------------------------------------------------
+    ! disable collective communication for max_across_PEs() 
+    !------------------------------------------------------
+    singleList(1)=rank
+    call set_PElist(singleList)
+
+    actual = rank
+    call max_across_PEs(actual)
+    expected = rank
+
+    @assertEqual(expected,actual)
+
+    actual = rank
+    call max_across_PEs(actual, PElist=singleList)
+    expected = rank
+
+    @assertEqual(expected,actual)
+
+    !-----------------------------------------------
+    ! Switch back the communicator to the global one
+    !-----------------------------------------------
+    call set_PElist(saveList)
+
+    actual = rank
+    call max_across_PEs(actual)
+    expected = npes-1
+
+    @assertEqual(expected,actual)
+
+    deallocate(saveList)
+    deallocate(singleList)
+    
+  end subroutine test_SetGetPElistA
+   
+end module test_set_pelist_to_single_then_reset
