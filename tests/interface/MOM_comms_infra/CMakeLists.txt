@@ -13,6 +13,11 @@ set(MOM_COMS_INFRA_TESTS
   test_field_checksum_real642d.pf
   test_field_checksum_real643d.pf
   test_field_checksum_real644d.pf
+  test_field_checksum_real64_0d_masked.pf
+  test_field_checksum_real64_1d_masked.pf
+  test_field_checksum_real64_2d_masked.pf
+  test_field_checksum_real64_3d_masked.pf
+  test_field_checksum_real64_4d_masked.pf
   test_sum_across_pes_int32_0d.pf
   test_sum_across_pes_int32_1d.pf
   test_sum_across_pes_int32_2d.pf

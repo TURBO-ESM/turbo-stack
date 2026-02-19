@@ -1,0 +1,27 @@
+module test_field_checksum_real64_4d_masked
+  use pfunit
+  use MOM_coms_infra
+  use MOM_test_case
+  use iso_fortran_env, only : int64, real64
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: field_checksum_4d_masked_testcase
+  end type field_checksum_4d_masked_testcase
+
+contains
+
+  @test(npes=[4])
+  subroutine field_checksum_real64_4d_masked(this)
+    class (field_checksum_4d_masked_testcase), intent(inout) :: this
+    integer                        :: i, j, k, l
+    real                           :: field(5,5,5,5)      = reshape( [ ((((real(l), i=1,5), j=1,5), k=1,5), l=1,5) ], shape=[5,5,5,5] )
+    real,                parameter :: mask              = 3.0
+    integer(kind=int64), parameter :: expected_checksum = 2814749767106560000
+    integer(kind=int64)            :: actual_checksum
+
+    actual_checksum = field_chksum(field, mask_val=mask)
+
+    @assertEqual(expected_checksum, actual_checksum)
+  end subroutine field_checksum_real64_4d_masked
+end module test_field_checksum_real64_4d_masked
