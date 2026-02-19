@@ -18,8 +18,9 @@ MAKEFLAGS += --jobs=4
 LDFLAGS :=
 
 FC_AUTO_R8 = -r8
+FC_AUTO_I4 = -i4
 FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee
+FFLAGS = $(FC_AUTO_R8) -Mnofma $(FC_AUTO_I4) -gopt  -time -Mextend -byteswapio -Mflushz -Kieee
 FFLAGS_DEBUG = -O0 -g  # -Mbounds fails compilation and -KTrap=fp fails run! seems like there is a floating point exception in netcdf_io_mod
 FFLAGS_REPRO = -O1 -tp=x86-64-v3
 
