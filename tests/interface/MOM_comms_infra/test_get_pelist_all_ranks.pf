@@ -2,6 +2,7 @@ module test_get_pelist_all_ranks
   use pfunit
   use MOM_coms_infra
   use MOM_test_case
+  use, intrinsic :: iso_fortran_env, only: int32
   implicit none
 
   @testCase()
@@ -13,8 +14,8 @@ contains
   @test(npes=[4])
   subroutine test_GetPElist(this)
     class (testcase_pelist), intent(inout) :: this
-    integer :: i, npes
-    integer, allocatable :: expected(:), actual(:)
+    integer(kind=int32) :: i, npes
+    integer(kind=int32), allocatable :: expected(:), actual(:)
 
     !--------------------------------------------------------
     ! This unit test tests the Get_PElist() which returns a 

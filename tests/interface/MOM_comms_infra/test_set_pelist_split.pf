@@ -2,6 +2,7 @@ module test_set_pelist_split
   use pfunit
   use MOM_coms_infra
   use MOM_test_case
+  use, intrinsic :: iso_fortran_env, only: int32
   implicit none
 
   @testCase()
@@ -13,9 +14,9 @@ contains
   @test(npes=[4])
   subroutine test_SetPElist(this)
     class (testcase_pelist), intent(inout) :: this
-    integer :: npes, npesSplit, rank, actual, expected
-    integer :: i
-    integer, allocatable :: pe_sub_list(:)
+    integer(kind=int32) :: npes, npesSplit, rank, actual, expected
+    integer(kind=int32) :: i
+    integer(kind=int32), allocatable :: pe_sub_list(:)
 
     !--------------------------------------------------------
     ! This unit test tests the ability to split a communicator 
