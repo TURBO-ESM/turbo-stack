@@ -9,9 +9,9 @@ set(MOM_COMS_INFRA_TESTS
   test_broadcast_real1D.pf
   test_broadcast_real2D.pf
   test_broadcast_real3D.pf
-  test_pelistA.pf
-  test_pelistB.pf
-  test_pelistC.pf
+  test_set_pelist_to_single_then_reset.pf
+  test_set_pelist_split.pf
+  test_get_pelist_all_ranks.pf
 )
 
 add_mom_tests(${MOM_COMS_INFRA_TESTS})

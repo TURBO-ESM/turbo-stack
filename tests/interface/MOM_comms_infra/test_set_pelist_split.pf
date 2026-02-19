@@ -1,4 +1,4 @@
-module test_pelistB
+module test_set_pelist_split
   use pfunit
   use MOM_coms_infra
   use MOM_test_case
@@ -15,7 +15,7 @@ contains
     class (testcase_pelist), intent(inout) :: this
     integer :: npes, npesSplit, rank, actual, expected
     integer :: i
-    integer, allocatable :: List(:)
+    integer, allocatable :: pe_sub_list(:)
 
     !--------------------------------------------------------
     ! This unit test tests the ability to split a communicator 
@@ -28,7 +28,7 @@ contains
     rank = this%getProcessRank()
     npesSplit = npes/2
 
-    allocate(List(0:npesSplit-1))
+    allocate(pe_sub_list(0:npesSplit-1))
 
     !------------------------------
     ! Split the communicator in two 
@@ -38,17 +38,17 @@ contains
        ! Ensemble #1 MPI ranks
        !----------------------
        do i=0,npesSplit-1
-         List(i)=i
+         pe_sub_list(i)=i
        enddo
     else
        !----------------------
        ! Ensemble #2 MPI ranks
        !----------------------
        do i=0,npesSplit-1
-         List(i) = npesSplit+i
+         pe_sub_list(i) = npesSplit+i
        enddo
     endif 
-    call set_PElist(List)
+    call set_PElist(pe_sub_list)
 
     !---------------------------
     ! Use max_across_PEs() 
@@ -64,8 +64,8 @@ contains
         @assertEqual(expected,actual)
     endif
 
-    deallocate(List)
+    deallocate(pe_sub_list)
     
   end subroutine test_SetPElist
    
-end module test_pelistB
+end module test_set_pelist_split

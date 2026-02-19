@@ -1,4 +1,4 @@
-module test_pelistA
+module test_set_pelist_to_single_then_reset
   use pfunit
   use MOM_coms_infra
   use MOM_test_case
@@ -69,4 +69,4 @@ contains
     
   end subroutine test_SetGetPElistA
    
-end module test_pelistA
+end module test_set_pelist_to_single_then_reset

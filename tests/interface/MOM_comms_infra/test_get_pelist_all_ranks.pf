@@ -1,4 +1,4 @@
-module test_pelistC
+module test_get_pelist_all_ranks
   use pfunit
   use MOM_coms_infra
   use MOM_test_case
@@ -44,4 +44,4 @@ contains
     
   end subroutine test_GetPElist
    
-end module test_pelistC
+end module test_get_pelist_all_ranks
