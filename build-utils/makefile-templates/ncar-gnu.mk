@@ -20,7 +20,7 @@ LDFLAGS :=
 
 FC_AUTO_R8 := -fdefault-real-8 -fdefault-double-8
 FPPFLAGS :=
-FFLAGS := $(FC_AUTO_R8) -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none -fallow-argument-mismatch  -fallow-invalid-boz -fcray-pointer
+FFLAGS := $(FC_AUTO_R8) -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none -fallow-argument-mismatch  -fallow-invalid-boz -fcray-pointer -fno-range-check
 CFLAGS := -std=gnu99
 
 CXXFLAGS := -std=c++17

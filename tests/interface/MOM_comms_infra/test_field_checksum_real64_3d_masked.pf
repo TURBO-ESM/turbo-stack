@@ -17,7 +17,7 @@ contains
     integer                        :: i, j, k
     real                           :: field(5,5,5)      = reshape( [ (((real(k), i=1,5), j=1,5), k=1,5) ], shape=[5,5,5] )
     real,                parameter :: mask              = 3.0
-    integer(kind=int64), parameter :: expected_checksum = 562949953421312000
+    integer(kind=int64), parameter :: expected_checksum = 562949953421312000_int64
     integer(kind=int64)            :: actual_checksum
 
     actual_checksum = field_chksum(field, mask_val=mask)
