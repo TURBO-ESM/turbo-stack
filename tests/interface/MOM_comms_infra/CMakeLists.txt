@@ -8,6 +8,8 @@ set(MOM_COMS_INFRA_TESTS
   test_broadcast_real1D.pf
   test_broadcast_real2D.pf
   test_broadcast_real3D.pf
+  test_broadcast_IntArray.pf
+  test_broadcast_RealArray.pf
   test_set_pelist_to_single_then_reset.pf
   test_set_pelist_split.pf
   test_get_pelist_all_ranks.pf
