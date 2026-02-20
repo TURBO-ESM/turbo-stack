@@ -313,6 +313,11 @@ if [[ "${UNIT_TESTS_ONLY}" == "1" ]]; then
 fi
 
 # 1) Build Underlying Infrastructure Library
+if [[ "${INFRA}" == "TIM" ]]; then
+  INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS}"
+  INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS}"
+fi
+
 cd ${BLD_PATH}
 mkdir -p ${INFRA}
 cd ${INFRA}
@@ -320,15 +325,17 @@ ${MKMF_ROOT}/list_paths ${INFRA_ROOT}
 # We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
 echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
 echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
-${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
+${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -o "${INFRA_INCLUDE_FLAGS}" -l "${INFRA_LINKING_FLAGS}" -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
+
 
 LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
 if [[ "${INFRA}" == "TIM" ]]; then
-  INCLUDE_OPTS="${INCLUDE_OPTS} -I../amrex/install/include"
-  LINKING_FLAGS="${LINKING_FLAGS} -L../amrex/install/lib -lamrex"
+  INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS}"
+  LINKING_FLAGS="${LINKING_FLAGS} ${AMREX_LINK_FLAGS}"
 fi
+
 # 2) Build MOM6 infra
 cd ${BLD_PATH}
 mkdir -p MOM6-infra

@@ -5,7 +5,7 @@
 ############
 FC = mpif90
 CC = mpicc
-CXX = g++
+CXX = mpicxx
 LD = mpif90 $(MAIN_PROGRAM)
 
 #########
@@ -28,6 +28,8 @@ FFLAGS_DEBUG = -O0 -g -W -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,over
 CFLAGS := -D__IFC
 CFLAGS_REPRO= -O2
 CFLAGS_DEBUG = -O0 -g
+
+CXXFLAGS := -std=c++17
 
 LDFLAGS :=
 
