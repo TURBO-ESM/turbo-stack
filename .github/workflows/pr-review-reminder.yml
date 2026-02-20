@@ -1,0 +1,72 @@
+name: PR Review Reminder
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # Daily at 9am UTC
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+  issues: write
+
+jobs:
+  remind-reviewers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for stale review requests
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ONE_DAY = 24 * 60 * 60 * 1000;
+            const ONE_WEEK = 7 * ONE_DAY;
+            const now = new Date();
+
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            for (const pr of pulls) {
+              if (!pr.requested_reviewers.length) continue;
+
+              const lastActivity = new Date(pr.updated_at);
+              const age = now - lastActivity;
+
+              // Skip if there was activity within the last week
+              if (age < ONE_WEEK) continue;
+
+              // Get submitted reviews
+              const { data: reviews } = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number
+              });
+
+              // Collect users who have already reviewed
+              const reviewersWhoReviewed = new Set(
+                reviews.map(r => r.user.login)
+              );
+
+              // Identify reviewers who haven't reviewed yet
+              const pendingReviewers = pr.requested_reviewers
+                .map(r => r.login)
+                .filter(login => !reviewersWhoReviewed.has(login));
+
+              if (pendingReviewers.length === 0) continue;
+
+              const mentions = pendingReviewers
+                .map(login => `@${login}`)
+                .join(' ');
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `👋 Friendly reminder ${mentions} — this PR has had no activity for 7 days and is still awaiting your review. When you have a moment, please take a look!`
+              });
+
+              console.log(`Reminder posted on PR #${pr.number} for ${mentions}`);
+            }
+
