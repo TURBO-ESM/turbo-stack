@@ -49,7 +49,9 @@ contains
    
     expected = 1
     @assertEqual(expected, actual)
+
     call actual_c%free()
+    deallocate(expected)
    
   end subroutine test_bcast_IntArray
 
