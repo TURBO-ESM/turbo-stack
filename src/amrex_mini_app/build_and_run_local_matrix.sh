@@ -17,6 +17,11 @@ if [[ "${DOXYGEN:-0}" == "1" ]]; then
     echo "Will generate Doxygen documentation."
 fi
 
+# You can set the CODE_COVERAGE environment variable to 1 to enable generating code coverage reports. You will need gcov and lcov installed and in your path to do this.
+if [[ "${CODE_COVERAGE:-0}" == "1" ]]; then
+    echo "Will generate code coverage report."
+fi
+
 compiler_list="gcc llvm intel-oneapi-compilers"
 
 mpi_list="openmpi mpich"
@@ -41,8 +46,10 @@ if [ ! -d "${turbo_mini_app_root}" ]; then
 fi
 
 ###############################################################################
-# Spack Environment Setup
+# Build and Run for Each Compiler and MPI Combination
 ###############################################################################
+
+compiler_supports_code_coverage_list="gcc llvm"
 
 for compiler in $compiler_list; do
     for mpi in $mpi_list; do
@@ -112,6 +119,8 @@ for compiler in $compiler_list; do
         spack env activate "$SPACK_ENVIRONMENT_NAME"
 
         spack load $COMPILER@$COMPILER_VERSION
+
+        export BUILD_DIR="${HOME}/turbo_amrex_mini_app_builds/${COMPILER}_${MPI}"
 
         ${turbo_mini_app_root}/build_and_run.sh
 
