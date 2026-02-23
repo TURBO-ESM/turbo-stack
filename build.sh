@@ -333,6 +333,7 @@ LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
 if [[ "${INFRA}" == "TIM" ]]; then
   INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS}"
+  # -lstdc++ link flag needed for older ocmpilers (especially non llvm based ones)
   LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS}"
 fi
 
