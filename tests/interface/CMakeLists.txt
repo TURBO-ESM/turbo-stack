@@ -1,1 +1,2 @@
 add_subdirectory(MOM_comms_infra)
+add_subdirectory(MOM_domain_infra)

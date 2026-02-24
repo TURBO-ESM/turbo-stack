@@ -1,0 +1,46 @@
+module test_compute_extent
+  use pfunit
+  use MOM_test_case
+  use iso_fortran_env, only : int32
+  use MOM_domain_infra, only : compute_extent
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_compute_extent
+  end type testcase_compute_extent
+
+contains
+
+  @test(npes=[4])
+  subroutine test_compute_extent_int32(this)
+    class (testcase_compute_extent), intent(inout) :: this
+    integer(kind=int32) :: isg    !< The starting index of the global index space
+    integer(kind=int32) :: ieg    !< The ending index of the global index space
+    integer(kind=int32) :: ndivs  !< The number of divisions
+    integer(kind=int32), allocatable, dimension(:) :: ibegin_actual, ibegin_expected !< The starting index of each division
+    integer(kind=int32), allocatable, dimension(:) :: iend_actual, iend_expected !< The ending index of each division
+
+    isg = 1
+    ieg = 100
+    ndivs = 4
+
+    allocate(ibegin_expected(ndivs))
+    allocate(iend_expected(ndivs))
+    ibegin_expected = [1, 26, 51, 76]
+    iend_expected = [25, 50, 75, 100]
+
+    allocate(ibegin_actual(ndivs))
+    allocate(iend_actual(ndivs))
+    call compute_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
+    
+    @assertEqual(ibegin_expected, ibegin_actual)
+    @assertEqual(iend_expected, iend_actual)
+
+    deallocate(ibegin_actual)
+    deallocate(iend_actual)
+    deallocate(ibegin_expected)
+    deallocate(iend_expected)
+
+  end subroutine test_compute_extent_int32
+
+end module test_compute_extent
