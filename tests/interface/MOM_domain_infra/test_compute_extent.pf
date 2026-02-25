@@ -6,12 +6,12 @@ module test_compute_extent
   implicit none
 
   @testCase()
-  type, extends(MOM_MPI_test_case) :: testcase_compute_extent
+  type, extends(TestCase) :: testcase_compute_extent
   end type testcase_compute_extent
 
 contains
 
-  @test(npes=[4])
+  @test(description="Test compute_extent with integer(kind=int32) parameters")
   subroutine test_compute_extent_int32(this)
     class (testcase_compute_extent), intent(inout) :: this
     integer(kind=int32) :: isg    !< The starting index of the global index space
@@ -28,10 +28,12 @@ contains
     allocate(iend_expected(ndivs))
     ibegin_expected = [1, 26, 51, 76]
     iend_expected = [25, 50, 75, 100]
+    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
 
     allocate(ibegin_actual(ndivs))
     allocate(iend_actual(ndivs))
     call compute_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
+    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_actual, iend_actual)
     
     @assertEqual(ibegin_expected, ibegin_actual)
     @assertEqual(iend_expected, iend_actual)
@@ -42,5 +44,50 @@ contains
     deallocate(iend_expected)
 
   end subroutine test_compute_extent_int32
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Helpers to check that the computed extents are consistent with the input
+  ! parameters and with each other, without relying on specific expected values
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine check_extents_self_consistent(isg, ieg, ndivs, ibegin, iend)
+    integer(kind=int32), intent(in) :: isg, ieg, ndivs
+    integer(kind=int32), intent(in) :: ibegin(:), iend(:)
+    integer(kind=int32) :: i
+
+    ! Check that the input parameters are valid
+    @assertGreaterThan(ieg, isg)
+    @assertGreaterThan(ndivs, 0)
+    @assertLessThanOrEqual(ndivs, ieg - isg + 1)
+
+    ! Check the output arrays are the right size
+    @assertEqual(size(ibegin), ndivs)
+    @assertEqual(size(iend), ndivs)
+
+    ! Check each element in the range is increasing
+    do i = 2, size(ibegin)
+      @assertLessThan(ibegin(i-1), ibegin(i))
+      @assertLessThan(iend(i-1), iend(i))
+    end do
+
+    ! Check the entire range is covered
+    @assertEqual(ibegin(1), isg)
+    @assertEqual(iend(size(iend)), ieg)
+
+    ! Check the beginning of each range is less than its end
+    do i = 1, size(ibegin)
+       @assertLessThan(ibegin(i), iend(i))
+    end do
+  
+    ! Check no gaps or overlaps between ranges
+    do i = 2, size(ibegin)
+       @assertEqual(ibegin(i), iend(i-1) + 1)
+    end do
+
+    ! check that all ranges are equal in size except possibly the last one
+    do i = 1, size(ibegin)-1
+       @assertEqual(iend(i) - ibegin(i) + 1, (ieg - isg + 1) / ndivs)
+    end do
+
+  end subroutine check_extents_self_consistent
 
 end module test_compute_extent
