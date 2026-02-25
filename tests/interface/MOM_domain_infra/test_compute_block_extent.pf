@@ -6,14 +6,14 @@ module test_compute_block_extent
   implicit none
 
   @testCase()
-  type, extends(MOM_MPI_test_case) :: testcase_compute_block_extent
+  type, extends(TestCase) :: testcase_compute_block_extent
   end type testcase_compute_block_extent
 
 contains
   ! Helper function to check monotonicity
   logical function is_monotonic_increasing(arr)
-    integer, intent(in) :: arr(:)
-    integer :: i
+    integer(kind=int32), intent(in) :: arr(:)
+    integer(kind=int32) :: i
     is_monotonic_increasing = .true.
     do i = 2, size(arr)
       if (arr(i) < arr(i-1)) then
@@ -23,7 +23,8 @@ contains
     end do
   end function is_monotonic_increasing
 
-  @test(npes=[4])
+  @test(description="Test compute_block_extent with integer(kind=int32) parameters")
+  !@test()
   subroutine test_compute_block_extent_int32(this)
     class (testcase_compute_block_extent), intent(inout) :: this
     integer(kind=int32) :: isg    !< The starting index of the global index space
