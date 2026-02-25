@@ -1,6 +1,7 @@
 
 set(MOM_DOMAIN_INFRA_TESTS
   test_compute_extent.pf
+  test_compute_block_extent.pf
 )
 
 add_mom_tests(${MOM_DOMAIN_INFRA_TESTS})

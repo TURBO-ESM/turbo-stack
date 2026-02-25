@@ -1,0 +1,92 @@
+module test_compute_block_extent
+  use pfunit
+  use MOM_test_case
+  use iso_fortran_env, only : int32
+  use MOM_domain_infra, only : compute_block_extent
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_compute_block_extent
+  end type testcase_compute_block_extent
+
+contains
+  ! Helper function to check monotonicity
+  logical function is_monotonic_increasing(arr)
+    integer, intent(in) :: arr(:)
+    integer :: i
+    is_monotonic_increasing = .true.
+    do i = 2, size(arr)
+      if (arr(i) < arr(i-1)) then
+        is_monotonic_increasing = .false.
+        exit
+      end if
+    end do
+  end function is_monotonic_increasing
+
+  @test(npes=[4])
+  subroutine test_compute_block_extent_int32(this)
+    class (testcase_compute_block_extent), intent(inout) :: this
+    integer(kind=int32) :: isg    !< The starting index of the global index space
+    integer(kind=int32) :: ieg    !< The ending index of the global index space
+    integer(kind=int32) :: ndivs  !< The number of divisions
+    integer(kind=int32) :: i, min_block, max_block
+    integer(kind=int32), allocatable, dimension(:) :: ibegin_actual, ibegin_expected !< The starting index of each division
+    integer(kind=int32), allocatable, dimension(:) :: iend_actual, iend_expected !< The ending index of each division
+
+    isg = 1
+    ieg = 100
+    ndivs = 4
+
+    @assertGreaterThan(ieg, isg)
+    @assertGreaterThan(ndivs, 0)
+    @assertLessThanOrEqual(ndivs, ieg - isg + 1)
+
+    allocate(ibegin_expected(ndivs))
+    allocate(iend_expected(ndivs))
+    ibegin_expected = [1, 26, 51, 76]
+    iend_expected = [25, 50, 75, 100]
+
+    allocate(ibegin_actual(ndivs))
+    allocate(iend_actual(ndivs))
+    call compute_block_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
+    
+    @assertEqual(ibegin_expected, ibegin_actual)
+    @assertEqual(iend_expected, iend_actual)
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Checks that are independent of the specific expected values and would work for any valid input parameters:
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Check each element in the range is increasing
+    @assertTrue(is_monotonic_increasing(ibegin_actual))
+    @assertTrue(is_monotonic_increasing(iend_actual))
+
+    ! Check the entire input range is covered
+    @assertEqual(ibegin_actual(1), isg)
+    @assertEqual(iend_actual(ndivs), ieg)
+
+    ! Check the end of each range is greater than the beginning
+    do i = 1, ndivs
+       @assertGreaterThan(iend_actual(i), ibegin_actual(i))
+    end do
+  
+    ! Check no gaps or overlaps between ranges:
+    do i = 2, ndivs
+       @assertEqual(ibegin_actual(i), iend_actual(i-1) + 1)
+    end do
+
+    ! check that all ranges are equal in size except possibly the last one
+    do i = 1, ndivs-1
+       @assertEqual(iend_actual(i) - ibegin_actual(i) + 1, (ieg - isg + 1) / ndivs)
+    end do
+
+    ! check sum of block sizes equals total size
+    @assertEqual(sum(iend_actual - ibegin_actual + 1), ieg - isg + 1)
+
+    deallocate(ibegin_actual)
+    deallocate(iend_actual)
+    deallocate(ibegin_expected)
+    deallocate(iend_expected)
+
+  end subroutine test_compute_block_extent_int32
+
+end module test_compute_block_extent
