@@ -2,7 +2,7 @@ module test_compute_extent
   use pfunit
   use MOM_test_case
   use iso_fortran_env, only : int32
-  use MOM_domain_infra, only : compute_extent
+  use MOM_domain_infra, only : compute_extent, compute_block_extent
   implicit none
 
   @testCase()
@@ -20,21 +20,31 @@ contains
     integer(kind=int32), allocatable, dimension(:) :: ibegin_actual, ibegin_expected !< The starting index of each division
     integer(kind=int32), allocatable, dimension(:) :: iend_actual, iend_expected !< The ending index of each division
 
+    ! Input 
     isg = 1
     ieg = 100
     ndivs = 4
 
+    ! Expected output for these specific input parameters, computed manually
     allocate(ibegin_expected(ndivs))
     allocate(iend_expected(ndivs))
     ibegin_expected = [1, 26, 51, 76]
     iend_expected = [25, 50, 75, 100]
     call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
 
+    ! compute_extent to get the actual output and check it matches the expected output
     allocate(ibegin_actual(ndivs))
     allocate(iend_actual(ndivs))
     call compute_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
     call check_extents_self_consistent(isg, ieg, ndivs, ibegin_actual, iend_actual)
-    
+    @assertEqual(ibegin_expected, ibegin_actual)
+    @assertEqual(iend_expected, iend_actual)
+
+    !! compute_block_extent to get the actual output and check it matches the expected output
+    ibegin_actual = 0
+    iend_actual = 0
+    call compute_block_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
+    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_actual, iend_actual)
     @assertEqual(ibegin_expected, ibegin_actual)
     @assertEqual(iend_expected, iend_actual)
 
