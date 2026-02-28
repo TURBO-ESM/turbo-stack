@@ -22,17 +22,19 @@ contains
 
     ! Input 
     isg = 1
-    ieg = 100
+    ieg = 101
     ndivs = 4
 
-    ! Expected output for these specific input parameters, computed manually
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! compute_extent to get the actual output and check it matches the expected output
+
     allocate(ibegin_expected(ndivs))
     allocate(iend_expected(ndivs))
-    ibegin_expected = [1, 26, 51, 76]
-    iend_expected = [25, 50, 75, 100]
-    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
+    ! Expected output for 4 divisions of the range [1, 101] puts the larger range first:
+    ibegin_expected = [1, 27, 52, 77]
+    iend_expected = [26, 51, 76, 101]
 
-    ! compute_extent to get the actual output and check it matches the expected output
+    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
     allocate(ibegin_actual(ndivs))
     allocate(iend_actual(ndivs))
     call compute_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
@@ -40,9 +42,14 @@ contains
     @assertEqual(ibegin_expected, ibegin_actual)
     @assertEqual(iend_expected, iend_actual)
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !! compute_block_extent to get the actual output and check it matches the expected output
     ibegin_actual = 0
     iend_actual = 0
+    ! Expected output for 4 divisions of the range [1, 101] puts the larger range last:
+    ibegin_expected = [1, 26, 51, 76]
+    iend_expected = [25, 50, 75, 101]
+    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
     call compute_block_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
     call check_extents_self_consistent(isg, ieg, ndivs, ibegin_actual, iend_actual)
     @assertEqual(ibegin_expected, ibegin_actual)
@@ -85,17 +92,12 @@ contains
 
     ! Check the beginning of each range is less than its end
     do i = 1, size(ibegin)
-       @assertLessThan(ibegin(i), iend(i))
+       @assertLessThanOrEqual(ibegin(i), iend(i))
     end do
   
     ! Check no gaps or overlaps between ranges
     do i = 2, size(ibegin)
        @assertEqual(ibegin(i), iend(i-1) + 1)
-    end do
-
-    ! check that all ranges are equal in size except possibly the last one
-    do i = 1, size(ibegin)-1
-       @assertEqual(iend(i) - ibegin(i) + 1, (ieg - isg + 1) / ndivs)
     end do
 
   end subroutine check_extents_self_consistent
