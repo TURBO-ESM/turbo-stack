@@ -59,6 +59,10 @@ jobs:
           which mpicc
           mpicc --version 2>/dev/null || true
 
-      - name: Build/run ctest
+      - name: Build/run ctest (TIM)
         run: |
           ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra TIM --unit-tests-only
+
+      - name: Build/run ctest (FMS2)
+        run: |
+          ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra FMS2 --unit-tests-only
