@@ -1,4 +1,4 @@
-name: Run TIM unit tests
+name: Run Unit Tests (TIM and FMS2)
 
 # See the following link for more information on the NCAR HPC development containers:
 # https://hub.docker.com/u/ncarcisl

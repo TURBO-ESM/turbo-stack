@@ -329,8 +329,8 @@ ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -o "${INFRA_INCLUDE_FLAGS}" -l
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
 
 
-LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
-INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
+LINKING_FLAGS="-L../MOM6-infra-${INFRA} -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
+INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra-${INFRA}"
 if [[ "${INFRA}" == "TIM" ]]; then
   INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS}"
   # -lstdc++ link flag needed for older ocmpilers (especially non llvm based ones)
@@ -339,8 +339,8 @@ fi
 
 # 2) Build MOM6 infra
 cd ${BLD_PATH}
-mkdir -p MOM6-infra
-cd MOM6-infra
+mkdir -p MOM6-infra-${INFRA}
+cd MOM6-infra-${INFRA}
 expanded=$(eval echo ${MOM6_infra_files})
 ${MKMF_ROOT}/list_paths -l ${expanded}
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p ${LIBINFRA} -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
@@ -361,7 +361,7 @@ if [ $UNIT_TESTS_ONLY -eq 1 ]; then
   NetCDF_C_PREFIX_PATH=$(nc-config --prefix)             \
   NetCDF_Fortran_PREFIX_PATH=$(nf-config --prefix)       \
   PATH_TO_BACKEND_LIB="${BLD_PATH}/${INFRA}"             \
-  PATH_TO_LIBINFRA="${BLD_PATH}/MOM6-infra"              \
+  PATH_TO_LIBINFRA="${BLD_PATH}/MOM6-infra-${INFRA}"     \
   LIB_INFRA=${INFRA}                                     \
   CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}                   \
     make -j${JOBS} -C ${UNIT_TEST_ROOT} build_unit_tests
