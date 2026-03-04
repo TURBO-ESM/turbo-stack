@@ -1,6 +1,6 @@
 [submodule "src/MOM6"]
 	path = submodules/MOM6
-	url = https://github.com/mwaxmonsky/MOM6.git
+	url = https://github.com/TURBO-ESM/MOM6.git
 [submodule "src/FMS"]
 	path = submodules/FMS
 	url = https://github.com/TURBO-ESM/FMS
