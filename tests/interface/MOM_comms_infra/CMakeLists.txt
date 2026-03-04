@@ -13,11 +13,11 @@ set(MOM_COMS_INFRA_TESTS
   test_set_pelist_to_single_then_reset.pf
   test_set_pelist_split.pf
   test_get_pelist_all_ranks.pf
-  test_field_checksum_real640d.pf
-  test_field_checksum_real641d.pf
-  test_field_checksum_real642d.pf
-  test_field_checksum_real643d.pf
-  test_field_checksum_real644d.pf
+  test_field_checksum_real_0d.pf
+  test_field_checksum_real_1d.pf
+  test_field_checksum_real_2d.pf
+  test_field_checksum_real_3d.pf
+  test_field_checksum_real_4d.pf
   test_sum_across_pes_int32_0d.pf
   test_sum_across_pes_int32_1d.pf
   test_sum_across_pes_int32_2d.pf
