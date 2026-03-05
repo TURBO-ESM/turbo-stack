@@ -1,6 +1,5 @@
 module test_compute_extent
   use pfunit
-  use MOM_test_case
   use iso_fortran_env, only : int32
   use MOM_domain_infra, only : compute_extent, compute_block_extent
   implicit none
