@@ -24,33 +24,18 @@ contains
     ieg = 101
     ndivs = 4
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! compute_extent to get the actual output and check it matches the expected output
-
+    ! Expected output for 4 divisions of the range [1, 101] puts the larger range first:
     allocate(ibegin_expected(ndivs))
     allocate(iend_expected(ndivs))
-    ! Expected output for 4 divisions of the range [1, 101] puts the larger range first:
     ibegin_expected = [1, 27, 52, 77]
     iend_expected = [26, 51, 76, 101]
-
     call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
+
     allocate(ibegin_actual(ndivs))
     allocate(iend_actual(ndivs))
     call compute_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
     call check_extents_self_consistent(isg, ieg, ndivs, ibegin_actual, iend_actual)
-    @assertEqual(ibegin_expected, ibegin_actual)
-    @assertEqual(iend_expected, iend_actual)
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !! compute_block_extent to get the actual output and check it matches the expected output
-    ibegin_actual = 0
-    iend_actual = 0
-    ! Expected output for 4 divisions of the range [1, 101] puts the larger range last:
-    ibegin_expected = [1, 26, 51, 76]
-    iend_expected = [25, 50, 75, 101]
-    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
-    call compute_block_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
-    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_actual, iend_actual)
     @assertEqual(ibegin_expected, ibegin_actual)
     @assertEqual(iend_expected, iend_actual)
 
@@ -60,6 +45,42 @@ contains
     deallocate(iend_expected)
 
   end subroutine test_compute_extent_int32
+
+  @test(description="Test compute_block_extent with integer(kind=int32) parameters")
+  subroutine test_compute_block_extent_int32(this)
+    class (testcase_compute_extent), intent(inout) :: this
+    integer(kind=int32) :: isg    !< The starting index of the global index space
+    integer(kind=int32) :: ieg    !< The ending index of the global index space
+    integer(kind=int32) :: ndivs  !< The number of divisions
+    integer(kind=int32), allocatable, dimension(:) :: ibegin_actual, ibegin_expected !< The starting index of each division
+    integer(kind=int32), allocatable, dimension(:) :: iend_actual, iend_expected !< The ending index of each division
+
+    ! Input 
+    isg = 1
+    ieg = 101
+    ndivs = 4
+
+    ! Expected output for 4 divisions of the range [1, 101] puts the larger range last:
+    allocate(ibegin_expected(ndivs))
+    allocate(iend_expected(ndivs))
+    ibegin_expected = [1, 26, 51, 76]
+    iend_expected = [25, 50, 75, 101]
+    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_expected, iend_expected)
+
+    allocate(ibegin_actual(ndivs))
+    allocate(iend_actual(ndivs))
+    call compute_block_extent(isg, ieg, ndivs, ibegin_actual, iend_actual)
+    call check_extents_self_consistent(isg, ieg, ndivs, ibegin_actual, iend_actual)
+
+    @assertEqual(ibegin_expected, ibegin_actual)
+    @assertEqual(iend_expected, iend_actual)
+
+    deallocate(ibegin_actual)
+    deallocate(iend_actual)
+    deallocate(ibegin_expected)
+    deallocate(iend_expected)
+
+  end subroutine test_compute_block_extent_int32
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Helpers to check that the computed extents are consistent with the input
@@ -90,9 +111,7 @@ contains
     @assertEqual(iend(size(iend)), ieg)
 
     ! Check the beginning of each range is less than or equal to its end
-    do i = 1, size(ibegin)
-       @assertLessThanOrEqual(ibegin(i), iend(i))
-    end do
+    @assertLessThanOrEqual(ibegin(i), iend(i))
   
     ! Check no gaps or overlaps between ranges
     do i = 2, size(ibegin)
@@ -100,7 +119,7 @@ contains
     end do
 
     ! Check that the number of elements in each range varies by at most 1 (i.e. the ranges are as evenly sized as possible)
-    @assertLessThanOrEqual( maxval(iend-ibegin) - minval(iend-ibegin), 1 )
+    @assertLessThanOrEqual(maxval(iend-ibegin) - minval(iend-ibegin), 1 )
 
   end subroutine check_extents_self_consistent
 
