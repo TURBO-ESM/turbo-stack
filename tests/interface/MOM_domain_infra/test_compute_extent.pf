@@ -100,6 +100,11 @@ contains
        @assertEqual(ibegin(i), iend(i-1) + 1)
     end do
 
+    ! Check that the number of elements in each range varies by at most 1 (i.e. the ranges are as evenly sized as possible)
+    do i = 2, size(ibegin)
+       @assertLessThanOrEqual(abs((iend(i) - ibegin(i) + 1) - (iend(i-1) - ibegin(i-1) + 1)), 1)
+    end do
+
   end subroutine check_extents_self_consistent
 
 end module test_compute_extent
