@@ -89,7 +89,7 @@ contains
     @assertEqual(ibegin(1), isg)
     @assertEqual(iend(size(iend)), ieg)
 
-    ! Check the beginning of each range is less than its end
+    ! Check the beginning of each range is less than or equal to its end
     do i = 1, size(ibegin)
        @assertLessThanOrEqual(ibegin(i), iend(i))
     end do
