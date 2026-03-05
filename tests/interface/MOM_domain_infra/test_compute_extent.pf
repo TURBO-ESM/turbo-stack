@@ -100,9 +100,7 @@ contains
     end do
 
     ! Check that the number of elements in each range varies by at most 1 (i.e. the ranges are as evenly sized as possible)
-    do i = 2, size(ibegin)
-       @assertLessThanOrEqual(abs((iend(i) - ibegin(i) + 1) - (iend(i-1) - ibegin(i-1) + 1)), 1)
-    end do
+    @assertLessThanOrEqual( maxval(iend-ibegin) - minval(iend-ibegin), 1 )
 
   end subroutine check_extents_self_consistent
 
