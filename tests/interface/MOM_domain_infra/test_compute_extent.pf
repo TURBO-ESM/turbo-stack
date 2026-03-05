@@ -111,7 +111,7 @@ contains
     @assertEqual(iend(size(iend)), ieg)
 
     ! Check the beginning of each range is less than or equal to its end
-    @assertLessThanOrEqual(ibegin(i), iend(i))
+    @assertLessThanOrEqual(ibegin, iend)
   
     ! Check no gaps or overlaps between ranges
     do i = 2, size(ibegin)
