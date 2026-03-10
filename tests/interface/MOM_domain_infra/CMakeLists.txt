@@ -1,6 +1,7 @@
 
 set(MOM_DOMAIN_INFRA_TESTS
   test_compute_extent.pf
+  test_create_mom_domain.pf
 )
 
 add_mom_tests(${MOM_DOMAIN_INFRA_TESTS})

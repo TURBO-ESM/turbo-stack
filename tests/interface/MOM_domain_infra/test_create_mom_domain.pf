@@ -1,0 +1,65 @@
+module test_create_mom_domain
+  use pfunit
+  use MOM_test_case
+  use MOM_domains, only : MOM_domain_type, create_MOM_domain
+  !use mpp_parameter, only : NORTH
+  use iso_fortran_env, only : int32
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_domain
+  end type testcase_domain
+
+contains
+
+  @test(npes=[4])
+  subroutine test_basic_init_no_file(this)
+    class (testcase_domain), intent(inout) :: this
+    type(MOM_domain_type), pointer :: dom => null()
+    integer(kind=int32) :: n_global(2)  = (/4, 8/)
+    integer(kind=int32) :: n_halo(2)    = (/1, 1/)
+    logical :: reentrant(2) = (/ .false., .false. /)
+    !logical :: reentrant(2) = (/ .true., .false. /)
+    logical :: tripolar_N   = .false.
+    integer(kind=int32) :: layout(2)    = (/2, 2/)
+    ! optional arguments for create_MOM_domain
+    logical :: thin_halos   = .true.  ! marked as optional but will segfault if not provided, I believe the default value should be true
+    logical :: nonblocking  = .false. ! marked as optional but will segfault if not provided, I believe the default value should be false
+    logical :: symmetric    = .false.
+    !integer, dimension(2), optional, intent(in) :: io_layout 
+    !character(len=*), optional, intent(in) :: domain_name 
+    !character(len=*), optional, intent(in) :: mask_table 
+
+
+    call create_MOM_domain(dom, n_global, n_halo, reentrant, tripolar_N, layout, &
+      symmetric=symmetric, thin_halos=thin_halos, nonblocking=nonblocking)
+
+    ! Assertions: Check domain fields are correctly set
+    call assertEqual(dom%niglobal, n_global(1))
+    call assertEqual(dom%njglobal, n_global(2))
+    call assertEqual(dom%nihalo, n_halo(1))
+    call assertEqual(dom%njhalo, n_halo(2))
+    call assertEqual(dom%name, "MOM")
+    call assertEqual(dom%layout, layout)
+
+    ! XFLAGS and YFLAGS are set to be special values from mpp_domain?... for now just hardcoding the expected values based on the reentrant input
+    if (reentrant(1)) then
+      call assertEqual(dom%X_FLAGS, 2)
+    else
+      call assertEqual(dom%X_FLAGS, 0)
+    end if
+
+    if (reentrant(2)) then
+      call assertEqual(dom%Y_FLAGS, 2)
+    else if (tripolar_N) then
+      call assertEqual(dom%Y_FLAGS, 2**5)
+    else
+      call assertEqual(dom%Y_FLAGS, 0)
+    end if
+
+    call assertEqual(dom%io_layout, (/1, 1/) )
+    call assertEqual(dom%turns, 0)
+    ! Not checking mpp_domain and mpp_domain2 pointers at the moment
+  end subroutine test_basic_init_no_file
+
+end module test_create_mom_domain
