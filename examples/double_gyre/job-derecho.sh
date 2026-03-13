@@ -11,5 +11,6 @@
 export TMPDIR=${SCRATCH}/${USER}/temp && mkdir -p $TMPDIR
 
 COMPILER=intel
+INFRA=FMS2
 
-mpiexec ../../bin/${COMPILER}/MOM6/MOM6
+mpiexec ../../bin/${COMPILER}/MOM6_using_${INFRA}/MOM6/MOM6
