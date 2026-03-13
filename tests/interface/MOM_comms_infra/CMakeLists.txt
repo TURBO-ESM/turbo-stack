@@ -30,6 +30,9 @@ set(MOM_COMS_INFRA_TESTS
   test_min_across_pes_int_0d.pf
   test_min_across_pes_real64_0d.pf
   test_min_across_pes_real64_1d.pf
+  test_max_across_pes_int_0d.pf
+  test_max_across_pes_real64_0d.pf
+  test_max_across_pes_real64_1d.pf
   test_num_pes.pf
   test_root_pe.pf
   test_pe_here.pf

@@ -23,7 +23,7 @@ contains
 
     expected_global_min = -1.5
 
-    actual_global_min = real(0.5*(comm_rank-3), kind=real64)
+    actual_global_min = 0.5_real64 * real(comm_rank-3, kind=real64)
     call min_across_PEs(actual_global_min)
 
     @assertEqual(expected_global_min, actual_global_min, tolerance=tolerance)
