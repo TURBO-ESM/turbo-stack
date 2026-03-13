@@ -1,0 +1,36 @@
+module test_all_across_pes
+  use pfunit
+  use MOM_coms_infra, only : all_across_PEs
+  use MOM_test_case
+  use iso_fortran_env, only : int32
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: test_case_all_across_pes
+  end type test_case_all_across_pes
+
+contains
+
+  @test(npes=[4])
+  subroutine test_AllAcrossPEs(this)
+    class (test_case_all_across_pes), intent(inout) :: this
+    integer(kind=int32) :: comm_rank
+    integer(kind=int32) :: i
+    logical :: expected_global_all
+    logical :: actual_global_all
+
+    comm_rank = this%getProcessRank()
+
+    ! Test where we expect at least one rank to be false
+    expected_global_all = .false.
+    actual_global_all = all_across_PEs(modulo(comm_rank,2) == 1)
+    @assertEqual(expected_global_all, actual_global_all)
+
+    ! Test where we expect at least all ranks to be true
+    expected_global_all = .true.
+    actual_global_all = all_across_PEs(comm_rank > -1)
+    @assertEqual(expected_global_all, actual_global_all)
+
+  end subroutine test_AllAcrossPEs
+   
+end module test_all_across_pes
