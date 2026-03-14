@@ -2,7 +2,6 @@ module test_create_mom_domain
   use pfunit
   use MOM_test_case
   use MOM_domains, only : MOM_domain_type, create_MOM_domain
-  !use mpp_parameter, only : NORTH
   use iso_fortran_env, only : int32
   implicit none
 
@@ -26,36 +25,51 @@ module test_create_mom_domain
 contains
 
   @test(npes=[4])
-  subroutine test_basic_init_no_file(this)
+  subroutine create_mom_domain_test(this)
     class (testcase_domain), intent(inout) :: this
 
     ! Using blocks to test multiple cases of domain creation with different arguments.
     ! Each block has its own scope so we can reuse variable names and ensure proper deallocation of the domain after each test case
+
+    ! Default case with default arguments
     block
       type(MOM_domain_type), pointer :: dom => null()
       type(create_mom_domain_args_type) :: args
       call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
         symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking)
       call check_domain(dom, args)
-      !if (associated(dom)) call deallocate(dom)
+      if (associated(dom)) deallocate(dom)
     end block
 
-    ! Second test case: change reentrant flag
+    ! Change reentrant flag
     block
-      type(MOM_domain_type), pointer :: dom => null()
-      type(create_mom_domain_args_type) :: args
-    
-      ! TODO: A loop over true and false for the reentrant flag in both dimensions to test the different logic branches in create_MOM_domain for setting the X_FLAGS and Y_FLAGS values in the domain.
-      args%reentrant = (/ .true., .false. /)
+      integer :: i, j
+      logical :: reentrant_x, reentrant_y
+      
+      do i = 0, 1
+        do j = 0, 1
+          reentrant_x = (i == 1)
+          reentrant_y = (j == 1)
+          block
+            type(MOM_domain_type), pointer :: dom => null()
+            type(create_mom_domain_args_type) :: args
 
-      call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
-        symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking)
-      call check_domain(dom, args)
-      !if (associated(dom)) call deallocate(dom)
+            args%reentrant = (/ reentrant_x, reentrant_y /)
+            if (reentrant_y .and. args%tripolar_N) then
+              cycle ! skip the invalid case of tripolar_N true with reentrant_y true since this is not currently supported in create_MOM_domain
+            end if
+
+            call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+              symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+            call check_domain(dom, args)
+
+            if (associated(dom)) deallocate(dom)
+          end block
+        end do
+      end do
     end block
 
-
-  end subroutine test_basic_init_no_file
+  end subroutine create_mom_domain_test
 
   subroutine check_domain(dom, create_mom_domain_args)
     type(MOM_domain_type), pointer, intent(in) :: dom
