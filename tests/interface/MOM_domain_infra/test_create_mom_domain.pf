@@ -41,11 +41,32 @@ contains
       if (associated(dom)) deallocate(dom)
     end block
 
+    ! Change n_global
+    block
+      integer(kind=int32) :: n_global_x, n_global_y
+      ! TODO: These fail for values of 1, 2, and 3. Is that expected given the other arguments are left at their default values? 
+      do n_global_x = 4, 8
+        do n_global_y = 4, 8
+          block
+            type(MOM_domain_type), pointer :: dom => null()
+            type(create_mom_domain_args_type) :: args
+
+            args%n_global = (/ n_global_x, n_global_y /)
+
+            call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+              symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+            call check_domain(dom, args)
+
+            if (associated(dom)) deallocate(dom)
+          end block
+        end do
+      end do
+    end block
+
     ! Change reentrant flag
     block
       integer :: i, j
       logical :: reentrant_x, reentrant_y
-      
       do i = 0, 1
         do j = 0, 1
           reentrant_x = (i == 1)
