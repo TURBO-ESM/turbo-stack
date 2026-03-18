@@ -284,50 +284,50 @@ contains
     integer(kind=int32), parameter :: CYCLIC_GLOBAL_DOMAIN = 2
 
     !call assertAssociated(dom)
-    call assertTrue(associated(dom))
+    @assertTrue(associated(dom))
 
-    call assertEqual(dom%name, create_mom_domain_args%name)
+    @assertEqual(dom%name, create_mom_domain_args%name)
 
-    call assertEqual(dom%nonblocking_updates, create_mom_domain_args%nonblocking)
-    call assertEqual(dom%thin_halo_updates, create_mom_domain_args%thin_halos)
-    call assertEqual(dom%symmetric, create_mom_domain_args%symmetric)
+    @assertEqual(dom%nonblocking_updates, create_mom_domain_args%nonblocking)
+    @assertEqual(dom%thin_halo_updates, create_mom_domain_args%thin_halos)
+    @assertEqual(dom%symmetric, create_mom_domain_args%symmetric)
 
-    call assertEqual(dom%niglobal, create_mom_domain_args%n_global(1))
-    call assertEqual(dom%njglobal, create_mom_domain_args%n_global(2))
+    @assertEqual(dom%niglobal, create_mom_domain_args%n_global(1))
+    @assertEqual(dom%njglobal, create_mom_domain_args%n_global(2))
 
-    call assertEqual(dom%nihalo, create_mom_domain_args%n_halo(1))
-    call assertEqual(dom%njhalo, create_mom_domain_args%n_halo(2))
+    @assertEqual(dom%nihalo, create_mom_domain_args%n_halo(1))
+    @assertEqual(dom%njhalo, create_mom_domain_args%n_halo(2))
 
     ! XFLAGS and YFLAGS are set to be special values from mpp_domain?... for now just hardcoding the expected values based on the reentrant input
     if (create_mom_domain_args%reentrant(1)) then
-      call assertEqual(dom%X_FLAGS, CYCLIC_GLOBAL_DOMAIN)
+      @assertEqual(dom%X_FLAGS, CYCLIC_GLOBAL_DOMAIN)
     else
-      call assertEqual(dom%X_FLAGS, 0)
+      @assertEqual(dom%X_FLAGS, 0)
     end if
 
     if (create_mom_domain_args%reentrant(2)) then
-      call assertEqual(dom%Y_FLAGS, CYCLIC_GLOBAL_DOMAIN)
+      @assertEqual(dom%Y_FLAGS, CYCLIC_GLOBAL_DOMAIN)
     else if (create_mom_domain_args%tripolar_N) then
-      call assertEqual(dom%Y_FLAGS, 2**5)
+      @assertEqual(dom%Y_FLAGS, 2**5)
     else
-      call assertEqual(dom%Y_FLAGS, 0)
+      @assertEqual(dom%Y_FLAGS, 0)
     end if
 
-    call assertEqual(dom%layout, create_mom_domain_args%layout)
+    @assertEqual(dom%layout, create_mom_domain_args%layout)
 
     ! More logic about how to set io_layout based on the input arguments in create_MOM_domain, but for now just checking it matches the input value
-    call assertEqual(dom%io_layout, create_mom_domain_args%io_layout)
+    @assertEqual(dom%io_layout, create_mom_domain_args%io_layout)
 
     ! TODO:Logic about how to set MOM_dom%maskmap based on the input arguments in create_MOM_domain, but for now just checking it is set to the expected value of 0
     ! check that this is a null pointer.
-    call assertFalse(associated(dom%maskmap))
+    @assertFalse(associated(dom%maskmap))
 
-    call assertEqual(dom%turns, 0)
+    @assertEqual(dom%turns, 0)
 
     ! TODO: Not checking mpp_domain and mpp_domain2 pointers at the moment
     ! Check that these are not null pointers, but not checking the actual contents of the domains at this time
-    call assertTrue(associated(dom%mpp_domain))
-    call assertTrue(associated(dom%mpp_domain_d2))
+    @assertTrue(associated(dom%mpp_domain))
+    @assertTrue(associated(dom%mpp_domain_d2))
 
   end subroutine check_domain
 
