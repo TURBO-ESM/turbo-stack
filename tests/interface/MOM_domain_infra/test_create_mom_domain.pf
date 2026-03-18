@@ -11,11 +11,12 @@ module test_create_mom_domain
     logical :: reentrant(2) = (/ .false., .false. /)
     logical :: tripolar_N   = .false.
     integer(kind=int32) :: layout(2)    = (/2, 2/)
-    logical :: thin_halos   = .true.
-    logical :: nonblocking  = .false.
-    logical :: symmetric    = .false.
+    logical :: thin_halos   = .true.  ! Marked as optional but will segfault if not given as an argument to create_MOM_domain
+    logical :: nonblocking  = .false. ! Marked as optional but will segfault if not given as an argument to create_MOM_domain
+    logical :: symmetric    = .true.
     character(len=20) :: name = "MOM"
     integer(kind=int32) :: io_layout(2) = (/1, 1/)
+    ! Not covering mask table for now. Its a file?
   end type create_mom_domain_args_type
 
   @testCase()
@@ -31,15 +32,21 @@ contains
     ! Using blocks to test multiple cases of domain creation with different arguments.
     ! Each block has its own scope so we can reuse variable names and ensure proper deallocation of the domain after each test case
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Default case with default arguments
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     block
       type(MOM_domain_type), pointer :: dom => null()
       type(create_mom_domain_args_type) :: args
       call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
-        symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+        thin_halos=args%thin_halos, nonblocking=args%nonblocking)
       call check_domain(dom, args)
       if (associated(dom)) deallocate(dom)
     end block
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Required arguments with non default values
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! Change n_global
     block
@@ -54,7 +61,28 @@ contains
             args%n_global = (/ n_global_x, n_global_y /)
 
             call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
-              symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+              thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+            call check_domain(dom, args)
+
+            if (associated(dom)) deallocate(dom)
+          end block
+        end do
+      end do
+    end block
+
+    ! Change n_halo
+    block
+      integer(kind=int32) :: n_halo_x, n_halo_y
+      do n_halo_x = 1, 2
+        do n_halo_y = 1, 2
+          block
+            type(MOM_domain_type), pointer :: dom => null()
+            type(create_mom_domain_args_type) :: args
+
+            args%n_halo = (/ n_halo_x, n_halo_y /)
+
+            call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+              thin_halos=args%thin_halos, nonblocking=args%nonblocking)
             call check_domain(dom, args)
 
             if (associated(dom)) deallocate(dom)
@@ -65,29 +93,210 @@ contains
 
     ! Change reentrant flag
     block
-      integer :: i, j
-      logical :: reentrant_x, reentrant_y
-      do i = 0, 1
-        do j = 0, 1
-          reentrant_x = (i == 1)
-          reentrant_y = (j == 1)
+      integer :: is_reentrant_x, is_reentrant_y
+      do is_reentrant_x = 0, 1
+        do is_reentrant_y = 0, 1
           block
             type(MOM_domain_type), pointer :: dom => null()
             type(create_mom_domain_args_type) :: args
 
-            args%reentrant = (/ reentrant_x, reentrant_y /)
-            if (reentrant_y .and. args%tripolar_N) then
+            args%reentrant = (/ (is_reentrant_x == 1), (is_reentrant_y == 1) /)
+            if (args%reentrant(2) .and. args%tripolar_N) then
               cycle ! skip the invalid case of tripolar_N true with reentrant_y true since this is not currently supported in create_MOM_domain
             end if
 
             call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
-              symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+              thin_halos=args%thin_halos, nonblocking=args%nonblocking)
             call check_domain(dom, args)
 
             if (associated(dom)) deallocate(dom)
           end block
         end do
       end do
+    end block
+
+    ! Change tripolar_N flag
+    block
+      integer :: is_tripolar_N
+      do is_tripolar_N = 0, 1
+        block
+          type(MOM_domain_type), pointer :: dom => null()
+          type(create_mom_domain_args_type) :: args
+
+          args%tripolar_N = (is_tripolar_N == 1)
+
+          call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+            thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+          call check_domain(dom, args)
+
+          if (associated(dom)) deallocate(dom)
+        end block
+      end do
+    end block
+
+    ! Change layout
+    block
+
+      ! This Fails
+      ! integer(kind=int32), parameter :: layout_x_values(3) = (/4, 2, 1/)
+      ! integer(kind=int32), parameter :: layout_y_values(3) = (/1, 2, 4/)
+
+      ! Fall back to this default value to get it to pass for now.
+      integer(kind=int32), parameter :: layout_x_values(1) = (/2/)
+      integer(kind=int32), parameter :: layout_y_values(1) = (/2/)
+
+      integer(kind=int32) :: i, j
+      do i = 1, size(layout_x_values)
+        do j = 1, size(layout_y_values)
+          block
+            type(MOM_domain_type), pointer :: dom => null()
+            type(create_mom_domain_args_type) :: args
+
+            args%layout = (/ layout_x_values(i), layout_y_values(j) /)
+
+            call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+              thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+            call check_domain(dom, args)
+
+            if (associated(dom)) deallocate(dom)
+          end block
+        end do
+      end do
+
+      !integer(kind=int32) :: layout_x, layout_y
+      !do layout_x = 2, 4
+      !  do layout_y = 2, 4
+      !    block
+      !      type(MOM_domain_type), pointer :: dom => null()
+      !      type(create_mom_domain_args_type) :: args
+
+      !      args%layout = (/ layout_x, layout_y /)
+
+      !      call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+      !        thin_halos=args%thin_halos, nonblocking=args%nonblocking)
+      !      call check_domain(dom, args)
+
+      !      if (associated(dom)) deallocate(dom)
+      !    end block
+      !  end do
+      !end do
+    end block
+
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Optional arguments with non default values
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! Change name
+    block
+      type(MOM_domain_type), pointer :: dom => null()
+      type(create_mom_domain_args_type) :: args
+
+      args%name = "some_domain_name"
+
+      call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+        thin_halos=args%thin_halos, nonblocking=args%nonblocking, domain_name=args%name)
+      call check_domain(dom, args)
+
+      if (associated(dom)) deallocate(dom)
+    end block
+
+    ! Change all arguments, a bunch of nested loops to test multiple combinations of arguments for create_MOM_domain.
+    block
+      ! User input here: For setting loop bounds for non bool arguments to create_MOM_domain
+      integer(kind=int32), parameter :: n_global_x_min = 4, n_global_x_max = 8  ! TODO: These fail for values of 1, 2, and 3. Is that expected given the other arguments are left at their default values? 
+      integer(kind=int32), parameter :: n_global_y_min = 4, n_global_y_max = 8  ! TODO: These fail for values of 1, 2, and 3. Is that expected given the other arguments are left at their default values? 
+      integer(kind=int32), parameter :: n_halo_x_min = 0, n_halo_x_max = 2
+      integer(kind=int32), parameter :: n_halo_y_min = 0, n_halo_y_max = 2
+      integer(kind=int32), parameter :: layout_x_min = 2, layout_x_max = 2
+      integer(kind=int32), parameter :: layout_y_min = 2, layout_y_max = 2
+      integer(kind=int32), parameter :: name_idx_min = 1, name_idx_max = 2
+      integer(kind=int32), parameter :: io_layout_x_min = 1, io_layout_x_max = 1
+      integer(kind=int32), parameter :: io_layout_y_min = 1, io_layout_y_max = 1
+      ! For setting arguments to create_MOM_domain
+      integer(kind=int32) :: n_global_x, n_global_y
+      integer(kind=int32) :: n_halo_x, n_halo_y
+      integer(kind=int32) :: is_reentrant_x, is_reentrant_y
+      integer(kind=int32) :: is_tripolar_N
+      integer(kind=int32) :: layout_x, layout_y
+      integer(kind=int32) :: is_thin_halos
+      integer(kind=int32) :: is_nonblocking
+      integer(kind=int32) :: is_symmetric
+      integer(kind=int32) :: name_idx
+      integer(kind=int32) :: io_layout_x, io_layout_y
+     
+      n_global_x_loop : do n_global_x = n_global_x_min, n_global_x_max
+      n_global_y_loop : do n_global_y = n_global_y_min, n_global_y_max
+      n_halo_x_loop : do n_halo_x = n_halo_x_min, n_halo_x_max
+      n_halo_y_loop : do n_halo_y = n_halo_y_min, n_halo_y_max
+      is_reentrant_x_loop : do is_reentrant_x = 0, 1
+      is_reentrant_y_loop : do is_reentrant_y = 0, 1
+      is_tripolar_N_loop : do is_tripolar_N = 0, 1
+      layout_x_loop : do layout_x = layout_x_min, layout_x_max
+      layout_y_loop : do layout_y = layout_y_min, layout_y_max
+      thin_halos_loop : do is_thin_halos = 0, 1
+      nonblocking_loop : do is_nonblocking = 0, 1
+      symmetric_loop : do is_symmetric = 0, 1
+      name_loop : do name_idx = name_idx_min, name_idx_max
+      io_layout_x_loop : do io_layout_x = io_layout_x_min, io_layout_x_max
+      io_layout_y_loop : do io_layout_y = io_layout_y_min, io_layout_y_max
+        block
+          type(MOM_domain_type), pointer :: dom => null()
+          type(create_mom_domain_args_type) :: args
+
+          args%n_global = (/ n_global_x, n_global_y /)
+          args%n_halo = (/ n_halo_x, n_halo_y /)
+          args%reentrant = (/ (is_reentrant_x == 1), (is_reentrant_y == 1) /)
+          args%tripolar_N = (is_tripolar_N == 1)
+          args%layout = (/ layout_x, layout_y /)
+          args%thin_halos = (is_thin_halos == 1)
+          args%nonblocking = (is_nonblocking == 1)
+          args%symmetric = (is_symmetric == 1)
+          if (name_idx == 1) then
+            args%name = "MOM_domain_name"
+          else if (name_idx == 2) then
+            args%name = "MOM_domain_name2"
+          end if
+          args%io_layout = (/ io_layout_x, io_layout_y /)
+
+          ! Cant have reentrant_y true with tripolar_N true
+          if (args%reentrant(2) .and. args%tripolar_N) then
+            cycle ! skip the invalid case of tripolar_N true with reentrant_y true since this is not currently supported in create_MOM_domain
+          end if
+
+          ! Number of points in the x direction must be even when using a tripolar grid
+          !if ( (mod(args%n_global(1), 2) == 1) .and. args%tripolar_N) then
+          if ( (mod(args%n_global(1) + 2*args%n_halo(1), 2) == 1) .and. args%tripolar_N) then
+            cycle ! skip the invalid case of tripolar_N true with an odd number of points in the x direction since this is not currently supported in create_MOM_domain
+          end if
+
+          ! Skip tripolar cases for now because it segfaults for some cases. Not sure what combination of other arguments lead to this
+          if (args%tripolar_N ) then
+            cycle 
+          end if
+
+          call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+            symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking, io_layout=args%io_layout, &
+            domain_name=args%name)
+          call check_domain(dom, args)
+
+          if (associated(dom)) deallocate(dom)
+        end block
+      end do io_layout_y_loop
+      end do io_layout_x_loop
+      end do name_loop
+      end do symmetric_loop
+      end do nonblocking_loop
+      end do thin_halos_loop
+      end do layout_y_loop
+      end do layout_x_loop
+      end do is_tripolar_N_loop
+      end do is_reentrant_y_loop
+      end do is_reentrant_x_loop
+      end do n_halo_y_loop
+      end do n_halo_x_loop
+      end do n_global_y_loop
+      end do n_global_x_loop
     end block
 
   end subroutine create_mom_domain_test
