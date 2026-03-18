@@ -101,9 +101,6 @@ contains
             type(create_mom_domain_args_type) :: args
 
             args%reentrant = (/ (is_reentrant_x == 1), (is_reentrant_y == 1) /)
-            if (args%reentrant(2) .and. args%tripolar_N) then
-              cycle ! skip the invalid case of tripolar_N true with reentrant_y true since this is not currently supported in create_MOM_domain
-            end if
 
             call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
               thin_halos=args%thin_halos, nonblocking=args%nonblocking)
@@ -137,11 +134,11 @@ contains
     ! Change layout
     block
 
-      ! This Fails
+
+      ! TODO: This Fails
       ! integer(kind=int32), parameter :: layout_x_values(3) = (/4, 2, 1/)
       ! integer(kind=int32), parameter :: layout_y_values(3) = (/1, 2, 4/)
-
-      ! Fall back to this default value to get it to pass for now.
+      ! Fall back to this default value to get it to pass for now. Come back and see how layout is used in create_MOM_domain and what reasonable values for these arguments should be.
       integer(kind=int32), parameter :: layout_x_values(1) = (/2/)
       integer(kind=int32), parameter :: layout_y_values(1) = (/2/)
 
@@ -163,25 +160,10 @@ contains
         end do
       end do
 
-      !integer(kind=int32) :: layout_x, layout_y
-      !do layout_x = 2, 4
-      !  do layout_y = 2, 4
-      !    block
-      !      type(MOM_domain_type), pointer :: dom => null()
-      !      type(create_mom_domain_args_type) :: args
-
-      !      args%layout = (/ layout_x, layout_y /)
-
-      !      call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
-      !        thin_halos=args%thin_halos, nonblocking=args%nonblocking)
-      !      call check_domain(dom, args)
-
-      !      if (associated(dom)) deallocate(dom)
-      !    end block
-      !  end do
-      !end do
     end block
 
+    ! TODO: thin_halos and nonblocking are optional arguments in create_MOM_domain but create_MOM_domain will segfault if not given,
+    !       Not testing them here in the required arguments section but maybe we should?
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Optional arguments with non default values
@@ -208,12 +190,12 @@ contains
       integer(kind=int32), parameter :: n_global_y_min = 4, n_global_y_max = 8  ! TODO: These fail for values of 1, 2, and 3. Is that expected given the other arguments are left at their default values? 
       integer(kind=int32), parameter :: n_halo_x_min = 0, n_halo_x_max = 2
       integer(kind=int32), parameter :: n_halo_y_min = 0, n_halo_y_max = 2
-      integer(kind=int32), parameter :: layout_x_min = 2, layout_x_max = 2
-      integer(kind=int32), parameter :: layout_y_min = 2, layout_y_max = 2
+      integer(kind=int32), parameter :: layout_x_min = 2, layout_x_max = 2      ! TODO: This Fails for values other than min=max=2. Come back and see how layout is used in create_MOM_domain and what reasonable values for these arguments should be.
+      integer(kind=int32), parameter :: layout_y_min = 2, layout_y_max = 2      ! TODO: This Fails for values other than min=max=2. Come back and see how layout is used in create_MOM_domain and what reasonable values for these arguments should be.
       integer(kind=int32), parameter :: name_idx_min = 1, name_idx_max = 2
-      integer(kind=int32), parameter :: io_layout_x_min = 1, io_layout_x_max = 1
-      integer(kind=int32), parameter :: io_layout_y_min = 1, io_layout_y_max = 1
-      ! For setting arguments to create_MOM_domain
+      integer(kind=int32), parameter :: io_layout_x_min = 1, io_layout_x_max = 2 ! TODO: Pick reasonable values to loop over for this arguments
+      integer(kind=int32), parameter :: io_layout_y_min = 1, io_layout_y_max = 2 ! TODO: Pick reasonable values to loop over for this arguments
+      ! Variables used to set arguments to create_MOM_domain inside of the following loops
       integer(kind=int32) :: n_global_x, n_global_y
       integer(kind=int32) :: n_halo_x, n_halo_y
       integer(kind=int32) :: is_reentrant_x, is_reentrant_y
@@ -264,13 +246,7 @@ contains
             cycle ! skip the invalid case of tripolar_N true with reentrant_y true since this is not currently supported in create_MOM_domain
           end if
 
-          ! Number of points in the x direction must be even when using a tripolar grid
-          !if ( (mod(args%n_global(1), 2) == 1) .and. args%tripolar_N) then
-          if ( (mod(args%n_global(1) + 2*args%n_halo(1), 2) == 1) .and. args%tripolar_N) then
-            cycle ! skip the invalid case of tripolar_N true with an odd number of points in the x direction since this is not currently supported in create_MOM_domain
-          end if
-
-          ! Skip tripolar cases for now because it segfaults for some cases. Not sure what combination of other arguments lead to this
+          ! TODO: Skip tripolar cases for now because it segfaults for some cases. Not sure what combination of other arguments lead to this. Determine which combinations of arguments are valid for create_MOM_domain with tripolar_N later.
           if (args%tripolar_N ) then
             cycle 
           end if
