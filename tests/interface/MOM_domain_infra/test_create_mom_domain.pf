@@ -16,7 +16,7 @@ module test_create_mom_domain
     logical :: symmetric    = .true.
     character(len=20) :: name = "MOM"
     integer(kind=int32) :: io_layout(2) = (/1, 1/)
-    ! Not covering mask table for now. Its a file?
+    ! Not covering mask table for now. It's a file?
   end type create_mom_domain_args_type
 
   @testCase()
@@ -241,7 +241,7 @@ contains
           end if
           args%io_layout = (/ io_layout_x, io_layout_y /)
 
-          ! Cant have reentrant_y true with tripolar_N true
+          ! Can't have reentrant_y true with tripolar_N true
           if (args%reentrant(2) .and. args%tripolar_N) then
             cycle ! skip the invalid case of tripolar_N true with reentrant_y true since this is not currently supported in create_MOM_domain
           end if
