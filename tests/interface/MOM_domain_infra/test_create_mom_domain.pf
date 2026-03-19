@@ -195,6 +195,7 @@ contains
       integer(kind=int32), parameter :: name_idx_min = 1, name_idx_max = 2
       integer(kind=int32), parameter :: io_layout_x_min = 1, io_layout_x_max = 2 ! TODO: Pick reasonable values to loop over for this arguments
       integer(kind=int32), parameter :: io_layout_y_min = 1, io_layout_y_max = 2 ! TODO: Pick reasonable values to loop over for this arguments
+
       ! Variables used to set arguments to create_MOM_domain inside of the following loops
       integer(kind=int32) :: n_global_x, n_global_y
       integer(kind=int32) :: n_halo_x, n_halo_y
@@ -207,6 +208,7 @@ contains
       integer(kind=int32) :: name_idx
       integer(kind=int32) :: io_layout_x, io_layout_y
      
+      ! All of these loop bounds are set in the user input parameters at the beginning of this block.
       n_global_x_loop : do n_global_x = n_global_x_min, n_global_x_max
       n_global_y_loop : do n_global_y = n_global_y_min, n_global_y_max
       n_halo_x_loop : do n_halo_x = n_halo_x_min, n_halo_x_max
@@ -222,6 +224,7 @@ contains
       name_loop : do name_idx = name_idx_min, name_idx_max
       io_layout_x_loop : do io_layout_x = io_layout_x_min, io_layout_x_max
       io_layout_y_loop : do io_layout_y = io_layout_y_min, io_layout_y_max
+
         block
           type(MOM_domain_type), pointer :: dom => null()
           type(create_mom_domain_args_type) :: args
@@ -258,6 +261,7 @@ contains
 
           if (associated(dom)) deallocate(dom)
         end block
+
       end do io_layout_y_loop
       end do io_layout_x_loop
       end do name_loop
