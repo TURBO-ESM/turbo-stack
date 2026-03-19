@@ -243,12 +243,12 @@ contains
 
           ! Can't have reentrant_y true with tripolar_N true
           if (args%reentrant(2) .and. args%tripolar_N) then
-            cycle ! skip the invalid case of tripolar_N true with reentrant_y true since this is not currently supported in create_MOM_domain
+            cycle is_tripolar_N_loop
           end if
 
           ! TODO: Skip tripolar cases for now because it segfaults for some cases. Not sure what combination of other arguments lead to this. Determine which combinations of arguments are valid for create_MOM_domain with tripolar_N later.
           if (args%tripolar_N ) then
-            cycle 
+            cycle is_tripolar_N_loop
           end if
 
           call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
@@ -318,14 +318,13 @@ contains
     ! More logic about how to set io_layout based on the input arguments in create_MOM_domain, but for now just checking it matches the input value
     @assertEqual(dom%io_layout, create_mom_domain_args%io_layout)
 
-    ! TODO:Logic about how to set MOM_dom%maskmap based on the input arguments in create_MOM_domain, but for now just checking it is set to the expected value of 0
-    ! check that this is a null pointer.
+    ! TODO:Logic about how to set MOM_dom%maskmap based on the input arguments in create_MOM_domain, but for now just checking it is null pointer.
     @assertFalse(associated(dom%maskmap))
 
     @assertEqual(dom%turns, 0)
 
     ! TODO: Not checking mpp_domain and mpp_domain2 pointers at the moment
-    ! Check that these are not null pointers, but not checking the actual contents of the domains at this time
+    ! Check that these are not null pointers, but not checking the actual contents of the mpp domains at this time
     @assertTrue(associated(dom%mpp_domain))
     @assertTrue(associated(dom%mpp_domain_d2))
 
