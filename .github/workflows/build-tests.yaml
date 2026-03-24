@@ -62,7 +62,7 @@ jobs:
       - name: Build MOM6 with TIM
         run: |
           ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra TIM
-          if [[ ! `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_TIM/MOM6-infra/libinfra-TIM.a 2>&1 | grep -q tim_com` ]]; then
+          if [[ ! `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_TIM/MOM6-infra/libinfra-TIM.a | grep -q tim_com` ]]; then
             echo "ERROR: Did not find tim_com in libinfra-TIM.a (did TIM module change name?)"
             exit 1
           fi
@@ -70,7 +70,7 @@ jobs:
       - name: Build MOM6 with FMS2
         run: |
           ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra FMS2
-          if [[ `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6-infra/libinfra-FMS2.a 2>&1 | grep -q tim_com` ]]; then
+          if [[ `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6-infra/libinfra-FMS2.a | grep -q tim_com` ]]; then
             echo "ERROR: Found tim_com in libinfra-FMS2.a (=> using TIM infra, not FMS)"
             exit 1
           fi
