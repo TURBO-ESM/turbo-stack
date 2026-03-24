@@ -17,7 +17,6 @@ contains
     integer(kind=int32) :: comm_rank
     real(kind=real64) :: expected_global_min
     real(kind=real64) :: actual_global_min
-    real(kind=real64), parameter :: tolerance = 1.0e-12_real64
 
     comm_rank = this%getProcessRank()
 
@@ -26,7 +25,7 @@ contains
     actual_global_min = 0.5_real64 * real(comm_rank-3, kind=real64)
     call min_across_PEs(actual_global_min)
 
-    @assertEqual(expected_global_min, actual_global_min, tolerance=tolerance)
+    @assertEqual(expected_global_min, actual_global_min)
   end subroutine test_MinAcrossPEs
    
 end module test_min_across_pes_real64_0d

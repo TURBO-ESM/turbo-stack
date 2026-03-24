@@ -15,7 +15,6 @@ contains
   subroutine test_MaxAcrossPEs(this)
     class (test_case_max_across_pes), intent(inout) :: this
     integer(kind=int32) :: comm_rank
-    integer(kind=int32) :: i
     integer(kind=int32) :: expected_global_max
     integer(kind=int32) :: actual_global_max
 

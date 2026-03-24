@@ -15,7 +15,6 @@ contains
   subroutine test_AllAcrossPEs(this)
     class (test_case_all_across_pes), intent(inout) :: this
     integer(kind=int32) :: comm_rank
-    integer(kind=int32) :: i
     logical :: expected_global_all
     logical :: actual_global_all
 

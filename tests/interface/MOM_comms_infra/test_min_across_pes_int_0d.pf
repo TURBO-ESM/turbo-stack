@@ -15,7 +15,6 @@ contains
   subroutine test_MinAcrossPEs(this)
     class (test_case_min_across_pes), intent(inout) :: this
     integer(kind=int32) :: comm_rank
-    integer(kind=int32) :: i
     integer(kind=int32) :: expected_global_min
     integer(kind=int32) :: actual_global_min
 
