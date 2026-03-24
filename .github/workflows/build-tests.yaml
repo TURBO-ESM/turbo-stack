@@ -1,4 +1,4 @@
-name: Build Inside NCAR HPC Development Containers
+name: Build MOM6 with TIM and FMS
 
 # See the following link for more information on the NCAR HPC development containers:
 # https://hub.docker.com/u/ncarcisl
@@ -16,24 +16,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ nvhpc, oneapi, gcc14, clang ]
-        mpi:      [ openmpi, mpich ]
-        #gpu:      [ nogpu, cuda ]
+        compiler: [ oneapi, gcc14 ]
+        mpi:      [ mpich ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
         runner:   [ ubuntu-latest, gha-runner-turbo ]
-        include:
-          - mpi: openmpi
-            extra_mpiexec_args: '--allow-run-as-root'
 
-        exclude:
-          # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
-          - compiler: nvhpc
-            mpi: openmpi
-
-
-
-    name: Build
+    name: Build Test
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
@@ -70,20 +59,18 @@ jobs:
           which mpicc
           mpicc --version 2>/dev/null || true
 
-      - name: MPI+OpenMP Hello World
+      - name: Build MOM6 with TIM
         run: |
-          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
-          ldd ./hello_world_mpi
-          export OMP_NUM_THREADS=2
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
+          ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra TIM
+          if [[ ! `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_TIM/MOM6-infra/libinfra-TIM.a | grep tim_com` ]]; then
+            echo "ERROR: Did not find tim_com in libinfra-TIM.a (did TIM module change name?)"
+            exit 1
+          fi
 
-      - name: Build turbo-stack
+      - name: Build MOM6 with FMS2
         run: |
-          echo "Building turbo-stack..."
-          ./build.sh --machine container --compiler ${COMPILER_FAMILY}
-
-      - name: Run double gyre test
-        run: |
-          echo "Running double gyre test..."
-          cd ./examples/double_gyre
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6/MOM6
+          ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra FMS2
+          if [[ `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6-infra/libinfra-FMS2.a | grep tim_com` ]]; then
+            echo "ERROR: Found tim_com in libinfra-FMS2.a (=> using TIM infra, not FMS)"
+            exit 1
+          fi

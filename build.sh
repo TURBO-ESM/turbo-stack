@@ -196,7 +196,7 @@ if [ -z "${JOBS}"  ]; then
 fi
 echo "Using ${JOBS} jobs"
 
-BLD_PATH=${ROOTDIR}/bin/${COMPILER}
+BLD_PATH=${ROOTDIR}/bin/${COMPILER}/MOM6_using_${INFRA}
 
 # If override is set, remove existing build directory
 if [ $OVERRIDE -eq 1 ]; then
