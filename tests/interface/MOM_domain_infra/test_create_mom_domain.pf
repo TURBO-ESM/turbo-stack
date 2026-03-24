@@ -29,26 +29,38 @@ contains
   subroutine create_mom_domain_test(this)
     class (testcase_domain), intent(inout) :: this
 
-    integer(kind=int32), parameter :: num_tests = 5
+    integer(kind=int32), parameter :: num_tests = 3
     type(MOM_domain_type), pointer :: dom => null()
     type(create_mom_domain_args_type) :: args
     integer(kind=int32) :: i
 
     do i = 1, num_tests
-      write(args%name, '(A,I0)') "MOM_domain_name", i
       ! TODO: No tripolar cases for now because it segfaults for some cases
       !       It should work with realistic grids (eg CESM's tx2_3v2)
       select case (i)
         case (1)
-          args%n_global = (/ 4, 8 /)
-          args%n_halo = (/ 0, 0 /)
-          args%reentrant = (/ .false., .true. /)
+          args%name = 'benchmark'
+          args%reentrant = (/ .true., .false. /)
           args%tripolar_N = .false.
+          args%n_global = (/ 360, 180 /)
+          args%n_halo = (/ 4, 4 /)
+          args%symmetric = .true.
+          args%nonblocking = .false.
+          args%thin_halos = .true.
           args%layout = (/ 2, 2 /)
-          args%thin_halos = .false.
-          args%nonblocking = .true.
-          args%symmetric = .false.
-          args%io_layout = (/ 2, 2 /)
+          args%io_layout = (/ 1, 1 /)
+
+        case (2)
+          args%name = 'double_gyre'
+          args%reentrant = (/ .false., .false. /)
+          args%tripolar_N = .false.
+          args%n_global = (/ 44, 40 /)
+          args%n_halo = (/ 4, 4 /)
+          args%symmetric = .true.
+          args%nonblocking = .false.
+          args%thin_halos = .true.
+          args%layout = (/ 2, 2 /)
+          args%io_layout = (/ 1, 1 /)
 
           ! Test without optional arguments
           ! TODO: this currently segfaults, but maybe it'll work with realistic domain?
@@ -56,49 +68,18 @@ contains
           ! call check_domain(dom, args)
           ! if (associated(dom)) deallocate(dom)
 
-        case (2)
-          args%n_global = (/ 5, 7 /)
-          args%n_halo = (/ 1, 2 /)
+        case (3)
+          args%name = 'tx2_3v2'
           args%reentrant = (/ .true., .false. /)
-          args%tripolar_N = .false.
-          args%layout = (/ 2, 2 /)
+          args%tripolar_N = .true.
+          args%n_global = (/ 540, 480 /)
+          args%n_halo = (/ 4, 4 /)
+          args%symmetric = .false.
+          args%nonblocking = .false.
           args%thin_halos = .true.
-          args%nonblocking = .true.
-          args%symmetric = .true.
+          args%layout = (/ 2, 2 /)
           args%io_layout = (/ 2, 2 /)
 
-        case (3)
-          args%n_global = (/ 6, 6 /)
-          args%n_halo = (/ 2, 1 /)
-          args%reentrant = (/ .false., .false. /)
-          args%tripolar_N = .false.
-          args%layout = (/ 2, 2 /)
-          args%thin_halos = .false.
-          args%nonblocking = .false.
-          args%symmetric = .true.
-          args%io_layout = (/ 1, 2 /)
-
-        case (4)
-          args%n_global = (/ 7, 5 /)
-          args%n_halo = (/ 1, 2 /)
-          args%reentrant = (/ .true., .true. /)
-          args%tripolar_N = .false.
-          args%layout = (/ 2, 2 /)
-          args%thin_halos = .true.
-          args%nonblocking = .false.
-          args%symmetric = .false.
-          args%io_layout = (/ 2, 1 /)
-
-        case (5)
-          args%n_global = (/ 8, 4 /)
-          args%n_halo = (/ 0, 0 /)
-          args%reentrant = (/ .false., .true. /)
-          args%tripolar_N = .false.
-          args%layout = (/ 2, 2 /)
-          args%thin_halos = .false.
-          args%nonblocking = .true.
-          args%symmetric = .true.
-          args%io_layout = (/ 1, 1 /)
         case DEFAULT
           ! Fail if domain for test i is not defined
           @assertTrue(.false.)
