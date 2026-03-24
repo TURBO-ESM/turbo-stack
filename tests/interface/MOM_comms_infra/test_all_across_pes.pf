@@ -15,20 +15,17 @@ contains
   subroutine test_AllAcrossPEs(this)
     class (test_case_all_across_pes), intent(inout) :: this
     integer(kind=int32) :: comm_rank
-    logical :: expected_global_all
     logical :: actual_global_all
 
     comm_rank = this%getProcessRank()
 
     ! Test where we expect at least one rank to be false
-    expected_global_all = .false.
     actual_global_all = all_across_PEs(modulo(comm_rank,2) == 1)
-    @assertEqual(expected_global_all, actual_global_all)
+    @assertFalse(actual_global_all)
 
-    ! Test where we expect at least all ranks to be true
-    expected_global_all = .true.
+    ! Test where we expect all ranks to be true
     actual_global_all = all_across_PEs(comm_rank > -1)
-    @assertEqual(expected_global_all, actual_global_all)
+    @assertTrue(actual_global_all)
 
   end subroutine test_AllAcrossPEs
    
