@@ -16,6 +16,16 @@ jobs:
       run:
         shell: bash -elo pipefail {0}
     steps:
+      - name: Diagnostic: Show container and PATH info
+        run: |
+          echo "OS release:" && cat /etc/os-release || true
+          echo "PATH:" && echo $PATH
+          echo "Which spack:" && which spack || echo "spack not found"
+          echo "Home:" && echo $HOME
+          echo "User:" && whoami
+          echo "Current directory:" && pwd
+          echo "Listing root directory:" && ls -l /
+          echo "Listing home directory:" && ls -l $HOME
       - name: Checkout repository
         uses: actions/checkout@v6
         #with:
