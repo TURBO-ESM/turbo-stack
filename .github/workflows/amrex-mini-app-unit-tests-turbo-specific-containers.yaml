@@ -1,0 +1,29 @@
+name: AMReX Mini-App Unit Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: hctorres/turbo-containers:ubuntu-spack-gcc-environment
+    defaults:
+      run:
+        shell: bash -elo pipefail {0}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Show environment info
+        run: |
+          gcc --version
+          spack --version
+      - name: Run Unit Tests
+        run: |
+          export TURBO_STACK_ROOT=/turbo-stack
+          cd $TURBO_STACK_ROOT/src/amrex_mini_app/
+          ./build_and_run.sh
