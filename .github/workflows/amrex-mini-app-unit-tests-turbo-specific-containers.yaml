@@ -16,7 +16,7 @@ jobs:
       run:
         shell: bash -elo pipefail {0}
     steps:
-      - name: Diagnostic: Show container and PATH info
+      - name: Show container and PATH info
         run: |
           echo "OS release:" && cat /etc/os-release || true
           echo "PATH:" && echo $PATH
@@ -38,7 +38,6 @@ jobs:
           echo "SPACK_ROOT=${SPACK_ROOT}"
       - name: Modify default CI container environment after checkout
         run: |
-
           # Directory where you pulled the turbo stack repository
           export TURBO_STACK_ROOT="${GITHUB_WORKSPACE}"
           echo "TURBO_STACK_ROOT=${TURBO_STACK_ROOT}" >> $GITHUB_ENV
@@ -58,7 +57,6 @@ jobs:
           ## To control build and runtime behavior later
           #export DEBUG=1
           #echo "DEBUG=${DEBUG}" >> $GITHUB_ENV
-
       - name: Build and Run Unit Tests
         run: |
           $TURBO_MINI_APP_ROOT/build_and_run.sh
