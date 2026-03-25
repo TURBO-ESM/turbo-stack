@@ -34,8 +34,8 @@ jobs:
       - name: Show environment info
         run: |
           gcc --version
-          spack --version
           echo "SPACK_ROOT=${SPACK_ROOT}"
+          spack --version
       - name: Modify default CI container environment after checkout
         run: |
           # Directory where you pulled the turbo stack repository
@@ -59,4 +59,6 @@ jobs:
           #echo "DEBUG=${DEBUG}" >> $GITHUB_ENV
       - name: Build and Run Unit Tests
         run: |
+          #. /entrypoint.sh
+          . /activate.sh
           $TURBO_MINI_APP_ROOT/build_and_run.sh
