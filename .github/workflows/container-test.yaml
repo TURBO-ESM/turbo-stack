@@ -1,0 +1,14 @@
+name: Container Test
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  test-container:
+    runs-on: ubuntu-latest
+    container:
+      image: hctorres/turbo-containers:ubuntu-spack-gcc-environment
+    steps:
+      - run: cat /etc/os-release
+      - run: which spack || echo "spack not found"
