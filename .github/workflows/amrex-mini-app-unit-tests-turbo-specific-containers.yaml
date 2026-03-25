@@ -35,6 +35,7 @@ jobs:
         run: |
           gcc --version
           echo "SPACK_ROOT=${SPACK_ROOT}"
+          . /activate.sh
           spack --version
       - name: Modify default CI container environment after checkout
         run: |
