@@ -21,10 +21,11 @@ jobs:
         #with:
         #  submodules: 'recursive'
         #  fetch-depth: 0
-      #- name: Show environment info
-      #  run: |
-      #    gcc --version
-      #    spack --version
+      - name: Show environment info
+        run: |
+          gcc --version
+          spack --version
+          echo "SPACK_ROOT=${SPACK_ROOT}"
       - name: Modify default CI container environment after checkout
         run: |
 
