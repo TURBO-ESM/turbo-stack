@@ -8,10 +8,17 @@ on:
     branches: ["main"]
 
 jobs:
-  build:
+  run-matrix:
+  strategy:
+    fail-fast: false
+    matrix:
+      compiler: [ gcc, llvm ] 
+      mpi:      [ openmpi ]
+
     runs-on: ubuntu-latest
     container:
-      image: hctorres/turbo-containers:ubuntu-spack-gcc-environment
+      image: hctorres/turbo-containers:ubuntu-spack-${{ matrix.compiler }}-${{ matrix.mpi }} 
+      #image: hctorres/turbo-containers:ubuntu-spack-gcc-openmpi 
     defaults:
       run:
         shell: bash -elo pipefail {0}
