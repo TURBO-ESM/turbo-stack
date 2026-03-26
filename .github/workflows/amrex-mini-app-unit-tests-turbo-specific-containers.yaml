@@ -9,12 +9,11 @@ on:
 
 jobs:
   run-matrix:
-  strategy:
-    fail-fast: false
-    matrix:
-      compiler: [ gcc, llvm ] 
-      mpi:      [ openmpi ]
-
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ gcc, llvm ] 
+        mpi:      [ openmpi ]
     runs-on: ubuntu-latest
     container:
       image: hctorres/turbo-containers:ubuntu-spack-${{ matrix.compiler }}-${{ matrix.mpi }} 
