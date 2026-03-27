@@ -35,8 +35,9 @@ contains
     integer(kind=int32) :: i
 
     do i = 1, num_tests
-      ! TODO: No tripolar cases for now because it segfaults for some cases
-      !       It should work with realistic grids (eg CESM's tx2_3v2)
+      ! TODO: Only limited tripolar coverage for now: case (3) uses a realistic
+      !       tripolar grid (e.g. CESM's tx2_3v2), but some other tripolar
+      !       configurations still segfault.
       select case (i)
         case (1)
           args%name = 'benchmark'
@@ -141,7 +142,7 @@ contains
     ! More logic about how to set io_layout based on the input arguments in create_MOM_domain, but for now just checking it matches the input value
     @assertEqual(dom%io_layout, create_mom_domain_args%io_layout)
 
-    ! TODO:Logic about how to set MOM_dom%maskmap based on the input arguments in create_MOM_domain, but for now just checking it is null pointer.
+    ! TODO: Logic about how to set MOM_dom%maskmap based on the input arguments in create_MOM_domain, but for now just checking it is null pointer.
     @assertFalse(associated(dom%maskmap))
 
     @assertEqual(dom%turns, 0)
