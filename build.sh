@@ -15,7 +15,7 @@ UNIT_TEST_ROOT=${ROOTDIR}/tests
 # Default values for CLI arguments
 COMPILER="intel"
 MACHINE="ncar"
-INFRA="FMS2"
+INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
