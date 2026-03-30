@@ -86,4 +86,4 @@ jobs:
         run: |
           echo "Running double gyre test..."
           cd ./examples/double_gyre
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6/MOM6
+          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6_using_TIM/MOM6/MOM6
