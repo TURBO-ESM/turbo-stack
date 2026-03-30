@@ -21,7 +21,8 @@ jobs:
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
-        runner:   [ ubuntu-latest, gha-runner-turbo ]
+        # runner:   [ ubuntu-latest, gha-runner-turbo ]   gha-runner-turbo are not currently launching
+        runner:   [ ubuntu-latest ]
         include:
           - mpi: openmpi
             extra_mpiexec_args: '--allow-run-as-root'

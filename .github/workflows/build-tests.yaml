@@ -20,7 +20,8 @@ jobs:
         mpi:      [ mpich ]
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
-        runner:   [ ubuntu-latest, gha-runner-turbo ]
+        #runner:   [ ubuntu-latest, gha-runner-turbo ]  gh-runner-turbo are not work currently
+        runner:   [ ubuntu-latest]
 
     name: Build Test
     runs-on: ${{ matrix.runner }}
