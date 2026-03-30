@@ -24,6 +24,7 @@ OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
 CMAKE_BUILD_TYPE="Release"
 
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -67,9 +68,7 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
-            if [[ "${INFRA}" == "TIM" ]]; then
-              INFRA_ROOT=${ROOTDIR}/submodules/TIM
-            elif [[ "${INFRA}" != "FMS2" ]]; then
+            if [[ "${INFRA}" != "TIM" && "${INFRA}" != "FMS2" ]]; then
               echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
               exit 1
             fi
@@ -118,6 +117,11 @@ while [[ "$#" -gt 0 ]]; do
     esac
     shift
 done
+
+# Make sure that the submodules/TIM is included if using the TIM infrastructure
+if [[ "${INFRA}" == "TIM" ]]; then
+   INFRA_ROOT=${ROOTDIR}/submodules/TIM
+fi
 
 echo "Starting build at $(date)"
 echo "Compiler: $COMPILER"
