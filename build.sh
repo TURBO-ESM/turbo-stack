@@ -34,7 +34,7 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: TIM)"
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
