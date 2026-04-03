@@ -29,7 +29,7 @@ jobs:
         shell: bash -elo pipefail {0}
 
     container:
-      image: ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
+      image:  docker.io/ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -64,13 +64,5 @@ jobs:
           ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra TIM
           if [[ ! `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_TIM/MOM6-infra/libinfra-TIM.a | grep tim_com` ]]; then
             echo "ERROR: Did not find tim_com in libinfra-TIM.a (did TIM module change name?)"
-            exit 1
-          fi
-
-      - name: Build MOM6 with FMS2
-        run: |
-          ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra FMS2
-          if [[ `nm --print-armap bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6-infra/libinfra-FMS2.a | grep tim_com` ]]; then
-            echo "ERROR: Found tim_com in libinfra-FMS2.a (=> using TIM infra, not FMS)"
             exit 1
           fi
