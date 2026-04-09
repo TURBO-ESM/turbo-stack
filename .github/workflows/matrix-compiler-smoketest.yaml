@@ -78,6 +78,6 @@ jobs:
           echo "Running double gyre test..."
           cd ./examples/double_gyre
           echo "Inspecting shared library dependencies:"
-          ldd ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+          ldd ../../bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6/MOM6
           echo "Running double gyre test..."
-          mpiexec -n 2 ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+          mpiexec -n 2 ../../bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6/MOM6
