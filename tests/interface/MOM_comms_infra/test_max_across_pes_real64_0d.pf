@@ -27,5 +27,5 @@ contains
 
     @assertEqual(expected_global_max, actual_global_max)
   end subroutine test_MaxAcrossPEs
-   
+
 end module test_max_across_pes_real64_0d

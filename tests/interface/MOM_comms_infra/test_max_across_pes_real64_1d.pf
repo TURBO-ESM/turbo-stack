@@ -36,5 +36,5 @@ contains
     deallocate(actual_global_max)
 
   end subroutine test_MaxAcrossPEs
-   
+
 end module test_max_across_pes_real64_1d

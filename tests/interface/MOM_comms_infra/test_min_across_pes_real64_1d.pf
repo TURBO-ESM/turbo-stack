@@ -36,5 +36,5 @@ contains
     deallocate(actual_global_min)
 
   end subroutine test_MinAcrossPEs
-   
+
 end module test_min_across_pes_real64_1d
