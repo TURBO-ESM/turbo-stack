@@ -28,5 +28,5 @@ contains
     @assertFalse(actual_global_any)
 
   end subroutine test_AnyAcrossPEs
-   
+
 end module test_any_across_pes

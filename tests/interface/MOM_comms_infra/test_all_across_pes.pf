@@ -28,5 +28,5 @@ contains
     @assertTrue(actual_global_all)
 
   end subroutine test_AllAcrossPEs
-   
+
 end module test_all_across_pes
