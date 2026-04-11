@@ -1,6 +1,7 @@
 
 set(ARRAY_MOD_TESTS
-  test_duplicate.pf
+  test_duplicate_full.pf
+  test_duplicate_subsection.pf
   test_copy2array.pf
   test_copy2fortran.pf
 )

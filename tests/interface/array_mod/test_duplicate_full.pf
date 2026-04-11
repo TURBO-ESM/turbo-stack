@@ -1,4 +1,4 @@
-module test_duplicate
+module test_duplicate_full
   use pfunit
   use array_mod
   use MOM_test_case
@@ -33,4 +33,4 @@ contains
 
   end subroutine test_array_duplicate
 
-end module test_duplicate
+end module test_duplicate_full
