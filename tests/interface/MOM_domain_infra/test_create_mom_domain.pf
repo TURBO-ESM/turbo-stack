@@ -1,0 +1,158 @@
+module test_create_mom_domain
+  use pfunit
+  use MOM_test_case
+  use MOM_domains, only : MOM_domain_type, create_MOM_domain
+  use iso_fortran_env, only : int32
+  implicit none
+
+  type :: create_mom_domain_args_type
+    integer(kind=int32) :: n_global(2)
+    integer(kind=int32) :: n_halo(2)
+    logical :: reentrant(2)
+    logical :: tripolar_N
+    integer(kind=int32) :: layout(2)
+    logical :: thin_halos   ! Marked as optional but will segfault if not given as an argument to create_MOM_domain
+    logical :: nonblocking  ! Marked as optional but will segfault if not given as an argument to create_MOM_domain
+    logical :: symmetric
+    character(len=20) :: name
+    integer(kind=int32) :: io_layout(2)
+    ! Not covering mask table for now. It's a file?
+  end type create_mom_domain_args_type
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_domain
+  end type testcase_domain
+
+contains
+
+  @test(npes=[4])
+  subroutine create_mom_domain_test(this)
+    class (testcase_domain), intent(inout) :: this
+
+    integer(kind=int32), parameter :: num_tests = 3
+    type(MOM_domain_type), pointer :: dom => null()
+    type(create_mom_domain_args_type) :: args
+    integer(kind=int32) :: i
+
+    do i = 1, num_tests
+      ! TODO: Only limited tripolar coverage for now: case (3) uses a realistic
+      !       tripolar grid (e.g. CESM's tx2_3v2), but some other tripolar
+      !       configurations still segfault.
+      select case (i)
+        case (1)
+          args%name = 'benchmark'
+          args%reentrant = (/ .true., .false. /)
+          args%tripolar_N = .false.
+          args%n_global = (/ 360, 180 /)
+          args%n_halo = (/ 4, 4 /)
+          args%symmetric = .true.
+          args%nonblocking = .false.
+          args%thin_halos = .true.
+          args%layout = (/ 2, 2 /)
+          args%io_layout = (/ 1, 1 /)
+
+        case (2)
+          args%name = 'double_gyre'
+          args%reentrant = (/ .false., .false. /)
+          args%tripolar_N = .false.
+          args%n_global = (/ 44, 40 /)
+          args%n_halo = (/ 4, 4 /)
+          args%symmetric = .true.
+          args%nonblocking = .false.
+          args%thin_halos = .true.
+          args%layout = (/ 2, 2 /)
+          args%io_layout = (/ 1, 1 /)
+
+          ! Test without optional arguments
+          ! TODO: this currently segfaults, but maybe it'll work with realistic domain?
+          ! call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout)
+          ! call check_domain(dom, args)
+          ! if (associated(dom)) deallocate(dom)
+
+        case (3)
+          args%name = 'tx2_3v2'
+          args%reentrant = (/ .true., .false. /)
+          args%tripolar_N = .true.
+          args%n_global = (/ 540, 480 /)
+          args%n_halo = (/ 4, 4 /)
+          args%symmetric = .false.
+          args%nonblocking = .false.
+          args%thin_halos = .true.
+          args%layout = (/ 2, 2 /)
+          args%io_layout = (/ 2, 2 /)
+
+        case DEFAULT
+          ! Fail if domain for test i is not defined
+          @assertTrue(.false.)
+      end select
+
+      ! Can't have reentrant_y true with tripolar_N true
+      if (args%reentrant(2) .and. args%tripolar_N) then
+        cycle
+      end if
+
+      call create_MOM_domain(dom, args%n_global, args%n_halo, args%reentrant, args%tripolar_N, args%layout, &
+        symmetric=args%symmetric, thin_halos=args%thin_halos, nonblocking=args%nonblocking, io_layout=args%io_layout, &
+        domain_name=args%name)
+      call check_domain(dom, args)
+
+      if (associated(dom)) deallocate(dom)
+    end do
+
+  end subroutine create_mom_domain_test
+
+  subroutine check_domain(dom, create_mom_domain_args)
+    type(MOM_domain_type), pointer, intent(in) :: dom
+    type(create_mom_domain_args_type), intent(in) :: create_mom_domain_args
+    ! These values are pulled in from mpp?
+    integer(kind=int32), parameter :: CYCLIC_GLOBAL_DOMAIN = 2
+
+    !call assertAssociated(dom)
+    @assertTrue(associated(dom))
+
+    @assertEqual(dom%name, create_mom_domain_args%name)
+
+    @assertEqual(dom%nonblocking_updates, create_mom_domain_args%nonblocking)
+    @assertEqual(dom%thin_halo_updates, create_mom_domain_args%thin_halos)
+    @assertEqual(dom%symmetric, create_mom_domain_args%symmetric)
+
+    @assertEqual(dom%niglobal, create_mom_domain_args%n_global(1))
+    @assertEqual(dom%njglobal, create_mom_domain_args%n_global(2))
+
+    @assertEqual(dom%nihalo, create_mom_domain_args%n_halo(1))
+    @assertEqual(dom%njhalo, create_mom_domain_args%n_halo(2))
+
+    ! XFLAGS and YFLAGS are set to be special values from mpp_domain?... for now just hardcoding the expected values based on the reentrant input
+    if (create_mom_domain_args%reentrant(1)) then
+      @assertEqual(dom%X_FLAGS, CYCLIC_GLOBAL_DOMAIN)
+    else
+      @assertEqual(dom%X_FLAGS, 0)
+    end if
+
+    if (create_mom_domain_args%reentrant(2)) then
+      @assertEqual(dom%Y_FLAGS, CYCLIC_GLOBAL_DOMAIN)
+    else if (create_mom_domain_args%tripolar_N) then
+      @assertEqual(dom%Y_FLAGS, 2**5)
+    else
+      @assertEqual(dom%Y_FLAGS, 0)
+    end if
+
+    @assertEqual(dom%layout, create_mom_domain_args%layout)
+
+    ! More logic about how to set io_layout based on the input arguments in create_MOM_domain, but for now just checking it matches the input value
+    @assertEqual(dom%io_layout, create_mom_domain_args%io_layout)
+
+    ! TODO: Logic about how to set MOM_dom%maskmap based on the input arguments in create_MOM_domain, but for now just checking it is null pointer.
+    @assertFalse(associated(dom%maskmap))
+
+    @assertEqual(dom%turns, 0)
+
+    ! TODO: Not checking mpp_domain and mpp_domain2 pointers at the moment
+    ! Check that these are not null pointers, but not checking the actual contents of the mpp domains at this time
+    @assertTrue(associated(dom%mpp_domain))
+    @assertTrue(associated(dom%mpp_domain_d2))
+
+  end subroutine check_domain
+
+
+end module test_create_mom_domain
