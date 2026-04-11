@@ -19,9 +19,9 @@ contains
     integer, dimension(1) :: lb_actual, ub_actual
     integer, dimension(1) :: lb_expected, ub_expected
 
-    1--------------------------------------------
+    !--------------------------------------------
     ! Duplicate a contigous array subsection
-    1--------------------------------------------
+    !--------------------------------------------
     lb_expected = [1]
     ub_expected = [n1]
     call array_A%dup(array_F(:,3))
@@ -30,9 +30,9 @@ contains
     @assertEqual(lb_expected, lb_actual)
     @assertEqual(ub_expected, ub_actual)
 
-    1--------------------------------------------
+    !--------------------------------------------
     ! Duplicate a non-contigous array subsection
-    1--------------------------------------------
+    !--------------------------------------------
     lb_expected = [1]
     ub_expected = [n2]
     call array_A%dup(array_F(2,:))
