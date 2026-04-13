@@ -30,7 +30,7 @@ jobs:
             });
 
             for (const pr of pulls) {
-              if (!pr.requested_reviewers.length) continue;
+              if (!pr.requested_reviewers.length || pr.draft) continue;
 
               const lastActivity = new Date(pr.updated_at);
               const age = now - lastActivity;
