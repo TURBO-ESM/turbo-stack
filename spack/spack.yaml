@@ -2,7 +2,7 @@ spack:
   specs:
     - mpi
     - netcdf-fortran
-    - fms
+    - fms precision=64
     - pfunit +mpi
   view: true
   concretizer:
