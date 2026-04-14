@@ -17,5 +17,6 @@ if [ ! -d /glade/work/altuntas/mom6.standalone.runs/cesm/INPUT/t232/ ]; then
 fi
 
 COMPILER=intel
+INFRA=FMS2
 
-mpiexec ../../bin/${COMPILER}/MOM6/MOM6
+mpiexec ../../bin/${COMPILER}/MOM6_using_${INFRA}/MOM6/MOM6

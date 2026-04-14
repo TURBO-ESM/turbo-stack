@@ -4,7 +4,7 @@
 ############
 FC = mpif90
 CC = mpicc
-CXX = g++
+CXX = mpicxx
 LD = mpif90 $(MAIN_PROGRAM)
 
 #########
@@ -23,6 +23,8 @@ FFLAGS :=$(FC_AUTO_R8) -fcray-pointer  -Waliasing -ffree-line-length-none -fno-r
 CFLAGS := -D__IFC
 
 LDFLAGS :=
+
+CXXFLAGS := -std=c++17
 
 ifeq ($(CODECOV),1)
 	FFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
