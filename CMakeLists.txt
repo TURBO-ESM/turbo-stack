@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 project(TurboStack LANGUAGES Fortran C CXX)
 
+include(cmake/TurboOptions.cmake)
+
 # FMS — provides FMS::fms_r8; transitively finds MPI and NetCDF
 find_package(FMS REQUIRED COMPONENTS R8)
 
