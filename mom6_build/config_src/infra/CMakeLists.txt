@@ -28,5 +28,7 @@ target_include_directories(mom6_infra
 
 target_link_libraries(mom6_infra
     PUBLIC  FMS::fms_r8 MPI::MPI_Fortran NetCDF::NetCDF_Fortran
-    PRIVATE MOM6::framework
+    # framework_base (not framework) — see mom6_build/src/framework/CMakeLists.txt
+    # for why this must be framework_base to avoid a circular dependency.
+    PRIVATE MOM6::framework_base
 )
