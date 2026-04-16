@@ -1,7 +1,11 @@
 set(MOM6_INFRA_DIR ${MOM6_DIR}/config_src/infra/${TURBO_INFRA})
 
-# MOM_interp_infra.F90 is excluded — it depends on MOM_io from src/,
-# which requires much of the MOM6 framework to be built first.
+# Layer 2 (mom6_infra): FMS2/TIM infrastructure wrapper.
+# See src/framework/CMakeLists.txt for Layers 1 and 3.
+# needs mom6_framework_base -- see that file for why this is framework_base and not framework.
+#
+# MOM_interp_infra.F90 is excluded here; it depends on MOM_io which is above
+# the infra layer. It is compiled as part of mom6_io in src/framework/CMakeLists.txt.
 add_library(mom6_infra STATIC
     ${MOM6_INFRA_DIR}/MOM_error_infra.F90
     ${MOM6_INFRA_DIR}/MOM_constants.F90
@@ -28,7 +32,5 @@ target_include_directories(mom6_infra
 
 target_link_libraries(mom6_infra
     PUBLIC  FMS::fms_r8 MPI::MPI_Fortran NetCDF::NetCDF_Fortran
-    # framework_base (not framework) — see mom6_build/src/framework/CMakeLists.txt
-    # for why this must be framework_base to avoid a circular dependency.
     PRIVATE MOM6::framework_base
 )
