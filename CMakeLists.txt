@@ -18,3 +18,5 @@ find_package(NetCDF REQUIRED COMPONENTS C Fortran)
 
 # pFUnit — unit testing framework
 find_package(PFUNIT REQUIRED)
+
+add_subdirectory(mom6_build)
