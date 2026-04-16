@@ -22,15 +22,6 @@ jobs:
         gpu:      [ nogpu ]
         arch:     [ x86_64 ]
         runner:   [ ubuntu-latest, gha-runner-turbo ]
-        include:
-          - mpi: openmpi
-            extra_mpiexec_args: '--allow-run-as-root'
-
-        exclude:
-          # skip nvhpc/openmpi until CPU architecture mismatch gets resolved
-          - compiler: nvhpc
-            mpi: openmpi
-
 
 
     name: Build
@@ -40,7 +31,7 @@ jobs:
         shell: bash -elo pipefail {0}
 
     container:
-      image: docker.io/ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
+      image: docker.io/ncarcisl/hpcdev-${{ matrix.arch }}:almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +63,7 @@ jobs:
 
       - name: MPI+OpenMP Hello World
         run: |
-          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.C -fopenmp
+          mpicxx -o ./hello_world_mpi /container/extras/hello_world_mpi.cxx -fopenmp
           ldd ./hello_world_mpi
           export OMP_NUM_THREADS=2
           mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ./hello_world_mpi
@@ -86,4 +77,7 @@ jobs:
         run: |
           echo "Running double gyre test..."
           cd ./examples/double_gyre
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6/MOM6
+          echo "Inspecting shared library dependencies:"
+          ldd ../../bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6/MOM6
+          echo "Running double gyre test..."
+          mpiexec -n 2 ../../bin/${COMPILER_FAMILY}/MOM6_using_FMS2/MOM6/MOM6
