@@ -1,10 +1,11 @@
 
-set(MOM_DOMAIN_INFRA_TESTS
-  test_compute_extent.pf
-  test_create_mom_domain.pf
+add_mom_test(test_compute_extent.pf
+    LINK_LIBRARIES MOM6::infra
 )
 
-add_mom_tests(${MOM_DOMAIN_INFRA_TESTS})
+add_mom_test(test_create_mom_domain.pf
+    LINK_LIBRARIES MOM6::framework
+)
 
 
 # Copy namelist file to output directory to satisfy FMS requirement

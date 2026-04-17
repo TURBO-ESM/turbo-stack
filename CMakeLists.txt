@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
 project(TurboStack LANGUAGES Fortran C CXX)
 
-include(cmake/TurboOptions.cmake)
-include(cmake/TurboCompilerFlags.cmake)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+include(TurboOptions)
+include(TurboCompilerFlags)
 
 # FMS — provides FMS::fms_r8; transitively finds MPI and NetCDF
 find_package(FMS REQUIRED COMPONENTS R8)
@@ -20,3 +22,8 @@ find_package(NetCDF REQUIRED COMPONENTS C Fortran)
 find_package(PFUNIT REQUIRED)
 
 add_subdirectory(mom6_build)
+
+if(TURBO_BUILD_UNIT_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
