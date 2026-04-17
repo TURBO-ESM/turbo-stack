@@ -12,6 +12,12 @@
 #   --create-spack-env      Create the Spack environment if it does not exist
 #   --recreate-spack-env    Delete and recreate the Spack environment from scratch
 #   --spack-env NAME        Name of the Spack environment (default: turbo_stack)
+#
+# Any unrecognized options are forwarded to build_and_test.py, e.g.:
+#   --debug                 Full clean rebuild: implies --fresh and --clean
+#   --fresh                 Wipe CMake cache and regenerate (passes --fresh to cmake configure)
+#   --clean                 Remove compiled objects before building (passes --clean-first to cmake build)
+#   --no-build, --no-test   Skip build or test steps
 
 set -e
 

@@ -1,5 +1,8 @@
 spack:
   specs:
+    - cmake
+    - ninja
+    - gmake
     - mpi
     - netcdf-fortran
     - fms precision=64

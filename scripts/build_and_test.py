@@ -38,8 +38,20 @@ def main():
         help="Build directory"
     )
     parser.add_argument(
+        "--debug", action="store_true",
+        help="Full clean rebuild: implies --fresh and --clean"
+    )
+    parser.add_argument(
+        "--fresh", action="store_true",
+        help="Pass --fresh to cmake configure (wipes CMake cache and regenerates)"
+    )
+    parser.add_argument(
         "--no-configure", action="store_true",
         help="Skip cmake configure step (build dir must already exist)"
+    )
+    parser.add_argument(
+        "--clean", action="store_true",
+        help="Pass --clean-first to cmake build (removes compiled objects before building)"
     )
     parser.add_argument(
         "--no-build", action="store_true",
@@ -53,17 +65,30 @@ def main():
         "--jobs", "-j", type=int,
         help="Parallel build jobs"
     )
+    parser.add_argument(
+        "--generator", "-G", choices=["Ninja", "Unix Makefiles"], default="Ninja",
+        help="CMake build system generator (default: Ninja)"
+    )
     args = parser.parse_args()
+
+    if args.debug:
+        args.fresh = True
+        args.clean = True
 
     build_dir = Path(args.build_dir)
 
     if not args.no_configure:
-        run(["cmake", "-S", str(repo_root), "-B", str(build_dir)], "CMake configure")
+        configure_cmd = ["cmake", "-G", args.generator, "-S", str(repo_root), "-B", str(build_dir)]
+        if args.fresh:
+            configure_cmd.append("--fresh")
+        run(configure_cmd, "CMake configure")
     elif not build_dir.exists():
         sys.exit(f"Error: --no-configure was given but build dir does not exist: {build_dir}")
 
     if not args.no_build:
         build_cmd = ["cmake", "--build", str(build_dir)]
+        if args.clean:
+            build_cmd.append("--clean-first")
         if args.jobs:
             build_cmd += ["--parallel", str(args.jobs)]
         run(build_cmd, "CMake build")
