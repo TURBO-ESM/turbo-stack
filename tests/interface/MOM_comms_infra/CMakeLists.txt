@@ -45,6 +45,4 @@ add_mom_tests(
     LINK_LIBRARIES MOM6::infra
 )
 
-
-# Copy namelist file to output directory to satisfy FMS requirement
-configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
+copy_dummy_fms_input_nml()

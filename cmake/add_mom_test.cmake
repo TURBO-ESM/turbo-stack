@@ -26,3 +26,10 @@ function(add_mom_test TEST_FILE)
 
     set_property(TARGET ${TEST_TARGET} PROPERTY LINKER_LANGUAGE Fortran)
 endfunction()
+
+# copy_dummy_fms_input_nml()
+# Copies input.nml into the current build directory so FMS can find it at runtime.
+# Call once per test subdirectory that links against FMS if input.nml is not already present in the source directory.
+function(copy_dummy_fms_input_nml)
+    configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
+endfunction()

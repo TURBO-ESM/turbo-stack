@@ -7,6 +7,4 @@ add_mom_test(test_create_mom_domain.pf
     LINK_LIBRARIES MOM6::framework
 )
 
-
-# Copy namelist file to output directory to satisfy FMS requirement
-configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
+copy_dummy_fms_input_nml()
