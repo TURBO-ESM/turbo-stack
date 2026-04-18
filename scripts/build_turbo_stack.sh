@@ -1,4 +1,16 @@
 #!/bin/bash
+# Usage: ./scripts/build_turbo_stack.sh [options]
+#
+# CMake configure, build, and test turbo-stack.
+# Requires the spack environment to be active (call via build.sh, or activate manually).
+#
+# Required environment variables:
+#   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
+#
+# Options:
+#   --debug           Adds --fresh to cmake configure and --clean-first to cmake build
+#   --build_dir DIR   Build directory (default: $TURBO_STACK_ROOT/build/default)
+
 set -e
 
 # Default arguments

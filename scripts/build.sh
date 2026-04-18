@@ -1,31 +1,22 @@
 #!/bin/bash
-# Usage: ./scripts/build_and_test.sh [spack-options] [subcommand] [subcommand-options]
+# Usage: ./scripts/build.sh [options]
 #
-# Sets up and activates a Spack environment, then runs build_and_test.py.
-# Users who manage their own environment (modules, manual) can call build_and_test.py directly.
+# Sets up and activates a Spack environment, then calls build_turbo_stack.sh.
+# If the spack environment is already active, build_turbo_stack.sh can be called directly.
 #
 # Required environment variables:
 #   SPACK_ROOT          Path to your Spack installation
 #   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
 #
-# Spack options (consumed by this script):
-#   --create-spack-env      Create the Spack environment if it does not exist
-#   --recreate-spack-env    Delete and recreate the Spack environment from scratch
-#   --spack-env NAME        Name of the Spack environment (default: turbo_stack)
-#
-# Subcommands (forwarded to build_and_test.py, default: all):
-#   configure [--fresh] [-G GENERATOR] [-B DIR]
-#   build     [--clean] [-j N] [-B DIR]
-#   test      [-B DIR]
-#   all       [--debug] [--fresh] [--clean] [--no-configure] [--no-build] [--no-test] [-j N] [-G GENERATOR] [-B DIR]
+# Options:
+#   --debug               Full clean rebuild (passed through to build_turbo_stack.sh)
+#   --create-spack-env    Create the Spack environment if it does not exist
+#   --recreate-spack-env  Delete and recreate the Spack environment from scratch
 #
 # Examples:
-#   build_and_test.sh                              # configure + build + test
-#   build_and_test.sh --debug                      # full clean rebuild
-#   build_and_test.sh --recreate-spack-env --debug # recreate env then full rebuild
-#   build_and_test.sh configure --fresh            # reconfigure only
-#   build_and_test.sh build -j 8                   # rebuild with 8 jobs
-#   build_and_test.sh test                         # rerun tests only
+#   build.sh                              # configure + build + test
+#   build.sh --debug                      # full clean rebuild
+#   build.sh --recreate-spack-env --debug # recreate spack env then full clean rebuild
 
 set -e
 
