@@ -7,7 +7,7 @@ TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
-INFRA_ROOT=${ROOTDIR}/submodules/FMS
+INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
 UNIT_TEST_ROOT=${ROOTDIR}/tests
@@ -15,7 +15,7 @@ UNIT_TEST_ROOT=${ROOTDIR}/tests
 # Default values for CLI arguments
 COMPILER="intel"
 MACHINE="ncar"
-INFRA="FMS2"
+INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
@@ -24,16 +24,27 @@ OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
 CMAKE_BUILD_TYPE="Release"
 
+# Find valid values for INFRA
+for dir in `ls -d ${ROOTDIR}/submodules/infra/*`; do
+  if [ ! -z "${VALID_INFRA}" ]; then
+    VALID_INFRA="${VALID_INFRA}, `(basename ${dir})`"
+  else
+    VALID_INFRA=`(basename ${dir})`
+  fi
+done
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --help)
             echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--infra <infra>] [--codecov] [--offload] [--debug] [--override]"
-            echo "Build script for MOM6 with FMS."
+            echo "Build script for MOM6 with FMS2 or TIM infrastructure"
+            echo "Can run infrastructure layer unit tests instead of building the full MOM6 executable"
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build"
+            echo "                               (valid values [${VALID_INFRA}]; default: TIM)"
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
@@ -67,10 +78,9 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
-            if [[ "${INFRA}" == "TIM" ]]; then
-              INFRA_ROOT=${ROOTDIR}/submodules/TIM
-            elif [[ "${INFRA}" != "FMS2" ]]; then
-              echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
+            INFRA_ROOT=${ROOTDIR}/submodules/infra/${INFRA}
+            if [[ ! -d "${INFRA_ROOT}" ]]; then
+              echo "--infra option ${INFRA} not valid.  Valid options are [${VALID_INFRA}]."
               exit 1
             fi
             shift ;;
