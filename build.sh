@@ -15,7 +15,7 @@ UNIT_TEST_ROOT=${ROOTDIR}/tests
 # Default values for CLI arguments
 COMPILER="intel"
 MACHINE="ncar"
-INFRA="FMS2"
+INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
@@ -23,6 +23,7 @@ CODECOV=0 # False
 OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
 CMAKE_BUILD_TYPE="Release"
+
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -33,7 +34,7 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: TIM)"
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
@@ -67,9 +68,7 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
-            if [[ "${INFRA}" == "TIM" ]]; then
-              INFRA_ROOT=${ROOTDIR}/submodules/TIM
-            elif [[ "${INFRA}" != "FMS2" ]]; then
+            if [[ "${INFRA}" != "TIM" && "${INFRA}" != "FMS2" ]]; then
               echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
               exit 1
             fi
@@ -118,6 +117,11 @@ while [[ "$#" -gt 0 ]]; do
     esac
     shift
 done
+
+# Make sure that the submodules/TIM is included if using the TIM infrastructure
+if [[ "${INFRA}" == "TIM" ]]; then
+   INFRA_ROOT=${ROOTDIR}/submodules/TIM
+fi
 
 echo "Starting build at $(date)"
 echo "Compiler: $COMPILER"
