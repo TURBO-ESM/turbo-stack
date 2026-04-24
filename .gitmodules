@@ -1,6 +1,7 @@
 [submodule "src/MOM6"]
 	path = submodules/MOM6
-	url = https://github.com/TURBO-ESM/MOM6.git
+	url = https://github.com/johnmauff/MOM6.git
+	branch = continuity01
 [submodule "src/FMS"]
 	path = submodules/FMS
 	url = https://github.com/TURBO-ESM/FMS
@@ -18,7 +19,8 @@
 	url = https://github.com/AMReX-Codes/amrex.git
 [submodule "submodules/TIM"]
 	path = submodules/TIM
-	url = https://github.com/TURBO-ESM/TIM.git
+	url = https://github.com/johnmauff/TIM.git
+	branch = continuity01
 [submodule "submodules/pFUnit"]
 	path = submodules/pFUnit
 	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git

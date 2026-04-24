@@ -1,2 +1,3 @@
 add_subdirectory(MOM_comms_infra)
 add_subdirectory(MOM_domain_infra)
+add_subdirectory(array_mod)
