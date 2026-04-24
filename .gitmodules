@@ -2,7 +2,7 @@
 	path = submodules/MOM6
 	url = https://github.com/TURBO-ESM/MOM6.git
 [submodule "src/FMS"]
-	path = submodules/FMS
+	path = submodules/infra/FMS2
 	url = https://github.com/TURBO-ESM/FMS
 [submodule "src/CESM_share"]
 	path = submodules/CESM_share
@@ -17,7 +17,7 @@
 	path = submodules/amrex
 	url = https://github.com/AMReX-Codes/amrex.git
 [submodule "submodules/TIM"]
-	path = submodules/TIM
+	path = submodules/infra/TIM
 	url = https://github.com/TURBO-ESM/TIM.git
 [submodule "submodules/pFUnit"]
 	path = submodules/pFUnit
