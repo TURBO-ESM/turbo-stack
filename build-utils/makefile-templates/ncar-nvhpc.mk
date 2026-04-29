@@ -6,7 +6,7 @@
 
 FC = ftn
 CC = cc
-CXX = c++
+CXX = CC
 LD = ftn $(MAIN_PROGRAM)
 
 ############
@@ -19,8 +19,9 @@ MAKEFLAGS += --jobs=8
 LDFLAGS :=
 
 FC_AUTO_R8 = -r8
+FC_AUTO_I4 = -i4
 FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
-FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
+FFLAGS = $(FC_AUTO_R8) -Mnofma $(FC_AUTO_I4) -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
 
 
 CFLAGS = -gopt -time -Mnofma
