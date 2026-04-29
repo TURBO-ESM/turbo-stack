@@ -181,19 +181,12 @@ Both live in `submodules/MOM6/pkg/` — vendored inside the MOM6 submodule.
 
 ---
 
-### Phase 4b — MARBL and Other In-Tree Submodules [ ] ← NEXT
+### Phase 4b — MARBL and Other In-Tree Submodules [✅ COMPLETE]
 
-MARBL is a top-level submodule at `submodules/MARBL/`. Audit remaining submodules (`submodules/`) to confirm which are already provided by the environment (FMS, AMReX, pFUnit) and which must be built in-tree.
-
-- [ ] Audit all submodules: FMS, AMReX, pFUnit → already from environment; TIM, CESM_share, MARBL → built in-tree
-- [ ] MARBL → `MOM6::MARBL`: enumerate all `.F90` in `submodules/MARBL/src/`
-- [ ] Each target: `set_target_properties(... Fortran_MODULE_DIRECTORY ...)` + `target_include_directories(... INTERFACE $<BUILD_INTERFACE:...>)`
-
-**Validation:** Extend link-test to include MARBL:
-
-```fortran
-use marbl_kinds_mod, only: r8
-```
+- ✅ `marbl_build/` shadow tree mirrors `submodules/MARBL/`: `marbl_build/CMakeLists.txt` + `marbl_build/src/CMakeLists.txt`
+- ✅ `MOM6::MARBL` — all 34 `.F90` files in `submodules/MARBL/src/`; no external deps (perf_mod only used under `#if MARBL_TIMING_OPT == CIME`, which we don't define)
+- ✅ CMake Fortran dependency scanner handles internal module ordering automatically
+- ✅ 40/40 tests still pass
 
 ---
 
@@ -297,3 +290,5 @@ Add when managing multiple environments becomes necessary (CI matrix, NCAR, cont
 | Phase 3 | Five-layer stack complete: `mom6_framework_base` -> `mom6_infra` -> `mom6_framework` -> `mom6_grid` -> `mom6_io`; infra 100%, framework 30/33 (3 deferred to Phase 5 pending deep src/ deps) |
 | Phase 3.5 | Unit tests wired; `find_mom_dependencies.cmake` replaced by direct target refs; 40/40 tests pass |
 | Phase 4a | `MOM6::CVMix` and `MOM6::GSW` built; shadow tree mirrors `submodules/MOM6/pkg/`; `dep_link_test` passes; 40/40 tests still pass |
+| Phase 4b | `MOM6::MARBL` built; `marbl_build/` shadow tree mirrors `submodules/MARBL/`; all 34 files compile; 40/40 tests still pass |
+| Merge | Merged main → branch; MOM6 updated (added `MOM_string_infra.F90` to `mom6_infra`); FMS/TIM submodules relocated to `submodules/infra/`; pFUnit updated to v4.18 |

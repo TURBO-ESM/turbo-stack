@@ -22,6 +22,7 @@ find_package(NetCDF REQUIRED COMPONENTS C Fortran)
 find_package(PFUNIT REQUIRED)
 
 add_subdirectory(mom6_build)
+add_subdirectory(marbl_build)
 
 if(TURBO_BUILD_UNIT_TESTS)
     enable_testing()
