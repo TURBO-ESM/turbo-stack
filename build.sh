@@ -7,7 +7,7 @@ TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
-INFRA_ROOT=${ROOTDIR}/submodules/FMS
+INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
 UNIT_TEST_ROOT=${ROOTDIR}/tests
@@ -15,7 +15,7 @@ UNIT_TEST_ROOT=${ROOTDIR}/tests
 # Default values for CLI arguments
 COMPILER="intel"
 MACHINE="ncar"
-INFRA="FMS2"
+INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
@@ -24,16 +24,27 @@ OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
 CMAKE_BUILD_TYPE="Release"
 
+# Find valid values for INFRA
+for dir in `ls -d ${ROOTDIR}/submodules/infra/*`; do
+  if [ ! -z "${VALID_INFRA}" ]; then
+    VALID_INFRA="${VALID_INFRA}, `(basename ${dir})`"
+  else
+    VALID_INFRA=`(basename ${dir})`
+  fi
+done
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --help)
             echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--infra <infra>] [--codecov] [--offload] [--debug] [--override]"
-            echo "Build script for MOM6 with FMS."
+            echo "Build script for MOM6 with FMS2 or TIM infrastructure"
+            echo "Can run infrastructure layer unit tests instead of building the full MOM6 executable"
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build"
+            echo "                               (valid values [${VALID_INFRA}]; default: TIM)"
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
@@ -67,10 +78,9 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
-            if [[ "${INFRA}" == "TIM" ]]; then
-              INFRA_ROOT=${ROOTDIR}/submodules/TIM
-            elif [[ "${INFRA}" != "FMS2" ]]; then
-              echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
+            INFRA_ROOT=${ROOTDIR}/submodules/infra/${INFRA}
+            if [[ ! -d "${INFRA_ROOT}" ]]; then
+              echo "--infra option ${INFRA} not valid.  Valid options are [${VALID_INFRA}]."
               exit 1
             fi
             shift ;;
@@ -240,30 +250,7 @@ if [ "$MACHINE" == "ncar" ]; then
   fi
 fi
 
-# comma-separated list of files in src/framework that are needed to build $LININFRA (for FMS2, at least)
-MOM6_infra_framework_deps_list=$(cat << EOF
-MOM_string_functions.F90
-MOM_io.F90
-MOM_array_transform.F90
-MOM_domains.F90
-MOM_error_handler.F90
-posix.F90
-MOM_file_parser.F90
-MOM_coms.F90
-MOM_document.F90
-MOM_cpu_clock.F90
-MOM_unit_scaling.F90
-MOM_dyn_horgrid.F90
-MOM_hor_index.F90
-MOM_ensemble_manager.F90
-MOM_io_file.F90
-MOM_netcdf.F90
-EOF
-)
-MOM6_infra_framework_deps=$(echo ${MOM6_infra_framework_deps_list} | tr ' ' ',')
-# comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
-MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
-MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
+MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
 # 0) Build AMReX if needed

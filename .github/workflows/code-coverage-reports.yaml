@@ -33,7 +33,7 @@ jobs:
       - name: Run double gyre (instrumented build)
         run: |
           cd examples/double_gyre
-          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6_using_FMS2/MOM6/MOM6
+          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6_using_TIM/MOM6/MOM6
           make coverage
           cd ../..
       
@@ -41,7 +41,7 @@ jobs:
         run: |
           cd examples/benchmark
           echo "#override DAYMAX = 0.1" >> MOM_override
-          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6_using_FMS2/MOM6/MOM6
+          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6_using_TIM/MOM6/MOM6
           make coverage
           make coverage base=../double_gyre
           cd ../..
