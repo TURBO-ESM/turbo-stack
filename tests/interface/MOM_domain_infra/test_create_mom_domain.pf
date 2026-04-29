@@ -1,7 +1,7 @@
 module test_create_mom_domain
   use pfunit
   use MOM_test_case
-  use MOM_domains, only : MOM_domain_type, create_MOM_domain
+  use MOM_domain_infra, only : MOM_domain_type, create_MOM_domain
   use iso_fortran_env, only : int32
   implicit none
 
