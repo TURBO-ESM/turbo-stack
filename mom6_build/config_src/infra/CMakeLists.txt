@@ -18,6 +18,7 @@ add_library(mom6_infra STATIC
     ${MOM6_INFRA_DIR}/MOM_data_override_infra.F90
     ${MOM6_INFRA_DIR}/MOM_diag_manager_infra.F90
     ${MOM6_INFRA_DIR}/MOM_couplertype_infra.F90
+    ${MOM6_INFRA_DIR}/MOM_string_infra.F90
     ${MOM6_INFRA_DIR}/MOM_io_infra.F90
 )
 add_library(MOM6::infra ALIAS mom6_infra)
