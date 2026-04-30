@@ -253,7 +253,7 @@ fi
 MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
-# 0) Build AMReX if needed
+# 0) Build AMReX if needed; also set -D_TIM for MOM6 build
 if [[ "${INFRA}" == "TIM" ]]; then
   # Check if AMREX_INSTALL_PATH was provided or if need to build from submodule first.
   if [[ -z "${AMREX_INSTALL_PATH}" ]]; then
@@ -275,6 +275,8 @@ if [[ "${INFRA}" == "TIM" ]]; then
   fi
   AMREX_LINK_FLAGS="-L${AMREX_INSTALL_PATH}/lib -lamrex"
   AMREX_INCLUDE_FLAGS="-I${AMREX_INSTALL_PATH}/include"
+
+  FFLAGS="-D_TIM"
 fi
 
 # 0a) Build pFUnit if needed
@@ -358,7 +360,7 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p MOM6 -l "${LINKING_FLAGS}" -c "${FFLAGS} -Duse_libMPI -Duse_netCDF -DSPMD" path_names
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
