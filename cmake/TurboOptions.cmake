@@ -1,6 +1,5 @@
 # What to build
 option(TURBO_BUILD_UNIT_TESTS "Build pFUnit unit tests" ON)
-option(TURBO_BUILD_MOM6       "Build MOM6 executable"   OFF)
 
 # Infrastructure backend
 set(TURBO_INFRA "FMS2" CACHE STRING "Infrastructure backend: FMS2 or TIM")

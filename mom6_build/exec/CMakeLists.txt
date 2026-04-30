@@ -8,6 +8,10 @@ add_executable(MOM6
     ${MOM6_DRIVER_DIR}/user_surface_forcing.F90
 )
 
+set_target_properties(MOM6 PROPERTIES
+    Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mod
+)
+
 target_include_directories(MOM6
     PRIVATE ${MOM6_DIR}/config_src/memory/${TURBO_MEMORY_MODE}
 )

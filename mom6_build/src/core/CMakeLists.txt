@@ -1,6 +1,6 @@
 set(MOM6_CORE_DIR ${MOM6_DIR}/src/core)
 
-# Remaining core files (MOM_grid and MOM_verticalGrid are in mom6_grid above).
+# Remaining core files (MOM_grid and MOM_verticalGrid are in mom6_grid below).
 target_sources(mom6_ocean PRIVATE
     ${MOM6_CORE_DIR}/MOM.F90
     ${MOM6_CORE_DIR}/MOM_CoriolisAdv.F90
@@ -51,10 +51,7 @@ set_target_properties(mom6_grid PROPERTIES
 
 target_include_directories(mom6_grid
     INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/mod>
-)
-
-target_include_directories(mom6_grid
-    PRIVATE ${MOM6_DIR}/config_src/memory/${TURBO_MEMORY_MODE}
+    PRIVATE   ${MOM6_DIR}/config_src/memory/${TURBO_MEMORY_MODE}
 )
 
 target_link_libraries(mom6_grid

@@ -56,9 +56,9 @@ if(TURBO_CODECOV)
 endif()
 
 # --- Apply ---
-add_compile_options(
-    "$<$<COMPILE_LANGUAGE:Fortran>:${_turbo_fortran_flags}>"
-)
+foreach(_flag IN LISTS _turbo_fortran_flags)
+    add_compile_options("$<$<COMPILE_LANGUAGE:Fortran>:${_flag}>")
+endforeach()
 
 message(STATUS "Fortran compiler: ${CMAKE_Fortran_COMPILER_ID} ${CMAKE_Fortran_COMPILER_VERSION}")
 message(STATUS "Fortran flags: ${_turbo_fortran_flags}")

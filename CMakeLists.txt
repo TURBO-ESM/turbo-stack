@@ -18,13 +18,11 @@ list(APPEND CMAKE_MODULE_PATH "${FMS_INSTALL_PREFIX}/lib/cmake/fms")
 find_package(MPI REQUIRED COMPONENTS Fortran)
 find_package(NetCDF REQUIRED COMPONENTS C Fortran)
 
-# pFUnit — unit testing framework
-find_package(PFUNIT REQUIRED)
-
 add_subdirectory(mom6_build)
 add_subdirectory(marbl_build)
 
 if(TURBO_BUILD_UNIT_TESTS)
+    find_package(PFUNIT REQUIRED)
     enable_testing()
     add_subdirectory(tests)
 endif()

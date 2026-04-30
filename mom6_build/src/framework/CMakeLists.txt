@@ -110,12 +110,11 @@ target_sources(mom6_framework PRIVATE
     ${MOM6_FRAMEWORK_DIR}/MOM_io_file.F90
 )
 
-# TODO(Phase 5): three src/framework/ files are deferred until src/ is built.
-# They depend on modules that live outside src/framework/ and src/core/:
+# Three src/framework/ files are compiled as part of mom6_ocean (mom6_build/src/CMakeLists.txt)
+# because they depend on modules outside src/framework/ and src/core/:
 #   MOM_diag_mediator       needs MOM_EOS, MOM_interface_heights, MOM_variables
 #   MOM_diag_remap          needs MOM_EOS, MOM_regridding, MOM_remapping, coord_* modules
 #   MOM_horizontal_regridding needs MOM_debugging (src/diagnostics/)
-# Add these to mom6_io or a higher layer once the full src/ tree is wired in Phase 5.
 
 add_library(MOM6::framework ALIAS mom6_framework)
 
