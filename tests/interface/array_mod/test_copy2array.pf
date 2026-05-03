@@ -1,0 +1,41 @@
+module test_copy2array
+  use pfunit
+  use array_mod
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_duplicate
+  end type testcase_duplicate
+
+contains
+
+  @test(npes=[4])
+  subroutine test_array_copy2A(this)
+    class (testcase_duplicate), intent(inout) :: this
+    integer, parameter :: n1 = 45, n2 = 12
+    real, dimension(n1,n2) :: array_expected
+    type(RealArray_t) :: array_A
+    real, dimension(:,:), pointer :: array_actual
+    integer :: i, j
+
+    do j=1,n2
+      do i=1,n1
+        array_expected(i,j) = real(i) + 2.3*real(j)
+      enddo
+    enddo
+
+    ! Duplicate the size of a Fortran array
+    call array_A%dup(array_expected)
+
+    ! Copy the values into the Array container 
+    call array_A%copy2array(array_expected)
+
+    ! Get a view of the ArrayReal_t
+    call array_A%view(array_actual)
+
+    @assertEqual(array_expected, array_actual)
+
+  end subroutine test_array_copy2A
+
+end module test_copy2array

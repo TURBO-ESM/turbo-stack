@@ -1,0 +1,46 @@
+module test_duplicate_subsection
+  use pfunit
+  use array_mod
+  use MOM_test_case
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: testcase_duplicate
+  end type testcase_duplicate
+
+contains
+
+  @test(npes=[4])
+  subroutine test_array_duplicate(this)
+    class (testcase_duplicate), intent(inout) :: this
+    integer, parameter :: n1 = 45, n2 = 12
+    real, dimension(n1,n2) :: array_F  
+    type(RealArray_t) :: array_A
+    integer, dimension(1) :: lb_actual, ub_actual
+    integer, dimension(1) :: lb_expected, ub_expected
+
+    !--------------------------------------------
+    ! Duplicate a contigous array subsection
+    !--------------------------------------------
+    lb_expected = [1]
+    ub_expected = [n1]
+    call array_A%dup(array_F(:,3))
+    lb_actual = array_A%lb
+    ub_actual = array_A%ub
+    @assertEqual(lb_expected, lb_actual)
+    @assertEqual(ub_expected, ub_actual)
+
+    !--------------------------------------------
+    ! Duplicate a non-contigous array subsection
+    !--------------------------------------------
+    lb_expected = [1]
+    ub_expected = [n2]
+    call array_A%dup(array_F(2,:))
+    lb_actual = array_A%lb
+    ub_actual = array_A%ub
+    @assertEqual(lb_expected, lb_actual)
+    @assertEqual(ub_expected, ub_actual)
+
+  end subroutine test_array_duplicate
+
+end module test_duplicate_subsection
