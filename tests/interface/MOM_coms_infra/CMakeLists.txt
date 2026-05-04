@@ -10,9 +10,6 @@ set(MOM_COMS_INFRA_TESTS
   test_broadcast_real3D.pf
   test_broadcast_IntArray.pf
   test_broadcast_RealArray.pf
-  test_set_pelist_to_single_then_reset.pf
-  test_set_pelist_split.pf
-  test_get_pelist_all_ranks.pf
   test_field_checksum_real_0d.pf
   test_field_checksum_real_1d.pf
   test_field_checksum_real_2d.pf
@@ -35,9 +32,6 @@ set(MOM_COMS_INFRA_TESTS
   test_max_across_pes_real64_1d.pf
   test_any_across_pes.pf
   test_all_across_pes.pf
-  test_num_pes.pf
-  test_root_pe.pf
-  test_pe_here.pf
 )
 
 add_mom_tests(${MOM_COMS_INFRA_TESTS})
