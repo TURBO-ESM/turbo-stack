@@ -23,7 +23,7 @@ FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
 FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
 
 
-CFLAGS = -gopt -time -Mnofma
+CFLAGS = -gopt -time -Mnofma -DHAVE_GETTID
 CPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
 
 CXXFLAGS := --std=c++17
@@ -34,19 +34,14 @@ ifeq ($(DEBUG),1)
   FFLAGS += -O0 -g
   CFLAGS += -O0 -g
 else
-  ifeq ($(OFFLOAD),1)
-    FFLAGS += -O0
-    CFLAGS += -O0
-  else
     FFLAGS += -O2
     CFLAGS += -O2
-  endif
 endif
 
 ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -fopenmp -Minfo=all
+  FFLAGS += -mp=gpu -gpu=cc80 -fopenmp -stdpar -Minfo=accel
   CFLAGS += -mp=gpu -gpu=cc80
-  LDFLAGS += -mp=gpu
+  LDFLAGS += -mp=gpu -lmpi_gtl_cuda
 endif
 
 # NetCDF Flags

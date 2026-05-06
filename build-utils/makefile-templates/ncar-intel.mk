@@ -23,7 +23,7 @@ FFLAGS := $(FC_AUTO_R8) -qno-opt-dynamic-align  -convert big_endian -assume byte
 FFLAGS_DEBUG = -O0 -g -check uninit -check bounds -check nopointer -fpe0 -check noarg_temp_created # CESM uses -check pointers, that throws an error, changed to nopointer
 FFLAGS_REPRO = -O2 -debug minimal
 
-CFLAGS := -qno-opt-dynamic-align -fp-model precise -std=gnu99  -no-fma -qopt-report -march=core-avx2
+CFLAGS := -qno-opt-dynamic-align -fp-model precise -std=gnu99  -no-fma -qopt-report -march=core-avx2 -DHAVE_GETTID
 CFLAGS_REPRO= -O2 -debug minimal
 CFLAGS_DEBUG = -O0 -g
 
