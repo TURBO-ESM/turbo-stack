@@ -227,21 +227,15 @@ if [ "$MACHINE" == "ncar" ]; then
   # Load modules if on derecho
   if [ ! "${HOST:0:5}" == "crhtc" ] && [ ! "${HOST:0:6}" == "casper" ]; then
     module --force purge
-    . /glade/u/apps/derecho/23.09/spack/opt/spack/lmod/8.7.24/gcc/7.5.0/c645/lmod/lmod/init/sh
-    module load cesmdev/1.0 ncarenv/23.09
     case $COMPILER in
       "intel" )
-        module load craype intel/2023.2.1 mkl ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2 esmf/8.6.0
+        module load ncarenv/25.10 craype/2.7.34 intel/2025.2.1 ncarcompilers/1.1.0 libfabric/1.22.0 cray-mpich/8.1.32 hdf5/1.14.6 netcdf/4.9.3 cmake
         ;;
       "gnu" )
-        module load craype gcc/12.2.0 cray-libsci/23.02.1.1 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2-debug esmf/8.6.0-debug
+        module load ncarenv/25.10 craype/2.7.34 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 libfabric/1.22.0 cray-mpich/8.1.32
         ;;
       "nvhpc" )
-        if [ $OFFLOAD -eq 1 ]; then
-          module load craype nvhpc/24.9 ncarcompilers/1.0.0 cmake cray-mpich/8.1.29 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 cuda/12.2.1
-        else
-          module load craype nvhpc/23.7 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3
-        fi
+        module load ncarenv/25.10 cuda/12.9.0 cmake/3.31.8 hdf5/1.14.6 libfabric/1.22.0 craype/2.7.34 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 cray-mpich/8.1.32 cmake
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
