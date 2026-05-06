@@ -8,6 +8,9 @@
 # Load modules to match compile-time environment
 module load cuda/12.9.0 nvhpc/25.9 cray-mpich/8.1.32
 
+### Set temp to scratch
+export TMPDIR=${SCRATCH}/${USER}/temp && mkdir -p $TMPDIR
+
 COMPILER=nvhpc
 INFRA=FMS2
 

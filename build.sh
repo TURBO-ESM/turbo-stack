@@ -226,16 +226,16 @@ if [ "$MACHINE" == "ncar" ]; then
   HOST=$(hostname)
   # Load modules if on derecho
   if [ ! "${HOST:0:5}" == "crhtc" ] && [ ! "${HOST:0:6}" == "casper" ]; then
-    module --force purge
+    module reset
     case $COMPILER in
       "intel" )
         module load ncarenv/25.10 craype/2.7.34 intel/2025.2.1 ncarcompilers/1.1.0 libfabric/1.22.0 cray-mpich/8.1.32 hdf5/1.14.6 netcdf/4.9.3 cmake
         ;;
       "gnu" )
-        module load ncarenv/25.10 craype/2.7.34 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 libfabric/1.22.0 cray-mpich/8.1.32
+        module load ncarenv/25.10 craype/2.7.34 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 libfabric/1.22.0 cray-mpich/8.1.32 cmake
         ;;
       "nvhpc" )
-        module load ncarenv/25.10 cuda/12.9.0 cmake/3.31.8 hdf5/1.14.6 libfabric/1.22.0 craype/2.7.34 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 cray-mpich/8.1.32 cmake
+        module load ncarenv/25.10 cuda/12.9.0 hdf5/1.14.6 libfabric/1.22.0 craype/2.7.34 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 cray-mpich/8.1.32 cmake
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
