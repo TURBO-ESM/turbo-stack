@@ -102,9 +102,9 @@ scripts/build_turbo_stack.sh
 | MPI | User-configured environment | `find_package(MPI REQUIRED)` → `MPI::MPI_Fortran` | |
 | TIM | **Built in-tree** (submodule) | `add_subdirectory(submodules/infra/TIM tim_build)`; exports `FMS::fms_r8` — same alias as Spack FMS | Phase 6 |
 | CESM_share | Not needed (not used by MOM6 solo driver) | — | Investigated; only needed by mkmf TIM build |
-| CVMix | **Built in-tree** (MOM6 subdir) | Static lib target `MOM6::CVMix` | Lives in `submodules/MOM6/pkg/` |
-| MARBL | **Built in-tree** (submodule) | Static lib target `MOM6::MARBL` | No CMakeLists.txt; we add one |
-| GSW | **Built in-tree** (MOM6 subdir) | Static lib target `MOM6::GSW` | Lives in `submodules/MOM6/pkg/` |
+| CVMix | **Built in-tree** (MOM6 repo `pkg/`) | Static lib target `MOM6::CVMix` | Built inline in `MOM6/pkg/CMakeLists.txt` |
+| MARBL | **Built in turbo-stack** (`marbl_build/`) | Static lib target `MOM6::MARBL` | turbo-stack owns and builds it; MOM6 repo consumes it as a pre-defined target — same pattern as `FMS::fms_r8` |
+| GSW | **Built in-tree** (MOM6 repo `pkg/`) | Static lib target `MOM6::GSW` | Built inline in `MOM6/pkg/CMakeLists.txt` |
 
 `CMAKE_PREFIX_PATH` must be set before invoking CMake — by hand, via Lmod modules, Spack, or a prebuilt container. turbo-stack's CMake never sets it directly.
 
@@ -228,7 +228,7 @@ Both paths export the same `FMS::fms_r8` target; nothing downstream of `mom6_inf
 - ✅ FMS2 build: 40/40 tests pass
 - ✅ TIM build: 40/40 tests pass
 
-**`double_gyre` with TIM:** not yet validated — deferred; unit tests confirm correct library wiring.
+**`double_gyre` with TIM:** ✅ bit-for-bit identical to cmake reference (`ocean.stats.cmake_reference`) — same as FMS2.
 
 **Key design note — hot-swap mechanism:**
 TIM exports `TIM::tim_r8`; root `CMakeLists.txt` aliases it to `FMS::fms_r8`.
@@ -241,7 +241,59 @@ so the full-path libnetcdf.so appears in downstream link commands. TIM's `tim_r8
 
 ---
 
-### Phase 7 — CI Workflow Migration [ ]
+### Phase 7 — Migrate MOM6 CMake Build into Standalone MOM6 Repo [✅ COMPLETE]
+
+Move the CMake build system from turbo-stack's `mom6_build/` shadow tree into the
+standalone MOM6 repository (`../MOM6`, branch `192-feature-cmake-build-system-for-MOM6`,
+based on `dev/turbo`). turbo-stack consumes MOM6 via `add_subdirectory` pointed at
+that repo.
+
+**Why:** The CMakeLists.txt files logically belong in the MOM6 repository. Moving them
+upstream makes the MOM6 repo self-contained and lets other consumers use it directly.
+Files placed directly inside the source directories they describe eliminate the artificial
+path-variable indirection that the shadow tree required.
+
+**Completed:**
+
+- ✅ Root `MOM6/CMakeLists.txt` — sets `MOM6_SOURCE_DIR`, includes `MOM6Options.cmake`,
+  calls `add_subdirectory(pkg)`, `add_subdirectory(src)`, `add_subdirectory(config_src)`
+- ✅ `cmake/MOM6Options.cmake` — `TURBO_INFRA` and `TURBO_MEMORY_MODE` cache variables
+- ✅ `pkg/CMakeLists.txt` — `MOM6::CVMix` and `MOM6::GSW` built inline (no nested shadow
+  subdirs); `pkg/CVMix-src` and `pkg/GSW-Fortran` submodules initialized
+- ✅ All `src/*/CMakeLists.txt` — bare filenames throughout (no path variables needed
+  since each file lives next to its sources); `parameterizations/` uses relative subdir
+  paths (`lateral/`, `vertical/`, `stochastic/`)
+- ✅ `src/framework/CMakeLists.txt` — five-layer stack (`framework_base` → `infra` →
+  `framework` → `grid` → `io`); only cross-tree reference is
+  `${MOM6_SOURCE_DIR}/config_src/infra/${TURBO_INFRA}/MOM_interp_infra.F90` in `mom6_io`
+- ✅ `config_src/infra/CMakeLists.txt` — `mom6_infra` uses `${TURBO_INFRA}/filename.F90`
+  relative paths; TIM-only `MOM_coms_helpers.F90` still conditional
+- ✅ `config_src/drivers/solo_driver/CMakeLists.txt` — `MOM6` executable (replaces
+  turbo-stack's `mom6_build/exec/`)
+- ✅ turbo-stack `CMakeLists.txt` updated:
+  - `MOM6_SOURCE_DIR` cache variable reads `$MOM6_ROOT` (fails loudly if unset)
+  - `add_subdirectory(marbl_build)` runs **before** MOM6 so `MOM6::MARBL` is defined
+  - `add_subdirectory("${MOM6_SOURCE_DIR}" mom6_build)` replaces `add_subdirectory(mom6_build)`
+- ✅ `MOM6_ROOT=/home/lalo/projects/turbo/MOM6` added to `~/.bashrc`
+- ✅ `mom6_build/` shadow tree removed from turbo-stack
+- ✅ 40/40 tests pass; `MOM6` executable builds cleanly
+
+**MARBL placement — Option B (turbo-stack owns it):**
+MARBL is biogeochemistry infrastructure specific to the TURBO project. Rather than
+adding it as a submodule inside the MOM6 repo, turbo-stack builds it in `marbl_build/`
+and exposes it as a pre-defined `MOM6::MARBL` target before calling `add_subdirectory`
+on the MOM6 repo — the same pattern used for `FMS::fms_r8`. The MOM6 repo's
+`pkg/CMakeLists.txt` documents this with a comment; MOM6's `.gitignore` already excludes
+`pkg/MARBL`.
+
+**Submodule vs local path:** Currently using `MOM6_ROOT=../MOM6` (local clone on the
+feature branch). Once the MOM6 PR is merged to `dev/turbo`, update the turbo-stack
+submodule (`submodules/MOM6`) to that commit and switch to
+`add_subdirectory(submodules/MOM6 mom6_build)`.
+
+---
+
+### Phase 8 — CI Workflow Migration [ ] ← NEXT
 
 Update `.github/workflows/` to invoke CMake instead of the legacy `build.sh` (mkmf-era).
 
@@ -253,7 +305,7 @@ Update `.github/workflows/` to invoke CMake instead of the legacy `build.sh` (mk
 
 ---
 
-### Phase 8 — Validate, Document, Retire build.sh [ ]
+### Phase 9 — Validate, Document, Retire build.sh [ ]
 
 - [ ] All CI workflows passing with CMake
 - [ ] `double_gyre` and `benchmark` examples produce matching output
@@ -264,7 +316,7 @@ Update `.github/workflows/` to invoke CMake instead of the legacy `build.sh` (mk
 
 ---
 
-### Phase 9 — CMakePresets.json (Optional) [ ]
+### Phase 10 — CMakePresets.json (Optional) [ ]
 
 Add when managing multiple environments becomes necessary (CI matrix, NCAR, containers). Not needed for local single-environment development.
 
@@ -312,3 +364,4 @@ Add when managing multiple environments becomes necessary (CI matrix, NCAR, cont
 | Phase 5 | `MOM6::ocean` + `MOM6` executable built; `double_gyre` 10-day run completes; reference output saved; GSW toolbox (179 files) and ODA kdtree.f90 discovered and added |
 | Review | Full CMakeLists review: removed `TURBO_BUILD_MOM6` (unused option), gated `find_package(PFUNIT)` on `TURBO_BUILD_UNIT_TESTS`, reverted mom6_ocean PUBLIC→PRIVATE (PRIVATE breaks static lib propagation), added `Fortran_MODULE_DIRECTORY` to exec, removed `cvmix_gsw_link_test`, fixed compiler flags genex, cleaned stale comments |
 | Phase 6 | TIM CMake build complete: TURBO_INFRA=FMS2|TIM hot-swap wired; amrex +fortran in spack.yaml; TIM_ROOT env var; NetCDF::NetCDF_C PUBLIC on tim_r8; 40/40 tests pass with both backends |
+| Phase 7 | CMakeLists.txt hierarchy added directly to MOM6 repo (branch `192-feature-cmake-build-system-for-MOM6`); files use bare filenames since they live next to their sources; CVMix/GSW submodules initialized; MARBL stays in turbo-stack as Option B (pre-defined `MOM6::MARBL` target); `mom6_build/` shadow tree removed from turbo-stack; MOM6_ROOT env var wired; 40/40 tests pass |

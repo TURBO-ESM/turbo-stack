@@ -37,8 +37,21 @@ endif()
 find_package(MPI REQUIRED COMPONENTS Fortran)
 find_package(NetCDF REQUIRED COMPONENTS C Fortran)
 
-add_subdirectory(mom6_build)
+# MOM6_SOURCE_DIR: path to a standalone MOM6 source checkout.
+# Reads $MOM6_ROOT env var; fails loudly at configure time if unset.
+if(NOT DEFINED MOM6_SOURCE_DIR)
+    set(MOM6_SOURCE_DIR "$ENV{MOM6_ROOT}" CACHE PATH "Path to MOM6 source directory")
+endif()
+if(NOT MOM6_SOURCE_DIR)
+    message(FATAL_ERROR
+        "TurboStack requires MOM6_ROOT to be set in the environment "
+        "(or pass -DMOM6_SOURCE_DIR=/path/to/MOM6)")
+endif()
+
+# MARBL must be configured before MOM6 so that MOM6::MARBL is already defined
+# when the MOM6 subdirectory processes its target_link_libraries calls.
 add_subdirectory(marbl_build)
+add_subdirectory("${MOM6_SOURCE_DIR}" mom6_build)
 
 if(TURBO_BUILD_UNIT_TESTS)
     find_package(PFUNIT REQUIRED)
