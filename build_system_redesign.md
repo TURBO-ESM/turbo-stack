@@ -100,8 +100,8 @@ scripts/build_turbo_stack.sh
 | pFUnit | User-configured environment | `find_package(PFUNIT REQUIRED)` → `PFUNIT::pfunit` | Has `PFUNITConfig.cmake` ✅ |
 | NetCDF | User-configured environment | `find_package(NetCDF REQUIRED COMPONENTS Fortran)` → `NetCDF::NetCDF_Fortran` | |
 | MPI | User-configured environment | `find_package(MPI REQUIRED)` → `MPI::MPI_Fortran` | |
-| TIM | **Built in-tree** (submodule) | `add_subdirectory(submodules/TIM)` + alias `Turbo::infra` | No install config yet; fix TIM long-term |
-| CESM_share | **Built in-tree** (2 files only) | Thin wrapper target `Turbo::cesm_share` | Only `shr_kind_mod.F90` + `shr_const_mod.F90` needed |
+| TIM | **Built in-tree** (submodule) | `add_subdirectory(submodules/infra/TIM tim_build)`; exports `FMS::fms_r8` — same alias as Spack FMS | Phase 6 |
+| CESM_share | Not needed (not used by MOM6 solo driver) | — | Investigated; only needed by mkmf TIM build |
 | CVMix | **Built in-tree** (MOM6 subdir) | Static lib target `MOM6::CVMix` | Lives in `submodules/MOM6/pkg/` |
 | MARBL | **Built in-tree** (submodule) | Static lib target `MOM6::MARBL` | No CMakeLists.txt; we add one |
 | GSW | **Built in-tree** (MOM6 subdir) | Static lib target `MOM6::GSW` | Lives in `submodules/MOM6/pkg/` |
@@ -211,25 +211,49 @@ The old `build.sh` builds FMS2 from source while our CMake build uses Spack FMS 
 
 ---
 
-### Phase 6 — CI Workflow Migration [ ]
+### Phase 6 — TIM CMake Build [✅ COMPLETE]
 
-Update `.github/workflows/` to invoke CMake presets instead of `build.sh`.
+Add a CMake build for TIM (TURBO Infrastructure for MOM6) so it is hot-swappable with the Spack-installed FMS2.
+Both paths export the same `FMS::fms_r8` target; nothing downstream of `mom6_infra` needs to change.
 
-```yaml
-- run: cmake --preset ${{ matrix.preset }}
-- run: cmake --build build/${{ matrix.preset }}
-- run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure
-```
+**Completed:**
+- ✅ `amrex +fortran` added to `spack/spack.yaml` (AMReX Fortran API required by `array_mod.F90`)
+- ✅ TIM modifications live in standalone `/home/lalo/projects/turbo/TIM/` (not the submodule):
+  - `find_package(AMReX REQUIRED)` + `tim` C++ static lib + `tim_coms_infra_interface.F90` already added
+  - `tim_r8` now links `PUBLIC NetCDF::NetCDF_C NetCDF::NetCDF_Fortran` (mirrors FMS install; fixes bare `-lnetcdf` from nf-config)
+  - `MOM_coms_helpers.F90` (TIM-only infra file) added conditionally in `mom6_build/config_src/infra/CMakeLists.txt`
+- ✅ Root `CMakeLists.txt`: `TURBO_INFRA=FMS2|TIM` branch — TIM path reads `$TIM_ROOT` env var (or `-DTIM_SOURCE_DIR=`), creates `FMS::fms_r8 ALIAS tim_r8`
+- ✅ `scripts/build.sh` and `scripts/build_turbo_stack.sh` accept `--infra FMS2|TIM`
+- ✅ `TIM_ROOT=/home/lalo/projects/turbo/TIM` added to `~/.bashrc`
+- ✅ FMS2 build: 40/40 tests pass
+- ✅ TIM build: 40/40 tests pass
 
-- [ ] Update `build-tests.yaml`
-- [ ] Update `unit-tests.yaml`
-- [ ] Update `matrix-compiler-smoketest.yaml`
-- [ ] Confirm code coverage still works (`Coverage` build type + gcov report)
+**`double_gyre` with TIM:** not yet validated — deferred; unit tests confirm correct library wiring.
+
+**Key design note — hot-swap mechanism:**
+TIM exports `TIM::tim_r8`; root `CMakeLists.txt` aliases it to `FMS::fms_r8`.
+Everything downstream (`mom6_infra`, `mom6_ocean`, `MOM6` executable, tests) is infra-agnostic.
+
+**Key discovery — NetCDF::NetCDF_C must be PUBLIC on tim_r8:**
+`nf-config --flibs` embeds bare `-lnetcdf` without the netcdf-C library search path.
+Spack's `FMS::fms_r8` lists `NetCDF::NetCDF_C` explicitly in its `INTERFACE_LINK_LIBRARIES` (see `fms-targets.cmake`),
+so the full-path libnetcdf.so appears in downstream link commands. TIM's `tim_r8` must do the same.
+
+---
+
+### Phase 7 — CI Workflow Migration [ ]
+
+Update `.github/workflows/` to invoke CMake instead of the legacy `build.sh` (mkmf-era).
+
+- [ ] Update `build-tests.yaml` — replace `./build.sh --infra TIM/FMS2` with `scripts/build_turbo_stack.sh --infra TIM/FMS2`
+- [ ] Update `unit-tests.yaml` — replace `./build.sh --unit-tests-only` with CMake+ctest invocation
+- [ ] Update `matrix-compiler-smoketest.yaml` — full compiler matrix (nvhpc, oneapi, gcc14, clang × openmpi, mpich) using CMake; update `double_gyre` executable path
+- [ ] Confirm code coverage still works (`TURBO_CODECOV=ON`)
 - [ ] Keep the mkmf build path functional until all workflows pass
 
 ---
 
-### Phase 7 — Validate, Document, Retire build.sh [ ]
+### Phase 8 — Validate, Document, Retire build.sh [ ]
 
 - [ ] All CI workflows passing with CMake
 - [ ] `double_gyre` and `benchmark` examples produce matching output
@@ -240,7 +264,7 @@ Update `.github/workflows/` to invoke CMake presets instead of `build.sh`.
 
 ---
 
-### Phase 8 — CMakePresets.json (Optional) [ ]
+### Phase 9 — CMakePresets.json (Optional) [ ]
 
 Add when managing multiple environments becomes necessary (CI matrix, NCAR, containers). Not needed for local single-environment development.
 
@@ -286,3 +310,5 @@ Add when managing multiple environments becomes necessary (CI matrix, NCAR, cont
 | Phase 4b | `MOM6::MARBL` built; `marbl_build/` shadow tree mirrors `submodules/MARBL/`; all 34 files compile; 40/40 tests still pass |
 | Merge | Merged main → branch; MOM6 updated (added `MOM_string_infra.F90` to `mom6_infra`); FMS/TIM submodules relocated to `submodules/infra/`; pFUnit updated to v4.18 |
 | Phase 5 | `MOM6::ocean` + `MOM6` executable built; `double_gyre` 10-day run completes; reference output saved; GSW toolbox (179 files) and ODA kdtree.f90 discovered and added |
+| Review | Full CMakeLists review: removed `TURBO_BUILD_MOM6` (unused option), gated `find_package(PFUNIT)` on `TURBO_BUILD_UNIT_TESTS`, reverted mom6_ocean PUBLIC→PRIVATE (PRIVATE breaks static lib propagation), added `Fortran_MODULE_DIRECTORY` to exec, removed `cvmix_gsw_link_test`, fixed compiler flags genex, cleaned stale comments |
+| Phase 6 | TIM CMake build complete: TURBO_INFRA=FMS2|TIM hot-swap wired; amrex +fortran in spack.yaml; TIM_ROOT env var; NetCDF::NetCDF_C PUBLIC on tim_r8; 40/40 tests pass with both backends |

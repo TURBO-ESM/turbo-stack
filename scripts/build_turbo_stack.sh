@@ -10,19 +10,22 @@
 # Options:
 #   --debug           Adds --fresh to cmake configure and --clean-first to cmake build
 #   --build_dir DIR   Build directory (default: $TURBO_STACK_ROOT/build/default)
+#   --infra FMS2|TIM  Infrastructure backend (default: FMS2); TIM also requires TIM_ROOT
 
 set -e
 
 # Default arguments
 build_dir="$TURBO_STACK_ROOT/build/default"
 debug=false
+infra=""
 
 # Command line argument parsing
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --build_dir)   build_dir="$2"; shift 2 ;;
-        --debug)              debug=true; shift ;;
-        *)                    break ;;
+        --debug)       debug=true; shift ;;
+        --infra)       infra="$2"; shift 2 ;;
+        *)             break ;;
     esac
 done
 
@@ -40,6 +43,9 @@ fi
 if [[ "$debug" == true ]]; then
     cmake_generate_options+=("-DCMAKE_BUILD_TYPE=Debug")
     cmake_generate_options+=("--fresh")
+fi
+if [[ -n "$infra" ]]; then
+    cmake_generate_options+=("-DTURBO_INFRA=$infra")
 fi
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 

@@ -21,6 +21,10 @@ add_library(mom6_infra STATIC
     ${MOM6_INFRA_DIR}/MOM_string_infra.F90
     ${MOM6_INFRA_DIR}/MOM_io_infra.F90
 )
+# MOM_coms_helpers.F90 exists only in the TIM infra directory
+if(TURBO_INFRA STREQUAL "TIM")
+    target_sources(mom6_infra PRIVATE ${MOM6_INFRA_DIR}/MOM_coms_helpers.F90)
+endif()
 add_library(MOM6::infra ALIAS mom6_infra)
 
 set_target_properties(mom6_infra PROPERTIES
