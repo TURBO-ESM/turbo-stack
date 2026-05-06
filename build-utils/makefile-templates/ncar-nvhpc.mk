@@ -39,7 +39,7 @@ else
 endif
 
 ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -fopenmp -Minfo=accel
+  FFLAGS += -mp=gpu -gpu=cc80 -fopenmp -stdpar -Minfo=accel
   CFLAGS += -mp=gpu -gpu=cc80
   LDFLAGS += -mp=gpu -lmpi_gtl_cuda
 endif
