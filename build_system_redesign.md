@@ -293,19 +293,68 @@ submodule (`submodules/MOM6`) to that commit and switch to
 
 ---
 
-### Phase 8 — CI Workflow Migration [ ] ← NEXT
+### Phase 8 — CI Environment Prerequisites [ ] ← NEXT
 
-Update `.github/workflows/` to invoke CMake instead of the legacy `build.sh` (mkmf-era).
+Before any CMake-based CI workflow can run, the containers and submodules must be in a
+known state. This phase identifies and resolves every precondition so that Phase 9 can
+write workflows against a stable foundation.
 
-- [ ] Update `build-tests.yaml` — replace `./build.sh --infra TIM/FMS2` with `scripts/build_turbo_stack.sh --infra TIM/FMS2`
-- [ ] Update `unit-tests.yaml` — replace `./build.sh --unit-tests-only` with CMake+ctest invocation
-- [ ] Update `matrix-compiler-smoketest.yaml` — full compiler matrix (nvhpc, oneapi, gcc14, clang × openmpi, mpich) using CMake; update `double_gyre` executable path
-- [ ] Confirm code coverage still works (`TURBO_CODECOV=ON`)
-- [ ] Keep the mkmf build path functional until all workflows pass
+**Known preconditions for the CMake build:**
+
+| Requirement | Local dev (Spack) | CI containers | Gap |
+|---|---|---|---|
+| Fortran/C/C++ compiler | Spack-activated | Pre-installed (`COMPILER_FAMILY`, `CC`/`FC`/`CXX` set by `/container/config_env.sh`) | None |
+| MPI | Spack OpenMPI | Pre-installed (openmpi or mpich variant) | None (verify `mpifort` visible) |
+| NetCDF-C + NetCDF-Fortran | Spack | Unknown — containers built for mkmf era | **Verify** |
+| FMS (with `FMSConfig.cmake`) | Spack `fms precision=64` | Not present | **Must provide** |
+| pFUnit (with `PFUNITConfig.cmake`) | Spack | Not present | **Must provide** |
+| Ninja | Spack | Unknown | **Verify / install** |
+| AMReX +fortran (TIM mode only) | Spack `amrex +fortran` | Unknown — likely present without Fortran | **Verify Fortran interface** |
+| `MOM6_ROOT` → MOM6 source with CMakeLists.txt | `~/.bashrc` | Not set | **Must set** |
+| `TIM_ROOT` → TIM source with NetCDF fix | `~/.bashrc` | Not set | **Must set** |
+| `MARBL_ROOT` / MARBL submodule | `submodules/MARBL` | Available via recursive checkout | None |
+
+**Sub-steps (to be refined as we investigate):**
+
+- [ ] Push TIM commits (`d5cf907` C++ update, `e8d9437` NetCDF-C fix) to
+  `TURBO-ESM/TIM` remote — currently 2 commits ahead of `origin/main`
+- [ ] Update `submodules/infra/TIM` pointer in turbo-stack to the pushed TIM commit
+- [ ] Update `submodules/MOM6` pointer to the cmake-build commit on
+  `192-feature-cmake-build-system-for-MOM6` (`eb4fd4f94`)
+- [ ] Verify which packages are present in the NCAR CI containers
+  (`ncarcisl/cisldev-x86_64-almalinux9-{compiler}-{mpi}`) — particularly
+  NetCDF, Ninja, AMReX
+- [ ] Decide strategy for FMS in CI: build from `submodules/infra/FMS2`
+  with cmake as a prerequisite step (clean, no container changes needed) vs.
+  add FMS to the container images (faster CI, requires container rebuild)
+- [ ] Decide strategy for pFUnit in CI: same choice as FMS
+- [ ] Decide strategy for AMReX +fortran in CI (TIM mode):
+  build from source, Spack with binary cache, or updated container image
+- [ ] Write `scripts/install_ci_prerequisites.sh` (or a GitHub Actions composite
+  action) that installs/builds whatever the above decisions require —
+  this becomes the first step in every CMake-based workflow
+- [ ] Set `MOM6_ROOT` and `TIM_ROOT` to the submodule paths in CI
+  (`${GITHUB_WORKSPACE}/submodules/MOM6`, `${GITHUB_WORKSPACE}/submodules/infra/TIM`)
 
 ---
 
-### Phase 9 — Validate, Document, Retire build.sh [ ]
+### Phase 9 — CI Workflow Migration [ ]
+
+Update `.github/workflows/` to invoke CMake instead of the legacy `build.sh` (mkmf-era).
+
+- [ ] Add new `cmake-unit-tests.yaml` — activate prerequisites (Phase 8 script), call
+  `scripts/build_turbo_stack.sh`; run ctest; replace `unit-tests.yaml` once passing
+- [ ] Add new `cmake-build-tests.yaml` — FMS2 and TIM infra variants; replace
+  `build-tests.yaml` once passing
+- [ ] Add new `cmake-smoketest.yaml` — full compiler matrix (nvhpc, oneapi, gcc14,
+  clang × openmpi, mpich); `double_gyre` run; replace `matrix-compiler-smoketest.yaml`
+  once passing
+- [ ] Confirm code coverage still works (`TURBO_CODECOV=ON`)
+- [ ] Keep the mkmf workflows running in parallel until all CMake workflows pass
+
+---
+
+### Phase 10 — Validate, Document, Retire build.sh [ ]
 
 - [ ] All CI workflows passing with CMake
 - [ ] `double_gyre` and `benchmark` examples produce matching output
@@ -316,7 +365,7 @@ Update `.github/workflows/` to invoke CMake instead of the legacy `build.sh` (mk
 
 ---
 
-### Phase 10 — CMakePresets.json (Optional) [ ]
+### Phase 11 — CMakePresets.json (Optional) [ ]
 
 Add when managing multiple environments becomes necessary (CI matrix, NCAR, containers). Not needed for local single-environment development.
 
@@ -365,3 +414,4 @@ Add when managing multiple environments becomes necessary (CI matrix, NCAR, cont
 | Review | Full CMakeLists review: removed `TURBO_BUILD_MOM6` (unused option), gated `find_package(PFUNIT)` on `TURBO_BUILD_UNIT_TESTS`, reverted mom6_ocean PUBLIC→PRIVATE (PRIVATE breaks static lib propagation), added `Fortran_MODULE_DIRECTORY` to exec, removed `cvmix_gsw_link_test`, fixed compiler flags genex, cleaned stale comments |
 | Phase 6 | TIM CMake build complete: TURBO_INFRA=FMS2|TIM hot-swap wired; amrex +fortran in spack.yaml; TIM_ROOT env var; NetCDF::NetCDF_C PUBLIC on tim_r8; 40/40 tests pass with both backends |
 | Phase 7 | CMakeLists.txt hierarchy added directly to MOM6 repo (branch `192-feature-cmake-build-system-for-MOM6`); files use bare filenames since they live next to their sources; CVMix/GSW submodules initialized; MARBL stays in turbo-stack as Option B (pre-defined `MOM6::MARBL` target); `mom6_build/` shadow tree removed from turbo-stack; MOM6_ROOT env var wired; 40/40 tests pass |
+| Phase 8 planning | Identified CI preconditions: FMS and pFUnit not in containers, NetCDF/Ninja/AMReX status unknown, TIM changes unpushed, MOM6 and TIM submodule pointers stale; Phase 8 (prerequisites) inserted before CI workflow migration (now Phase 9) |

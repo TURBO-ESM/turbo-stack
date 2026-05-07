@@ -11,7 +11,7 @@ endfunction()
 
 # add_mom_test(file.pf [LINK_LIBRARIES lib1 lib2 ...])
 # Creates a pFUnit CTest from a single .pf file.
-# Always links FMS::fms_r8 (provides MPI and NetCDF transitively).
+# Always links TURBO::infra_r8 (provides MPI and NetCDF transitively).
 # Pass additional libraries under test via LINK_LIBRARIES.
 function(add_mom_test TEST_FILE)
     cmake_parse_arguments(TEST "" "" "LINK_LIBRARIES" ${ARGN})
@@ -19,7 +19,7 @@ function(add_mom_test TEST_FILE)
 
     add_pfunit_ctest(${TEST_TARGET}
         TEST_SOURCES "${TEST_FILE}"
-        LINK_LIBRARIES FMS::fms_r8 ${TEST_LINK_LIBRARIES}
+        LINK_LIBRARIES TURBO::infra_r8 ${TEST_LINK_LIBRARIES}
         OTHER_SOURCES "${BASE_MOM_PFUNIT_INFRA}"
         MAX_PES 4
     )
