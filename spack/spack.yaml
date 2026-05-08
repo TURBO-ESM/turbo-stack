@@ -12,14 +12,5 @@ spack:
   concretizer:
     unify: true
   packages:
-  #  c:
-  #    prefer:
-  #      - gcc
-  #  cxx:
-  #    prefer:
-  #      - gcc
-  #  fortran:
-  #    prefer:
-  #      - gcc
     mpi:
       require: openmpi

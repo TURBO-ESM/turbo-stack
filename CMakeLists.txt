@@ -16,19 +16,11 @@ if(TURBO_INFRA STREQUAL "FMS2")
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE FMS::fms_r8)
 elseif(TURBO_INFRA STREQUAL "TIM")
-    # TIM_SOURCE_DIR: prefer -DTIM_SOURCE_DIR=, fall back to $TIM_ROOT env var.
-    if(NOT DEFINED TIM_SOURCE_DIR)
-        set(TIM_SOURCE_DIR "$ENV{TIM_ROOT}" CACHE PATH "Path to TIM source directory")
-    endif()
-    if(NOT TIM_SOURCE_DIR)
-        message(FATAL_ERROR
-            "TURBO_INFRA=TIM requires TIM_ROOT to be set in the environment "
-            "(or pass -DTIM_SOURCE_DIR=/path/to/TIM)")
-    endif()
-    list(PREPEND CMAKE_MODULE_PATH "${TIM_SOURCE_DIR}/cmake")
-    set(32BIT OFF CACHE BOOL "" FORCE)
-    set(64BIT ON  CACHE BOOL "" FORCE)
-    add_subdirectory("${TIM_SOURCE_DIR}" tim_build)
+    # TIM_DIR: path to TIM's CMake build directory (contains TIMConfig.cmake).
+    # The build script pre-builds TIM and passes -DTIM_DIR= automatically.
+    find_package(TIM REQUIRED)
+    # TIM ships FindNetCDF.cmake alongside its config; expose it for the explicit find below.
+    list(APPEND CMAKE_MODULE_PATH "${TIM_DIR}")
     add_library(turbo_infra_r8 INTERFACE)
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE TIM::tim_r8)
@@ -52,7 +44,7 @@ if(NOT MOM6_SOURCE_DIR)
         "(or pass -DMOM6_SOURCE_DIR=/path/to/MOM6)")
 endif()
 
-# MARBL must be configured before MOM6 so that MOM6::MARBL is already defined
+# MARBL must be configured before MOM6 so that MARBL::marbl is already defined
 # when the MOM6 subdirectory processes its target_link_libraries calls.
 add_subdirectory(marbl_build)
 add_subdirectory("${MOM6_SOURCE_DIR}" mom6_build)

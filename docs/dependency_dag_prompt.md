@@ -38,7 +38,7 @@ Generate a Graphviz dot file at `docs/dependency_dag.dot` showing the build-time
 - Dashed edge to `TIM::tim_r8` labelled `TURBO_INFRA=TIM`
 
 **turbo-stack marbl_build/ (submodules/MARBL)** — purple fill (`#ede0f5`):
-- `MOM6::MARBL`
+- `MARBL::marbl`
 
 **MOM6 repo (MOM6_ROOT)** — green fill (`#d8f0d8`):
 - `MOM6::CVMix`
@@ -48,7 +48,7 @@ Generate a Graphviz dot file at `docs/dependency_dag.dot` showing the build-time
 - `MOM6::framework` → infra, framework_base
 - `MOM6::grid` → framework
 - `MOM6::io` → grid
-- `MOM6::ocean` → io, grid, CVMix, GSW, MOM6::MARBL  (darker green `#52c452`)
+- `MOM6::ocean` → io, grid, CVMix, GSW, MARBL::marbl  (darker green `#52c452`)
 - `MOM6 (executable)` ellipse → ocean  (dark green `#2e8b57`, white font)
 
 **turbo-stack tests/** — tan fill (`#f0e8d8`):

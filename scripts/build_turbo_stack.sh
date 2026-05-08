@@ -47,6 +47,26 @@ fi
 if [[ -n "$infra" ]]; then
     cmake_generate_options+=("-DTURBO_INFRA=$infra")
 fi
+
+# Pre-build TIM before configuring turbo-stack so find_package(TIM) can use the build tree.
+# TIM_ROOT (env var): TIM source directory — used to build TIM.
+# TIM_DIR  (cmake):   TIM build directory — CMake's standard find_package hint variable.
+if [[ "$infra" == "TIM" ]]; then
+    if [[ -z "${TIM_ROOT:-}" ]]; then
+        echo "Error: --infra TIM requires TIM_ROOT to be set in the environment." >&2
+        exit 1
+    fi
+    tim_build_dir="$TURBO_STACK_ROOT/build/tim"
+    echo "--- Building TIM ($TIM_ROOT) ---"
+    tim_cmake_opts=("-G" "$generator" "-D64BIT=ON" "-D32BIT=OFF")
+    [[ "$debug" == true ]] && tim_cmake_opts+=("--fresh")
+    cmake "${tim_cmake_opts[@]}" -S "$TIM_ROOT" -B "$tim_build_dir"
+    tim_build_opts=()
+    [[ "$debug" == true ]] && tim_build_opts+=("--clean-first")
+    cmake --build "$tim_build_dir" "${tim_build_opts[@]}"
+    cmake_generate_options+=("-DTIM_DIR=$tim_build_dir")
+fi
+
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 
 # Build# Build the code. 

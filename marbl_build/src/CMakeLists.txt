@@ -36,7 +36,7 @@ add_library(mom6_marbl STATIC
     ${MARBL_SRC_DIR}/marbl_init_mod.F90
     ${MARBL_SRC_DIR}/marbl_interface.F90
 )
-add_library(MOM6::MARBL ALIAS mom6_marbl)
+add_library(MARBL::marbl ALIAS mom6_marbl)
 
 set_target_properties(mom6_marbl PROPERTIES
     Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mod

@@ -100,10 +100,10 @@ scripts/build_turbo_stack.sh
 | pFUnit | User-configured environment | `find_package(PFUNIT REQUIRED)` → `PFUNIT::pfunit` | Has `PFUNITConfig.cmake` ✅ |
 | NetCDF | User-configured environment | `find_package(NetCDF REQUIRED COMPONENTS Fortran)` → `NetCDF::NetCDF_Fortran` | |
 | MPI | User-configured environment | `find_package(MPI REQUIRED)` → `MPI::MPI_Fortran` | |
-| TIM | **Built in-tree** (submodule) | `add_subdirectory(submodules/infra/TIM tim_build)`; exports `FMS::fms_r8` — same alias as Spack FMS | Phase 6 |
+| TIM | Pre-built by `build_turbo_stack.sh`, consumed from build tree | `find_package(TIM REQUIRED)` via `-DTIM_DIR=$TURBO_STACK_ROOT/build/tim` | Phase 6 |
 | CESM_share | Not needed (not used by MOM6 solo driver) | — | Investigated; only needed by mkmf TIM build |
 | CVMix | **Built in-tree** (MOM6 repo `pkg/`) | Static lib target `MOM6::CVMix` | Built inline in `MOM6/pkg/CMakeLists.txt` |
-| MARBL | **Built in turbo-stack** (`marbl_build/`) | Static lib target `MOM6::MARBL` | turbo-stack owns and builds it; MOM6 repo consumes it as a pre-defined target — same pattern as `FMS::fms_r8` |
+| MARBL | **Built in turbo-stack** (`marbl_build/`) | Static lib target `MARBL::marbl` | turbo-stack owns and builds it; MOM6 repo consumes it as a pre-defined target — same pattern as `FMS::fms_r8` |
 | GSW | **Built in-tree** (MOM6 repo `pkg/`) | Static lib target `MOM6::GSW` | Built inline in `MOM6/pkg/CMakeLists.txt` |
 
 `CMAKE_PREFIX_PATH` must be set before invoking CMake — by hand, via Lmod modules, Spack, or a prebuilt container. turbo-stack's CMake never sets it directly.
@@ -184,7 +184,7 @@ Both live in `submodules/MOM6/pkg/` — vendored inside the MOM6 submodule.
 ### Phase 4b — MARBL and Other In-Tree Submodules [✅ COMPLETE]
 
 - ✅ `marbl_build/` shadow tree mirrors `submodules/MARBL/`: `marbl_build/CMakeLists.txt` + `marbl_build/src/CMakeLists.txt`
-- ✅ `MOM6::MARBL` — all 34 `.F90` files in `submodules/MARBL/src/`; no external deps (perf_mod only used under `#if MARBL_TIMING_OPT == CIME`, which we don't define)
+- ✅ `MARBL::marbl` — all 34 `.F90` files in `submodules/MARBL/src/`; no external deps (perf_mod only used under `#if MARBL_TIMING_OPT == CIME`, which we don't define)
 - ✅ CMake Fortran dependency scanner handles internal module ordering automatically
 - ✅ 40/40 tests still pass
 
@@ -222,9 +222,10 @@ Both paths export the same `FMS::fms_r8` target; nothing downstream of `mom6_inf
   - `find_package(AMReX REQUIRED)` + `tim` C++ static lib + `tim_coms_infra_interface.F90` already added
   - `tim_r8` now links `PUBLIC NetCDF::NetCDF_C NetCDF::NetCDF_Fortran` (mirrors FMS install; fixes bare `-lnetcdf` from nf-config)
   - `MOM_coms_helpers.F90` (TIM-only infra file) added conditionally in `mom6_build/config_src/infra/CMakeLists.txt`
-- ✅ Root `CMakeLists.txt`: `TURBO_INFRA=FMS2|TIM` branch — TIM path reads `$TIM_ROOT` env var (or `-DTIM_SOURCE_DIR=`), creates `FMS::fms_r8 ALIAS tim_r8`
+- ✅ Root `CMakeLists.txt`: `TURBO_INFRA=FMS2|TIM` branch — TIM path uses `find_package(TIM REQUIRED)` consuming the build tree via `-DTIM_DIR=`; creates `TURBO::infra_r8 ALIAS TIM::tim_r8`
+- ✅ `scripts/build_turbo_stack.sh`: when `--infra TIM`, pre-builds TIM at `$TURBO_STACK_ROOT/build/tim` then passes `-DTIM_DIR` to turbo-stack configure
 - ✅ `scripts/build.sh` and `scripts/build_turbo_stack.sh` accept `--infra FMS2|TIM`
-- ✅ `TIM_ROOT=/home/lalo/projects/turbo/TIM` added to `~/.bashrc`
+- ✅ `TIM_ROOT=/home/lalo/projects/turbo/TIM` added to `~/.bashrc` (source directory for the TIM pre-build)
 - ✅ FMS2 build: 40/40 tests pass
 - ✅ TIM build: 40/40 tests pass
 
@@ -272,7 +273,7 @@ path-variable indirection that the shadow tree required.
   turbo-stack's `mom6_build/exec/`)
 - ✅ turbo-stack `CMakeLists.txt` updated:
   - `MOM6_SOURCE_DIR` cache variable reads `$MOM6_ROOT` (fails loudly if unset)
-  - `add_subdirectory(marbl_build)` runs **before** MOM6 so `MOM6::MARBL` is defined
+  - `add_subdirectory(marbl_build)` runs **before** MOM6 so `MARBL::marbl` is defined
   - `add_subdirectory("${MOM6_SOURCE_DIR}" mom6_build)` replaces `add_subdirectory(mom6_build)`
 - ✅ `MOM6_ROOT=/home/lalo/projects/turbo/MOM6` added to `~/.bashrc`
 - ✅ `mom6_build/` shadow tree removed from turbo-stack
@@ -281,7 +282,7 @@ path-variable indirection that the shadow tree required.
 **MARBL placement — Option B (turbo-stack owns it):**
 MARBL is biogeochemistry infrastructure specific to the TURBO project. Rather than
 adding it as a submodule inside the MOM6 repo, turbo-stack builds it in `marbl_build/`
-and exposes it as a pre-defined `MOM6::MARBL` target before calling `add_subdirectory`
+and exposes it as a pre-defined `MARBL::marbl` target before calling `add_subdirectory`
 on the MOM6 repo — the same pattern used for `FMS::fms_r8`. The MOM6 repo's
 `pkg/CMakeLists.txt` documents this with a comment; MOM6's `.gitignore` already excludes
 `pkg/MARBL`.
@@ -293,48 +294,178 @@ submodule (`submodules/MOM6`) to that commit and switch to
 
 ---
 
-### Phase 8 — CI Environment Prerequisites [ ] ← NEXT
+### Phase 8 — CI Container and Environment Setup [ ] ← NEXT
 
-Before any CMake-based CI workflow can run, the containers and submodules must be in a
-known state. This phase identifies and resolves every precondition so that Phase 9 can
-write workflows against a stable foundation.
+Add a new turbo-stack-owned Ubuntu 26.04 CI container. The approach is bottom-up:
+validate each layer before building on top of it. The container is a pure pre-built
+dependency environment — all source code is supplied at CI time.
 
-**Known preconditions for the CMake build:**
+**Note on submodules:** The TIM and MOM6 submodule pointers in turbo-stack are
+currently stale (they do not yet point to the CMake-capable commits). Until those
+pointers are updated (Phase 8.8), the CI action will clone TIM and MOM6 explicitly
+at known branches rather than relying on `submodules: recursive`. Once the pointers
+are updated, the explicit clones will be replaced with a single recursive checkout —
+that is the intended steady-state.
 
-| Requirement | Local dev (Spack) | CI containers | Gap |
-|---|---|---|---|
-| Fortran/C/C++ compiler | Spack-activated | Pre-installed (`COMPILER_FAMILY`, `CC`/`FC`/`CXX` set by `/container/config_env.sh`) | None |
-| MPI | Spack OpenMPI | Pre-installed (openmpi or mpich variant) | None (verify `mpifort` visible) |
-| NetCDF-C + NetCDF-Fortran | Spack | Unknown — containers built for mkmf era | **Verify** |
-| FMS (with `FMSConfig.cmake`) | Spack `fms precision=64` | Not present | **Must provide** |
-| pFUnit (with `PFUNITConfig.cmake`) | Spack | Not present | **Must provide** |
-| Ninja | Spack | Unknown | **Verify / install** |
-| AMReX +fortran (TIM mode only) | Spack `amrex +fortran` | Unknown — likely present without Fortran | **Verify Fortran interface** |
-| `MOM6_ROOT` → MOM6 source with CMakeLists.txt | `~/.bashrc` | Not set | **Must set** |
-| `TIM_ROOT` → TIM source with NetCDF fix | `~/.bashrc` | Not set | **Must set** |
-| `MARBL_ROOT` / MARBL submodule | `submodules/MARBL` | Available via recursive checkout | None |
+**What lives in the container vs. supplied at CI time:**
 
-**Sub-steps (to be refined as we investigate):**
+| Artifact | Location | How provided |
+|---|---|---|
+| Compiler (GCC), Python, system libs | Ubuntu 26.04 base | `apt-get` in Dockerfile |
+| MPI, NetCDF, FMS, pFUnit, AMReX, Ninja, CMake | `/opt/spack` env | Spack install in Dockerfile |
+| turbo-stack source | `$GITHUB_WORKSPACE` | `actions/checkout` in CI action |
+| TIM source | `$GITHUB_WORKSPACE/submodules/infra/TIM` (or explicit clone until submodules updated) | Recursive checkout / explicit clone |
+| MOM6 source | `$GITHUB_WORKSPACE/submodules/MOM6` (or explicit clone until submodules updated) | Recursive checkout / explicit clone |
+| MARBL source | `$GITHUB_WORKSPACE/submodules/MARBL` | Recursive checkout (pointer is current) |
 
-- [ ] Push TIM commits (`d5cf907` C++ update, `e8d9437` NetCDF-C fix) to
-  `TURBO-ESM/TIM` remote — currently 2 commits ahead of `origin/main`
-- [ ] Update `submodules/infra/TIM` pointer in turbo-stack to the pushed TIM commit
-- [ ] Update `submodules/MOM6` pointer to the cmake-build commit on
-  `192-feature-cmake-build-system-for-MOM6` (`eb4fd4f94`)
-- [ ] Verify which packages are present in the NCAR CI containers
-  (`ncarcisl/cisldev-x86_64-almalinux9-{compiler}-{mpi}`) — particularly
-  NetCDF, Ninja, AMReX
-- [ ] Decide strategy for FMS in CI: build from `submodules/infra/FMS2`
-  with cmake as a prerequisite step (clean, no container changes needed) vs.
-  add FMS to the container images (faster CI, requires container rebuild)
-- [ ] Decide strategy for pFUnit in CI: same choice as FMS
-- [ ] Decide strategy for AMReX +fortran in CI (TIM mode):
-  build from source, Spack with binary cache, or updated container image
-- [ ] Write `scripts/install_ci_prerequisites.sh` (or a GitHub Actions composite
-  action) that installs/builds whatever the above decisions require —
-  this becomes the first step in every CMake-based workflow
-- [ ] Set `MOM6_ROOT` and `TIM_ROOT` to the submodule paths in CI
-  (`${GITHUB_WORKSPACE}/submodules/MOM6`, `${GITHUB_WORKSPACE}/submodules/infra/TIM`)
+---
+
+#### Phase 8.1 — Write the Dockerfile [ ]
+
+Create `ci/Dockerfile`. The container only installs the Spack environment — no
+source code is baked in.
+
+Key decisions:
+- **Base**: `ubuntu:26.04` — LTS released April 2026; verify Spack package
+  availability against this distro before committing to it
+- **Spack version**: pin to a specific release tag so rebuilds are reproducible;
+  record the chosen tag in this plan once decided
+- **`SPACK_ROOT`**: `/opt/spack`
+- **Spack env name**: `turbo_stack` (matches local dev)
+
+High-level Dockerfile stages:
+1. `apt-get` system prerequisites (build-essential, gfortran, python3, git, curl,
+   file, unzip, patch, bzip2, xz-utils, zlib1g-dev)
+2. Clone Spack at pinned tag to `$SPACK_ROOT`
+3. `COPY spack/spack.yaml` → `spack env create turbo_stack + install --fail-fast`
+4. `spack clean --all` to reduce image size
+5. Write `/etc/profile.d/spack.sh` to activate the env on login
+
+**Open question:** DockerHub org/image name (e.g. `turboesm/turbo-stack-ci:ubuntu26.04`).
+
+---
+
+#### Phase 8.2 — Build the image locally [ ]
+
+```bash
+docker build -t turbo-stack-ci:dev -f ci/Dockerfile .
+```
+
+Validate Spack packages all resolved:
+```bash
+docker run --rm turbo-stack-ci:dev bash -c \
+  ". /opt/spack/share/spack/setup-env.sh \
+   && spack env activate turbo_stack \
+   && spack find \
+   && nf-config --version \
+   && cmake --version \
+   && mpifort --version"
+```
+
+---
+
+#### Phase 8.3 — Validate TIM builds inside the container [ ]
+
+Mount the local TIM source and verify it compiles with the container's Spack env:
+
+```bash
+docker run --rm \
+  -v /home/lalo/projects/turbo/TIM:/opt/tim \
+  turbo-stack-ci:dev \
+  bash -c ". /opt/spack/share/spack/setup-env.sh \
+           && spack env activate turbo_stack \
+           && cmake -S /opt/tim -B /tmp/tim-build -G Ninja -D64BIT=ON -D32BIT=OFF \
+           && cmake --build /tmp/tim-build"
+```
+
+Success: `libtim_r8.a` present in `/tmp/tim-build`.
+
+---
+
+#### Phase 8.4 — Validate MOM6 builds inside the container [ ]
+
+Mount TIM and MOM6 locally; verify MOM6's CMake build works against the Spack env:
+
+```bash
+docker run --rm \
+  -v /home/lalo/projects/turbo/TIM:/opt/tim \
+  -v /home/lalo/projects/turbo/MOM6:/opt/mom6 \
+  -v $(pwd)/marbl_build:/workspace/marbl_build \
+  -v $(pwd)/submodules/MARBL:/workspace/submodules/MARBL \
+  -e MOM6_ROOT=/opt/mom6 \
+  -e TIM_ROOT=/opt/tim \
+  turbo-stack-ci:dev \
+  bash -c ". /opt/spack/share/spack/setup-env.sh \
+           && spack env activate turbo_stack \
+           && cmake -S /workspace -B /tmp/mom6-build -G Ninja -DTURBO_BUILD_UNIT_TESTS=OFF \
+           && cmake --build /tmp/mom6-build --target MOM6"
+```
+
+---
+
+#### Phase 8.5 — Validate full turbo-stack build inside the container [ ]
+
+Mount the full local checkout and run the complete build + tests:
+
+```bash
+docker run --rm \
+  -v $(pwd):/workspace \
+  -v /home/lalo/projects/turbo/TIM:/opt/tim \
+  -v /home/lalo/projects/turbo/MOM6:/opt/mom6 \
+  -e MOM6_ROOT=/opt/mom6 \
+  -e TIM_ROOT=/opt/tim \
+  turbo-stack-ci:dev \
+  bash -c ". /opt/spack/share/spack/setup-env.sh \
+           && spack env activate turbo_stack \
+           && cd /workspace \
+           && scripts/build_turbo_stack.sh"
+```
+
+Success: 40/40 tests pass; `MOM6` executable present in build dir.
+
+---
+
+#### Phase 8.6 — Push to DockerHub [ ]
+
+- [ ] Confirm DockerHub org/repo name
+- [ ] `docker tag turbo-stack-ci:dev <org>/turbo-stack-ci:ubuntu26.04`
+- [ ] `docker push <org>/turbo-stack-ci:ubuntu26.04`
+
+---
+
+#### Phase 8.7 — GitHub Actions: container build/push workflow [ ]
+
+Create `.github/workflows/build-ci-container.yaml`:
+- Trigger: push to `main` when `ci/Dockerfile` or `spack/spack.yaml` changes,
+  plus `workflow_dispatch` for manual rebuilds
+- Steps: `docker/login-action`, `docker build`, `docker push`
+- Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`
+- Tags: `ubuntu26.04` (stable) and `sha-${{ github.sha }}` (pinned)
+
+---
+
+#### Phase 8.8 — Submodule pointer updates [ ]
+
+Once TIM and MOM6 CMake changes are on stable/merged branches:
+
+- [ ] Update `submodules/infra/TIM` pointer to the commit with `TIMConfig.cmake.in`
+- [ ] Update `submodules/MOM6` pointer to the cmake-build branch commit
+- [ ] Verify `git submodule update --init --recursive` from a clean checkout
+  gives working `TIM_ROOT` and `MOM6_ROOT` paths
+- [ ] Switch the CI action (Phase 8.9) from explicit clones to `submodules: recursive`
+
+---
+
+#### Phase 8.9 — GitHub Actions: CMake unit-tests workflow [ ]
+
+Create `.github/workflows/cmake-unit-tests.yaml`:
+- Uses the new container image
+- Checks out turbo-stack; initially clones TIM and MOM6 at known branches explicitly
+  (switch to `submodules: recursive` after Phase 8.8)
+- Sets `MOM6_ROOT` and `TIM_ROOT` to the cloned/submodule paths
+- Runs `scripts/build_turbo_stack.sh` for both `--infra FMS2` and `--infra TIM`
+- Reports ctest results
+- Run in parallel with existing `unit-tests.yaml` until stable
 
 ---
 
@@ -386,7 +517,7 @@ Add when managing multiple environments becomes necessary (CI matrix, NCAR, cont
 | NCAR module system incompatible with CMake toolchain approach | Low | Keep `build.sh` wrapper for NCAR env setup if needed |
 | `find_package(FMS)` path not set correctly in a new environment | Medium | `CMAKE_PREFIX_PATH` must be set by the environment (Spack/modules) before invoking CMake; `find_package(... REQUIRED)` will fail loudly if not set |
 | No `FindNetCDF.cmake` in stock CMake | Medium | Check for one bundled with FMS install; otherwise add `cmake/FindNetCDF.cmake` to this repo |
-| TIM doesn't install a CMake config file | Medium | In-tree `add_subdirectory` is the interim solution; open upstream TIM issue to add install config |
+| TIM doesn't install a CMake config file | ~~Medium~~ **Resolved** | TIM ships `TIMConfig.cmake.in` + `export(EXPORT ...)` for build-tree discovery; turbo-stack pre-builds TIM and uses `find_package(TIM)` via `-DTIM_DIR=` |
 
 ---
 
@@ -408,10 +539,10 @@ Add when managing multiple environments becomes necessary (CI matrix, NCAR, cont
 | Phase 3 | Five-layer stack complete: `mom6_framework_base` -> `mom6_infra` -> `mom6_framework` -> `mom6_grid` -> `mom6_io`; infra 100%, framework 30/33 (3 deferred to Phase 5 pending deep src/ deps) |
 | Phase 3.5 | Unit tests wired; `find_mom_dependencies.cmake` replaced by direct target refs; 40/40 tests pass |
 | Phase 4a | `MOM6::CVMix` and `MOM6::GSW` built; shadow tree mirrors `submodules/MOM6/pkg/`; `dep_link_test` passes; 40/40 tests still pass |
-| Phase 4b | `MOM6::MARBL` built; `marbl_build/` shadow tree mirrors `submodules/MARBL/`; all 34 files compile; 40/40 tests still pass |
+| Phase 4b | `MARBL::marbl` built; `marbl_build/` shadow tree mirrors `submodules/MARBL/`; all 34 files compile; 40/40 tests still pass |
 | Merge | Merged main → branch; MOM6 updated (added `MOM_string_infra.F90` to `mom6_infra`); FMS/TIM submodules relocated to `submodules/infra/`; pFUnit updated to v4.18 |
 | Phase 5 | `MOM6::ocean` + `MOM6` executable built; `double_gyre` 10-day run completes; reference output saved; GSW toolbox (179 files) and ODA kdtree.f90 discovered and added |
 | Review | Full CMakeLists review: removed `TURBO_BUILD_MOM6` (unused option), gated `find_package(PFUNIT)` on `TURBO_BUILD_UNIT_TESTS`, reverted mom6_ocean PUBLIC→PRIVATE (PRIVATE breaks static lib propagation), added `Fortran_MODULE_DIRECTORY` to exec, removed `cvmix_gsw_link_test`, fixed compiler flags genex, cleaned stale comments |
 | Phase 6 | TIM CMake build complete: TURBO_INFRA=FMS2|TIM hot-swap wired; amrex +fortran in spack.yaml; TIM_ROOT env var; NetCDF::NetCDF_C PUBLIC on tim_r8; 40/40 tests pass with both backends |
-| Phase 7 | CMakeLists.txt hierarchy added directly to MOM6 repo (branch `192-feature-cmake-build-system-for-MOM6`); files use bare filenames since they live next to their sources; CVMix/GSW submodules initialized; MARBL stays in turbo-stack as Option B (pre-defined `MOM6::MARBL` target); `mom6_build/` shadow tree removed from turbo-stack; MOM6_ROOT env var wired; 40/40 tests pass |
-| Phase 8 planning | Identified CI preconditions: FMS and pFUnit not in containers, NetCDF/Ninja/AMReX status unknown, TIM changes unpushed, MOM6 and TIM submodule pointers stale; Phase 8 (prerequisites) inserted before CI workflow migration (now Phase 9) |
+| Phase 7 | CMakeLists.txt hierarchy added directly to MOM6 repo (branch `192-feature-cmake-build-system-for-MOM6`); files use bare filenames since they live next to their sources; CVMix/GSW submodules initialized; MARBL stays in turbo-stack as Option B (pre-defined `MARBL::marbl` target); `mom6_build/` shadow tree removed from turbo-stack; MOM6_ROOT env var wired; 40/40 tests pass |
+| Phase 8 planning | New Ubuntu 26.04 + Spack CI container; container is pure dependency environment (no source baked in); bottom-up validation: Spack env → TIM → MOM6 → turbo-stack; submodule pointers for TIM and MOM6 are stale — CI will clone explicitly until updated (Phase 8.8); 9 sub-steps through DockerHub push and cmake-unit-tests workflow |
