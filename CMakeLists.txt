@@ -3,7 +3,19 @@ project(TurboStack LANGUAGES Fortran C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+# MOM6_SOURCE_DIR must be resolved before including MOM6Options (which sets
+# TURBO_INFRA and TURBO_MEMORY_MODE — the canonical definitions for both repos).
+if(NOT DEFINED MOM6_SOURCE_DIR)
+    set(MOM6_SOURCE_DIR "$ENV{MOM6_ROOT}" CACHE PATH "Path to MOM6 source directory")
+endif()
+if(NOT MOM6_SOURCE_DIR)
+    message(FATAL_ERROR
+        "TurboStack requires MOM6_ROOT to be set in the environment "
+        "(or pass -DMOM6_SOURCE_DIR=/path/to/MOM6)")
+endif()
+
 include(TurboOptions)
+include("${MOM6_SOURCE_DIR}/cmake/MOM6Options.cmake")
 include(TurboCompilerFlags)
 
 # Infrastructure backend — FMS2 (Spack-installed) or TIM (in-tree build).
@@ -18,7 +30,7 @@ if(TURBO_INFRA STREQUAL "FMS2")
 elseif(TURBO_INFRA STREQUAL "TIM")
     # TIM_DIR: path to TIM's CMake build directory (contains TIMConfig.cmake).
     # The build script pre-builds TIM and passes -DTIM_DIR= automatically.
-    find_package(TIM REQUIRED)
+    find_package(TIM REQUIRED COMPONENTS R8)
     # TIM ships FindNetCDF.cmake alongside its config; expose it for the explicit find below.
     list(APPEND CMAKE_MODULE_PATH "${TIM_DIR}")
     add_library(turbo_infra_r8 INTERFACE)
@@ -32,17 +44,6 @@ endif()
 # so our own targets can link against them directly.
 find_package(MPI REQUIRED COMPONENTS Fortran)
 find_package(NetCDF REQUIRED COMPONENTS C Fortran)
-
-# MOM6_SOURCE_DIR: path to a standalone MOM6 source checkout.
-# Reads $MOM6_ROOT env var; fails loudly at configure time if unset.
-if(NOT DEFINED MOM6_SOURCE_DIR)
-    set(MOM6_SOURCE_DIR "$ENV{MOM6_ROOT}" CACHE PATH "Path to MOM6 source directory")
-endif()
-if(NOT MOM6_SOURCE_DIR)
-    message(FATAL_ERROR
-        "TurboStack requires MOM6_ROOT to be set in the environment "
-        "(or pass -DMOM6_SOURCE_DIR=/path/to/MOM6)")
-endif()
 
 # MARBL must be configured before MOM6 so that MARBL::marbl is already defined
 # when the MOM6 subdirectory processes its target_link_libraries calls.

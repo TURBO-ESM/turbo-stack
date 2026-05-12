@@ -21,7 +21,7 @@
 #   build.sh --infra TIM --debug          # full clean rebuild with TIM backend
 #   build.sh --recreate-spack-env --debug # recreate spack env then full clean rebuild
 
-set -e
+set -eo pipefail
 
 # Default arguments
 create_spack_env=false

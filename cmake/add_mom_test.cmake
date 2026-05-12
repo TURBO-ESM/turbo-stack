@@ -5,7 +5,11 @@
 function(add_mom_tests)
     cmake_parse_arguments(SUITE "" "" "TEST_FILES;LINK_LIBRARIES" ${ARGN})
     foreach(TEST_FILE IN LISTS SUITE_TEST_FILES)
-        add_mom_test("${TEST_FILE}" LINK_LIBRARIES ${SUITE_LINK_LIBRARIES})
+        if(SUITE_LINK_LIBRARIES)
+            add_mom_test("${TEST_FILE}" LINK_LIBRARIES ${SUITE_LINK_LIBRARIES})
+        else()
+            add_mom_test("${TEST_FILE}")
+        endif()
     endforeach()
 endfunction()
 
@@ -17,10 +21,14 @@ function(add_mom_test TEST_FILE)
     cmake_parse_arguments(TEST "" "" "LINK_LIBRARIES" ${ARGN})
     get_filename_component(TEST_TARGET ${TEST_FILE} NAME_WE)
 
+    set(_pfunit_other_sources "")
+    if(BASE_MOM_PFUNIT_INFRA)
+        set(_pfunit_other_sources OTHER_SOURCES "${BASE_MOM_PFUNIT_INFRA}")
+    endif()
     add_pfunit_ctest(${TEST_TARGET}
         TEST_SOURCES "${TEST_FILE}"
         LINK_LIBRARIES TURBO::infra_r8 ${TEST_LINK_LIBRARIES}
-        OTHER_SOURCES "${BASE_MOM_PFUNIT_INFRA}"
+        ${_pfunit_other_sources}
         MAX_PES 4
     )
 

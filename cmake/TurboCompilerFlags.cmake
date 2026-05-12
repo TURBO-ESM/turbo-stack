@@ -30,7 +30,7 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC|PGI")
         -Mnofma -i4 -Mextend -byteswapio -Mflushz -Kieee
     )
 
-elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Clang")
+elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Flang|LLVMFlang")
     set(_turbo_fortran_flags
         -fdefault-real-8 -fdefault-double-8
         -fconvert=big-endian
@@ -40,7 +40,6 @@ else()
     message(FATAL_ERROR
         "Unrecognized Fortran compiler '${CMAKE_Fortran_COMPILER_ID}'. "
         "No project-specific flags applied.")
-    set(_turbo_fortran_flags "")
 endif()
 
 # --- Code coverage (GNU only) ---

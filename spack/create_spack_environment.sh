@@ -22,7 +22,7 @@
 #   1. Copy spack_gcc.yaml -> spack_<compiler>.yaml and adjust compiler/mpi entries
 #   2. Run: ./spack/create_spack_environment.sh turbo-<compiler> spack/spack_<compiler>.yaml
 
-set -e
+set -eo pipefail
 
 # --- SPACK_ROOT (required, must come from environment) ---
 if [[ -z "${SPACK_ROOT:-}" ]]; then
@@ -74,7 +74,7 @@ spack env create "$spack_environment_name" "$spack_environment_yaml_file"
 spack env activate "$spack_environment_name"
 
 echo "Concretizing ..."
-spack concretize #--fresh --force
+spack concretize
 
 echo "Installing (this may take a while) ..."
 spack install
