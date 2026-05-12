@@ -13,6 +13,7 @@ Generate a Graphviz dot file at `docs/dependency_dag.dot` showing the build-time
 - `splines=ortho`, `compound=true`.
 - Group nodes into labelled clusters by origin (see below).
 - Use dashed edges for conditional / hot-swap relationships.
+- **Use `xlabel=` (not `label=`) for any edge that carries a text label.** Graphviz's orthogonal router does not support inline edge labels; `xlabel` places the text externally and avoids the layout warning.
 - Diamond nodes for INTERFACE adapter targets (backend-agnostic wrappers).
 - Ellipse nodes for executables and test suites.
 - **Never use `lhead=cluster_*` on edges.** All arrows must point to specific named nodes, even when the target lives inside a cluster. Using `lhead` collapses multiple distinct edges into a single arrow at the cluster boundary, hiding which library is actually being linked.
@@ -38,9 +39,11 @@ Generate a Graphviz dot file at `docs/dependency_dag.dot` showing the build-time
 - Dashed edge to `TIM::tim_r8` labelled `TURBO_INFRA=TIM`
 
 **turbo-stack marbl_build/ (submodules/MARBL)** — purple fill (`#ede0f5`):
-- `MARBL::marbl`
+- `MARBL::marbl` — pure Fortran library; no cmake-level external dependencies
 
 **MOM6 repo (MOM6_ROOT)** — green fill (`#d8f0d8`):
+MOM6 source lives in the external `MOM6_ROOT` directory (not an in-tree submodule);
+turbo-stack includes it via `add_subdirectory("${MOM6_SOURCE_DIR}" mom6_build)`.
 - `MOM6::CVMix`
 - `MOM6::GSW` → NetCDF_C, NetCDF_Fortran
 - `MOM6::framework_base`
@@ -52,7 +55,11 @@ Generate a Graphviz dot file at `docs/dependency_dag.dot` showing the build-time
 - `MOM6 (executable)` ellipse → ocean  (dark green `#2e8b57`, white font)
 
 **turbo-stack tests/** — tan fill (`#f0e8d8`):
-- `pFUnit unit tests (40 tests)` ellipse → MOM6::framework, MOM6::infra, TURBO::infra_r8, PFUNIT::pfunit
+- `pFUnit unit tests` ellipse → MOM6::framework, MOM6::infra, TURBO::infra_r8, PFUNIT::pfunit
+  - Two suites: `tests/interface/MOM_comms_infra/` (links MOM6::infra) and
+    `tests/interface/MOM_domain_infra/` (one test links MOM6::infra, one links MOM6::framework).
+  - All tests always link TURBO::infra_r8 (via the `add_mom_test` CMake macro).
+  - Update the parenthetical test count when suites are added or removed.
 
 ### Direct link structure for tests
 Every test executable links `TURBO::infra_r8` directly (via the `add_mom_test` CMake macro).
