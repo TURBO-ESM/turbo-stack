@@ -30,11 +30,12 @@ scripts/build.sh --recreate-spack-env --debug  # also recreate spack env
 - `--recreate-spack-env` — delete and recreate the spack environment from scratch
 
 ### build_turbo_stack.sh options
-- `--debug` — adds `--fresh` to cmake configure and `--clean-first` to cmake build
+- `--debug` — cleans the build directory and rebuilds from scratch
+- `--ninja` — use Ninja generator instead of the default (Unix Makefiles)
 - `--build_dir DIR` — override build directory (default: `$TURBO_STACK_ROOT/build/default`)
 
 ### Spack environment
-Defined in `spack/spack.yaml`. Default environment name: `turbo_stack`. Includes ninja (default CMake generator), MPI (OpenMPI), NetCDF, FMS, and pFUnit.
+Defined in `spack/spack.yaml`. Default environment name: `turbo_stack`. Includes ninja (optional fast generator), MPI (OpenMPI), NetCDF, FMS, and pFUnit.
 
 **AMReX mini-app tests** are built with CMake separately (see `src/amrex_mini_app/CMakeLists.txt`). They use GoogleTest (C++) and require HDF5.
 
@@ -45,7 +46,7 @@ Defined in `spack/spack.yaml`. Default environment name: `turbo_stack`. Includes
 ```
 build.sh (spack setup + activation)
   └─→ build_turbo_stack.sh (CMake orchestrator)
-        ├─→ cmake configure (Ninja, finds FMS/MPI/NetCDF/pFUnit via spack)
+        ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
         ├─→ cmake build
         └─→ ctest
 

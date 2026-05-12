@@ -10,6 +10,7 @@
 #
 # Options:
 #   --debug               Full clean rebuild (passed through to build_turbo_stack.sh)
+#   --ninja               Use Ninja generator instead of the default (Unix Makefiles)
 #   --build_dir DIR       Build directory (passed through to build_turbo_stack.sh)
 #   --infra FMS2|TIM      Infrastructure backend (passed through; TIM requires TIM_ROOT)
 #   --create-spack-env    Create the Spack environment if it does not exist
@@ -27,6 +28,7 @@ set -eo pipefail
 create_spack_env=false
 recreate_spack_env=false
 debug=false
+ninja=false
 infra=""
 build_dir=""
 
@@ -35,6 +37,7 @@ while [[ $# -gt 0 ]]; do
         --create-spack-env)   create_spack_env=true; shift ;;
         --recreate-spack-env) recreate_spack_env=true; shift ;;
         --debug)              debug=true; shift ;;
+        --ninja)              ninja=true; shift ;;
         --infra)              infra="$2"; shift 2 ;;
         --build_dir)          build_dir="$2"; shift 2 ;;
         --)                   shift; break ;;
@@ -45,6 +48,10 @@ done
 #######################################
 # Environment Management
 #######################################
+if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
+    echo "Error: TURBO_STACK_ROOT is not set." >&2
+    exit 1
+fi
 if [[ -z "${SPACK_ROOT:-}" ]]; then
     echo "Error: SPACK_ROOT is not set." >&2
     exit 1
@@ -79,6 +86,7 @@ spack env activate "$spack_env_name"
 
 build_args=()
 [[ "$debug"     == true ]] && build_args+=(--debug)
+[[ "$ninja"     == true ]] && build_args+=(--ninja)
 [[ -n "$infra"           ]] && build_args+=(--infra "$infra")
 [[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")
 bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"

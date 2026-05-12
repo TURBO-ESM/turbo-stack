@@ -28,7 +28,7 @@ if(TURBO_INFRA STREQUAL "FMS2")
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE FMS::fms_r8)
 elseif(TURBO_INFRA STREQUAL "TIM")
-    # TIM_DIR: path to TIM's CMake build directory (contains TIMConfig.cmake).
+    # TIM_DIR: directory containing TIMConfig.cmake (e.g. build/tim/lib/cmake/tim).
     # The build script pre-builds TIM and passes -DTIM_DIR= automatically.
     find_package(TIM REQUIRED COMPONENTS R8)
     # TIM ships FindNetCDF.cmake alongside its config; expose it for the explicit find below.

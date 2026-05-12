@@ -8,7 +8,8 @@
 #   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
 #
 # Options:
-#   --debug           Adds --fresh to cmake configure and --clean-first to cmake build
+#   --debug           Cleans the build directory and rebuilds from scratch
+#   --ninja           Use Ninja generator instead of the default (Unix Makefiles)
 #   --build_dir DIR   Build directory (default: $TURBO_STACK_ROOT/build/default)
 #   --infra FMS2|TIM  Infrastructure backend (default: FMS2); TIM also requires TIM_ROOT
 
@@ -23,6 +24,7 @@ fi
 build_dir="$TURBO_STACK_ROOT/build/default"
 build_type="Release"
 debug=false
+ninja=false
 infra=""
 
 # Command line argument parsing
@@ -30,22 +32,19 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --build_dir)   build_dir="$2"; shift 2 ;;
         --debug)       debug=true; shift ;;
+        --ninja)       ninja=true; shift ;;
         --infra)       infra="$2"; shift 2 ;;
         *)             break ;;
     esac
 done
 
-# Hardcoded generate options for now, but could be made into arguments in the future.
 source_dir="$TURBO_STACK_ROOT"
-generator="Ninja"
 
 # Generate
 cmake_generate_options=()
 #cmake_generate_options+=("-DCMAKE_C_COMPILER=$CC")
 #cmake_generate_options+=("-DCMAKE_CXX_COMPILER=$CXX")
-if [[ "$generator" != "" ]]; then
-    cmake_generate_options+=("-G" "$generator")
-fi
+[[ "$ninja" == true ]] && cmake_generate_options+=("-G" "Ninja")
 if [[ "$debug" == true ]]; then
     build_type="Debug"
     cmake_generate_options+=("--fresh")
@@ -78,7 +77,8 @@ if [[ "$infra" == "TIM" ]]; then
     fi
     [[ "$_tim_needs_clean" == true ]] && rm -rf "$tim_build_dir"
 
-    tim_cmake_opts=("-G" "$generator" "-DCMAKE_BUILD_TYPE=$build_type" "-D64BIT=ON" "-D32BIT=OFF")
+    tim_cmake_opts=("-DCMAKE_BUILD_TYPE=$build_type" "-D64BIT=ON" "-D32BIT=OFF")
+    [[ "$ninja" == true ]] && tim_cmake_opts=("-G" "Ninja" "${tim_cmake_opts[@]}")
     cmake "${tim_cmake_opts[@]}" -S "$TIM_ROOT" -B "$tim_build_dir"
     cmake --build "$tim_build_dir"
     cmake_generate_options+=("-DTIM_DIR=$tim_build_dir/lib/cmake/tim")
