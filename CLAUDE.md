@@ -8,34 +8,64 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Requires `SPACK_ROOT` and `TURBO_STACK_ROOT` to be set (add to your shell profile).
+Requires `TURBO_STACK_ROOT` (and, for the spack flavor, `SPACK_ROOT`) to be set in your shell profile. See [`scripts/README.md`](scripts/README.md) for the full reference; the design rationale lives in [`setup_env_separation_plan.md`](setup_env_separation_plan.md).
 
-### Local build (configure + build + test)
+### 3-step pipeline
+
+```
+setup environment  →  build dependencies from source  →  build turbo-stack
+```
+
+Different flavors fill in steps 1 and 2 differently; step 3 is always the same.
+
+### Local build (spack flavor, one command)
+
 ```bash
-scripts/build.sh              # incremental build
-scripts/build.sh --debug      # full clean rebuild (--fresh + --clean-first)
-scripts/build.sh --recreate-spack-env --debug  # also recreate spack env
+scripts/build_with_spack.sh                              # incremental build
+scripts/build_with_spack.sh --debug                      # full clean rebuild
+scripts/build_with_spack.sh --infra TIM                  # FMS2 default; --infra TIM also builds TIM from source
+scripts/build_with_spack.sh --recreate-spack-env --debug # nuke + recreate the spack env, then clean rebuild
+```
+
+### Explicit two-step (any flavor; faster iteration)
+
+```bash
+# spack flavor
+source scripts/setup_environment/with_spack.sh
+scripts/build_turbo_stack.sh
+# (for --infra TIM, also `source scripts/build_dependencies_from_source.sh --only tim` first)
+
+# module flavor (laptop emulation of Derecho — temp until env/derecho.sh exists)
+source scripts/setup_environment/derecho_modules_emulation_with_spack.sh
+scripts/build_turbo_stack.sh
 ```
 
 ### Script structure
 
-| Script | Purpose |
-|--------|---------|
-| `scripts/build.sh` | Top-level entry point: spack env setup + activation, then calls `build_turbo_stack.sh` |
-| `scripts/build_turbo_stack.sh` | CMake configure → build → ctest. Safe to call directly if spack env is already active. |
+| Script | Role | How invoked |
+|---|---|---|
+| `scripts/build_with_spack.sh` | Orchestrator: runs the full pipeline for the spack flavor | exec'd |
+| `scripts/setup_environment/<flavor>.sh` | Step 1 — toolchain + (for module flavors) builds deps | sourced |
+| `scripts/build_dependencies_from_source.sh` | Step 2 — cmake-builds FMS/pFUnit/AMReX/TIM into a per-tag prefix; per-dep `--no-X` / `--only LIST` toggles | sourced |
+| `scripts/build_turbo_stack.sh` | Step 3 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
-### build.sh options
-- `--debug` — full clean rebuild (passed through to `build_turbo_stack.sh`)
-- `--create-spack-env` — create the spack environment if it does not exist
-- `--recreate-spack-env` — delete and recreate the spack environment from scratch
+`build_turbo_stack.sh` options: `--debug`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`.
 
-### build_turbo_stack.sh options
-- `--debug` — cleans the build directory and rebuilds from scratch
-- `--ninja` — use Ninja generator instead of the default (Unix Makefiles)
-- `--build_dir DIR` — override build directory (default: `$TURBO_STACK_ROOT/build/default`)
+### Source-tree overrides
+
+`build_dependencies_from_source.sh` reads `MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PFUNIT_ROOT` / `AMREX_ROOT`. If set, those paths are used; otherwise the corresponding submodule is used. Useful for iterating against local dev trees:
+
+```bash
+export MOM6_ROOT=$HOME/projects/MOM6
+source scripts/setup_environment/derecho_modules_emulation_with_spack.sh
+scripts/build_turbo_stack.sh
+```
 
 ### Spack environment
-Defined in `spack/spack.yaml`. Default environment name: `turbo_stack`. Includes ninja (optional fast generator), MPI (OpenMPI), NetCDF, FMS, and pFUnit.
+
+Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, FMS, pFUnit, AMReX. The spack flavor only needs to build TIM from source (`--only tim`) since spack does not package TIM.
+
+A second spack env defined in `spack/derecho_modules_emulation_with_spack.yaml` provides *just* the toolchain (cmake, MPI, NetCDF) — used by the temporary emulation driver to exercise the from-source path on a laptop until Derecho access is back.
 
 **AMReX mini-app tests** are built with CMake separately (see `src/amrex_mini_app/CMakeLists.txt`). They use GoogleTest (C++) and require HDF5.
 
@@ -44,8 +74,10 @@ Defined in `spack/spack.yaml`. Default environment name: `turbo_stack`. Includes
 ### Component Relationships
 
 ```
-build.sh (spack setup + activation)
-  └─→ build_turbo_stack.sh (CMake orchestrator)
+build_with_spack.sh                                        ─── orchestrator (spack flavor)
+  └─→ setup_environment/with_spack.sh                          step 1 (sourced)
+  └─→ build_dependencies_from_source.sh --only tim             step 2, only when --infra TIM (sourced)
+  └─→ build_turbo_stack.sh                                     step 3 (exec'd)
         ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
         ├─→ cmake build
         └─→ ctest
@@ -82,7 +114,7 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 
 - **Fortran** — MOM6, FMS, MARBL, unit tests under `tests/`
 - **C++20** — AMReX mini-app (`src/amrex_mini_app/`), GoogleTest-based tests there
-- **Bash** — `scripts/build.sh`, `scripts/build_turbo_stack.sh` build orchestration
+- **Bash** — build orchestration under `scripts/` (see [`scripts/README.md`](scripts/README.md))
 
 ## CI/CD
 

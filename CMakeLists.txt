@@ -18,7 +18,8 @@ include(TurboOptions)
 include("${MOM6_SOURCE_DIR}/cmake/MOM6Options.cmake")
 include(TurboCompilerFlags)
 
-# Infrastructure backend — FMS2 (Spack-installed) or TIM (in-tree build).
+# Infrastructure backend — FMS2 or TIM.  Both come from CMAKE_PREFIX_PATH
+# (populated either by spack env activate or by build_dependencies_from_source.sh).
 # Both paths define TURBO::infra_r8; nothing downstream needs to know which backend.
 if(TURBO_INFRA STREQUAL "FMS2")
     find_package(FMS REQUIRED COMPONENTS R8)
@@ -28,8 +29,9 @@ if(TURBO_INFRA STREQUAL "FMS2")
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE FMS::fms_r8)
 elseif(TURBO_INFRA STREQUAL "TIM")
-    # TIM_DIR: directory containing TIMConfig.cmake (e.g. build/tim/lib/cmake/tim).
-    # The build script pre-builds TIM and passes -DTIM_DIR= automatically.
+    # TIM is built+installed by scripts/build_dependencies_from_source.sh into
+    # deps/<tag>/install (or by spack, in principle, though spack does not
+    # currently package TIM). find_package(TIM) resolves via CMAKE_PREFIX_PATH.
     find_package(TIM REQUIRED COMPONENTS R8)
     # TIM ships FindNetCDF.cmake alongside its config; expose it for the explicit find below.
     list(APPEND CMAKE_MODULE_PATH "${TIM_DIR}")
