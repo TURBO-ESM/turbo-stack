@@ -22,9 +22,16 @@ include(TurboCompilerFlags)
 # (populated either by spack env activate or by build_dependencies_from_source.sh).
 # Both paths define TURBO::infra_r8; nothing downstream needs to know which backend.
 if(TURBO_INFRA STREQUAL "FMS2")
+    # fms-config.cmake calls find_dependency(NetCDF), and most NetCDF installs
+    # (incl. the Derecho spack module) ship no CMake config — only nc-config.
+    # FMS's own FindNetCDF.cmake must therefore be on CMAKE_MODULE_PATH *before*
+    # find_package(FMS), not just after it.
+    find_path(_fms_cmake_dir NAMES fms-config.cmake
+              PATH_SUFFIXES lib/cmake/fms lib64/cmake/fms cmake/fms)
+    if(_fms_cmake_dir)
+        list(APPEND CMAKE_MODULE_PATH "${_fms_cmake_dir}")
+    endif()
     find_package(FMS REQUIRED COMPONENTS R8)
-    # FMS ships its own FindNetCDF.cmake; expose it for the explicit find below.
-    list(APPEND CMAKE_MODULE_PATH "${FMS_INSTALL_PREFIX}/lib/cmake/fms")
     add_library(turbo_infra_r8 INTERFACE)
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE FMS::fms_r8)
@@ -32,9 +39,13 @@ elseif(TURBO_INFRA STREQUAL "TIM")
     # TIM is built+installed by scripts/build_dependencies_from_source.sh into
     # deps/<tag>/install (or by spack, in principle, though spack does not
     # currently package TIM). find_package(TIM) resolves via CMAKE_PREFIX_PATH.
+    # Same NetCDF-via-find_dependency issue as the FMS2 branch above.
+    find_path(_tim_cmake_dir NAMES tim-config.cmake
+              PATH_SUFFIXES lib/cmake/tim lib64/cmake/tim cmake/tim)
+    if(_tim_cmake_dir)
+        list(APPEND CMAKE_MODULE_PATH "${_tim_cmake_dir}")
+    endif()
     find_package(TIM REQUIRED COMPONENTS R8)
-    # TIM ships FindNetCDF.cmake alongside its config; expose it for the explicit find below.
-    list(APPEND CMAKE_MODULE_PATH "${TIM_DIR}")
     add_library(turbo_infra_r8 INTERFACE)
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE TIM::tim_r8)
