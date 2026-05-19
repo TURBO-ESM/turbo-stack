@@ -50,6 +50,15 @@ endif()
 find_package(MPI REQUIRED COMPONENTS Fortran)
 find_package(NetCDF REQUIRED COMPONENTS C Fortran)
 
+# Attach NetCDF::NetCDF_C to the infra wrapper so its absolute libnetcdf.so
+# path lands on every link line that uses TURBO::infra_r8. FMS::fms_r8 only
+# carries NetCDF::NetCDF_Fortran in its INTERFACE_LINK_LIBRARIES, plus bare
+# `-lnetcdf` flags from nf-config --flibs; on NetCDF installs with split
+# lib/lib64 layouts (e.g. NCAR's Derecho module) the bare flag fails to
+# resolve at link time. Explicit attachment makes the dependency truthful
+# regardless of upstream FMS / infra layout choices.
+target_link_libraries(turbo_infra_r8 INTERFACE NetCDF::NetCDF_C)
+
 # MARBL must be configured before MOM6 so that MARBL::marbl is already defined
 # when the MOM6 subdirectory processes its target_link_libraries calls.
 add_subdirectory(marbl_build)
