@@ -25,6 +25,13 @@
 #                       nodes and on PBS/SLURM allocations that don't pin
 #                       cpusets -- caller knows the right value, this script
 #                       doesn't.
+#   --                  End of options to this script.  Anything after `--` is
+#                       appended verbatim to `cmake --build`, e.g.
+#                         ... -- -v                 (cmake's own --verbose)
+#                         ... -- --target MOM6      (build a specific target)
+#                         ... -- -- -j 16           (forward -j 16 to the generator)
+#                       Unknown options that are NOT preceded by `--` are an
+#                       error (catches typos like --paralel).
 
 set -eo pipefail
 
@@ -49,7 +56,12 @@ while [[ $# -gt 0 ]]; do
         --ninja)        ninja=true; shift ;;
         --infra)        infra="$2"; shift 2 ;;
         --parallel|-j)  parallel="$2"; shift 2 ;;
-        *)              break ;;
+        --)             shift; break ;;
+        *)
+            echo "Error: unknown option '$1' to build_turbo_stack.sh" >&2
+            echo "       Pass unknown args after '--' to forward them to \`cmake --build\`." >&2
+            exit 1
+            ;;
     esac
 done
 
@@ -76,7 +88,7 @@ cmake_build_options=("--parallel" "$parallel")
 if [[ "$debug" == true ]]; then
     cmake_build_options+=("--clean-first")
 fi
-cmake --build "$build_dir" "${cmake_build_options[@]}"
+cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
 
 # Test
 cmake_test_options=()
