@@ -21,6 +21,10 @@
 #   --infra FMS2|TIM        Infrastructure backend (passed through).  For TIM,
 #                           this script also sources build_dependencies_from_source.sh
 #                           --only tim, since spack does not provide TIM.
+#   --parallel N, -j N      Parallel build jobs.  Forwarded as --parallel N to
+#                           the deps step (when --infra TIM) and to the
+#                           turbo-stack build step.  Defaults to serial in both
+#                           child scripts when omitted.
 #   --recreate-spack-env    Delete and recreate the Spack env from scratch
 #
 # Examples:
@@ -36,6 +40,7 @@ debug=false
 ninja=false
 infra=""
 build_dir=""
+parallel=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -44,6 +49,7 @@ while [[ $# -gt 0 ]]; do
         --ninja)              ninja=true; shift ;;
         --infra)              infra="$2"; shift 2 ;;
         --build_dir)          build_dir="$2"; shift 2 ;;
+        --parallel|-j)        parallel="$2"; shift 2 ;;
         --)                   shift; break ;;
         *)                    break ;;
     esac
@@ -62,8 +68,10 @@ source "$TURBO_STACK_ROOT/scripts/setup_environment/with_spack.sh" "${env_args[@
 
 # --- Stage 1b: TIM is not in spack -- build from source when requested ---
 if [[ "$infra" == "TIM" ]]; then
+    deps_args=(--only tim)
+    [[ -n "$parallel" ]] && deps_args+=(--parallel "$parallel")
     # shellcheck source=/dev/null
-    source "$TURBO_STACK_ROOT/scripts/build_dependencies_from_source.sh" --only tim
+    source "$TURBO_STACK_ROOT/scripts/build_dependencies_from_source.sh" "${deps_args[@]}"
 fi
 
 # --- Stage 2: configure + build + test -----------------------------------
@@ -72,4 +80,5 @@ build_args=()
 [[ "$ninja"     == true ]] && build_args+=(--ninja)
 [[ -n "$infra"           ]] && build_args+=(--infra "$infra")
 [[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")
+[[ -n "$parallel"        ]] && build_args+=(--parallel "$parallel")
 bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"

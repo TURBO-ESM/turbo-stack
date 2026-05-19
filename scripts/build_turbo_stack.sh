@@ -12,13 +12,19 @@
 #   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
 #
 # Options:
-#   --debug           Cleans the build directory and rebuilds from scratch
-#   --ninja           Use Ninja generator instead of the default (Unix Makefiles)
-#   --build_dir DIR   Build directory (default: $TURBO_STACK_ROOT/build/default)
-#   --infra FMS2|TIM  Infrastructure backend (default: FMS2). The chosen
-#                     backend must be discoverable via find_package on
-#                     CMAKE_PREFIX_PATH; build_dependencies_from_source.sh
-#                     handles that for from-source flavors.
+#   --debug             Cleans the build directory and rebuilds from scratch
+#   --ninja             Use Ninja generator instead of the default (Unix Makefiles)
+#   --build_dir DIR     Build directory (default: $TURBO_STACK_ROOT/build/default)
+#   --infra FMS2|TIM    Infrastructure backend (default: FMS2). The chosen
+#                       backend must be discoverable via find_package on
+#                       CMAKE_PREFIX_PATH; build_dependencies_from_source.sh
+#                       handles that for from-source flavors.
+#   --parallel N, -j N  Parallel build jobs for `cmake --build` (default: 1).
+#                       Pass an explicit N to parallelize.  The default stays
+#                       serial because `nproc` over-reports on shared login
+#                       nodes and on PBS/SLURM allocations that don't pin
+#                       cpusets -- caller knows the right value, this script
+#                       doesn't.
 
 set -eo pipefail
 
@@ -33,15 +39,17 @@ build_type="Release"
 debug=false
 ninja=false
 infra=""
+parallel="1"
 
 # Command line argument parsing
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --build_dir)   build_dir="$2"; shift 2 ;;
-        --debug)       debug=true; shift ;;
-        --ninja)       ninja=true; shift ;;
-        --infra)       infra="$2"; shift 2 ;;
-        *)             break ;;
+        --build_dir)    build_dir="$2"; shift 2 ;;
+        --debug)        debug=true; shift ;;
+        --ninja)        ninja=true; shift ;;
+        --infra)        infra="$2"; shift 2 ;;
+        --parallel|-j)  parallel="$2"; shift 2 ;;
+        *)              break ;;
     esac
 done
 
@@ -64,7 +72,7 @@ fi
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 
 # Build the code.
-cmake_build_options=()
+cmake_build_options=("--parallel" "$parallel")
 if [[ "$debug" == true ]]; then
     cmake_build_options+=("--clean-first")
 fi

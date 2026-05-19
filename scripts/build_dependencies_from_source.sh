@@ -31,7 +31,11 @@
 #   --tag NAME      Per-toolchain prefix tag (default: default)
 #                   Built artifacts go to $TURBO_STACK_ROOT/deps/<tag>/install
 #   --prefix DIR    Override install prefix
-#   --jobs N        Parallel build jobs (default: nproc)
+#   --parallel N    Parallel build jobs (default: 1; -j N also accepted).  Pass
+#   -j N            an explicit N to parallelize.  The default stays serial
+#                   because `nproc` over-reports on shared login nodes and on
+#                   PBS/SLURM allocations that don't pin cpusets -- the caller
+#                   knows the right value, this script doesn't.
 #   --rebuild       Force rebuild even if sentinel says "installed"
 #   --no-fms        Skip building FMS
 #   --no-pfunit     Skip building pFUnit
@@ -50,7 +54,7 @@
 
 _tag="default"
 _prefix=""
-_jobs=""
+_parallel="1"
 _rebuild=false
 _build_fms=true
 _build_pfunit=true
@@ -59,10 +63,10 @@ _build_tim=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --tag)       _tag="$2"; shift 2 ;;
-        --prefix)    _prefix="$2"; shift 2 ;;
-        --jobs)      _jobs="$2"; shift 2 ;;
-        --rebuild)   _rebuild=true; shift ;;
+        --tag)          _tag="$2"; shift 2 ;;
+        --prefix)       _prefix="$2"; shift 2 ;;
+        --parallel|-j)  _parallel="$2"; shift 2 ;;
+        --rebuild)      _rebuild=true; shift ;;
         --no-fms)    _build_fms=false; shift ;;
         --no-pfunit) _build_pfunit=false; shift ;;
         --no-amrex)  _build_amrex=false; shift ;;
@@ -107,7 +111,6 @@ if ! command -v mpicc >/dev/null 2>&1 || ! command -v mpif90 >/dev/null 2>&1; th
 fi
 
 [[ -z "$_prefix" ]] && _prefix="$TURBO_STACK_ROOT/deps/$_tag/install"
-[[ -z "$_jobs"   ]] && _jobs="$(nproc 2>/dev/null || echo 4)"
 _build_root="$TURBO_STACK_ROOT/deps/$_tag/build"
 mkdir -p "$_build_root" "$_prefix"
 
@@ -171,8 +174,8 @@ _build_and_install_dep() {
         "$@" \
         || return 1
 
-    echo "[build_dependencies_from_source] Building & installing $name ($_jobs parallel jobs) ..."
-    cmake --build "$build_dir" --parallel "$_jobs" --target install || return 1
+    echo "[build_dependencies_from_source] Building & installing $name ($_parallel parallel jobs) ..."
+    cmake --build "$build_dir" --parallel "$_parallel" --target install || return 1
 
     echo "$current_sha" > "$sentinel"
 }
@@ -258,7 +261,7 @@ if [[ "$_build_pfunit" == true ]]; then
 fi
 
 # --- Cleanup -------------------------------------------------------------
-unset _tag _prefix _jobs _rebuild _build_root _resolved
+unset _tag _prefix _parallel _rebuild _build_root _resolved
 unset _build_fms _build_pfunit _build_amrex _build_tim
 unset mom6_src fms_src tim_src pfunit_src amrex_src _pfunit_cmake_dir
 unset -f _ensure_submodule_initialized _resolve_root _build_and_install_dep
