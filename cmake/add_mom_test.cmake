@@ -32,7 +32,15 @@ function(add_mom_test TEST_FILE)
         MAX_PES 4
     )
 
-    set_property(TARGET ${TEST_TARGET} PROPERTY LINKER_LANGUAGE Fortran)
+    # Drive the test exe link via g++ rather than gfortran. The test
+    # sources are Fortran, so CMake would otherwise pick LINKER_LANGUAGE
+    # Fortran -- but gfortran does not auto-link the full C++ runtime
+    # (libstdc++, libgcc_s, libgcc) that AMReX needs when TURBO_INFRA=TIM
+    # is pulled in transitively through TURBO::infra_r8. g++ drives the
+    # link in both FMS2 and TIM configurations; CMake still appends
+    # -lgfortran/-lquadmath because Fortran objects contribute to the
+    # target.
+    set_property(TARGET ${TEST_TARGET} PROPERTY LINKER_LANGUAGE CXX)
 endfunction()
 
 # copy_dummy_fms_input_nml()
