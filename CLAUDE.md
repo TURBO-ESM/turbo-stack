@@ -31,12 +31,12 @@ scripts/build_with_spack.sh --recreate-spack-env --debug # nuke + recreate the s
 
 ```bash
 # spack flavor
-source scripts/setup_environment/with_spack.sh
+source scripts/setup_environment/spack_local_environment.sh
 scripts/build_turbo_stack.sh
 # (for --infra TIM, also `source scripts/build_dependencies_from_source.sh --only tim` first)
 
-# module flavor (laptop emulation of Derecho — temp until env/derecho.sh exists)
-source scripts/setup_environment/derecho_modules_emulation_with_spack.sh
+# module flavor (laptop emulation of Derecho — temp until derecho_cpu_gcc_openmpi.sh is fully verified)
+source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
 scripts/build_turbo_stack.sh
 ```
 
@@ -57,7 +57,7 @@ scripts/build_turbo_stack.sh
 
 ```bash
 export MOM6_ROOT=$HOME/projects/MOM6
-source scripts/setup_environment/derecho_modules_emulation_with_spack.sh
+source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
 scripts/build_turbo_stack.sh
 ```
 
@@ -75,7 +75,7 @@ A second spack env defined in `spack/derecho_modules_emulation_with_spack.yaml` 
 
 ```
 build_with_spack.sh                                        ─── orchestrator (spack flavor)
-  └─→ setup_environment/with_spack.sh                          step 1 (sourced)
+  └─→ setup_environment/spack_local_environment.sh                          step 1 (sourced)
   └─→ build_dependencies_from_source.sh --only tim             step 2, only when --infra TIM (sourced)
   └─→ build_turbo_stack.sh                                     step 3 (exec'd)
         ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)

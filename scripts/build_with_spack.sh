@@ -2,7 +2,7 @@
 # Usage: ./scripts/build_with_spack.sh [options]
 #
 # One-command build for the Spack flavor: sources
-# scripts/setup_environment/with_spack.sh, optionally builds TIM from source
+# scripts/setup_environment/spack_local_environment.sh, optionally builds TIM from source
 # (when --infra TIM, since spack does not package TIM), then calls
 # scripts/build_turbo_stack.sh to configure, build, and test.
 #
@@ -64,7 +64,7 @@ fi
 env_args=()
 [[ "$recreate_spack_env" == true ]] && env_args+=(--recreate)
 # shellcheck source=/dev/null
-source "$TURBO_STACK_ROOT/scripts/setup_environment/with_spack.sh" "${env_args[@]}"
+source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
 
 # --- Stage 1b: TIM is not in spack -- build from source when requested ---
 if [[ "$infra" == "TIM" ]]; then

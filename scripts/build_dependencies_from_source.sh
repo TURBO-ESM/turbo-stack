@@ -49,8 +49,8 @@
 # Required environment:
 #   TURBO_STACK_ROOT   Path to your turbo-stack repository clone
 #   A loaded toolchain (cmake + mpicc/mpif90 on PATH) -- typically set up
-#   by a per-machine env script that sources this one (e.g. scripts/setup_environment/derecho.sh
-#   or scripts/setup_environment/derecho_modules_emulation_with_spack.sh).
+#   by a per-machine env script that sources this one (e.g. scripts/setup_environment/derecho_cpu_gcc_openmpi.sh
+#   or scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh).
 
 _tag="default"
 _prefix=""

@@ -49,7 +49,7 @@ if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
 fi
 
 # --- Stage 1: environment setup (Derecho) --------------------------------
-source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho.sh"
+source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh"
 
 # --- Stage 1b: build dependencies from source... relies on modules being set up correctly to find the right compiler, MPI, NetCDF, etc. ---
 deps_args=()

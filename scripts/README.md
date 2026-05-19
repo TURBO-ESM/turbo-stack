@@ -18,10 +18,10 @@ scripts/
   build_with_spack.sh                         # ORCHESTRATOR — spack flavor one-command (steps 1+2+3)
   build_dependencies_from_source.sh           # STEP 2 — builds FMS/pFUnit/AMReX/TIM from source (sourced)
   build_turbo_stack.sh                        # STEP 3 — cmake configure + build + ctest (exec'd)
-  setup_environment/                          # STEP 1 — one file per flavor/machine (all sourced)
-    with_spack.sh                                # generic: spack env activation
-    derecho_modules_emulation_with_spack.sh      # TEMP: emulate Derecho on a laptop via a minimal spack env
-    derecho.sh                                   # FUTURE: real Derecho via Lmod modules
+  setup_environment/                                    # STEP 1 — one file per flavor/machine (all sourced)
+    spack_local_environment.sh                             # generic: spack env activation
+    emulate_derecho_modules_locally_with_spack.sh          # TEMP: emulate Derecho on a laptop via a minimal spack env
+    derecho_cpu_gcc_openmpi.sh                             # real Derecho via Lmod modules (CPU, gcc, OpenMPI)
 ```
 
 Future per-machine orchestrators (`build_on_derecho.sh`, `build_on_derecho_with_gpus.sh`, …) sit alongside `build_with_spack.sh` at the top level.
@@ -38,7 +38,7 @@ scripts/build_with_spack.sh --debug            # full clean rebuild
 scripts/build_with_spack.sh --infra TIM        # spack env + from-source TIM (spack does not package TIM)
 ```
 
-`build_with_spack.sh` runs all three steps. For `--infra TIM` it sources `build_dependencies_from_source.sh --only tim` after `setup_environment/with_spack.sh` because spack provides FMS/pFUnit/AMReX but not TIM.
+`build_with_spack.sh` runs all three steps. For `--infra TIM` it sources `build_dependencies_from_source.sh --only tim` after `setup_environment/spack_local_environment.sh` because spack provides FMS/pFUnit/AMReX but not TIM.
 
 ### Explicit two-step (any flavor; iterative development)
 
@@ -46,17 +46,17 @@ Source the env recipe once per shell, then run `build_turbo_stack.sh` as many ti
 
 ```bash
 # spack flavor
-source scripts/setup_environment/with_spack.sh
+source scripts/setup_environment/spack_local_environment.sh
 scripts/build_turbo_stack.sh                   # for --infra TIM you also need:
                                                #   source scripts/build_dependencies_from_source.sh --only tim
                                                #   scripts/build_turbo_stack.sh --infra TIM
 
-# module flavor (Derecho — once env/derecho.sh exists)
-source scripts/setup_environment/derecho.sh    # loads modules AND builds FMS/pFUnit/AMReX/TIM via step 2
+# module flavor (Derecho)
+source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh    # loads modules AND builds FMS/pFUnit/AMReX/TIM via step 2
 scripts/build_turbo_stack.sh
 
 # laptop-as-Derecho emulation
-source scripts/setup_environment/derecho_modules_emulation_with_spack.sh
+source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
 scripts/build_turbo_stack.sh
 ```
 
@@ -78,7 +78,7 @@ To test against a local dev tree, export the corresponding `_ROOT` before sourci
 
 ```bash
 export MOM6_ROOT=/home/me/projects/MOM6
-source scripts/setup_environment/derecho.sh
+source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh
 scripts/build_turbo_stack.sh
 ```
 
@@ -89,7 +89,7 @@ To skip building a specific dep (e.g., when spack already provides it):
 source scripts/build_dependencies_from_source.sh --only tim
 ```
 
-Flags on `build_dependencies_from_source.sh`: `--tag`, `--prefix`, `--jobs`, `--rebuild`, `--no-fms`, `--no-pfunit`, `--no-amrex`, `--no-tim`, `--only LIST`.
+Flags on `build_dependencies_from_source.sh`: `--tag`, `--prefix`, `--parallel|-j`, `--rebuild`, `--no-fms`, `--no-pfunit`, `--no-amrex`, `--no-tim`, `--only LIST`.
 
 ---
 

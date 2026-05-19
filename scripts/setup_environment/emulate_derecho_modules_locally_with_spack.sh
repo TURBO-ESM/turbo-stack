@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/setup_environment/derecho_modules_emulation_with_spack.sh
+# scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
 #
 # SOURCED. Temporary driver that emulates a module-based machine (Derecho)
 # on the laptop. Uses spack ONLY for the parts that come from Lmod on
@@ -7,11 +7,11 @@
 # built from source by scripts/build_dependencies_from_source.sh; MOM6
 # source comes from MOM6_ROOT (or submodule if unset).
 #
-# Once scripts/setup_environment/derecho.sh is wired up against real Lmod modules, delete this
-# file and spack/derecho_modules_emulation_with_spack.yaml.
+# Once scripts/setup_environment/derecho_cpu_gcc_openmpi.sh is verified against real Lmod modules,
+# delete this file and spack/derecho_modules_emulation_with_spack.yaml.
 #
 # Usage:
-#   source scripts/setup_environment/derecho_modules_emulation_with_spack.sh [build_dependencies_from_source.sh args]
+#   source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh [build_dependencies_from_source.sh args]
 
 if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
     echo "Error: TURBO_STACK_ROOT is not set." >&2

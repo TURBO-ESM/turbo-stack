@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/setup_environment/with_spack.sh
+# scripts/setup_environment/spack_local_environment.sh
 #
 # SOURCED, not executed.  Sets up the Spack environment so that subsequent
 # `cmake` / `ctest` / `find_package(...)` calls find FMS, pFUnit, NetCDF, MPI,
@@ -10,7 +10,7 @@
 # flavor).  See setup_env_separation_plan.md for the contract.
 #
 # Usage:
-#   source scripts/setup_environment/with_spack.sh [options]
+#   source scripts/setup_environment/spack_local_environment.sh [options]
 #
 # Required environment variables:
 #   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
         --recreate)           _recreate=true;           shift ;;
         --env-name)           _env_name="$2";           shift 2 ;;
         *)
-            echo "Error: unknown option '$1' to with_spack.sh" >&2
+            echo "Error: unknown option '$1' to spack_local_environment.sh" >&2
             return 1 2>/dev/null || exit 1
             ;;
     esac
