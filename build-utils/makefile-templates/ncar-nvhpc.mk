@@ -6,7 +6,7 @@
 
 FC = ftn
 CC = cc
-CXX = c++
+CXX = CC
 LD = ftn $(MAIN_PROGRAM)
 
 ############
