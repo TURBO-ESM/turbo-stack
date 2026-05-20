@@ -67,10 +67,10 @@ while [[ $# -gt 0 ]]; do
         --prefix)       _prefix="$2"; shift 2 ;;
         --parallel|-j)  _parallel="$2"; shift 2 ;;
         --rebuild)      _rebuild=true; shift ;;
-        --no-fms)    _build_fms=false; shift ;;
-        --no-pfunit) _build_pfunit=false; shift ;;
-        --no-amrex)  _build_amrex=false; shift ;;
-        --no-tim)    _build_tim=false; shift ;;
+        --no-fms)       _build_fms=false; shift ;;
+        --no-pfunit)    _build_pfunit=false; shift ;;
+        --no-amrex)     _build_amrex=false; shift ;;
+        --no-tim)       _build_tim=false; shift ;;
         --only)
             _build_fms=false; _build_pfunit=false; _build_amrex=false; _build_tim=false
             IFS=',' read -ra _only_list <<< "$2"
