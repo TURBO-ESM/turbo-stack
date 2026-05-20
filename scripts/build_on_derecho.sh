@@ -61,7 +61,6 @@ source "$TURBO_STACK_ROOT/scripts/build_dependencies_from_source.sh" "${deps_arg
 # --- Stage 2: configure + build + test -----------------------------------
 build_args=()
 [[ "$debug"     == true ]] && build_args+=(--debug)
-[[ "$ninja"     == true ]] && build_args+=(--ninja)
 [[ -n "$infra"           ]] && build_args+=(--infra "$infra")
 [[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")
 [[ -n "$parallel"        ]] && build_args+=(--parallel "$parallel")
