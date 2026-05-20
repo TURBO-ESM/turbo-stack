@@ -89,7 +89,7 @@ To skip building a specific dep (e.g., when spack already provides it):
 source scripts/build_dependencies_from_source.sh --only tim
 ```
 
-Flags on `build_dependencies_from_source.sh`: `--tag`, `--prefix`, `--parallel|-j`, `--rebuild`, `--no-fms`, `--no-pfunit`, `--no-amrex`, `--no-tim`, `--only LIST`.
+Flags on `build_dependencies_from_source.sh`: `--tag`, `--prefix`, `--parallel|-j`, `--rebuild [LIST]`, `--only LIST`.
 
 ---
 

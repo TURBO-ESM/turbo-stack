@@ -28,23 +28,26 @@
 #   source scripts/build_dependencies_from_source.sh [options]
 #
 # Options:
-#   --tag NAME      Per-toolchain prefix tag (default: default)
-#                   Built artifacts go to $TURBO_STACK_ROOT/deps/<tag>/install
-#   --prefix DIR    Override install prefix
-#   --parallel N    Parallel build jobs (default: 1; -j N also accepted).  Pass
-#   -j N            an explicit N to parallelize.  The default stays serial
-#                   because `nproc` over-reports on shared login nodes and on
-#                   PBS/SLURM allocations that don't pin cpusets -- the caller
-#                   knows the right value, this script doesn't.
-#   --rebuild       Force rebuild even if sentinel says "installed"
-#   --no-fms        Skip building FMS
-#   --no-pfunit     Skip building pFUnit
-#   --no-amrex      Skip building AMReX
-#   --no-tim        Skip building TIM
-#   --only LIST     Comma-separated list of deps to build; others skipped.
-#                     --only tim        -> build only TIM
-#                     --only fms,tim    -> build FMS and TIM, skip the rest
-#                   Valid names: fms, pfunit, amrex, tim.
+#   --tag NAME        Named install slot under $TURBO_STACK_ROOT/deps/<tag>/
+#                     (default: default).  Different toolchains / GPU backends /
+#                     build types can coexist by using distinct tag names.
+#   --prefix DIR      Override install prefix entirely (ignores --tag)
+#   --parallel N      Parallel build jobs (default: 1; -j N also accepted).
+#   -j N              Pass an explicit N to parallelize.  The default stays
+#                     serial because `nproc` over-reports on shared login nodes
+#                     and on PBS/SLURM allocations that don't pin cpusets --
+#                     the caller knows the right value, this script doesn't.
+#   --rebuild [LIST]  Force rebuild even if sentinel says "installed".  Without
+#                     LIST: rebuild every selected dep.  With a comma-separated
+#                     LIST: rebuild only those.  Examples:
+#                       --rebuild           -> rebuild every selected dep
+#                       --rebuild amrex     -> rebuild only AMReX
+#                       --rebuild fms,tim   -> rebuild FMS and TIM only
+#                     Valid names: fms, pfunit, amrex, tim.
+#   --only LIST       Comma-separated list of deps to build; others skipped.
+#                       --only tim        -> build only TIM
+#                       --only fms,tim    -> build FMS and TIM, skip the rest
+#                     Valid names: fms, pfunit, amrex, tim.
 #
 # Required environment:
 #   TURBO_STACK_ROOT   Path to your turbo-stack repository clone
@@ -55,7 +58,7 @@
 _tag="default"
 _prefix=""
 _parallel="1"
-_rebuild=false
+_rebuild_list=""        # "" = no force-rebuild; "all" = all selected; "fms,tim" = those only
 _build_fms=true
 _build_pfunit=true
 _build_amrex=true
@@ -66,11 +69,15 @@ while [[ $# -gt 0 ]]; do
         --tag)          _tag="$2"; shift 2 ;;
         --prefix)       _prefix="$2"; shift 2 ;;
         --parallel|-j)  _parallel="$2"; shift 2 ;;
-        --rebuild)      _rebuild=true; shift ;;
-        --no-fms)       _build_fms=false; shift ;;
-        --no-pfunit)    _build_pfunit=false; shift ;;
-        --no-amrex)     _build_amrex=false; shift ;;
-        --no-tim)       _build_tim=false; shift ;;
+        --rebuild)
+            # Optional list argument.  Consume $2 if it looks like a value
+            # (not another flag, not empty); else treat as bare "rebuild all".
+            if [[ $# -ge 2 && "$2" != --* && -n "$2" ]]; then
+                _rebuild_list="$2"; shift 2
+            else
+                _rebuild_list="all"; shift
+            fi
+            ;;
         --only)
             _build_fms=false; _build_pfunit=false; _build_amrex=false; _build_tim=false
             IFS=',' read -ra _only_list <<< "$2"
@@ -95,6 +102,22 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# --- Validate --rebuild list (if any) against known dep names -----------
+if [[ -n "$_rebuild_list" && "$_rebuild_list" != "all" ]]; then
+    IFS=',' read -ra _rebuild_check <<< "$_rebuild_list"
+    for _dep in "${_rebuild_check[@]}"; do
+        case "$_dep" in
+            fms|pfunit|amrex|tim) ;;
+            *)
+                echo "Error: unknown dep '$_dep' in --rebuild (valid: fms, pfunit, amrex, tim)" >&2
+                unset _rebuild_check _dep
+                return 1 2>/dev/null || exit 1
+                ;;
+        esac
+    done
+    unset _rebuild_check _dep
+fi
 
 # --- Validate toolchain & roots -----------------------------------------
 if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
@@ -142,8 +165,20 @@ _resolve_root() {
     fi
 }
 
+# _should_rebuild <name>  — true when the dep is on the --rebuild allowlist
+_should_rebuild() {
+    local name="$1"
+    [[ -z "$_rebuild_list" ]] && return 1
+    [[ "$_rebuild_list" == "all" ]] && return 0
+    case ",$_rebuild_list," in
+        *",$name,"*) return 0 ;;
+    esac
+    return 1
+}
+
 # _build_and_install_dep <name> <source-dir> <extra-cmake-args...>
-# Auto-rebuilds when the source HEAD SHA changes since the last install.
+# Auto-rebuilds when the source HEAD SHA changes since the last install,
+# or when --rebuild [LIST] explicitly requested this dep.
 _build_and_install_dep() {
     local name="$1" src="$2"
     shift 2
@@ -155,7 +190,10 @@ _build_and_install_dep() {
         current_sha=$(git -C "$src" rev-parse HEAD 2>/dev/null || echo "")
     fi
 
-    if [[ "$_rebuild" != true && -f "$sentinel" ]]; then
+    if _should_rebuild "$name"; then
+        echo "[build_dependencies_from_source] $name force-rebuild requested"
+        rm -rf "$build_dir"
+    elif [[ -f "$sentinel" ]]; then
         local installed_sha
         installed_sha=$(cat "$sentinel" 2>/dev/null)
         if [[ "$installed_sha" == "$current_sha" ]]; then
@@ -165,7 +203,6 @@ _build_and_install_dep() {
         echo "[build_dependencies_from_source] $name source changed (${installed_sha:0:8} -> ${current_sha:0:8}) -- rebuilding"
         rm -rf "$build_dir"
     fi
-    [[ "$_rebuild" == true ]] && rm -rf "$build_dir"
 
     echo "[build_dependencies_from_source] Configuring $name from $src ..."
     cmake -S "$src" -B "$build_dir" \
@@ -261,7 +298,7 @@ if [[ "$_build_pfunit" == true ]]; then
 fi
 
 # --- Cleanup -------------------------------------------------------------
-unset _tag _prefix _parallel _rebuild _build_root _resolved
+unset _tag _prefix _parallel _rebuild_list _build_root _resolved
 unset _build_fms _build_pfunit _build_amrex _build_tim
 unset mom6_src fms_src tim_src pfunit_src amrex_src _pfunit_cmake_dir
-unset -f _ensure_submodule_initialized _resolve_root _build_and_install_dep
+unset -f _ensure_submodule_initialized _resolve_root _build_and_install_dep _should_rebuild
