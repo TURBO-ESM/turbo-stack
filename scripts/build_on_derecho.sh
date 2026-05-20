@@ -1,6 +1,16 @@
 #!/bin/bash
 # Usage: ./scripts/build_on_derecho.sh [options]
 #
+# Required environment variables (set these in your shell profile, e.g. ~/.bashrc):
+#   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
+#
+# Optional environment variables (override the corresponding submodule when set):
+#   MOM6_ROOT           Path to a MOM6 source checkout (default: submodule)
+#   FMS_ROOT            Path to an FMS source checkout (default: submodule)
+#   TIM_ROOT            Path to a TIM source checkout (default: submodule)
+#   PFUNIT_ROOT         Path to a pFUnit source checkout (default: submodule)
+#   AMREX_ROOT          Path to an AMReX source checkout (default: submodule)
+#
 # Options:
 #   --debug                 Full clean rebuild (passed through)
 #   --build_dir DIR         Build directory (passed through)
@@ -18,14 +28,6 @@
 #   build_on_derecho.sh --infra TIM --debug          # full clean rebuild with TIM backend
 
 set -eo pipefail
-
-#############################################################################
-# Move this somewhere else later or just have it be set by the user, but for now just hardcoded
-export TURBO_STACK_ROOT=/glade/u/home/htorres/turbo_build_pr_tester/turbo-stack
-export MOM6_ROOT=/glade/u/home/htorres/turbo_build_pr_tester/MOM6
-export TIM_ROOT=/glade/u/home/htorres/turbo_build_pr_tester/TIM
-export FMS_ROOT=/glade/u/home/htorres/turbo_build_pr_tester/FMS
-#############################################################################
 
 debug=false
 infra=""
