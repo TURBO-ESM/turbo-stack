@@ -311,9 +311,6 @@ cd ${BLD_PATH}
 mkdir -p ${INFRA}
 cd ${INFRA}
 ${MKMF_ROOT}/list_paths ${INFRA_ROOT}
-# We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -o "${INFRA_INCLUDE_FLAGS}" -l "${INFRA_LINKING_FLAGS}" -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
 
