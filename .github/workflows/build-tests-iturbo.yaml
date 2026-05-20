@@ -37,11 +37,11 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
-     - name: Switch MOM6 to dev/turbo-debug
-       run: |
-         cd submodules/MOM6/
-         git checkout dev/turbo-debug
-         cd ../..
+      - name: Switch MOM6 to dev/turbo-debug
+        run: |
+          cd submodules/MOM6/
+          git checkout dev/turbo-debug
+          cd ../..
 
       - name: Interrogate Runtime Environment
         run: |
