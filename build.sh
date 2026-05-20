@@ -5,7 +5,6 @@ ROOTDIR=$(pwd -P)
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
-SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
 INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit

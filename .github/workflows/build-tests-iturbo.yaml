@@ -40,7 +40,10 @@ jobs:
       - name: Switch MOM6 to dev/turbo-debug
         run: |
           cd submodules/MOM6/
-          git checkout dev/turbo-debug
+          git fetch origin
+          git checkout --recurse-submodules dev/turbo-debug
+          echo "Head of dev/turbo-debug is this commit:"
+          git log --oneline --decorate | head -n 1
           cd ../..
 
       - name: Interrogate Runtime Environment
