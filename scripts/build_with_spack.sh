@@ -2,9 +2,9 @@
 # Usage: ./scripts/build_with_spack.sh [options]
 #
 # One-command build for the Spack flavor: sources
-# scripts/setup_environment/spack_local_environment.sh, optionally builds TIM from source
-# (when --infra TIM, since spack does not package TIM), then calls
-# scripts/build_turbo_stack.sh to configure, build, and test.
+# scripts/setup_environment/spack_local_environment.sh, optionally builds TIM
+# from source via build_dep (when --infra TIM, since spack does not package
+# TIM), then calls scripts/build_turbo_stack.sh to configure, build, and test.
 #
 # For the modules + from-source flavor (e.g. Derecho), source the appropriate
 # scripts/setup_environment/<machine>.sh manually and call
@@ -19,12 +19,12 @@
 #   --ninja                 Use Ninja generator (passed through)
 #   --build_dir DIR         Build directory (passed through)
 #   --infra FMS2|TIM        Infrastructure backend (passed through).  For TIM,
-#                           this script also sources build_dependencies_from_source.sh
-#                           --only tim, since spack does not provide TIM.
+#                           this script also calls `build_dep tim` since spack
+#                           does not provide TIM.
 #   --parallel N, -j N      Parallel build jobs.  Forwarded as --parallel N to
-#                           the deps step (when --infra TIM) and to the
-#                           turbo-stack build step.  Defaults to serial in both
-#                           child scripts when omitted.
+#                           the TIM build_dep call (when --infra TIM) and to
+#                           the turbo-stack build step.  Defaults to serial in
+#                           both when omitted.
 #   --recreate-spack-env    Delete and recreate the Spack env from scratch
 #
 # Examples:
@@ -68,10 +68,15 @@ source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" 
 
 # --- Stage 1b: TIM is not in spack -- build from source when requested ---
 if [[ "$infra" == "TIM" ]]; then
-    deps_args=(--only tim)
-    [[ -n "$parallel" ]] && deps_args+=(--parallel "$parallel")
     # shellcheck source=/dev/null
-    source "$TURBO_STACK_ROOT/scripts/build_dependencies_from_source.sh" "${deps_args[@]}"
+    source "$TURBO_STACK_ROOT/scripts/build_dep.sh"
+    tim_parallel_args=()
+    [[ -n "$parallel" ]] && tim_parallel_args=(--parallel "$parallel")
+    build_dep tim \
+        --build-dir "$TURBO_STACK_ROOT/deps/default/build/tim" \
+        --install-prefix "$TURBO_STACK_ROOT/deps/default/install" \
+        "${tim_parallel_args[@]}" \
+        -- -D64BIT=ON -D32BIT=OFF
 fi
 
 # --- Stage 2: configure + build + test -----------------------------------

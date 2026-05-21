@@ -95,22 +95,9 @@ build_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-build"
 
 # Helpers -------------------------------------------------------------------------------
 
-# Idempotent fetch-or-clone.  If $dest already has a git checkout, fetch the
-# requested branch and hard-reset to origin/<branch> (this is a PR tester, not
-# a dev tree -- we always want exactly origin's state).  Otherwise clone fresh.
-_clone_or_update() {
-    local repo_url="$1" branch="$2" dest="$3"
-    if [[ -d "$dest/.git" ]]; then
-        echo "[clone_or_update] $dest exists -- fetching and resetting to origin/$branch"
-        git -C "$dest" fetch origin "$branch"
-        git -C "$dest" checkout -B "$branch" "origin/$branch"
-        git -C "$dest" reset --hard "origin/$branch"
-        git -C "$dest" submodule update --init --recursive --force
-    else
-        echo "[clone_or_update] cloning $repo_url ($branch) into $dest"
-        git clone --branch "$branch" --recurse-submodules -- "$repo_url" "$dest"
-    fi
-}
+# Source the fetch_source library; clone-or-update logic now lives there.
+# shellcheck source=/dev/null
+source "$TURBO_STACK_ROOT/scripts/fetch_source.sh"
 
 # Optional clean step -------------------------------------------------------------------
 
@@ -143,24 +130,25 @@ mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" "$build_dir" "$log_dir" "$deps_that_over
 # Clone or update the override repos ----------------------------------------------------
 
 # MOM6 / TIM / FMS are PR branches not yet pinned by turbo-stack's submodules.
-# We can override their submodules by pulling the code we want to $deps_that_override_submodules_dir and exporting *_ROOT.
-# build_dependencies_from_source.sh will use these checkouts instead of the submodules.  *_ROOT must be set
-# BEFORE the env setup script runs, since build_dependencies_from_source.sh reads them at the top.
+# fetch_source pulls each into $deps_that_override_submodules_dir and exports
+# the matching <NAME>_ROOT, which downstream build_dep calls (in the env
+# script) and turbo-stack's CMakeLists.txt then pick up via the env-var
+# precedence layer.
 cd "$deps_that_override_submodules_dir"
 
 if [[ "$override_MOM6_submodule" == true ]]; then
-    export MOM6_ROOT="$deps_that_override_submodules_dir/MOM6"
-    _clone_or_update "$MOM6_REPO_URL" "$MOM6_BRANCH" "$MOM6_ROOT"
+    fetch_source --name MOM6 --url "$MOM6_REPO_URL" --branch "$MOM6_BRANCH" \
+                 --dest "$deps_that_override_submodules_dir/MOM6"
 fi
 
 if [[ "$override_TIM_submodule" == true ]]; then
-    export TIM_ROOT="$deps_that_override_submodules_dir/TIM"
-    _clone_or_update "$TIM_REPO_URL" "$TIM_BRANCH" "$TIM_ROOT"
+    fetch_source --name TIM --url "$TIM_REPO_URL" --branch "$TIM_BRANCH" \
+                 --dest "$deps_that_override_submodules_dir/TIM"
 fi
 
 if [[ "$override_FMS_submodule" == true ]]; then
-    export FMS_ROOT="$deps_that_override_submodules_dir/FMS"
-    _clone_or_update "$FMS_REPO_URL" "$FMS_BRANCH" "$FMS_ROOT"
+    fetch_source --name FMS --url "$FMS_REPO_URL" --branch "$FMS_BRANCH" \
+                 --dest "$deps_that_override_submodules_dir/FMS"
 fi
 
 # Record what we're testing -------------------------------------------------------------

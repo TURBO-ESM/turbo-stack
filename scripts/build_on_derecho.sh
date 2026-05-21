@@ -14,13 +14,12 @@
 # Options:
 #   --debug                 Full clean rebuild (passed through)
 #   --build_dir DIR         Build directory (passed through)
-#   --infra FMS2|TIM        Infrastructure backend (passed through).  For TIM,
-#                           this script also sources build_dependencies_from_source.sh
-#                           --only tim, since spack does not provide TIM.
-#   --parallel N, -j N      Parallel build jobs.  Forwarded as --parallel N to
-#                           both the deps step and the turbo-stack build step.
-#                           Defaults to serial in both child scripts when
-#                           omitted.
+#   --infra FMS2|TIM        Infrastructure backend (passed through to
+#                           build_turbo_stack.sh).
+#   --parallel N, -j N      Parallel build jobs.  Forwarded as TURBO_DEP_PARALLEL
+#                           to the env script's build_dep calls, and as
+#                           --parallel N to the turbo-stack build step.
+#                           Defaults to serial in both when omitted.
 #
 # Examples:
 #   build_on_derecho.sh                              # configure + build + test
@@ -50,13 +49,10 @@ if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
     exit 1
 fi
 
-# --- Stage 1: environment setup (Derecho) --------------------------------
+# --- Stage 1: environment setup + dependency builds (Derecho) -----------
+# Forward --parallel to the env script's build_dep calls via env var.
+[[ -n "$parallel" ]] && export TURBO_DEP_PARALLEL="$parallel"
 source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh"
-
-# --- Stage 1b: build dependencies from source... relies on modules being set up correctly to find the right compiler, MPI, NetCDF, etc. ---
-deps_args=()
-[[ -n "$parallel" ]] && deps_args+=(--parallel "$parallel")
-source "$TURBO_STACK_ROOT/scripts/build_dependencies_from_source.sh" "${deps_args[@]}" #--rebuild
 
 # --- Stage 2: configure + build + test -----------------------------------
 build_args=()

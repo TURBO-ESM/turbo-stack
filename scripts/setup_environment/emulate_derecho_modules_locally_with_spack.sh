@@ -4,14 +4,14 @@
 # SOURCED. Temporary driver that emulates a module-based machine (Derecho)
 # on the laptop. Uses spack ONLY for the parts that come from Lmod on
 # Derecho -- compiler, MPI, NetCDF, CMake. FMS, pFUnit, AMReX, and TIM are
-# built from source by scripts/build_dependencies_from_source.sh; MOM6
-# source comes from MOM6_ROOT (or submodule if unset).
+# built from source via build_dep; MOM6 source comes from $MOM6_ROOT
+# (or submodule if unset).
 #
-# Once scripts/setup_environment/derecho_cpu_gcc_openmpi.sh is verified against real Lmod modules,
-# delete this file and spack/derecho_modules_emulation_with_spack.yaml.
+# Once scripts/setup_environment/derecho_cpu_gcc_openmpi.sh is verified against
+# real Lmod modules, delete this file and spack/derecho_modules_emulation_with_spack.yaml.
 #
 # Usage:
-#   source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh [build_dependencies_from_source.sh args]
+#   source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
 
 if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
     echo "Error: TURBO_STACK_ROOT is not set." >&2
@@ -48,7 +48,41 @@ fi
 
 unset _emu_env _emu_yaml
 
-# Build FMS + pFUnit + AMReX + TIM from source, set up MOM6_ROOT / TIM_ROOT,
-# export CMAKE_PREFIX_PATH and PFUNIT_DIR.
+# --- Dependency builds -------------------------------------------------
+# Build FMS / pFUnit / AMReX / TIM from source via build_dep.  Source for each
+# defaults to the submodule unless $<NAME>_ROOT is exported by the caller.
+_deps_root="$TURBO_STACK_ROOT/deps/default"
+_install_prefix="$_deps_root/install"
+_build_root="$_deps_root/build"
+
+_parallel_args=()
+[[ -n "${TURBO_DEP_PARALLEL:-}" ]] && _parallel_args=(--parallel "$TURBO_DEP_PARALLEL")
+
 # shellcheck source=/dev/null
-source "$TURBO_STACK_ROOT/scripts/build_dependencies_from_source.sh" "$@"
+source "$TURBO_STACK_ROOT/scripts/build_dep.sh"
+
+build_dep fms \
+    --build-dir "$_build_root/fms" \
+    --install-prefix "$_install_prefix" \
+    "${_parallel_args[@]}" \
+    -- -D64BIT=ON -D32BIT=OFF -DFPIC=ON -DOPENMP=OFF
+
+build_dep pfunit \
+    --build-dir "$_build_root/pfunit" \
+    --install-prefix "$_install_prefix" \
+    "${_parallel_args[@]}" \
+    -- -DSKIP_MPI=NO -DSKIP_ESMF=YES -DENABLE_TESTS=OFF
+
+build_dep amrex \
+    --build-dir "$_build_root/amrex" \
+    --install-prefix "$_install_prefix" \
+    "${_parallel_args[@]}" \
+    -- -DAMReX_FORTRAN=ON -DAMReX_FORTRAN_INTERFACES=ON -DAMReX_MPI=ON
+
+build_dep tim \
+    --build-dir "$_build_root/tim" \
+    --install-prefix "$_install_prefix" \
+    "${_parallel_args[@]}" \
+    -- -D64BIT=ON -D32BIT=OFF
+
+unset _deps_root _install_prefix _build_root _parallel_args
