@@ -51,9 +51,13 @@ unset _emu_env _emu_yaml
 # --- Dependency builds -------------------------------------------------
 # Build FMS / pFUnit / AMReX / TIM from source via build_dep.  Source for each
 # defaults to the submodule unless $<NAME>_ROOT is exported by the caller.
-_deps_root="$TURBO_STACK_ROOT/deps/default"
-_install_prefix="$_deps_root/install"
-_build_root="$_deps_root/build"
+#
+# Where the deps land: default is inside the turbo-stack source tree at
+# deps/default; callers can override TURBO_DEPS_ROOT to redirect builds into
+# an ephemeral scratch dir (the PR-test driver does this).
+: "${TURBO_DEPS_ROOT:=$TURBO_STACK_ROOT/deps/default}"
+_install_prefix="$TURBO_DEPS_ROOT/install"
+_build_root="$TURBO_DEPS_ROOT/build"
 
 _parallel_args=()
 [[ -n "${TURBO_DEP_PARALLEL:-}" ]] && _parallel_args=(--parallel "$TURBO_DEP_PARALLEL")
@@ -85,4 +89,4 @@ build_dep tim \
     "${_parallel_args[@]}" \
     -- -D64BIT=ON -D32BIT=OFF
 
-unset _deps_root _install_prefix _build_root _parallel_args
+unset _install_prefix _build_root _parallel_args

@@ -5,18 +5,21 @@
 # against the new-build-system PR branches in MOM6 / TIM / FMS.  Trusts the
 # caller to have turbo-stack already checked out at the branch and state they
 # want tested -- the script does NOT pull, switch branches, or update
-# submodules under $TURBO_STACK_ROOT.
+# submodules under $TURBO_STACK_ROOT.  All artifacts (fetched source clones,
+# dep cmake builds + installs, turbo-stack builds, logs) land under
+# $TURBO_BUILD_SYSTEM_TEST_DIR; nothing is written into $TURBO_STACK_ROOT.
 #
 # Options:
 #   --only FMS2|TIM       Run only the named flavor (default: both)
 #   --parallel N, -j N    Parallel build jobs, forwarded to build_on_derecho.sh
 #                         (default: 128 -- one full Derecho compute node)
-#   --clean               Before doing anything else, rm -rf the override repo
-#                         clones (MOM6 / TIM / FMS), turbo-stack's build/ and
-#                         deps/ directories, and the per-flavor logs.  Forces a
-#                         from-scratch run.  Without --clean, existing override
-#                         clones are fetched + reset to origin/<branch>
-#                         (idempotent).
+#   --clean               Before doing anything else, rm -rf all artifacts
+#                         under $TURBO_BUILD_SYSTEM_TEST_DIR (override clones,
+#                         turbo-stack build dirs, dep cmake builds + installs,
+#                         logs).  Forces a from-scratch run.  Without --clean,
+#                         existing override clones are fetched + reset to
+#                         origin/<branch> (idempotent), and dep installs are
+#                         reused via build_dep's sentinel-skip.
 #
 # Configuration (env vars; export before invoking, or pass inline as `VAR=val ./script.sh`):
 #
@@ -117,7 +120,13 @@ log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 # *_ROOT is set.
 deps_that_override_submodules_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
 
-# Where we will build turbo-stack.  
+# Where the from-source dep cmake builds and installs land.  Redirects the env
+# script's TURBO_DEPS_ROOT default ($TURBO_STACK_ROOT/deps/default, which would
+# pollute the source repo) into the ephemeral test dir.  Exported below so the
+# env script (sourced via build_on_derecho.sh) picks it up.
+export TURBO_DEPS_ROOT="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-deps"
+
+# Where we will build turbo-stack.
 build_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-build"
 
 # Helpers -------------------------------------------------------------------------------
@@ -141,10 +150,9 @@ if [[ "$clean" == true ]]; then
         esac
     done
     echo "[--clean] removing override clones, prior build artifacts, and logs"
-    # Note: $TURBO_STACK_ROOT/deps is where deps built from submodules land.
     rm -rf "$build_dir" \
            "$deps_that_override_submodules_dir" \
-           "$TURBO_STACK_ROOT/deps" \
+           "$TURBO_DEPS_ROOT" \
            "$log_dir"
 fi
 
@@ -152,7 +160,11 @@ fi
 
 # Both mkdirs are idempotent.  Placed after --clean so the safety guard above
 # has already vetted $TURBO_BUILD_SYSTEM_TEST_DIR before we touch the filesystem.
-mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" "$build_dir" "$log_dir" "$deps_that_override_submodules_dir"
+mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" \
+         "$build_dir" \
+         "$log_dir" \
+         "$deps_that_override_submodules_dir" \
+         "$TURBO_DEPS_ROOT"
 
 # Clone or update the override repos ----------------------------------------------------
 

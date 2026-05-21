@@ -70,11 +70,14 @@ source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" 
 if [[ "$infra" == "TIM" ]]; then
     # shellcheck source=/dev/null
     source "$TURBO_STACK_ROOT/scripts/build_dep.sh"
+    # Same TURBO_DEPS_ROOT default as the per-machine env scripts -- callers can
+    # override this to redirect TIM's build + install into a scratch dir.
+    : "${TURBO_DEPS_ROOT:=$TURBO_STACK_ROOT/deps/default}"
     tim_parallel_args=()
     [[ -n "$parallel" ]] && tim_parallel_args=(--parallel "$parallel")
     build_dep tim \
-        --build-dir "$TURBO_STACK_ROOT/deps/default/build/tim" \
-        --install-prefix "$TURBO_STACK_ROOT/deps/default/install" \
+        --build-dir "$TURBO_DEPS_ROOT/build/tim" \
+        --install-prefix "$TURBO_DEPS_ROOT/install" \
         "${tim_parallel_args[@]}" \
         -- -D64BIT=ON -D32BIT=OFF
 fi

@@ -16,9 +16,12 @@ module load gcc cmake openmpi netcdf #pfunit
 export LIBRARY_PATH=/glade/u/apps/common/25.10/spack/opt/spack/gcc/14.3.0/nw2m/lib64:$LIBRARY_PATH
 
 # --- Dependency builds -------------------------------------------------
-_deps_root="$TURBO_STACK_ROOT/deps/default"
-_install_prefix="$_deps_root/install"
-_build_root="$_deps_root/build"
+# Where the from-source deps build and install.  Default lands inside the
+# turbo-stack source tree at deps/default; callers (e.g. the PR-test driver)
+# can override TURBO_DEPS_ROOT to redirect builds into an ephemeral scratch dir.
+: "${TURBO_DEPS_ROOT:=$TURBO_STACK_ROOT/deps/default}"
+_install_prefix="$TURBO_DEPS_ROOT/install"
+_build_root="$TURBO_DEPS_ROOT/build"
 
 # Forward --parallel from the orchestrator if it set TURBO_DEP_PARALLEL.
 _parallel_args=()
@@ -50,4 +53,4 @@ build_dep tim \
     "${_parallel_args[@]}" \
     -- -D64BIT=ON -D32BIT=OFF
 
-unset _deps_root _install_prefix _build_root _parallel_args
+unset _install_prefix _build_root _parallel_args
