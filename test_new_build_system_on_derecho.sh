@@ -21,7 +21,8 @@
 # Configuration:
 #   TURBO_STACK_ROOT      Path to turbo-stack clone (required, no default)
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Where override clones, build artifacts, and per-flavor
-#                         logs live (default: $TMPDIR/turbo_build_pr_tester)
+#                         logs live (default: $TMPDIR/turbo_build_system_test,
+#                         or /tmp if $TMPDIR is unset).
 
 set -euo pipefail
 
@@ -76,7 +77,7 @@ FMS_BRANCH="192-feature-cmake-build-system-for-FMS"
 
 # `:=` applies the default for TURBO_BUILD_SYSTEM_TEST_DIR when unset OR empty, so the
 # result is always non-empty.  TURBO_STACK_ROOT is required and validated above.
-: "${TURBO_BUILD_SYSTEM_TEST_DIR:=$TMPDIR/turbo_build_pr_tester}"
+: "${TURBO_BUILD_SYSTEM_TEST_DIR:=${TMPDIR:-/tmp}/turbo_build_system_test}"
 export TURBO_BUILD_SYSTEM_TEST_DIR
 
 # Per-flavor build logs land here.  Overwritten on each run; copy them aside if
@@ -115,8 +116,8 @@ _clone_or_update() {
 
 if [[ "$clean" == true ]]; then
     # Sanity-check the paths before rm -rf -- we own these locations by
-    # construction (config-section defaults are under $HOME), but a caller
-    # could plausibly export TURBO_BUILD_SYSTEM_TEST_DIR=/ by accident.
+    # construction (default is under $TMPDIR), but a caller could plausibly
+    # export TURBO_BUILD_SYSTEM_TEST_DIR=/ by accident.
     for d in "$TURBO_BUILD_SYSTEM_TEST_DIR" "$TURBO_STACK_ROOT"; do
         case "$d" in
             "" | / | "$HOME")
@@ -126,9 +127,10 @@ if [[ "$clean" == true ]]; then
         esac
     done
     echo "[--clean] removing override clones, prior build artifacts, and logs"
+    # Note: $TURBO_STACK_ROOT/deps is where deps built from submodules land.
     rm -rf "$build_dir" \
            "$deps_that_override_submodules_dir" \
-           "$TURBO_STACK_ROOT/deps" \                  # where deps build from submodules go
+           "$TURBO_STACK_ROOT/deps" \
            "$log_dir"
 fi
 
@@ -205,11 +207,11 @@ if [[ "$run_fms2" == true ]]; then
 fi
 
 if [[ "$run_tim" == true ]]; then
-    build_dir="$build_dir/turbo-stack-with-TIM"
+    tim_build_dir="$build_dir/turbo-stack-with-TIM"
     echo
-    echo "=== TIM build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $build_dir) ==="
+    echo "=== TIM build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $tim_build_dir) ==="
     "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra TIM \
-                                                    --build_dir "$build_dir" \
+                                                    --build_dir "$tim_build_dir" \
                                                     --parallel "$jobs" 2>&1 \
                                                     | tee "$log_dir/turbo-stack-with-TIM.log"
     tim_rc=${PIPESTATUS[0]}
