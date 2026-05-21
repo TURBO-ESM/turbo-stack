@@ -120,13 +120,12 @@ log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 # *_ROOT is set.
 deps_that_override_submodules_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
 
-# Where the from-source dep cmake builds and installs land.  Redirects the env
-# script's TURBO_DEPS_ROOT default ($TURBO_STACK_ROOT/deps/default, which would
-# pollute the source repo) into the ephemeral test dir.  Exported below so the
-# env script (sourced via build_on_derecho.sh) picks it up.
-export TURBO_DEPS_ROOT="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-deps"
-
-# Where we will build turbo-stack.
+# Where we will build turbo-stack.  Each per-flavor block below exports a
+# different TURBO_DEPS_ROOT pointing at a `deps/` subdir under its own
+# $build_dir, so FMS2 and TIM build + install isolated copies of FMS / pFUnit /
+# AMReX / TIM rather than sharing one install tree.  The env script's
+# `: "${TURBO_DEPS_ROOT:=...}"` default never fires here because the
+# per-flavor export wins.
 build_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-build"
 
 # Helpers -------------------------------------------------------------------------------
@@ -150,9 +149,10 @@ if [[ "$clean" == true ]]; then
         esac
     done
     echo "[--clean] removing override clones, prior build artifacts, and logs"
+    # $build_dir contains per-flavor turbo-stack-with-*/deps/ subtrees, so
+    # wiping $build_dir also wipes the from-source dep installs.
     rm -rf "$build_dir" \
            "$deps_that_override_submodules_dir" \
-           "$TURBO_DEPS_ROOT" \
            "$log_dir"
 fi
 
@@ -163,8 +163,7 @@ fi
 mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" \
          "$build_dir" \
          "$log_dir" \
-         "$deps_that_override_submodules_dir" \
-         "$TURBO_DEPS_ROOT"
+         "$deps_that_override_submodules_dir"
 
 # Clone or update the override repos ----------------------------------------------------
 
@@ -223,6 +222,7 @@ set +e
 
 if [[ "$run_fms2" == true ]]; then
     fms_build_dir="$build_dir/turbo-stack-with-FMS2"
+    export TURBO_DEPS_ROOT="$fms_build_dir/deps"
     echo
     echo "=== FMS2 build starting at $(date) (log: $log_dir/turbo-stack-with-FMS2.log, build dir: $fms_build_dir) ==="
     "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra FMS2 \
@@ -235,6 +235,7 @@ fi
 
 if [[ "$run_tim" == true ]]; then
     tim_build_dir="$build_dir/turbo-stack-with-TIM"
+    export TURBO_DEPS_ROOT="$tim_build_dir/deps"
     echo
     echo "=== TIM build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $tim_build_dir) ==="
     "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra TIM \
