@@ -63,20 +63,29 @@ run_tim=true
 
 # The branches of the dependencies we want to test -- these should be PR
 # branches that implement the new CMake build system, but are not yet pinned
-# by turbo-stack's submodules.  The script will clone or update these into
-# $deps_that_override_submodules_dir and set *_ROOT to point at them, so
-# build_dep (called from the env script) uses them instead of the submodules.
-# Could change this to point to other branches or forks if we want to test
-# other combinations of turbo-stack + dependency branches for other PRs.
-override_MOM6_submodule=true
+# by turbo-stack's submodules.  When the fetch_<NAME> flag below is true, the
+# script clones (or updates) into $deps_that_override_submodules_dir and sets
+# <NAME>_ROOT so build_dep (called from the env script) and turbo-stack's own
+# CMakeLists pick that source up instead of the submodule.
+#
+# Setting fetch_<NAME>=false here does NOT mean "use the submodule" -- it just
+# means "don't have this script clone." If the caller exports <NAME>_ROOT
+# before launching the script, that path still wins; the script just doesn't
+# overwrite it.  Use this when iterating against a local dev tree:
+#   export MOM6_ROOT=/path/to/local/MOM6
+#   fetch_MOM6=false ./test_new_build_system_on_derecho.sh   (after editing)
+#
+# Could change the branches/URLs below to point at other PRs or forks to test
+# other combinations of turbo-stack + dependency versions.
+fetch_MOM6=true
 MOM6_REPO_URL="https://github.com/TURBO-ESM/MOM6.git"
 MOM6_BRANCH="192-feature-cmake-build-system-for-MOM6"
 
-override_TIM_submodule=true
+fetch_TIM=true
 TIM_REPO_URL="https://github.com/TURBO-ESM/TIM.git"
 TIM_BRANCH="192-feature-cmake-build-system-for-TIM"
 
-override_FMS_submodule=true
+fetch_FMS=true
 FMS_REPO_URL="https://github.com/TURBO-ESM/FMS.git"
 FMS_BRANCH="192-feature-cmake-build-system-for-FMS"
 
@@ -143,17 +152,17 @@ mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" "$build_dir" "$log_dir" "$deps_that_over
 # precedence layer.
 cd "$deps_that_override_submodules_dir"
 
-if [[ "$override_MOM6_submodule" == true ]]; then
+if [[ "$fetch_MOM6" == true ]]; then
     fetch_source --name MOM6 --url "$MOM6_REPO_URL" --branch "$MOM6_BRANCH" \
                  --dest "$deps_that_override_submodules_dir/MOM6"
 fi
 
-if [[ "$override_TIM_submodule" == true ]]; then
+if [[ "$fetch_TIM" == true ]]; then
     fetch_source --name TIM --url "$TIM_REPO_URL" --branch "$TIM_BRANCH" \
                  --dest "$deps_that_override_submodules_dir/TIM"
 fi
 
-if [[ "$override_FMS_submodule" == true ]]; then
+if [[ "$fetch_FMS" == true ]]; then
     fetch_source --name FMS --url "$FMS_REPO_URL" --branch "$FMS_BRANCH" \
                  --dest "$deps_that_override_submodules_dir/FMS"
 fi
