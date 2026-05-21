@@ -4,7 +4,7 @@
 # personal machine.  Provides ONLY the parts that would come from Lmod
 # modules on Derecho (compiler, MPI, NetCDF, CMake, build tools) -- FMS,
 # pFUnit, AMReX, and TIM are intentionally absent so that
-# scripts/build_dependencies_from_source.sh exercises the same from-source path
+# scripts/build_dep.sh exercises the same from-source path
 # that will eventually run on Derecho.
 #
 # Once scripts/setup_environment/derecho_cpu_gcc_openmpi.sh is verified against real Lmod modules,

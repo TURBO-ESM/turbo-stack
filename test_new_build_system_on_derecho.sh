@@ -61,8 +61,13 @@ run_tim=true
 
 # Configuration -------------------------------------------------------------------------
 
-# The branches of the dependencies we want to test -- these should be PR branches that implement the new CMake build system, but are not yet pinned by turbo-stack's submodules.  The script will clone or update these into $deps_that_override_submodules_dir and set *_ROOT to point at them, so build_dependencies_from_source.sh uses them instead of the submodules. 
-# Could change this to point to other branches or forks if we want to test other combinations of turbo-stack + dependency branches for other PRs.
+# The branches of the dependencies we want to test -- these should be PR
+# branches that implement the new CMake build system, but are not yet pinned
+# by turbo-stack's submodules.  The script will clone or update these into
+# $deps_that_override_submodules_dir and set *_ROOT to point at them, so
+# build_dep (called from the env script) uses them instead of the submodules.
+# Could change this to point to other branches or forks if we want to test
+# other combinations of turbo-stack + dependency branches for other PRs.
 override_MOM6_submodule=true
 MOM6_REPO_URL="https://github.com/TURBO-ESM/MOM6.git"
 MOM6_BRANCH="192-feature-cmake-build-system-for-MOM6"
@@ -86,8 +91,10 @@ export TURBO_BUILD_SYSTEM_TEST_DIR
 # below before any filesystem state is created.
 log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 
-# Where the clones of the dependencies we will use inistead of the submodules from turbo-stack live.
-# These are populated by _clone_or_update below, and then build_dependencies_from_source.sh uses them instead of the submodules when *_ROOT is set.
+# Where the clones of the dependencies we will use instead of the submodules
+# from turbo-stack live.  These are populated by fetch_source below; build_dep
+# (called from the env script) then uses them instead of the submodules because
+# *_ROOT is set.
 deps_that_override_submodules_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
 
 # Where we will build turbo-stack.  

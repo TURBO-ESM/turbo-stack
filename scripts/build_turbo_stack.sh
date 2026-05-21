@@ -17,8 +17,9 @@
 #   --build_dir DIR     Build directory (default: $TURBO_STACK_ROOT/build/default)
 #   --infra FMS2|TIM    Infrastructure backend (default: FMS2). The chosen
 #                       backend must be discoverable via find_package on
-#                       CMAKE_PREFIX_PATH; build_dependencies_from_source.sh
-#                       handles that for from-source flavors.
+#                       CMAKE_PREFIX_PATH; build_dep.sh (called from the
+#                       per-machine env script) handles that for from-source
+#                       flavors.
 #   --parallel N, -j N  Parallel build jobs for `cmake --build` (default: 1).
 #                       Pass an explicit N to parallelize.  The default stays
 #                       serial because `nproc` over-reports on shared login
