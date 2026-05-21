@@ -20,8 +20,8 @@
 #
 # Configuration:
 #   TURBO_STACK_ROOT      Path to turbo-stack clone (required, no default)
-#   TURBO_BUILD_TEST_DIR  Where override clones, build artifacts, and per-flavor
-#                         logs live (default: $HOME/turbo_build_pr_tester)
+#   TURBO_BUILD_SYSTEM_TEST_DIR  Where override clones, build artifacts, and per-flavor
+#                         logs live (default: $TMPDIR/turbo_build_pr_tester)
 
 set -euo pipefail
 
@@ -60,22 +60,37 @@ run_tim=true
 
 # Configuration -------------------------------------------------------------------------
 
-# `:=` applies the default for TURBO_BUILD_TEST_DIR when unset OR empty, so the
-# result is always non-empty.  TURBO_STACK_ROOT is required and validated above.
-: "${TURBO_BUILD_TEST_DIR:=$HOME/turbo_build_pr_tester}"
-export TURBO_BUILD_TEST_DIR
-
-# Branch names for each repo under test.  Centralized here so retargeting the
-# script at a different PR set is a one-block edit.
+# The branches of the dependencies we want to test -- these should be PR branches that implement the new CMake build system, but are not yet pinned by turbo-stack's submodules.  The script will clone or update these into $deps_that_override_submodules_dir and set *_ROOT to point at them, so build_dependencies_from_source.sh uses them instead of the submodules. 
+# Could change this to point to other branches or forks if we want to test other combinations of turbo-stack + dependency branches for other PRs.
+override_MOM6_submodule=true
+MOM6_REPO_URL="https://github.com/TURBO-ESM/MOM6.git"
 MOM6_BRANCH="192-feature-cmake-build-system-for-MOM6"
+
+override_TIM_submodule=true
+TIM_REPO_URL="https://github.com/TURBO-ESM/TIM.git"
 TIM_BRANCH="192-feature-cmake-build-system-for-TIM"
+
+override_FMS_submodule=true
+FMS_REPO_URL="https://github.com/TURBO-ESM/FMS.git"
 FMS_BRANCH="192-feature-cmake-build-system-for-FMS"
+
+# `:=` applies the default for TURBO_BUILD_SYSTEM_TEST_DIR when unset OR empty, so the
+# result is always non-empty.  TURBO_STACK_ROOT is required and validated above.
+: "${TURBO_BUILD_SYSTEM_TEST_DIR:=$TMPDIR/turbo_build_pr_tester}"
+export TURBO_BUILD_SYSTEM_TEST_DIR
 
 # Per-flavor build logs land here.  Overwritten on each run; copy them aside if
 # you need history across runs.  The actual mkdir happens after the optional
-# --clean step so a dangerous TURBO_BUILD_TEST_DIR triggers the safety guard
+# --clean step so a dangerous TURBO_BUILD_SYSTEM_TEST_DIR triggers the safety guard
 # below before any filesystem state is created.
-log_dir="$TURBO_BUILD_TEST_DIR/logs"
+log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
+
+# Where the clones of the dependencies we will use inistead of the submodules from turbo-stack live.
+# These are populated by _clone_or_update below, and then build_dependencies_from_source.sh uses them instead of the submodules when *_ROOT is set.
+deps_that_override_submodules_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
+
+# Where we will build turbo-stack.  
+build_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-build"
 
 # Helpers -------------------------------------------------------------------------------
 
@@ -101,8 +116,8 @@ _clone_or_update() {
 if [[ "$clean" == true ]]; then
     # Sanity-check the paths before rm -rf -- we own these locations by
     # construction (config-section defaults are under $HOME), but a caller
-    # could plausibly export TURBO_BUILD_TEST_DIR=/ by accident.
-    for d in "$TURBO_BUILD_TEST_DIR" "$TURBO_STACK_ROOT"; do
+    # could plausibly export TURBO_BUILD_SYSTEM_TEST_DIR=/ by accident.
+    for d in "$TURBO_BUILD_SYSTEM_TEST_DIR" "$TURBO_STACK_ROOT"; do
         case "$d" in
             "" | / | "$HOME")
                 echo "Refusing to --clean: '$d' is too broad." >&2
@@ -111,37 +126,40 @@ if [[ "$clean" == true ]]; then
         esac
     done
     echo "[--clean] removing override clones, prior build artifacts, and logs"
-    rm -rf "$TURBO_BUILD_TEST_DIR/MOM6" \
-           "$TURBO_BUILD_TEST_DIR/TIM" \
-           "$TURBO_BUILD_TEST_DIR/FMS" \
-           "$TURBO_STACK_ROOT/build" \
-           "$TURBO_STACK_ROOT/deps" \
+    rm -rf "$build_dir" \
+           "$deps_that_override_submodules_dir" \
+           "$TURBO_STACK_ROOT/deps" \                  # where deps build from submodules go
            "$log_dir"
 fi
 
 # Working-directory setup ---------------------------------------------------------------
 
 # Both mkdirs are idempotent.  Placed after --clean so the safety guard above
-# has already vetted $TURBO_BUILD_TEST_DIR before we touch the filesystem.
-mkdir -p "$TURBO_BUILD_TEST_DIR" "$log_dir"
+# has already vetted $TURBO_BUILD_SYSTEM_TEST_DIR before we touch the filesystem.
+mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" "$build_dir" "$log_dir" "$deps_that_override_submodules_dir"
 
 # Clone or update the override repos ----------------------------------------------------
 
 # MOM6 / TIM / FMS are PR branches not yet pinned by turbo-stack's submodules.
-# Pulling them into $TURBO_BUILD_TEST_DIR and exporting *_ROOT makes
-# build_dependencies_from_source.sh use these checkouts instead of the
-# submodules.  *_ROOT must be set BEFORE the env setup script runs, since
-# build_dependencies_from_source.sh reads them at the top.
-cd "$TURBO_BUILD_TEST_DIR"
+# We can override their submodules by pulling the code we want to $deps_that_override_submodules_dir and exporting *_ROOT.
+# build_dependencies_from_source.sh will use these checkouts instead of the submodules.  *_ROOT must be set
+# BEFORE the env setup script runs, since build_dependencies_from_source.sh reads them at the top.
+cd "$deps_that_override_submodules_dir"
 
-export MOM6_ROOT="$TURBO_BUILD_TEST_DIR/MOM6"
-_clone_or_update https://github.com/TURBO-ESM/MOM6.git "$MOM6_BRANCH" "$MOM6_ROOT"
+if [[ "$override_MOM6_submodule" == true ]]; then
+    export MOM6_ROOT="$deps_that_override_submodules_dir/MOM6"
+    _clone_or_update "$MOM6_REPO_URL" "$MOM6_BRANCH" "$MOM6_ROOT"
+fi
 
-export TIM_ROOT="$TURBO_BUILD_TEST_DIR/TIM"
-_clone_or_update https://github.com/TURBO-ESM/TIM.git "$TIM_BRANCH" "$TIM_ROOT"
+if [[ "$override_TIM_submodule" == true ]]; then
+    export TIM_ROOT="$deps_that_override_submodules_dir/TIM"
+    _clone_or_update "$TIM_REPO_URL" "$TIM_BRANCH" "$TIM_ROOT"
+fi
 
-export FMS_ROOT="$TURBO_BUILD_TEST_DIR/FMS"
-_clone_or_update https://github.com/TURBO-ESM/FMS.git "$FMS_BRANCH" "$FMS_ROOT"
+if [[ "$override_FMS_submodule" == true ]]; then
+    export FMS_ROOT="$deps_that_override_submodules_dir/FMS"
+    _clone_or_update "$FMS_REPO_URL" "$FMS_BRANCH" "$FMS_ROOT"
+fi
 
 # Record what we're testing -------------------------------------------------------------
 
@@ -175,19 +193,25 @@ tim_rc=0
 set +e
 
 if [[ "$run_fms2" == true ]]; then
+    fms_build_dir="$build_dir/turbo-stack-with-FMS2"
     echo
-    echo "=== FMS2 build starting at $(date) (log: $log_dir/fms2.log) ==="
-    "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra FMS2 --parallel "$jobs" 2>&1 \
-        | tee "$log_dir/fms2.log"
+    echo "=== FMS2 build starting at $(date) (log: $log_dir/turbo-stack-with-FMS2.log, build dir: $fms_build_dir) ==="
+    "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra FMS2 \
+                                                    --build_dir "$fms_build_dir" \
+                                                    --parallel "$jobs" 2>&1 \
+                                                    | tee "$log_dir/turbo-stack-with-FMS2.log"
     fms2_rc=${PIPESTATUS[0]}
     echo "=== FMS2 build finished at $(date) (exit $fms2_rc) ==="
 fi
 
 if [[ "$run_tim" == true ]]; then
+    build_dir="$build_dir/turbo-stack-with-TIM"
     echo
-    echo "=== TIM build starting at $(date) (log: $log_dir/tim.log) ==="
-    "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra TIM --parallel "$jobs" 2>&1 \
-        | tee "$log_dir/tim.log"
+    echo "=== TIM build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $build_dir) ==="
+    "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra TIM \
+                                                    --build_dir "$build_dir" \
+                                                    --parallel "$jobs" 2>&1 \
+                                                    | tee "$log_dir/turbo-stack-with-TIM.log"
     tim_rc=${PIPESTATUS[0]}
     echo "=== TIM build finished at $(date) (exit $tim_rc) ==="
 fi
@@ -211,8 +235,8 @@ echo
 echo "================================================================"
 echo "Build summary"
 echo "================================================================"
-_verdict "FMS2" "$run_fms2" "$fms2_rc"
-_verdict "TIM " "$run_tim"  "$tim_rc"
+_verdict "turbo-stack with FMS2" "$run_fms2" "$fms2_rc"
+_verdict "turbo-stack with TIM" "$run_tim"  "$tim_rc"
 echo "================================================================"
 
 # Propagate failure so the test script's own exit code is meaningful.
