@@ -18,11 +18,33 @@
 #                         clones are fetched + reset to origin/<branch>
 #                         (idempotent).
 #
-# Configuration:
-#   TURBO_STACK_ROOT      Path to turbo-stack clone (required, no default)
-#   TURBO_BUILD_SYSTEM_TEST_DIR  Where override clones, build artifacts, and per-flavor
-#                         logs live (default: $TMPDIR/turbo_build_system_test,
-#                         or /tmp if $TMPDIR is unset).
+# Configuration (env vars; export before invoking, or pass inline as `VAR=val ./script.sh`):
+#
+#   TURBO_STACK_ROOT             Path to turbo-stack clone.  Required, no default.
+#
+#   TURBO_BUILD_SYSTEM_TEST_DIR  Where override clones, build artifacts, and
+#                                per-flavor logs live.  Default:
+#                                $TMPDIR/turbo_build_system_test (or
+#                                /tmp/turbo_build_system_test if $TMPDIR is unset).
+#
+#   fetch_MOM6 / fetch_TIM / fetch_FMS
+#                                (default: true)  When true, this script clones
+#                                the configured PR branch into the override dir
+#                                and exports <NAME>_ROOT for downstream
+#                                build_dep calls.  Set to false to keep this
+#                                script out of the override dir entirely --
+#                                typically combined with an exported <NAME>_ROOT
+#                                pointing at a local dev tree.
+#
+#   MOM6_ROOT / TIM_ROOT / FMS_ROOT
+#                                Local checkouts to test against.  When set,
+#                                build_dep (called from the env script) and
+#                                turbo-stack's CMakeLists pick these up via the
+#                                env-var precedence layer.  Pair with
+#                                fetch_<NAME>=false to suppress this script's
+#                                clone step.  Example:
+#                                  fetch_MOM6=false MOM6_ROOT=$HOME/dev/MOM6 \
+#                                      ./test_new_build_system_on_derecho.sh
 
 set -euo pipefail
 
@@ -61,31 +83,20 @@ run_tim=true
 
 # Configuration -------------------------------------------------------------------------
 
-# The branches of the dependencies we want to test -- these should be PR
-# branches that implement the new CMake build system, but are not yet pinned
-# by turbo-stack's submodules.  When the fetch_<NAME> flag below is true, the
-# script clones (or updates) into $deps_that_override_submodules_dir and sets
-# <NAME>_ROOT so build_dep (called from the env script) and turbo-stack's own
-# CMakeLists pick that source up instead of the submodule.
-#
-# Setting fetch_<NAME>=false here does NOT mean "use the submodule" -- it just
-# means "don't have this script clone." If the caller exports <NAME>_ROOT
-# before launching the script, that path still wins; the script just doesn't
-# overwrite it.  Use this when iterating against a local dev tree:
-#   export MOM6_ROOT=/path/to/local/MOM6
-#   fetch_MOM6=false ./test_new_build_system_on_derecho.sh   (after editing)
-#
-# Could change the branches/URLs below to point at other PRs or forks to test
-# other combinations of turbo-stack + dependency versions.
-fetch_MOM6=true
+# URLs and branches for each fetched dep.  These should be the PR branches that
+# implement the new CMake build system but are not yet pinned by turbo-stack's
+# submodules.  Edit to point at other PRs / forks when testing different
+# combinations.  The fetch_<NAME> defaults below use `:=` so callers can flip
+# them off without editing this file (see header for examples).
+: "${fetch_MOM6:=true}"
 MOM6_REPO_URL="https://github.com/TURBO-ESM/MOM6.git"
 MOM6_BRANCH="192-feature-cmake-build-system-for-MOM6"
 
-fetch_TIM=true
+: "${fetch_TIM:=true}"
 TIM_REPO_URL="https://github.com/TURBO-ESM/TIM.git"
 TIM_BRANCH="192-feature-cmake-build-system-for-TIM"
 
-fetch_FMS=true
+: "${fetch_FMS:=true}"
 FMS_REPO_URL="https://github.com/TURBO-ESM/FMS.git"
 FMS_BRANCH="192-feature-cmake-build-system-for-FMS"
 
