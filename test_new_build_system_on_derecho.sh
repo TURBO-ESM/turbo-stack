@@ -11,8 +11,11 @@
 #
 # Options:
 #   --only FMS2|TIM       Run only the named flavor (default: both)
-#   --parallel N, -j N    Parallel build jobs, forwarded to build_on_derecho.sh
-#                         (default: 128 -- one full Derecho compute node)
+#   --parallel N, -j N    Parallel build jobs, exported as
+#                         CMAKE_BUILD_PARALLEL_LEVEL for every downstream
+#                         `cmake --build` invocation (deps + both
+#                         turbo-stack flavors).  Default: 128 (one full
+#                         Derecho compute node).
 #   --clean               Before doing anything else, rm -rf all artifacts
 #                         under $TURBO_BUILD_SYSTEM_TEST_DIR (override clones,
 #                         turbo-stack build dirs, dep cmake builds + installs,
@@ -120,12 +123,17 @@ log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 # *_ROOT is set.
 deps_that_override_submodules_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
 
-# Where we will build turbo-stack.  Each per-flavor block below passes its own
-# --build_dir to build_on_derecho.sh; the orchestrator auto-derives the dep
-# cmake build + install root as $build_dir/deps, so FMS2 and TIM build +
-# install isolated copies of FMS / pFUnit / AMReX / TIM rather than sharing
-# one install tree.
+# Where we will build turbo-stack.  Each per-flavor block below points its own
+# --build_dir at a subdir under here.
 build_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-build"
+
+# Where the from-source deps (FMS / pFUnit / AMReX / TIM) build + install.
+# Shared across both flavors: the env script is sourced ONCE with this path,
+# deps build once, and both turbo-stack-build flavors find them via the
+# CMAKE_PREFIX_PATH the env script appends.  The deps don't depend on
+# TURBO_INFRA, so sharing is safe -- the second flavor's cmake config picks
+# the same install tree and the build_dep sentinel-skip avoids a rebuild.
+shared_deps_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/shared-deps"
 
 # Helpers -------------------------------------------------------------------------------
 
@@ -147,10 +155,9 @@ if [[ "$clean" == true ]]; then
                 ;;
         esac
     done
-    echo "[--clean] removing override clones, prior build artifacts, and logs"
-    # $build_dir contains per-flavor turbo-stack-with-*/deps/ subtrees, so
-    # wiping $build_dir also wipes the from-source dep installs.
+    echo "[--clean] removing override clones, prior build artifacts, deps, and logs"
     rm -rf "$build_dir" \
+           "$shared_deps_dir" \
            "$deps_that_override_submodules_dir" \
            "$log_dir"
 fi
@@ -161,6 +168,7 @@ fi
 # has already vetted $TURBO_BUILD_SYSTEM_TEST_DIR before we touch the filesystem.
 mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" \
          "$build_dir" \
+         "$shared_deps_dir" \
          "$log_dir" \
          "$deps_that_override_submodules_dir"
 
@@ -210,40 +218,55 @@ _print_version "TIM"         "$TIM_ROOT"
 _print_version "FMS"         "$FMS_ROOT"
 echo "================================================================"
 
-# Run the build and test script ---------------------------------------------------------
+# Build shared deps once ----------------------------------------------------------------
+
+# Set CMAKE_BUILD_PARALLEL_LEVEL before sourcing the env script -- cmake reads
+# it natively in every downstream `cmake --build` invocation (both the dep
+# builds and the per-flavor turbo-stack builds below).  No --parallel plumbing
+# needed past this point.
+export CMAKE_BUILD_PARALLEL_LEVEL="$jobs"
+
+# Source the env script ONCE.  It loads modules, then builds + installs
+# FMS / pFUnit / AMReX / TIM into $shared_deps_dir and appends the install
+# prefix to CMAKE_PREFIX_PATH.  Both flavors below find the deps that way --
+# no rebuild between flavors.  set -e is intentionally still active here:
+# any failure (modules, dep build) bails the whole test driver.
+echo
+echo "=== Shared deps build starting at $(date) (deps_build_root: $shared_deps_dir) ==="
+# shellcheck source=/dev/null
+source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh" \
+    --deps-build-root "$shared_deps_dir"
+echo "=== Shared deps build finished at $(date) ==="
+
+# Run each flavor's turbo-stack build -----------------------------------------------------
 
 # Drop `set -e` around the build invocations so a failure in one flavor doesn't
 # skip the other.  Capture each build's exit code via ${PIPESTATUS[0]} -- the
-# leftmost command in the pipe (build_on_derecho.sh), not tee's exit code.
+# leftmost command in the pipe (build_turbo_stack.sh), not tee's exit code.
 fms2_rc=0
 tim_rc=0
 set +e
 
-# Set CMAKE_BUILD_PARALLEL_LEVEL once for both flavors -- cmake reads it
-# natively in every downstream `cmake --build` invocation.  No --parallel
-# plumbing needed past this point.
-export CMAKE_BUILD_PARALLEL_LEVEL="$jobs"
-
 if [[ "$run_fms2" == true ]]; then
     fms_build_dir="$build_dir/turbo-stack-with-FMS2"
     echo
-    echo "=== FMS2 build starting at $(date) (log: $log_dir/turbo-stack-with-FMS2.log, build dir: $fms_build_dir) ==="
-    "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra FMS2 \
-                                                    --build_dir "$fms_build_dir" 2>&1 \
-                                                    | tee "$log_dir/turbo-stack-with-FMS2.log"
+    echo "=== FMS2 turbo-stack build starting at $(date) (log: $log_dir/turbo-stack-with-FMS2.log, build dir: $fms_build_dir) ==="
+    bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" --infra FMS2 \
+                                                           --build_dir "$fms_build_dir" 2>&1 \
+                                                           | tee "$log_dir/turbo-stack-with-FMS2.log"
     fms2_rc=${PIPESTATUS[0]}
-    echo "=== FMS2 build finished at $(date) (exit $fms2_rc) ==="
+    echo "=== FMS2 turbo-stack build finished at $(date) (exit $fms2_rc) ==="
 fi
 
 if [[ "$run_tim" == true ]]; then
     tim_build_dir="$build_dir/turbo-stack-with-TIM"
     echo
-    echo "=== TIM build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $tim_build_dir) ==="
-    "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra TIM \
-                                                    --build_dir "$tim_build_dir" 2>&1 \
-                                                    | tee "$log_dir/turbo-stack-with-TIM.log"
+    echo "=== TIM turbo-stack build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $tim_build_dir) ==="
+    bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" --infra TIM \
+                                                          --build_dir "$tim_build_dir" 2>&1 \
+                                                          | tee "$log_dir/turbo-stack-with-TIM.log"
     tim_rc=${PIPESTATUS[0]}
-    echo "=== TIM build finished at $(date) (exit $tim_rc) ==="
+    echo "=== TIM turbo-stack build finished at $(date) (exit $tim_rc) ==="
 fi
 
 set -e
