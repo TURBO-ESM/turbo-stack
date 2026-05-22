@@ -23,34 +23,28 @@ export LIBRARY_PATH=/glade/u/apps/common/25.10/spack/opt/spack/gcc/14.3.0/nw2m/l
 _install_prefix="$TURBO_DEPS_ROOT/install"
 _build_root="$TURBO_DEPS_ROOT/build"
 
-# Forward --parallel from the orchestrator if it set TURBO_DEP_PARALLEL.
-_parallel_args=()
-[[ -n "${TURBO_DEP_PARALLEL:-}" ]] && _parallel_args=(--parallel "$TURBO_DEP_PARALLEL")
-
+# Parallelism is governed by $CMAKE_BUILD_PARALLEL_LEVEL (set by the
+# orchestrator).  cmake --build reads it natively -- no plumbing needed here.
 source "$TURBO_STACK_ROOT/scripts/build_dep.sh"
 
 build_dep fms \
     --build-dir "$_build_root/fms" \
     --install-prefix "$_install_prefix" \
-    "${_parallel_args[@]}" \
     -- -D64BIT=ON -D32BIT=OFF -DFPIC=ON -DOPENMP=OFF
 
 build_dep pfunit \
     --build-dir "$_build_root/pfunit" \
     --install-prefix "$_install_prefix" \
-    "${_parallel_args[@]}" \
     -- -DSKIP_MPI=NO -DSKIP_ESMF=YES -DENABLE_TESTS=OFF
 
 build_dep amrex \
     --build-dir "$_build_root/amrex" \
     --install-prefix "$_install_prefix" \
-    "${_parallel_args[@]}" \
     -- -DAMReX_FORTRAN=ON -DAMReX_FORTRAN_INTERFACES=ON -DAMReX_MPI=ON
 
 build_dep tim \
     --build-dir "$_build_root/tim" \
     --install-prefix "$_install_prefix" \
-    "${_parallel_args[@]}" \
     -- -D64BIT=ON -D32BIT=OFF
 
-unset _install_prefix _build_root _parallel_args
+unset _install_prefix _build_root

@@ -20,12 +20,12 @@
 #                       CMAKE_PREFIX_PATH; build_dep.sh (called from the
 #                       per-machine env script) handles that for from-source
 #                       flavors.
-#   --parallel N, -j N  Parallel build jobs for `cmake --build` (default: 1).
-#                       Pass an explicit N to parallelize.  The default stays
-#                       serial because `nproc` over-reports on shared login
-#                       nodes and on PBS/SLURM allocations that don't pin
-#                       cpusets -- caller knows the right value, this script
-#                       doesn't.
+#   --parallel N, -j N  Parallel build jobs for `cmake --build`.  When omitted,
+#                       cmake reads $CMAKE_BUILD_PARALLEL_LEVEL as its own
+#                       native default (and falls back to the generator's
+#                       default if neither is set: 1 for Make, nproc for Ninja).
+#                       Orchestrators set CMAKE_BUILD_PARALLEL_LEVEL once for
+#                       the whole pipeline; --parallel is for per-call override.
 #   --                  End of options to this script.  Anything after `--` is
 #                       appended verbatim to `cmake --build`, e.g.
 #                         ... -- -v                 (cmake's own --verbose)
@@ -47,7 +47,7 @@ build_type="Release"
 debug=false
 ninja=false
 infra=""
-parallel="1"
+parallel=""
 
 # Command line argument parsing
 while [[ $# -gt 0 ]]; do
@@ -84,8 +84,11 @@ fi
 
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 
-# Build the code.
-cmake_build_options=("--parallel" "$parallel")
+# Build the code.  Pass --parallel only when the caller set it; otherwise
+# cmake reads CMAKE_BUILD_PARALLEL_LEVEL (or falls back to the generator's
+# default).
+cmake_build_options=()
+[[ -n "$parallel" ]] && cmake_build_options+=("--parallel" "$parallel")
 if [[ "$debug" == true ]]; then
     cmake_build_options+=("--clean-first")
 fi

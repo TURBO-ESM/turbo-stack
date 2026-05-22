@@ -16,10 +16,12 @@
 #   --build_dir DIR         Build directory (passed through)
 #   --infra FMS2|TIM        Infrastructure backend (passed through to
 #                           build_turbo_stack.sh).
-#   --parallel N, -j N      Parallel build jobs.  Forwarded as TURBO_DEP_PARALLEL
-#                           to the env script's build_dep calls, and as
-#                           --parallel N to the turbo-stack build step.
-#                           Defaults to serial in both when omitted.
+#   --parallel N, -j N      Parallel build jobs.  Exported as
+#                           CMAKE_BUILD_PARALLEL_LEVEL so every downstream
+#                           `cmake --build` invocation (deps + turbo-stack)
+#                           picks it up natively, without any flag plumbing.
+#                           When omitted, cmake's own defaults apply (1 for
+#                           Make, nproc for Ninja).
 #
 # Examples:
 #   build_on_derecho.sh                              # configure + build + test
@@ -49,9 +51,12 @@ if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
     exit 1
 fi
 
+# Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every
+# `cmake --build` in the rest of the pipeline (deps + turbo-stack) picks
+# this up without further flag plumbing.
+[[ -n "$parallel" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$parallel"
+
 # --- Stage 1: environment setup + dependency builds (Derecho) -----------
-# Forward --parallel to the env script's build_dep calls via env var.
-[[ -n "$parallel" ]] && export TURBO_DEP_PARALLEL="$parallel"
 source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh"
 
 # --- Stage 2: configure + build + test -----------------------------------
@@ -59,5 +64,4 @@ build_args=()
 [[ "$debug"     == true ]] && build_args+=(--debug)
 [[ -n "$infra"           ]] && build_args+=(--infra "$infra")
 [[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")
-[[ -n "$parallel"        ]] && build_args+=(--parallel "$parallel")
 bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"

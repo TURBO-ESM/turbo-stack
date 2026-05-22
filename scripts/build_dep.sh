@@ -17,6 +17,12 @@
 #       [--parallel N | -j N]
 #       -- [cmake args...]
 #
+# Parallel jobs:
+#   - With --parallel N (or -j N): pass --parallel N to `cmake --build`.
+#   - Without: don't pass --parallel; cmake reads $CMAKE_BUILD_PARALLEL_LEVEL
+#     as its own native default.  Orchestrators that want to set parallelism
+#     once for the whole pipeline should export CMAKE_BUILD_PARALLEL_LEVEL.
+#
 # Source resolution (first match wins):
 #   1. --source PATH                       explicit override
 #   2. --clone --url U --ref R             clone into --clone-dest, also
@@ -48,7 +54,7 @@ build_dep() {
     local _build_dir=""
     local _install_prefix=""
     local _rebuild=false
-    local _parallel="1"
+    local _parallel=""
     local _cmake_args=()
 
     if [[ $# -eq 0 ]]; then
@@ -212,8 +218,17 @@ build_dep() {
         "${_cmake_args[@]}" \
         || return 1
 
-    echo "[build_dep] $_name: building + installing ($_parallel parallel jobs)"
-    cmake --build "$_build_dir" --parallel "$_parallel" --target install || return 1
+    # Pass --parallel to cmake only when the caller explicitly set it.
+    # Otherwise cmake reads $CMAKE_BUILD_PARALLEL_LEVEL as its own default.
+    local _cmake_build_args=()
+    [[ -n "$_parallel" ]] && _cmake_build_args=(--parallel "$_parallel")
+
+    if [[ -n "$_parallel" ]]; then
+        echo "[build_dep] $_name: building + installing ($_parallel parallel jobs)"
+    else
+        echo "[build_dep] $_name: building + installing (parallelism from CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-cmake default})"
+    fi
+    cmake --build "$_build_dir" "${_cmake_build_args[@]}" --target install || return 1
 
     # --- Write sentinel atomically --------------------------------------
     {

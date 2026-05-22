@@ -220,14 +220,18 @@ fms2_rc=0
 tim_rc=0
 set +e
 
+# Set CMAKE_BUILD_PARALLEL_LEVEL once for both flavors -- cmake reads it
+# natively in every downstream `cmake --build` invocation.  No --parallel
+# plumbing needed past this point.
+export CMAKE_BUILD_PARALLEL_LEVEL="$jobs"
+
 if [[ "$run_fms2" == true ]]; then
     fms_build_dir="$build_dir/turbo-stack-with-FMS2"
     export TURBO_DEPS_ROOT="$fms_build_dir/deps"
     echo
     echo "=== FMS2 build starting at $(date) (log: $log_dir/turbo-stack-with-FMS2.log, build dir: $fms_build_dir) ==="
     "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra FMS2 \
-                                                    --build_dir "$fms_build_dir" \
-                                                    --parallel "$jobs" 2>&1 \
+                                                    --build_dir "$fms_build_dir" 2>&1 \
                                                     | tee "$log_dir/turbo-stack-with-FMS2.log"
     fms2_rc=${PIPESTATUS[0]}
     echo "=== FMS2 build finished at $(date) (exit $fms2_rc) ==="
@@ -239,8 +243,7 @@ if [[ "$run_tim" == true ]]; then
     echo
     echo "=== TIM build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $tim_build_dir) ==="
     "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra TIM \
-                                                    --build_dir "$tim_build_dir" \
-                                                    --parallel "$jobs" 2>&1 \
+                                                    --build_dir "$tim_build_dir" 2>&1 \
                                                     | tee "$log_dir/turbo-stack-with-TIM.log"
     tim_rc=${PIPESTATUS[0]}
     echo "=== TIM build finished at $(date) (exit $tim_rc) ==="

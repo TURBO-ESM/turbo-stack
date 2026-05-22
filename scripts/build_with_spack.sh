@@ -21,10 +21,12 @@
 #   --infra FMS2|TIM        Infrastructure backend (passed through).  For TIM,
 #                           this script also calls `build_dep tim` since spack
 #                           does not provide TIM.
-#   --parallel N, -j N      Parallel build jobs.  Forwarded as --parallel N to
-#                           the TIM build_dep call (when --infra TIM) and to
-#                           the turbo-stack build step.  Defaults to serial in
-#                           both when omitted.
+#   --parallel N, -j N      Parallel build jobs.  Exported as
+#                           CMAKE_BUILD_PARALLEL_LEVEL so every downstream
+#                           `cmake --build` invocation (TIM dep + turbo-stack)
+#                           picks it up natively, without any flag plumbing.
+#                           When omitted, cmake's own defaults apply (1 for
+#                           Make, nproc for Ninja).
 #   --recreate-spack-env    Delete and recreate the Spack env from scratch
 #
 # Examples:
@@ -60,6 +62,11 @@ if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
     exit 1
 fi
 
+# Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every
+# `cmake --build` in the rest of the pipeline (TIM dep + turbo-stack) picks
+# this up without further flag plumbing.
+[[ -n "$parallel" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$parallel"
+
 # --- Stage 1: environment setup (Spack flavor) ---------------------------
 env_args=()
 [[ "$recreate_spack_env" == true ]] && env_args+=(--recreate)
@@ -73,12 +80,9 @@ if [[ "$infra" == "TIM" ]]; then
     # Same TURBO_DEPS_ROOT default as the per-machine env scripts -- callers can
     # override this to redirect TIM's build + install into a scratch dir.
     : "${TURBO_DEPS_ROOT:=$TURBO_STACK_ROOT/deps/default}"
-    tim_parallel_args=()
-    [[ -n "$parallel" ]] && tim_parallel_args=(--parallel "$parallel")
     build_dep tim \
         --build-dir "$TURBO_DEPS_ROOT/build/tim" \
         --install-prefix "$TURBO_DEPS_ROOT/install" \
-        "${tim_parallel_args[@]}" \
         -- -D64BIT=ON -D32BIT=OFF
 fi
 
@@ -88,5 +92,4 @@ build_args=()
 [[ "$ninja"     == true ]] && build_args+=(--ninja)
 [[ -n "$infra"           ]] && build_args+=(--infra "$infra")
 [[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")
-[[ -n "$parallel"        ]] && build_args+=(--parallel "$parallel")
 bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"
