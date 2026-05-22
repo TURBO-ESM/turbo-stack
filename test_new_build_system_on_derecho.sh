@@ -1,4 +1,12 @@
 #!/bin/bash
+#PBS -N turbo-stack-new-build-system-test
+#PBS -A NCGD0067
+#PBS -q main
+#PBS -l select=1:ncpus=128:mpiprocs=128:mem=100GB
+#PBS -l walltime=01:00:00
+#PBS -j oe
+#PBS -V
+
 # Usage: ./test_new_build_system_on_derecho.sh [options]
 #
 # Drives the FMS2 and TIM build flavors of turbo-stack on Derecho end-to-end,
