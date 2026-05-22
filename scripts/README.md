@@ -1,6 +1,6 @@
 # `scripts/`
 
-Build orchestration for turbo-stack. The directory is organized around a **3-step pipeline**:
+Build orchestration for turbo-stack. The directory is organized around a **2-step pipeline**:
 
 1. **Set up the environment** — get a working toolchain (compiler, MPI, NetCDF, CMake) on `PATH` AND build/install any dependencies the toolchain doesn't provide.
 2. **Build turbo-stack** — `cmake` configure + build + `ctest`.
@@ -130,6 +130,38 @@ The env script's build_dep calls pick up `$FMS_ROOT` via the env-var precedence 
 
 ---
 
+## Where do dep builds + installs land?
+
+The orchestrators derive the deps location from `--build_dir`:
+
+- `build_with_spack.sh --build_dir /scratch/foo` → deps land at `/scratch/foo/deps/{build,install}/`.
+- `build_on_derecho.sh --build_dir /scratch/foo` → same.
+- Neither orchestrator given a `--build_dir`: deps land at `$TURBO_STACK_ROOT/deps/default/`.
+
+The orchestrators don't expose a separate flag for the deps location; `--build_dir` is the single knob. Power users who need deps in a path *unrelated* to the turbo-stack build dir can source an env script directly with its `--deps-build-root` flag:
+
+```bash
+source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh --deps-build-root /scratch/shared-deps
+scripts/build_turbo_stack.sh --build_dir /scratch/my-build
+```
+
+---
+
+## Parallel build jobs
+
+`--parallel N` / `-j N` on the orchestrators exports `CMAKE_BUILD_PARALLEL_LEVEL=N`. Every downstream `cmake --build` invocation (deps + turbo-stack) picks it up natively without any flag plumbing. You can also set `CMAKE_BUILD_PARALLEL_LEVEL` in your shell profile / qsub directive / CI config to skip the CLI flag entirely:
+
+```bash
+export CMAKE_BUILD_PARALLEL_LEVEL=32
+scripts/build_with_spack.sh                 # no --parallel needed
+```
+
+When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
+
+`build_dep.sh` and `build_turbo_stack.sh` also accept their own `--parallel N` flag as a per-call override.
+
+---
+
 ## Required environment
 
 Set these in your shell profile (e.g. `~/.bashrc`):
@@ -140,9 +172,4 @@ Set these in your shell profile (e.g. `~/.bashrc`):
 Optional, for testing against local dev trees:
 
 - `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT`, `PFUNIT_ROOT`, `AMREX_ROOT` — when set, override the corresponding submodule default.
-
----
-
-## Design rationale & history
-
-See [`../setup_env_separation_plan.md`](../setup_env_separation_plan.md) at the repo root for the design discussion, refactor status, and known issues (e.g. stale submodule pins).
+- `CMAKE_BUILD_PARALLEL_LEVEL` — when set, controls the default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs" above).

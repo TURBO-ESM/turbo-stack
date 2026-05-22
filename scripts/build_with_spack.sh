@@ -17,7 +17,11 @@
 # Options:
 #   --debug                 Full clean rebuild (passed through)
 #   --ninja                 Use Ninja generator (passed through)
-#   --build_dir DIR         Build directory (passed through)
+#   --build_dir DIR         Build directory for turbo-stack itself (passed
+#                           through).  Also controls where the TIM dep
+#                           cmake build + install lands: $DIR/deps/build/tim/
+#                           and $DIR/deps/install/.  When --build_dir is
+#                           omitted, TIM lands at $TURBO_STACK_ROOT/deps/default/.
 #   --infra FMS2|TIM        Infrastructure backend (passed through).  For TIM,
 #                           this script also calls `build_dep tim` since spack
 #                           does not provide TIM.
@@ -52,8 +56,10 @@ while [[ $# -gt 0 ]]; do
         --infra)              infra="$2"; shift 2 ;;
         --build_dir)          build_dir="$2"; shift 2 ;;
         --parallel|-j)        parallel="$2"; shift 2 ;;
-        --)                   shift; break ;;
-        *)                    break ;;
+        *)
+            echo "Error: unknown option '$1' to build_with_spack.sh" >&2
+            exit 1
+            ;;
     esac
 done
 
@@ -67,6 +73,14 @@ fi
 # this up without further flag plumbing.
 [[ -n "$parallel" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$parallel"
 
+# Where the inline TIM build_dep lands its build + install: derive from
+# --build_dir if given, else fall back to $TURBO_STACK_ROOT/deps/default.
+if [[ -n "$build_dir" ]]; then
+    deps_build_root="$build_dir/deps"
+else
+    deps_build_root="$TURBO_STACK_ROOT/deps/default"
+fi
+
 # --- Stage 1: environment setup (Spack flavor) ---------------------------
 env_args=()
 [[ "$recreate_spack_env" == true ]] && env_args+=(--recreate)
@@ -77,12 +91,9 @@ source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" 
 if [[ "$infra" == "TIM" ]]; then
     # shellcheck source=/dev/null
     source "$TURBO_STACK_ROOT/scripts/build_dep.sh"
-    # Same TURBO_DEPS_ROOT default as the per-machine env scripts -- callers can
-    # override this to redirect TIM's build + install into a scratch dir.
-    : "${TURBO_DEPS_ROOT:=$TURBO_STACK_ROOT/deps/default}"
     build_dep tim \
-        --build-dir "$TURBO_DEPS_ROOT/build/tim" \
-        --install-prefix "$TURBO_DEPS_ROOT/install" \
+        --build-dir "$deps_build_root/build/tim" \
+        --install-prefix "$deps_build_root/install" \
         -- -D64BIT=ON -D32BIT=OFF
 fi
 

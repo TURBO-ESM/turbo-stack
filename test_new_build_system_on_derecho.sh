@@ -120,12 +120,11 @@ log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 # *_ROOT is set.
 deps_that_override_submodules_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
 
-# Where we will build turbo-stack.  Each per-flavor block below exports a
-# different TURBO_DEPS_ROOT pointing at a `deps/` subdir under its own
-# $build_dir, so FMS2 and TIM build + install isolated copies of FMS / pFUnit /
-# AMReX / TIM rather than sharing one install tree.  The env script's
-# `: "${TURBO_DEPS_ROOT:=...}"` default never fires here because the
-# per-flavor export wins.
+# Where we will build turbo-stack.  Each per-flavor block below passes its own
+# --build_dir to build_on_derecho.sh; the orchestrator auto-derives the dep
+# cmake build + install root as $build_dir/deps, so FMS2 and TIM build +
+# install isolated copies of FMS / pFUnit / AMReX / TIM rather than sharing
+# one install tree.
 build_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-build"
 
 # Helpers -------------------------------------------------------------------------------
@@ -227,7 +226,6 @@ export CMAKE_BUILD_PARALLEL_LEVEL="$jobs"
 
 if [[ "$run_fms2" == true ]]; then
     fms_build_dir="$build_dir/turbo-stack-with-FMS2"
-    export TURBO_DEPS_ROOT="$fms_build_dir/deps"
     echo
     echo "=== FMS2 build starting at $(date) (log: $log_dir/turbo-stack-with-FMS2.log, build dir: $fms_build_dir) ==="
     "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra FMS2 \
@@ -239,7 +237,6 @@ fi
 
 if [[ "$run_tim" == true ]]; then
     tim_build_dir="$build_dir/turbo-stack-with-TIM"
-    export TURBO_DEPS_ROOT="$tim_build_dir/deps"
     echo
     echo "=== TIM build starting at $(date) (log: $log_dir/turbo-stack-with-TIM.log, build dir: $tim_build_dir) ==="
     "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh" --infra TIM \

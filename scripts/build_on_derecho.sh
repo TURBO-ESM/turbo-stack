@@ -13,7 +13,15 @@
 #
 # Options:
 #   --debug                 Full clean rebuild (passed through)
-#   --build_dir DIR         Build directory (passed through)
+#   --build_dir DIR         Build directory for turbo-stack itself (passed
+#                           through to build_turbo_stack.sh).  Also controls
+#                           where from-source dep cmake builds + installs
+#                           land: $DIR/deps/build/<name>/ and
+#                           $DIR/deps/install/.  When --build_dir is omitted,
+#                           deps land at $TURBO_STACK_ROOT/deps/default/.
+#                           Power users who need deps in a path unrelated to
+#                           the turbo-stack build dir can source the env
+#                           script directly with its --deps-build-root flag.
 #   --infra FMS2|TIM        Infrastructure backend (passed through to
 #                           build_turbo_stack.sh).
 #   --parallel N, -j N      Parallel build jobs.  Exported as
@@ -41,8 +49,10 @@ while [[ $# -gt 0 ]]; do
         --infra)              infra="$2"; shift 2 ;;
         --build_dir)          build_dir="$2"; shift 2 ;;
         --parallel|-j)        parallel="$2"; shift 2 ;;
-        --)                   shift; break ;;
-        *)                    break ;;
+        *)
+            echo "Error: unknown option '$1' to build_on_derecho.sh" >&2
+            exit 1
+            ;;
     esac
 done
 
@@ -57,7 +67,11 @@ fi
 [[ -n "$parallel" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$parallel"
 
 # --- Stage 1: environment setup + dependency builds (Derecho) -----------
-source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh"
+# When --build_dir is given, place deps next to it ($build_dir/deps).  Else
+# let the env script use its own default ($TURBO_STACK_ROOT/deps/default).
+env_args=()
+[[ -n "$build_dir" ]] && env_args=(--deps-build-root "$build_dir/deps")
+source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh" "${env_args[@]}"
 
 # --- Stage 2: configure + build + test -----------------------------------
 build_args=()

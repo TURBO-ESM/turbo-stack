@@ -5,6 +5,23 @@
 # FMS/pFUnit/AMReX/TIM from source via build_dep.  Buildable-dep source
 # defaults: $<NAME>_ROOT if exported (e.g. by fetch_source.sh or the user),
 # else the corresponding turbo-stack submodule.
+#
+# Options (passed as sourced args, typically by an orchestrator):
+#   --deps-build-root DIR    Where the from-source dep cmake builds + installs
+#                            land ($DIR/build/<name>/ and $DIR/install/).
+#                            Default: $TURBO_STACK_ROOT/deps/default.
+
+# --- Parse sourced args -----------------------------------------------
+_deps_build_root=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --deps-build-root) _deps_build_root="$2"; shift 2 ;;
+        *)
+            echo "Error: unknown option '$1' to derecho_cpu_gcc_openmpi.sh" >&2
+            return 1 2>/dev/null || exit 1
+            ;;
+    esac
+done
 
 # --- Toolchain ---------------------------------------------------------
 module purge
@@ -16,12 +33,11 @@ module load gcc cmake openmpi netcdf #pfunit
 export LIBRARY_PATH=/glade/u/apps/common/25.10/spack/opt/spack/gcc/14.3.0/nw2m/lib64:$LIBRARY_PATH
 
 # --- Dependency builds -------------------------------------------------
-# Where the from-source deps build and install.  Default lands inside the
-# turbo-stack source tree at deps/default; callers (e.g. the PR-test driver)
-# can override TURBO_DEPS_ROOT to redirect builds into an ephemeral scratch dir.
-: "${TURBO_DEPS_ROOT:=$TURBO_STACK_ROOT/deps/default}"
-_install_prefix="$TURBO_DEPS_ROOT/install"
-_build_root="$TURBO_DEPS_ROOT/build"
+# Deps build + install location comes from the --deps-build-root sourced arg
+# (parsed above); default is inside the turbo-stack source tree at deps/default.
+: "${_deps_build_root:=$TURBO_STACK_ROOT/deps/default}"
+_install_prefix="$_deps_build_root/install"
+_build_root="$_deps_build_root/build"
 
 # Parallelism is governed by $CMAKE_BUILD_PARALLEL_LEVEL (set by the
 # orchestrator).  cmake --build reads it natively -- no plumbing needed here.
@@ -47,4 +63,4 @@ build_dep tim \
     --install-prefix "$_install_prefix" \
     -- -D64BIT=ON -D32BIT=OFF
 
-unset _install_prefix _build_root
+unset _deps_build_root _install_prefix _build_root

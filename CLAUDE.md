@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Requires `TURBO_STACK_ROOT` (and, for the spack flavor, `SPACK_ROOT`) to be set in your shell profile. See [`scripts/README.md`](scripts/README.md) for the full reference; the design rationale lives in [`setup_env_separation_plan.md`](setup_env_separation_plan.md).
+Requires `TURBO_STACK_ROOT` (and, for the spack flavor, `SPACK_ROOT`) to be set in your shell profile. See [`scripts/README.md`](scripts/README.md) for the full reference.
 
 ### 2-step pipeline
 
@@ -50,7 +50,15 @@ scripts/build_turbo_stack.sh
 | `scripts/fetch_source.sh` | Library — defines `fetch_source` for source-only-consumed deps (MOM6, MARBL) | sourced |
 | `scripts/build_turbo_stack.sh` | Step 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
-`build_turbo_stack.sh` options: `--debug`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`.
+`build_turbo_stack.sh` options: `--debug`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`.
+
+### Where dep builds + installs land
+
+The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{build,install}/`. With no `--build_dir`, deps land at `$TURBO_STACK_ROOT/deps/default/`. To override the deps location independently of the turbo-stack build dir, source the env script directly with `--deps-build-root DIR`.
+
+### Parallel build jobs
+
+`--parallel N` on the orchestrators exports `CMAKE_BUILD_PARALLEL_LEVEL=N` once; every downstream `cmake --build` (deps + turbo-stack) reads it natively. You can also set `CMAKE_BUILD_PARALLEL_LEVEL` in your shell profile to skip the CLI flag. When neither is set, cmake's own default applies (Make=1, Ninja=nproc).
 
 ### Source-tree overrides
 
