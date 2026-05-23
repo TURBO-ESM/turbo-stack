@@ -3,13 +3,6 @@ project(TurboStack LANGUAGES Fortran C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-# fms-config.cmake / tim-config.cmake both call find_dependency(NetCDF). Most
-# NetCDF installs (incl. the Derecho spack module) ship no NetCDFConfig.cmake —
-# only nc-config — so a FindNetCDF.cmake must be on CMAKE_MODULE_PATH *before*
-# find_package(FMS|TIM). The FMS submodule ships one; use it as the canonical
-# source (TIM ships an identical copy).
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/submodules/infra/FMS2/cmake")
-
 # MOM6_SOURCE_DIR must be resolved before including MOM6Options (which sets
 # TURBO_INFRA and TURBO_MEMORY_MODE — the canonical definitions for both repos).
 if(NOT DEFINED MOM6_SOURCE_DIR)
@@ -29,7 +22,14 @@ include(TurboCompilerFlags)
 # (populated either by spack env activate or by build_dep.sh's per-call
 # CMAKE_PREFIX_PATH append).
 # Both paths define TURBO::infra_r8; nothing downstream needs to know which backend.
+#
+# fms-config.cmake / tim-config.cmake both call find_dependency(NetCDF). Most
+# NetCDF installs (incl. the Derecho spack module) ship no NetCDFConfig.cmake —
+# only nc-config — so a FindNetCDF.cmake must be on CMAKE_MODULE_PATH *before*
+# find_package(FMS|TIM). Each backend ships its own copy; pull from the
+# matching submodule so the two never drift through a shared assumption.
 if(TURBO_INFRA STREQUAL "FMS2")
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/submodules/infra/FMS2/cmake")
     find_package(FMS REQUIRED COMPONENTS R8)
     add_library(turbo_infra_r8 INTERFACE)
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
@@ -38,6 +38,7 @@ elseif(TURBO_INFRA STREQUAL "TIM")
     # TIM is built+installed by scripts/build_dep.sh into
     # deps/<tag>/install (or by spack, in principle, though spack does not
     # currently package TIM). find_package(TIM) resolves via CMAKE_PREFIX_PATH.
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/submodules/infra/TIM/cmake")
     find_package(TIM REQUIRED COMPONENTS R8)
     add_library(turbo_infra_r8 INTERFACE)
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
