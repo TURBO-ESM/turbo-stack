@@ -5,7 +5,6 @@ spack:
     - gmake
     - mpi
     - netcdf-fortran
-    - fms precision=64
     - pfunit +mpi
     - amrex +fortran
   view: true

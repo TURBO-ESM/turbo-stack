@@ -73,7 +73,7 @@ scripts/build_turbo_stack.sh
 
 ### Spack environment
 
-Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, FMS, pFUnit, AMReX. The spack flavor only needs to build TIM from source via `build_dep tim` (inside `build_with_spack.sh` when `--infra TIM`) since spack does not package TIM.
+Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS and TIM are intentionally not in spack: `build_with_spack.sh` always calls `build_dep fms` (and `build_dep tim` when `--infra TIM`) so the build uses the local source tree (`$FMS_ROOT`/`$TIM_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
 
 A second spack env defined in `spack/derecho_modules_emulation_with_spack.yaml` provides *just* the toolchain (cmake, MPI, NetCDF) — used by the temporary emulation driver to exercise the from-source path on a laptop until Derecho access is back.
 
