@@ -43,6 +43,28 @@
 #   - For name=pfunit: exports PFUNIT_DIR pointing at the versioned cmake dir.
 #   - For --clone: exports <NAME>_ROOT pointing at the clone destination.
 
+# Helper: expose a dep's install prefix to find_package(...) for downstream
+# cmake invocations.  Called by build_dep both on the rebuild path and on the
+# already-installed-skip path so an incremental run still sees the install.
+_build_dep_expose_install() {
+    local _name=$1
+    local _install_prefix=$2
+    case ":${CMAKE_PREFIX_PATH:-}:" in
+        *:"$_install_prefix":*) ;;
+        *) export CMAKE_PREFIX_PATH="$_install_prefix${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}" ;;
+    esac
+
+    # pFUnit installs into $_install_prefix/PFUNIT-X.Y/ -- a versioned subdir
+    # that find_package(PFUNIT) does not auto-walk via CMAKE_PREFIX_PATH alone.
+    if [[ "$_name" == "pfunit" ]]; then
+        local _pfunit_cmake_dir
+        _pfunit_cmake_dir=$(ls -d "$_install_prefix"/PFUNIT-*/cmake 2>/dev/null | head -n1)
+        if [[ -n "$_pfunit_cmake_dir" ]]; then
+            export PFUNIT_DIR="$_pfunit_cmake_dir"
+        fi
+    fi
+}
+
 build_dep() {
     # --- Parse arguments ------------------------------------------------
     local _name=""
@@ -199,6 +221,7 @@ build_dep() {
            && "$_saved_prefix" == "$_install_prefix" \
            && "$_saved_hash" == "$_cmake_args_hash" ]]; then
             echo "[build_dep] $_name @ ${_sha:0:8} already installed -- skipping"
+            _build_dep_expose_install "$_name" "$_install_prefix"
             return 0
         fi
 
@@ -239,18 +262,5 @@ build_dep() {
     } > "$_sentinel.tmp" && mv "$_sentinel.tmp" "$_sentinel"
 
     # --- Side effects: expose installs to find_package ------------------
-    case ":${CMAKE_PREFIX_PATH:-}:" in
-        *:"$_install_prefix":*) ;;
-        *) export CMAKE_PREFIX_PATH="$_install_prefix${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}" ;;
-    esac
-
-    # pFUnit installs into $_install_prefix/PFUNIT-X.Y/ -- a versioned subdir
-    # that find_package(PFUNIT) does not auto-walk via CMAKE_PREFIX_PATH alone.
-    if [[ "$_name" == "pfunit" ]]; then
-        local _pfunit_cmake_dir
-        _pfunit_cmake_dir=$(ls -d "$_install_prefix"/PFUNIT-*/cmake 2>/dev/null | head -n1)
-        if [[ -n "$_pfunit_cmake_dir" ]]; then
-            export PFUNIT_DIR="$_pfunit_cmake_dir"
-        fi
-    fi
+    _build_dep_expose_install "$_name" "$_install_prefix"
 }
