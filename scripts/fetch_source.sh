@@ -69,15 +69,33 @@ fetch_source() {
 
     mkdir -p "$(dirname "$_dest")"
 
+    # `git clone --branch` and `origin/$ref` only accept branch/tag refs.
+    # Detect SHA-shaped refs (7–40 hex chars) and take the detached-checkout
+    # path so a commit SHA can be used in place of a branch name.
+    local _ref_is_sha=false
+    if [[ "$_branch" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+        _ref_is_sha=true
+    fi
     if [[ -d "$_dest/.git" ]]; then
-        echo "[fetch_source] $_name: $_dest exists -- fetching and resetting to origin/$_branch"
-        git -C "$_dest" fetch origin "$_branch" || return 1
-        git -C "$_dest" checkout -B "$_branch" "origin/$_branch" || return 1
-        git -C "$_dest" reset --hard "origin/$_branch" || return 1
+        echo "[fetch_source] $_name: $_dest exists -- fetching to $_branch"
+        if [[ "$_ref_is_sha" == true ]]; then
+            git -C "$_dest" fetch origin || return 1
+            git -C "$_dest" checkout --detach "$_branch" || return 1
+        else
+            git -C "$_dest" fetch origin "$_branch" || return 1
+            git -C "$_dest" checkout -B "$_branch" "origin/$_branch" || return 1
+            git -C "$_dest" reset --hard "origin/$_branch" || return 1
+        fi
         git -C "$_dest" submodule update --init --recursive --force || return 1
     else
         echo "[fetch_source] $_name: cloning $_url ($_branch) into $_dest"
-        git clone --branch "$_branch" --recurse-submodules -- "$_url" "$_dest" || return 1
+        if [[ "$_ref_is_sha" == true ]]; then
+            git clone --recurse-submodules -- "$_url" "$_dest" || return 1
+            git -C "$_dest" checkout --detach "$_branch" || return 1
+            git -C "$_dest" submodule update --init --recursive --force || return 1
+        else
+            git clone --branch "$_branch" --recurse-submodules -- "$_url" "$_dest" || return 1
+        fi
     fi
 
     # Export <NAME_UPPER>_ROOT.

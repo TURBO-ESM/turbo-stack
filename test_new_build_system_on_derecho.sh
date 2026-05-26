@@ -208,8 +208,15 @@ fi
 
 # Print the SHA + branch of every checkout so a run is reproducible later --
 # paste this into the PR description or the post-mortem.
+# Tolerates an unset / empty repo_root: the script header documents a
+# `fetch_<NAME>=false <NAME>_ROOT=...` workflow, but a user who didn't export
+# the ROOT path would otherwise trip `set -u` here before any build runs.
 _print_version() {
     local label="$1" repo_root="$2"
+    if [[ -z "$repo_root" ]]; then
+        printf "  %-12s @ <not set>\n" "$label"
+        return
+    fi
     local sha branch
     sha=$(git -C "$repo_root" rev-parse HEAD)
     branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD)
@@ -221,9 +228,9 @@ echo "================================================================"
 echo "Testing matrix"
 echo "================================================================"
 _print_version "turbo-stack" "$TURBO_STACK_ROOT"
-_print_version "MOM6"        "$MOM6_ROOT"
-_print_version "TIM"         "$TIM_ROOT"
-_print_version "FMS"         "$FMS_ROOT"
+_print_version "MOM6"        "${MOM6_ROOT:-}"
+_print_version "TIM"         "${TIM_ROOT:-}"
+_print_version "FMS"         "${FMS_ROOT:-}"
 echo "================================================================"
 
 # Build shared deps once ----------------------------------------------------------------

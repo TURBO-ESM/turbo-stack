@@ -154,15 +154,33 @@ build_dep() {
         echo "[build_dep] $_name: source = $_resolved (explicit --source)"
     elif [[ "$_clone" == true ]]; then
         mkdir -p "$(dirname "$_clone_dest")"
+        # `git clone --branch` and `origin/$ref` only accept branch/tag refs.
+        # Detect SHA-shaped refs (7–40 hex chars) and take the detached-checkout
+        # path so the docs' "branch, tag, or commit" promise actually holds.
+        local _ref_is_sha=false
+        if [[ "$_ref" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            _ref_is_sha=true
+        fi
         if [[ -d "$_clone_dest/.git" ]]; then
-            echo "[build_dep] $_name: $_clone_dest exists -- fetching and resetting to origin/$_ref"
-            git -C "$_clone_dest" fetch origin "$_ref" || return 1
-            git -C "$_clone_dest" checkout -B "$_ref" "origin/$_ref" || return 1
-            git -C "$_clone_dest" reset --hard "origin/$_ref" || return 1
+            echo "[build_dep] $_name: $_clone_dest exists -- fetching to $_ref"
+            if [[ "$_ref_is_sha" == true ]]; then
+                git -C "$_clone_dest" fetch origin || return 1
+                git -C "$_clone_dest" checkout --detach "$_ref" || return 1
+            else
+                git -C "$_clone_dest" fetch origin "$_ref" || return 1
+                git -C "$_clone_dest" checkout -B "$_ref" "origin/$_ref" || return 1
+                git -C "$_clone_dest" reset --hard "origin/$_ref" || return 1
+            fi
             git -C "$_clone_dest" submodule update --init --recursive --force || return 1
         else
             echo "[build_dep] $_name: cloning $_url ($_ref) into $_clone_dest"
-            git clone --branch "$_ref" --recurse-submodules -- "$_url" "$_clone_dest" || return 1
+            if [[ "$_ref_is_sha" == true ]]; then
+                git clone --recurse-submodules -- "$_url" "$_clone_dest" || return 1
+                git -C "$_clone_dest" checkout --detach "$_ref" || return 1
+                git -C "$_clone_dest" submodule update --init --recursive --force || return 1
+            else
+                git clone --branch "$_ref" --recurse-submodules -- "$_url" "$_clone_dest" || return 1
+            fi
         fi
         _resolved="$_clone_dest"
         # Export <NAME>_ROOT so downstream callers find the same source.
