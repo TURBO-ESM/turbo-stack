@@ -76,12 +76,16 @@ jobs:
 
       - name: Install spack
         run: |
+          # gha-runner-turbo workspaces persist between jobs and `actions/checkout`'s
+          # clean step doesn't always remove untracked dirs like spack/, so wipe any
+          # leftover from a previous run before cloning fresh.
           echo "Building spack:"
+          rm -rf spack
           git clone --depth=2 https://github.com/spack/spack.git
           . spack/share/spack/setup-env.sh
           spack compiler find
           spack compiler list
-          spack spec zlib # Just to test that spack is working. 
+          spack spec zlib # Just to test that spack is working.
 
       - name: Modify default CI container environment
         run: |
