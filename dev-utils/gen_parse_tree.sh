@@ -5,16 +5,24 @@ ROOTDIR=$(pwd -P)/..
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
-SHR_ROOT=${ROOTDIR}/submodules/CESM_share
-INFRA_ROOT=${ROOTDIR}/submodules/FMS
+INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
 
 # Default values for CLI arguments
 COMPILER="flang_ptree"
 MACHINE="ncar"
-INFRA="FMS2"
+INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
 DEBUG=0 # False
 OVERRIDE=0 # False
+
+# Find valid values for INFRA
+for dir in `ls -d ${ROOTDIR}/submodules/infra/*`; do
+  if [ ! -z "${VALID_INFRA}" ]; then
+    VALID_INFRA="${VALID_INFRA}, `(basename ${dir})`"
+  else
+    VALID_INFRA=`(basename ${dir})`
+  fi
+done
 
 echo "Starting parse dump at `date`"
 # Parse command line arguments
@@ -25,7 +33,8 @@ while [[ "$#" -gt 0 ]]; do
             echo "Flang parse tree generator."
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build"
+            echo "                               (valid values [${VALID_INFRA}]; default: TIM)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
             echo "  --jobs <num_jobs>            Sets the number of jobs to use for make/cmake calls."
@@ -45,8 +54,10 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
-            if [[ "${INFRA}" == "TIM" ]]; then
-              INFRA_ROOT=${ROOTDIR}/submodules/TIM
+            INFRA_ROOT=${ROOTDIR}/submodules/infra/${INFRA}
+            if [[ ! -d "${INFRA_ROOT}" ]]; then
+              echo "--infra option ${INFRA} not valid.  Valid options are [${VALID_INFRA}]."
+              exit 1
             fi
             shift ;;
         --jobs)
@@ -111,7 +122,7 @@ if [ -z "${JOBS}"  ]; then
 fi
 echo "Using ${JOBS} jobs"
 
-BLD_PATH=${ROOTDIR}/bin/${COMPILER}
+BLD_PATH=${ROOTDIR}/bin/${COMPILER}/MOM6_using_${INFRA}
 
 # If override is set, remove existing build directory
 if [ $OVERRIDE -eq 1 ]; then
@@ -126,30 +137,7 @@ if [ ! -d ${BLD_PATH} ]; then
   mkdir -p ${BLD_PATH}
 fi
 
-# comma-separated list of files in src/framework that are needed to build $LININFRA (for FMS2, at least)
-MOM6_infra_framework_deps_list=$(cat << EOF
-MOM_string_functions.F90
-MOM_io.F90
-MOM_array_transform.F90
-MOM_domains.F90
-MOM_error_handler.F90
-posix.F90
-MOM_file_parser.F90
-MOM_coms.F90
-MOM_document.F90
-MOM_cpu_clock.F90
-MOM_unit_scaling.F90
-MOM_dyn_horgrid.F90
-MOM_hor_index.F90
-MOM_ensemble_manager.F90
-MOM_io_file.F90
-MOM_netcdf.F90
-EOF
-)
-MOM6_infra_framework_deps=$(echo ${MOM6_infra_framework_deps_list} | tr ' ' ',')
-# comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
-MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
-MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
+MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
 # 1) Build Underlying Infrastructure Library
@@ -158,9 +146,6 @@ if [[ "${INFRA}" == "FMS2" || "${INFRA}" == "TIM" ]]; then
   mkdir -p ${INFRA}
   cd ${INFRA}
   ${MKMF_ROOT}/list_paths ${INFRA_ROOT}
-  # We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-  echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-  echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
   ${MKMF_ROOT}/mkmf --gen-ptree -t ${TEMPLATE} -p lib${INFRA}.a path_names
   make -j${JOBS} DEBUG=${DEBUG} lib${INFRA}.a
   LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"

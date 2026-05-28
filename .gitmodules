@@ -4,9 +4,6 @@
 [submodule "src/FMS"]
 	path = submodules/infra/FMS2
 	url = https://github.com/TURBO-ESM/FMS
-[submodule "src/CESM_share"]
-	path = submodules/CESM_share
-	url = https://github.com/ESCOMP/CESM_share
 [submodule "src/MARBL"]
 	path = submodules/MARBL
 	url = https://github.com/marbl-ecosys/MARBL
