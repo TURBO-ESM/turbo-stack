@@ -4,6 +4,15 @@
 # LINK_LIBRARIES are passed through to each test (see add_mom_test below).
 function(add_mom_tests)
     cmake_parse_arguments(SUITE "" "" "TEST_FILES;LINK_LIBRARIES" ${ARGN})
+    # Catch positional callers (`add_mom_tests(foo.pf bar.pf)`) -- those used
+    # to silently register zero tests because the wrapper only looks at
+    # SUITE_TEST_FILES.
+    if(SUITE_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR
+            "add_mom_tests: unexpected positional arguments "
+            "'${SUITE_UNPARSED_ARGUMENTS}'. Pass test files via "
+            "TEST_FILES ... and link libs via LINK_LIBRARIES ....")
+    endif()
     foreach(TEST_FILE IN LISTS SUITE_TEST_FILES)
         if(SUITE_LINK_LIBRARIES)
             add_mom_test("${TEST_FILE}" LINK_LIBRARIES ${SUITE_LINK_LIBRARIES})

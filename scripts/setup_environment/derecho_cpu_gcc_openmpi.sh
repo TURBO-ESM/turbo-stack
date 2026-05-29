@@ -29,8 +29,9 @@ module load gcc cmake openmpi netcdf #pfunit
 
 # Temporary fix to get the right c++ standard library picked up for TIM, which
 # is built with gcc 14.3.0 on Derecho but the default compiler is still older
-# gcc.
-export LIBRARY_PATH=/glade/u/apps/common/25.10/spack/opt/spack/gcc/14.3.0/nw2m/lib64:$LIBRARY_PATH
+# gcc.  Use `${LIBRARY_PATH:-}` so the test driver (which sources this under
+# `set -u`) doesn't abort when LIBRARY_PATH isn't already in the module env.
+export LIBRARY_PATH=/glade/u/apps/common/25.10/spack/opt/spack/gcc/14.3.0/nw2m/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 # --- Dependency builds -------------------------------------------------
 # Deps build + install location comes from the --deps-build-root sourced arg
@@ -56,7 +57,8 @@ build_dep pfunit \
 build_dep amrex \
     --build-dir "$_build_root/amrex" \
     --install-prefix "$_install_prefix" \
-    -- -DAMReX_FORTRAN=ON -DAMReX_FORTRAN_INTERFACES=ON -DAMReX_MPI=ON
+    -- -DAMReX_FORTRAN=ON -DAMReX_FORTRAN_INTERFACES=ON -DAMReX_MPI=ON \
+       -DAMReX_TINY_PROFILE=ON
 
 build_dep tim \
     --build-dir "$_build_root/tim" \

@@ -92,7 +92,8 @@ build_dep pfunit \
 build_dep amrex \
     --build-dir "$_build_root/amrex" \
     --install-prefix "$_install_prefix" \
-    -- -DAMReX_FORTRAN=ON -DAMReX_FORTRAN_INTERFACES=ON -DAMReX_MPI=ON
+    -- -DAMReX_FORTRAN=ON -DAMReX_FORTRAN_INTERFACES=ON -DAMReX_MPI=ON \
+       -DAMReX_TINY_PROFILE=ON
 
 build_dep tim \
     --build-dir "$_build_root/tim" \

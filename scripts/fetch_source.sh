@@ -26,9 +26,13 @@
 #   --force        rm -rf $dest first, then re-clone fresh.
 #
 # Behavior:
-#   - If $dest/.git exists: git fetch + checkout -B branch origin/branch +
-#     reset --hard + recursive submodule update.  Idempotent on rerun.
-#   - Else: git clone --branch ... --recurse-submodules.
+#   - If $dest/.git exists: git fetch + dispatch on what $ref is --
+#       * branch  → checkout -B + reset --hard origin/$ref (tracking branch)
+#       * tag     → detached HEAD at refs/tags/$ref
+#       * SHA     → detached HEAD at $ref
+#     ...then a recursive submodule update.  Idempotent on rerun.
+#   - Else: git clone --branch ... --recurse-submodules (works for branches
+#     and tags; SHAs fall back to a plain clone + detached checkout).
 #   - On success: exports <NAME_UPPER>_ROOT="$dest".
 #
 # Why --url is required (no default): parsing .gitmodules would yield the
@@ -69,9 +73,10 @@ fetch_source() {
 
     mkdir -p "$(dirname "$_dest")"
 
-    # `git clone --branch` and `origin/$ref` only accept branch/tag refs.
-    # Detect SHA-shaped refs (7–40 hex chars) and take the detached-checkout
-    # path so a commit SHA can be used in place of a branch name.
+    # `git clone --branch` and `origin/$ref` only accept branch/tag refs;
+    # `origin/$ref` further only exists for branches.  Branches, tags, and
+    # SHAs each need a different checkout path so the documented "--branch
+    # accepts branch, tag, or commit" promise actually holds across reruns.
     local _ref_is_sha=false
     if [[ "$_branch" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
         _ref_is_sha=true
@@ -82,9 +87,20 @@ fetch_source() {
             git -C "$_dest" fetch origin || return 1
             git -C "$_dest" checkout --detach "$_branch" || return 1
         else
-            git -C "$_dest" fetch origin "$_branch" || return 1
-            git -C "$_dest" checkout -B "$_branch" "origin/$_branch" || return 1
-            git -C "$_dest" reset --hard "origin/$_branch" || return 1
+            # Fetch with --tags so both branches and tags become resolvable
+            # locally, then dispatch on what the ref actually is.  Branches
+            # keep the existing tracking-branch behavior; tags go to detached
+            # HEAD (the only sane option since tags don't move).
+            git -C "$_dest" fetch --tags origin "$_branch" || return 1
+            if git -C "$_dest" show-ref --verify --quiet "refs/remotes/origin/$_branch"; then
+                git -C "$_dest" checkout -B "$_branch" "origin/$_branch" || return 1
+                git -C "$_dest" reset --hard "origin/$_branch" || return 1
+            elif git -C "$_dest" show-ref --verify --quiet "refs/tags/$_branch"; then
+                git -C "$_dest" checkout --detach "refs/tags/$_branch" || return 1
+            else
+                echo "Error: fetch_source $_name: ref '$_branch' is neither a branch nor a tag on origin (and not a recognized SHA)" >&2
+                return 1
+            fi
         fi
         git -C "$_dest" submodule update --init --recursive --force || return 1
     else
@@ -94,6 +110,8 @@ fetch_source() {
             git -C "$_dest" checkout --detach "$_branch" || return 1
             git -C "$_dest" submodule update --init --recursive --force || return 1
         else
+            # `git clone --branch` accepts both branch and tag refs; for tags
+            # it lands on detached HEAD, which is what we want.
             git clone --branch "$_branch" --recurse-submodules -- "$_url" "$_dest" || return 1
         fi
     fi

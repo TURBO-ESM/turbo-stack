@@ -8,7 +8,10 @@ set(MOM_COMS_HELPERS_TESTS
   test_pe_here.pf
 )
 
-add_mom_tests(${MOM_COMS_HELPERS_TESTS})
+add_mom_tests(
+    TEST_FILES ${MOM_COMS_HELPERS_TESTS}
+    LINK_LIBRARIES MOM6::infra
+)
 
 
 # Copy namelist file to output directory to satisfy FMS requirement

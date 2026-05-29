@@ -154,9 +154,10 @@ build_dep() {
         echo "[build_dep] $_name: source = $_resolved (explicit --source)"
     elif [[ "$_clone" == true ]]; then
         mkdir -p "$(dirname "$_clone_dest")"
-        # `git clone --branch` and `origin/$ref` only accept branch/tag refs.
-        # Detect SHA-shaped refs (7–40 hex chars) and take the detached-checkout
-        # path so the docs' "branch, tag, or commit" promise actually holds.
+        # `git clone --branch` and `origin/$ref` only accept branch/tag refs;
+        # `origin/$ref` further only exists for branches.  Branches, tags, and
+        # SHAs each need a different checkout path so the docs' "branch, tag,
+        # or commit" promise actually holds across reruns.
         local _ref_is_sha=false
         if [[ "$_ref" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
             _ref_is_sha=true
@@ -167,9 +168,20 @@ build_dep() {
                 git -C "$_clone_dest" fetch origin || return 1
                 git -C "$_clone_dest" checkout --detach "$_ref" || return 1
             else
-                git -C "$_clone_dest" fetch origin "$_ref" || return 1
-                git -C "$_clone_dest" checkout -B "$_ref" "origin/$_ref" || return 1
-                git -C "$_clone_dest" reset --hard "origin/$_ref" || return 1
+                # Fetch with --tags so both branches and tags become resolvable
+                # locally, then check out the right ref kind.  Branches keep
+                # the existing tracking-branch behavior; tags go to detached
+                # HEAD (the only sane option since tags don't move).
+                git -C "$_clone_dest" fetch --tags origin "$_ref" || return 1
+                if git -C "$_clone_dest" show-ref --verify --quiet "refs/remotes/origin/$_ref"; then
+                    git -C "$_clone_dest" checkout -B "$_ref" "origin/$_ref" || return 1
+                    git -C "$_clone_dest" reset --hard "origin/$_ref" || return 1
+                elif git -C "$_clone_dest" show-ref --verify --quiet "refs/tags/$_ref"; then
+                    git -C "$_clone_dest" checkout --detach "refs/tags/$_ref" || return 1
+                else
+                    echo "Error: build_dep $_name: ref '$_ref' is neither a branch nor a tag on origin (and not a recognized SHA)" >&2
+                    return 1
+                fi
             fi
             git -C "$_clone_dest" submodule update --init --recursive --force || return 1
         else
@@ -179,6 +191,8 @@ build_dep() {
                 git -C "$_clone_dest" checkout --detach "$_ref" || return 1
                 git -C "$_clone_dest" submodule update --init --recursive --force || return 1
             else
+                # `git clone --branch` accepts both branch and tag refs; for
+                # tags it lands on detached HEAD, which is what we want.
                 git clone --branch "$_ref" --recurse-submodules -- "$_url" "$_clone_dest" || return 1
             fi
         fi

@@ -70,8 +70,6 @@ source_dir="$TURBO_STACK_ROOT"
 
 # Generate
 cmake_generate_options=()
-#cmake_generate_options+=("-DCMAKE_C_COMPILER=$CC")
-#cmake_generate_options+=("-DCMAKE_CXX_COMPILER=$CXX")
 [[ "$ninja" == true ]] && cmake_generate_options+=("-G" "Ninja")
 if [[ "$debug" == true ]]; then
     build_type="Debug"
@@ -95,6 +93,17 @@ fi
 cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
 
 # Test
-cmake_test_options=()
-cmake_test_options+=("--output-on-failure")
-ctest --test-dir "$build_dir" "${cmake_test_options[@]}"
+# Honor TURBO_BUILD_UNIT_TESTS: when CMake configured with the option OFF,
+# the tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing
+# to run -- worse, --test-dir would still succeed but a future
+# --output-on-failure would mislead.  Read the resolved value from the
+# CMake cache so users who pass -DTURBO_BUILD_UNIT_TESTS=OFF (via -- or by
+# editing the cache) get a tidy "skipped" log instead.
+turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
+turbo_build_unit_tests=${turbo_build_unit_tests:-ON}
+if [[ "$turbo_build_unit_tests" == "ON" || "$turbo_build_unit_tests" == "TRUE" \
+   || "$turbo_build_unit_tests" == "1"  || "$turbo_build_unit_tests" == "YES" ]]; then
+    ctest --test-dir "$build_dir" --output-on-failure
+else
+    echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=$turbo_build_unit_tests -- skipping ctest"
+fi

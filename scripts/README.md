@@ -107,7 +107,7 @@ Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_st
 fetch_source --name NAME --url URL --branch REF --dest DIR [--force]
 ```
 
-Idempotent clone-or-fetch + hard-reset to `origin/<branch>` + recursive submodule update. Exports `<NAME_UPPER>_ROOT="$dest"`.
+Idempotent clone-or-fetch + recursive submodule update; `--branch REF` accepts a branch, tag, or commit SHA (branch → tracking branch; tag/SHA → detached HEAD). Exports `<NAME_UPPER>_ROOT="$dest"`.
 
 `--url` is required (no default) — see the script header for the rationale.
 

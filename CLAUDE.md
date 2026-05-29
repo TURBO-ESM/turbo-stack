@@ -27,6 +27,8 @@ scripts/build_with_spack.sh --infra TIM                  # FMS2 default; --infra
 scripts/build_with_spack.sh --recreate-spack-env --debug # nuke + recreate the spack env, then clean rebuild
 ```
 
+`build_with_spack.sh` options: `--debug`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`, `--recreate-spack-env`.
+
 ### Explicit two-step (any flavor; faster iteration)
 
 ```bash

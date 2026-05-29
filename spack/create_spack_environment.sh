@@ -18,8 +18,8 @@
 # Creates a named Spack environment, installs all packages, and prints
 # the activation command. Does NOT activate — user must run the printed command.
 #
-# To add a new compiler environment:
-#   1. Copy spack_gcc.yaml -> spack_<compiler>.yaml and adjust compiler/mpi entries
+# To experiment with a compiler-specific environment:
+#   1. Copy spack/spack.yaml -> spack/spack_<compiler>.yaml and adjust compiler/mpi entries
 #   2. Run: ./spack/create_spack_environment.sh turbo-<compiler> spack/spack_<compiler>.yaml
 
 set -eo pipefail
