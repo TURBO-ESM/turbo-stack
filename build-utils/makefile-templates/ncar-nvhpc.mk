@@ -19,7 +19,7 @@ MAKEFLAGS += --jobs=8
 LDFLAGS :=
 
 FC_AUTO_R8 = -r8
-FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
+FPPFLAGS := $(shell pkg-config --cflags yaml-0.1) -DHAVE_FC_DO_CONCURRENT_LOCAL
 FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
 
 
@@ -39,8 +39,8 @@ else
 endif
 
 ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -fopenmp -stdpar -Minfo=accel
-  CFLAGS += -mp=gpu -gpu=cc80
+  FFLAGS += -mp=gpu -gpu=cc80,mem:separate -stdpar=gpu -Minfo=accel
+  CFLAGS += -mp=gpu -gpu=cc80,mem:separate
   LDFLAGS += -mp=gpu -lmpi_gtl_cuda
 endif
 
