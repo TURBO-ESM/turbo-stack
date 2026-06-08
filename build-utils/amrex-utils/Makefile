@@ -8,6 +8,7 @@ build_amrex:
 		-DAMReX_FORTRAN=YES                              \
 		-DCMAKE_Fortran_COMPILER=$(shell which $(FC))    \
 		-DCMAKE_CXX_COMPILER=$(shell which $(CXX))       \
-		-DCMAKE_C_COMPILER=$(shell which $(CC))       && \
+		-DCMAKE_C_COMPILER=$(shell which $(CC))          \
+		-DAMReX_TINY_PROFILE=ON                       && \
 	cmake --build ${AMREX_BLD_PATH} -j ${JOBS}        && \
 	cmake --install ${AMREX_BLD_PATH}

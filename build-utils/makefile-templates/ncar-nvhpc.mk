@@ -41,7 +41,14 @@ endif
 ifeq ($(OFFLOAD),1)
   FFLAGS += -mp=gpu -gpu=cc80,mem:separate -stdpar=gpu -Minfo=accel
   CFLAGS += -mp=gpu -gpu=cc80,mem:separate
-  LDFLAGS += -mp=gpu -lmpi_gtl_cuda
+  # The AMReX continuity bridge .cpp must be compiled by nvcc -- nvc++ (the Cray
+  # CC wrapper) cannot compile AMReX CUDA kernel launches. Route C++ through a
+  # dispatch wrapper: the bridge TUs -> nvcc -x cu, all other C++ -> CC. This is
+  # a no-op for the FMS2 build (it has no AMReX bridge files).
+  CXX = /glade/work/altuntas/turbo-stack-iturbo/build-utils/nvcc-cxx-wrap.sh
+  # Final link (LD = ftn) pulls in the CUDA runtime and the C++ runtime so the
+  # nvcc-compiled AMReX/bridge objects resolve.
+  LDFLAGS += -mp=gpu -cuda -gpu=cc80,mem:separate -c++libs -lmpi_gtl_cuda
 endif
 
 # NetCDF Flags
