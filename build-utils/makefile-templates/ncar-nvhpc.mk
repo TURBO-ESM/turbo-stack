@@ -46,9 +46,12 @@ ifeq ($(OFFLOAD),1)
   # dispatch wrapper: the bridge TUs -> nvcc -x cu, all other C++ -> CC. This is
   # a no-op for the FMS2 build (it has no AMReX bridge files).
   CXX = /glade/work/altuntas/turbo-stack-iturbo/build-utils/nvcc-cxx-wrap.sh
+  export NVCC_APPEND_FLAGS := --fmad=false
   # Final link (LD = ftn) pulls in the CUDA runtime and the C++ runtime so the
   # nvcc-compiled AMReX/bridge objects resolve.
   LDFLAGS += -mp=gpu -cuda -gpu=cc80,mem:separate -c++libs -lmpi_gtl_cuda
+else
+  CXXFLAGS += -Mnofma -Kieee
 endif
 
 # NetCDF Flags
