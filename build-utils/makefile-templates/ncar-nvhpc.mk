@@ -45,7 +45,7 @@ ifeq ($(OFFLOAD),1)
   # CC wrapper) cannot compile AMReX CUDA kernel launches. Route C++ through a
   # dispatch wrapper: the bridge TUs -> nvcc -x cu, all other C++ -> CC. This is
   # a no-op for the FMS2 build (it has no AMReX bridge files).
-  CXX = /glade/work/altuntas/turbo-stack-iturbo/build-utils/nvcc-cxx-wrap.sh
+  CXX = $(abspath $(dir $(MK_TEMPLATE))..)/nvcc-cxx-wrap.sh
   export NVCC_APPEND_FLAGS := --fmad=false
   AMREX_GPU_FLAGS := -DAMReX_GPU_BACKEND=CUDA -DAMReX_CUDA_ARCH=8.0 -DAMReX_MPI=NO -DAMReX_DIFFERENT_COMPILER=ON
   # Final link (LD = ftn) pulls in the CUDA runtime and the C++ runtime so the
