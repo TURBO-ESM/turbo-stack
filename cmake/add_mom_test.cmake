@@ -13,12 +13,10 @@ function(add_mom_tests)
             "'${SUITE_UNPARSED_ARGUMENTS}'. Pass test files via "
             "TEST_FILES ... and link libs via LINK_LIBRARIES ....")
     endif()
+    # An empty SUITE_LINK_LIBRARIES expands to a bare `LINK_LIBRARIES` keyword,
+    # which add_mom_test parses to an empty list -- so no need to branch on it.
     foreach(TEST_FILE IN LISTS SUITE_TEST_FILES)
-        if(SUITE_LINK_LIBRARIES)
-            add_mom_test("${TEST_FILE}" LINK_LIBRARIES ${SUITE_LINK_LIBRARIES})
-        else()
-            add_mom_test("${TEST_FILE}")
-        endif()
+        add_mom_test("${TEST_FILE}" LINK_LIBRARIES ${SUITE_LINK_LIBRARIES})
     endforeach()
 endfunction()
 
