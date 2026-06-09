@@ -139,7 +139,7 @@ build_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-build"
 # Shared across both flavors: the env script is sourced ONCE with this path,
 # deps build once, and both turbo-stack-build flavors find them via the
 # CMAKE_PREFIX_PATH the env script appends.  The deps don't depend on
-# TURBO_INFRA, so sharing is safe -- the second flavor's cmake config picks
+# MOM6_INFRA, so sharing is safe -- the second flavor's cmake config picks
 # the same install tree and the build_dep sentinel-skip avoids a rebuild.
 shared_deps_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/shared-deps"
 

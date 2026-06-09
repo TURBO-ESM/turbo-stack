@@ -4,7 +4,7 @@ project(TurboStack LANGUAGES Fortran C CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # MOM6_SOURCE_DIR must be resolved before including MOM6Options (which sets
-# TURBO_INFRA and TURBO_MEMORY_MODE — the canonical definitions for both repos).
+# MOM6_INFRA and MOM6_MEMORY_MODE — the canonical definitions for both repos).
 if(NOT DEFINED MOM6_SOURCE_DIR)
     set(MOM6_SOURCE_DIR "$ENV{MOM6_ROOT}" CACHE PATH "Path to MOM6 source directory")
 endif()
@@ -28,13 +28,13 @@ include(TurboCompilerFlags)
 # only nc-config — so a FindNetCDF.cmake must be on CMAKE_MODULE_PATH *before*
 # find_package(FMS|TIM). Each backend ships its own copy; pull from the
 # matching submodule so the two never drift through a shared assumption.
-if(TURBO_INFRA STREQUAL "FMS2")
+if(MOM6_INFRA STREQUAL "FMS2")
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/submodules/infra/FMS2/cmake")
     find_package(FMS REQUIRED COMPONENTS R8)
     add_library(turbo_infra_r8 INTERFACE)
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE FMS::fms_r8)
-elseif(TURBO_INFRA STREQUAL "TIM")
+elseif(MOM6_INFRA STREQUAL "TIM")
     # TIM is built+installed by scripts/build_dep.sh into
     # deps/<tag>/install (or by spack, in principle, though spack does not
     # currently package TIM). find_package(TIM) resolves via CMAKE_PREFIX_PATH.
@@ -44,7 +44,7 @@ elseif(TURBO_INFRA STREQUAL "TIM")
     add_library(TURBO::infra_r8 ALIAS turbo_infra_r8)
     target_link_libraries(turbo_infra_r8 INTERFACE TIM::tim_r8)
 else()
-    message(FATAL_ERROR "Unknown TURBO_INFRA='${TURBO_INFRA}'. Valid values: FMS2, TIM")
+    message(FATAL_ERROR "Unknown MOM6_INFRA='${MOM6_INFRA}'. Valid values: FMS2, TIM")
 endif()
 
 # MPI and NetCDF are found transitively by FMS/TIM but declared explicitly

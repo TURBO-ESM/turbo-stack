@@ -77,7 +77,7 @@ if [[ "$debug" == true ]]; then
 fi
 cmake_generate_options+=("-DCMAKE_BUILD_TYPE=$build_type")
 if [[ -n "$infra" ]]; then
-    cmake_generate_options+=("-DTURBO_INFRA=$infra")
+    cmake_generate_options+=("-DMOM6_INFRA=$infra")
 fi
 
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
