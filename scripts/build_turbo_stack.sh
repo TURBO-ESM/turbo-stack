@@ -94,16 +94,14 @@ cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
 
 # Test
 # Honor TURBO_BUILD_UNIT_TESTS: when CMake configured with the option OFF,
-# the tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing
-# to run -- worse, --test-dir would still succeed but a future
-# --output-on-failure would mislead.  Read the resolved value from the
-# CMake cache so users who pass -DTURBO_BUILD_UNIT_TESTS=OFF (via -- or by
-# editing the cache) get a tidy "skipped" log instead.
+# the tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing to
+# run.  Read the resolved value from the CMake cache and run ctest only when
+# it is the canonical truthy literal that option() writes: ON.  Anything else
+# -- OFF, an unreadable cache, or a hand-edited non-canonical value -- skips
+# with a tidy log line instead of a confusing empty-ctest error.
 turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
-turbo_build_unit_tests=${turbo_build_unit_tests:-ON}
-if [[ "$turbo_build_unit_tests" == "ON" || "$turbo_build_unit_tests" == "TRUE" \
-   || "$turbo_build_unit_tests" == "1"  || "$turbo_build_unit_tests" == "YES" ]]; then
+if [[ "$turbo_build_unit_tests" == "ON" ]]; then
     ctest --test-dir "$build_dir" --output-on-failure
 else
-    echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=$turbo_build_unit_tests -- skipping ctest"
+    echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=${turbo_build_unit_tests:-<unset>} -- skipping ctest"
 fi
