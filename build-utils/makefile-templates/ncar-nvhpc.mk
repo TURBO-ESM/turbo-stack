@@ -41,15 +41,11 @@ endif
 ifeq ($(OFFLOAD),1)
   FFLAGS += -mp=gpu -gpu=cc80,mem:separate -stdpar=gpu -Minfo=accel
   CFLAGS += -mp=gpu -gpu=cc80,mem:separate
-  # The AMReX continuity bridge .cpp must be compiled by nvcc -- nvc++ (the Cray
-  # CC wrapper) cannot compile AMReX CUDA kernel launches. Route C++ through a
-  # dispatch wrapper: the bridge TUs -> nvcc -x cu, all other C++ -> CC. This is
-  # a no-op for the FMS2 build (it has no AMReX bridge files).
+  # Below is a temporary workaround to use the nvcc wrapper for C++ compilation
+  # Will be removed once the build system is updated.
   CXX = $(abspath $(dir $(MK_TEMPLATE))..)/nvcc-cxx-wrap.sh
   export NVCC_APPEND_FLAGS := --fmad=false
   AMREX_GPU_FLAGS := -DAMReX_GPU_BACKEND=CUDA -DAMReX_CUDA_ARCH=8.0 -DAMReX_MPI=NO -DAMReX_DIFFERENT_COMPILER=ON
-  # Final link (LD = ftn) pulls in the CUDA runtime and the C++ runtime so the
-  # nvcc-compiled AMReX/bridge objects resolve.
   LDFLAGS += -mp=gpu -cuda -gpu=cc80,mem:separate -c++libs -lmpi_gtl_cuda
 else
   CXXFLAGS += -Mnofma -Kieee

@@ -1,8 +1,5 @@
 include $(TEMPLATE)
 
-# AMReX must build with the real host compiler. Under OFFLOAD the template sets
-# CXX to the MOM6 nvcc dispatch wrapper (for MOM6's own AMReX TUs); that wrapper
-# must not be AMReX's compiler. offload => nvhpc/ncar, where the host C++ is CC.
 ifeq ($(OFFLOAD),1)
   CXX := CC
 endif
