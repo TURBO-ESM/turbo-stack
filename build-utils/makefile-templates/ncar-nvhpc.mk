@@ -33,9 +33,11 @@ CXXFLAGS := --std=c++17
 ifeq ($(DEBUG),1)
   FFLAGS += -O0 -g
   CFLAGS += -O0 -g
+  CXXFLAGS += -O0 -g
 else
     FFLAGS += -O2
     CFLAGS += -O2
+    CXXFLAGS += -O2
 endif
 
 ifeq ($(OFFLOAD),1)
@@ -44,7 +46,8 @@ ifeq ($(OFFLOAD),1)
   # Below is a temporary workaround to use the nvcc wrapper for C++ compilation
   # Will be removed once the build system is updated.
   CXX = $(abspath $(dir $(MK_TEMPLATE))..)/nvcc-cxx-wrap.sh
-  export NVCC_APPEND_FLAGS := --fmad=false
+  # --fmad=false matches the Fortran -Mnofma. -Xptxas -O2 pins the device-code optimization level
+  export NVCC_APPEND_FLAGS := --fmad=false -Xptxas -O2
   AMREX_GPU_FLAGS := -DAMReX_GPU_BACKEND=CUDA -DAMReX_CUDA_ARCH=8.0 -DAMReX_MPI=NO -DAMReX_DIFFERENT_COMPILER=ON
   LDFLAGS += -mp=gpu -cuda -gpu=cc80,mem:separate -c++libs -lmpi_gtl_cuda
 else
