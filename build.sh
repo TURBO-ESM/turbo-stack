@@ -264,7 +264,7 @@ if [[ "${INFRA}" == "TIM" ]]; then
     AMREX_BLD_PATH=$(pwd)/build              \
     CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}     \
     AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH} \
-      make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
+      make -j${JOBS} OFFLOAD=${OFFLOAD} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
   fi
   AMREX_LINK_FLAGS="-L${AMREX_INSTALL_PATH}/lib -lamrex"
   AMREX_INCLUDE_FLAGS="-I${AMREX_INSTALL_PATH}/include"
