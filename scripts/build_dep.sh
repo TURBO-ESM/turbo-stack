@@ -219,6 +219,25 @@ build_dep() {
         _sha=$(git -C "$_resolved" rev-parse HEAD 2>/dev/null || echo "")
     fi
 
+    # Working-tree fingerprint.  The HEAD SHA alone misses *uncommitted* edits,
+    # so the documented "export <NAME>_ROOT to a local dev tree and iterate"
+    # workflow would be silently skipped -- HEAD never moves while you edit, so
+    # a stale install looks current.  When the tree is dirty, fold a hash of the
+    # uncommitted changes (tracked `diff HEAD` plus the porcelain status, which
+    # also captures added/untracked paths) into the fingerprint: an edit forces
+    # a rebuild, an unchanged rerun still skips.
+    local _tree="$_sha"
+    if [[ -n "$_sha" ]]; then
+        local _dirty
+        _dirty=$(git -C "$_resolved" status --porcelain 2>/dev/null || echo "")
+        if [[ -n "$_dirty" ]]; then
+            local _diff_hash
+            _diff_hash=$( { git -C "$_resolved" diff HEAD 2>/dev/null; printf '%s\n' "$_dirty"; } \
+                | sha256sum | cut -d' ' -f1)
+            _tree="${_sha}-dirty-${_diff_hash:0:16}"
+        fi
+    fi
+
     local _src_abs
     _src_abs=$(cd "$_resolved" && pwd)
 
@@ -237,11 +256,12 @@ build_dep() {
         echo "[build_dep] $_name force-rebuild requested"
         rm -rf "$_build_dir"
     elif [[ -f "$_sentinel" ]]; then
-        local _saved_sha="" _saved_src="" _saved_prefix="" _saved_hash=""
+        local _saved_sha="" _saved_tree="" _saved_src="" _saved_prefix="" _saved_hash=""
         local _k _v
         while IFS='=' read -r _k _v; do
             case "$_k" in
                 sha)             _saved_sha="$_v" ;;
+                tree)            _saved_tree="$_v" ;;
                 source)          _saved_src="$_v" ;;
                 install_prefix)  _saved_prefix="$_v" ;;
                 cmake_args_hash) _saved_hash="$_v" ;;
@@ -249,6 +269,7 @@ build_dep() {
         done < "$_sentinel"
 
         if [[ "$_saved_sha" == "$_sha" \
+           && "$_saved_tree" == "$_tree" \
            && "$_saved_src" == "$_src_abs" \
            && "$_saved_prefix" == "$_install_prefix" \
            && "$_saved_hash" == "$_cmake_args_hash" ]]; then
@@ -259,6 +280,8 @@ build_dep() {
 
         if [[ "$_saved_sha" != "$_sha" ]]; then
             echo "[build_dep] $_name source changed (${_saved_sha:0:8} -> ${_sha:0:8}) -- rebuilding"
+        elif [[ "$_saved_tree" != "$_tree" ]]; then
+            echo "[build_dep] $_name has uncommitted changes since last build -- rebuilding"
         else
             echo "[build_dep] $_name config changed (cmake args or paths differ) -- rebuilding"
         fi
@@ -288,6 +311,7 @@ build_dep() {
     # --- Write sentinel atomically --------------------------------------
     {
         echo "sha=$_sha"
+        echo "tree=$_tree"
         echo "source=$_src_abs"
         echo "install_prefix=$_install_prefix"
         echo "cmake_args_hash=$_cmake_args_hash"
