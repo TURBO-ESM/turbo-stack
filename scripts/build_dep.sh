@@ -13,7 +13,7 @@
 #       [--source PATH | --clone --url URL --ref REF --clone-dest DIR]
 #       --build-dir DIR
 #       --install-prefix DIR
-#       [--rebuild]
+#       [--rebuild] [--force]
 #       [--parallel N | -j N]
 #       -- [cmake args...]
 #
@@ -32,6 +32,11 @@
 #   4. Submodule fallback                  per-name table inside this script
 #
 # Valid <name> values: fms, pfunit, amrex, tim.
+#
+# --force: when --clone targets an existing checkout, permit the destructive
+#   update (reset --hard + submodule --force) even if that checkout has
+#   uncommitted changes.  Without it, build_dep refuses rather than discard
+#   them ($<NAME>_ROOT may point at a tree you are actively editing).
 #
 # Required environment:
 #   TURBO_STACK_ROOT  Path to your turbo-stack repository clone (used by the
@@ -76,6 +81,7 @@ build_dep() {
     local _build_dir=""
     local _install_prefix=""
     local _rebuild=false
+    local _force=false
     local _parallel=""
     local _cmake_args=()
 
@@ -96,6 +102,7 @@ build_dep() {
             --build-dir)      _build_dir="$2"; shift 2 ;;
             --install-prefix) _install_prefix="$2"; shift 2 ;;
             --rebuild)        _rebuild=true; shift ;;
+            --force)          _force=true; shift ;;
             --parallel|-j)    _parallel="$2"; shift 2 ;;
             --)               shift; _cmake_args=("$@"); break ;;
             *)
@@ -163,6 +170,15 @@ build_dep() {
             _ref_is_sha=true
         fi
         if [[ -d "$_clone_dest/.git" ]]; then
+            # The update below (reset --hard, submodule --force) would discard
+            # uncommitted work in $_clone_dest -- which is exported as
+            # <NAME>_ROOT, so editing it between runs is natural.  Refuse unless
+            # --force is the explicit opt-in.
+            if [[ "$_force" != true && -n "$(git -C "$_clone_dest" status --porcelain 2>/dev/null)" ]]; then
+                echo "Error: build_dep $_name: $_clone_dest has uncommitted changes." >&2
+                echo "       Commit or stash them, or pass --force to discard and update." >&2
+                return 1
+            fi
             echo "[build_dep] $_name: $_clone_dest exists -- fetching to $_ref"
             if [[ "$_ref_is_sha" == true ]]; then
                 git -C "$_clone_dest" fetch origin || return 1

@@ -23,9 +23,13 @@
 #   --url URL      Git URL.  Required (no default).  See rationale below.
 #   --branch REF   Branch, tag, or commit to check out.  Required.
 #   --dest DIR     Where to clone.  Required.
-#   --force        rm -rf $dest first, then re-clone fresh.
+#   --force        rm -rf $dest first, then re-clone fresh.  Also the explicit
+#                  opt-in to discard uncommitted changes in an existing $dest.
 #
 # Behavior:
+#   - If $dest/.git exists but its working tree is dirty: refuse unless --force
+#     (the reset --hard below would otherwise silently discard those edits, and
+#     $dest is exported as <NAME>_ROOT, so editing it between runs is natural).
 #   - If $dest/.git exists: git fetch + dispatch on what $ref is --
 #       * branch  → checkout -B + reset --hard origin/$ref (tracking branch)
 #       * tag     → detached HEAD at refs/tags/$ref
@@ -82,6 +86,15 @@ fetch_source() {
         _ref_is_sha=true
     fi
     if [[ -d "$_dest/.git" ]]; then
+        # The update below (reset --hard, submodule --force) would discard any
+        # uncommitted work in $_dest -- and $_dest is exported as <NAME>_ROOT,
+        # so editing it between runs is natural.  Refuse rather than silently
+        # destroy; --force (handled above: rm -rf + re-clone) is the opt-in.
+        if [[ -n "$(git -C "$_dest" status --porcelain 2>/dev/null)" ]]; then
+            echo "Error: fetch_source $_name: $_dest has uncommitted changes." >&2
+            echo "       Commit or stash them, or pass --force to discard and re-clone." >&2
+            return 1
+        fi
         echo "[fetch_source] $_name: $_dest exists -- fetching to $_branch"
         if [[ "$_ref_is_sha" == true ]]; then
             git -C "$_dest" fetch origin || return 1
