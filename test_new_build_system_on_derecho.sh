@@ -34,7 +34,7 @@
 #
 # Configuration (env vars; export before invoking, or pass inline as `VAR=val ./script.sh`):
 #
-#   TURBO_STACK_ROOT             Path to turbo-stack clone.  Required, no default.
+#   TURBO_STACK_ROOT             Path to turbo-stack clone.  Defaults to the directory containing this script.
 #
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Where override clones, build artifacts, and
 #                                per-flavor logs live.  Default:
@@ -61,11 +61,6 @@
 #                                      ./test_new_build_system_on_derecho.sh
 
 set -euo pipefail
-
-if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
-    echo "Error: TURBO_STACK_ROOT is not set." >&2
-    exit 1
-fi
 
 # Argument parsing ----------------------------------------------------------------------
 
@@ -96,6 +91,13 @@ run_tim=true
 [[ "$only" == "TIM"  ]] && run_fms2=false
 
 # Configuration -------------------------------------------------------------------------
+
+TURBO_STACK_ROOT="${TURBO_STACK_ROOT:-$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" && pwd)}"
+if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
+    echo "Error: TURBO_STACK_ROOT could not be resolved." >&2
+    exit 1
+fi
+
 
 # URLs and branches for each fetched dep.  These should be the PR branches that
 # implement the new CMake build system but are not yet pinned by turbo-stack's
