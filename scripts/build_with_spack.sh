@@ -2,11 +2,12 @@
 # Usage: ./scripts/build_with_spack.sh [options]
 #
 # One-command build for the Spack flavor: sources
-# scripts/setup_environment/spack_local_environment.sh, builds FMS (and TIM
-# when --infra TIM) from source via build_dep, then calls
-# scripts/build_turbo_stack.sh to configure, build, and test.  Spack provides
-# only cmake/MPI/NetCDF/pFUnit/AMReX; FMS is intentionally not in spack.yaml
-# because turbo-stack tracks features ahead of the released FMS package.
+# scripts/setup_environment/spack_local_environment.sh, builds the selected
+# infra backend (FMS for FMS2, TIM for --infra TIM) from source via build_dep,
+# then calls scripts/build_turbo_stack.sh to configure, build, and test.  Spack
+# provides only cmake/MPI/NetCDF/pFUnit/AMReX; FMS is intentionally not in
+# spack.yaml because turbo-stack tracks features ahead of the released FMS
+# package.
 #
 # For the modules + from-source flavor (e.g. Derecho), source the appropriate
 # scripts/setup_environment/<machine>.sh manually and call
@@ -24,9 +25,10 @@
 #                           cmake builds + installs land: $DIR/deps/build/<dep>/
 #                           and $DIR/deps/install/.  When --build_dir is
 #                           omitted, deps land at $TURBO_STACK_ROOT/deps/default/.
-#   --infra FMS2|TIM        Infrastructure backend (passed through).  Selecting
-#                           TIM adds a `build_dep tim` step; FMS is always
-#                           built from source either way.
+#   --infra FMS2|TIM        Infrastructure backend (default: FMS2, passed
+#                           through).  Builds the selected backend from source:
+#                           FMS for FMS2, TIM for TIM.  The two are mutually
+#                           exclusive.
 #   --parallel N, -j N      Parallel build jobs.  Exported as
 #                           CMAKE_BUILD_PARALLEL_LEVEL so every downstream
 #                           `cmake --build` invocation (FMS/TIM deps + turbo-stack)
@@ -46,7 +48,7 @@ set -eo pipefail
 recreate_spack_env=false
 debug=false
 ninja=false
-infra=""
+infra="FMS2"
 build_dir=""
 parallel=""
 
@@ -89,19 +91,21 @@ env_args=()
 # shellcheck source=/dev/null
 source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
 
-# --- Stage 1b: build deps not coming from spack ------------------------
-# FMS and TIM are both built from source.  FMS used to come from spack,
-# but turbo-stack tracks features ahead of the released package, so we
-# always defer to $FMS_ROOT (or the submodule fallback when FMS_ROOT is
-# unset) to avoid quietly linking a stale version.  TIM has never been
-# in spack.
+# --- Stage 1b: build the infra backend from source ---------------------
+# FMS2 and TIM are mutually exclusive, so build only the selected backend.
+# FMS used to come from spack, but turbo-stack tracks features ahead of the
+# released package, so we defer to $FMS_ROOT (or the submodule fallback when
+# FMS_ROOT is unset) to avoid quietly linking a stale version.  TIM has never
+# been in spack.
 # shellcheck source=/dev/null
 source "$TURBO_STACK_ROOT/scripts/build_dep.sh"
 
-build_dep fms \
-    --build-dir "$deps_build_root/build/fms" \
-    --install-prefix "$deps_build_root/install" \
-    -- -D64BIT=ON -D32BIT=OFF -DFPIC=ON -DOPENMP=OFF
+if [[ "$infra" == "FMS2" ]]; then
+    build_dep fms \
+        --build-dir "$deps_build_root/build/fms" \
+        --install-prefix "$deps_build_root/install" \
+        -- -D64BIT=ON -D32BIT=OFF -DFPIC=ON -DOPENMP=OFF
+fi
 
 if [[ "$infra" == "TIM" ]]; then
     build_dep tim \

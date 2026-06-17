@@ -22,8 +22,8 @@
 #                           Power users who need deps in a path unrelated to
 #                           the turbo-stack build dir can source the env
 #                           script directly with its --deps-build-root flag.
-#   --infra FMS2|TIM        Infrastructure backend (passed through to
-#                           build_turbo_stack.sh).
+#   --infra FMS2|TIM        Infrastructure backend (default: FMS2, passed
+#                           through to build_turbo_stack.sh).
 #   --parallel N, -j N      Parallel build jobs.  Exported as
 #                           CMAKE_BUILD_PARALLEL_LEVEL so every downstream
 #                           `cmake --build` invocation (deps + turbo-stack)
@@ -39,7 +39,7 @@
 set -eo pipefail
 
 debug=false
-infra=""
+infra="FMS2"
 build_dir=""
 parallel=""
 
