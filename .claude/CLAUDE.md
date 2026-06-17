@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**TURBO Stack** is the central software hub for the TURBO (Towards Understanding the Representation of the Biological Ocean) Earth System Modeling project. It integrates MOM6 (ocean circulation), FMS (infrastructure), MARBL (marine biogeochemistry), and TIM (new AMReX-based infrastructure backend) into a unified build environment.
+**TURBO Stack** is the central software hub for the TURBO project. It integrates MOM6, FMS , MARBL, and TIM (new AMReX-based infrastructure backend) into a unified build environment.
 
 ## Build Commands
 
@@ -99,10 +99,12 @@ build_on_derecho.sh                                        ─── orchestrato
   └─→ build_turbo_stack.sh                                   step 2 (exec'd)
 
 CMakeLists.txt (repo root)
-  ├─→ mom6_build/  (MOM6 framework + infra wrapper targets)
-  │     ├─→ MOM6::framework_base, MOM6::infra, MOM6::framework
-  │     ├─→ MOM6::grid, MOM6::io
-  │     └─→ MOM6::CVMix, MOM6::GSW  (pkg/ subdir)
+  ├─→ TURBO::infra_r8  (interface lib wrapping the backend: FMS::fms_r8 or TIM::tim_r8)
+  ├─→ marbl_build/  (MARBL::marbl, from submodules/MARBL)
+  ├─→ mom6_build/  (MOM6 libraries, consumed from $MOM6_ROOT)
+  │     ├─→ MOM6::ocean                 (top-level ocean model)
+  │     ├─→ MOM6::framework, MOM6::infra
+  │     └─→ MOM6::CVMix, MOM6::GSW      (pkg/ subdir)
   └─→ tests/  (pFUnit unit tests, 40 tests, MPI-aware)
 
 src/amrex_mini_app/ (C++ / CMake — separate build)
