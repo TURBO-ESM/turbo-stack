@@ -18,7 +18,9 @@
 #   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
 #
 # Options:
-#   --debug                 Full clean rebuild (passed through)
+#   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
+#   --clean                 Clean rebuild from scratch (passed through:
+#                           cmake --fresh + --clean-first)
 #   --ninja                 Use Ninja generator (passed through)
 #   --build_dir DIR         Build directory for turbo-stack itself (passed
 #                           through).  Also controls where the FMS/TIM dep
@@ -40,13 +42,14 @@
 # Examples:
 #   build_with_spack.sh                              # configure + build + test
 #   build_with_spack.sh --debug                      # full clean rebuild
-#   build_with_spack.sh --infra TIM --debug          # full clean rebuild with TIM backend
-#   build_with_spack.sh --recreate-spack-env --debug # recreate spack env then full clean rebuild
+#   build_with_spack.sh --infra TIM --clean          # full clean rebuild with TIM backend
+#   build_with_spack.sh --recreate-spack-env --clean # recreate spack env then full clean rebuild
 
 set -eo pipefail
 
 recreate_spack_env=false
 debug=false
+clean=false
 ninja=false
 infra="FMS2"
 build_dir=""
@@ -56,6 +59,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --recreate-spack-env) recreate_spack_env=true; shift ;;
         --debug)              debug=true; shift ;;
+        --clean)              clean=true; shift ;;
         --ninja)              ninja=true; shift ;;
         --infra)              infra="$2"; shift 2 ;;
         --build_dir)          build_dir="$2"; shift 2 ;;
@@ -117,6 +121,7 @@ fi
 # --- Stage 2: configure + build + test -----------------------------------
 build_args=()
 [[ "$debug"     == true ]] && build_args+=(--debug)
+[[ "$clean"     == true ]] && build_args+=(--clean)
 [[ "$ninja"     == true ]] && build_args+=(--ninja)
 [[ -n "$infra"           ]] && build_args+=(--infra "$infra")
 [[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")

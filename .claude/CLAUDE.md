@@ -21,13 +21,14 @@ Different flavors fill in step 1 differently; step 2 is always the same. Per-mac
 ### Local build (spack flavor, one command)
 
 ```bash
-scripts/build_with_spack.sh                              # incremental build
-scripts/build_with_spack.sh --debug                      # full clean rebuild
-scripts/build_with_spack.sh --infra TIM                  # FMS2 default; --infra TIM also builds TIM from source
-scripts/build_with_spack.sh --recreate-spack-env --debug # nuke + recreate the spack env, then clean rebuild
+scripts/build_with_spack.sh                              # build (default backend infra FMS2, Release)
+scripts/build_with_spack.sh --debug                      # Debug build
+scripts/build_with_spack.sh --clean                      # Clean rebuild from scratch
+scripts/build_with_spack.sh --infra TIM                  # infra is FMS2 as default; --infra TIM also builds TIM from source
+scripts/build_with_spack.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
 ```
 
-`build_with_spack.sh` options: `--debug`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`, `--recreate-spack-env`.
+`build_with_spack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`, `--recreate-spack-env`.
 
 ### Explicit two-step (any flavor; faster iteration)
 
@@ -52,7 +53,7 @@ scripts/build_turbo_stack.sh
 | `scripts/fetch_source.sh` | Library — defines `fetch_source` for source-only-consumed deps (MOM6, MARBL) | sourced |
 | `scripts/build_turbo_stack.sh` | Step 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
-`build_turbo_stack.sh` options: `--debug`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`.
+`build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`.
 
 ### Where dep builds + installs land
 

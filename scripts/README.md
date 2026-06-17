@@ -34,7 +34,8 @@ Future per-machine orchestrators (`build_on_derecho.sh`, `build_on_derecho_with_
 
 ```bash
 scripts/build_with_spack.sh                    # configure + build + test
-scripts/build_with_spack.sh --debug            # full clean rebuild
+scripts/build_with_spack.sh --debug            # incremental Debug build
+scripts/build_with_spack.sh --clean            # clean rebuild from scratch
 scripts/build_with_spack.sh --infra TIM        # spack env + from-source TIM (spack does not package TIM)
 ```
 

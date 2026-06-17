@@ -12,7 +12,9 @@
 #   AMREX_ROOT          Path to an AMReX source checkout (default: submodule)
 #
 # Options:
-#   --debug                 Full clean rebuild (passed through)
+#   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
+#   --clean                 Clean rebuild from scratch (passed through:
+#                           cmake --fresh + --clean-first)
 #   --build_dir DIR         Build directory for turbo-stack itself (passed
 #                           through to build_turbo_stack.sh).  Also controls
 #                           where from-source dep cmake builds + installs
@@ -39,6 +41,7 @@
 set -eo pipefail
 
 debug=false
+clean=false
 infra="FMS2"
 build_dir=""
 parallel=""
@@ -46,6 +49,7 @@ parallel=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --debug)              debug=true; shift ;;
+        --clean)              clean=true; shift ;;
         --infra)              infra="$2"; shift 2 ;;
         --build_dir)          build_dir="$2"; shift 2 ;;
         --parallel|-j)        parallel="$2"; shift 2 ;;
@@ -75,7 +79,8 @@ source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh" 
 
 # --- Stage 2: configure + build + test -----------------------------------
 build_args=()
-[[ "$debug"     == true ]] && build_args+=(--debug)
+[[ "$debug"      == true ]] && build_args+=(--debug)
+[[ "$clean"      == true ]] && build_args+=(--clean)
 [[ -n "$infra"           ]] && build_args+=(--infra "$infra")
 [[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")
 bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"

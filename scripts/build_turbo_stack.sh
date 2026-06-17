@@ -12,7 +12,9 @@
 #   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
 #
 # Options:
-#   --debug             Cleans the build directory and rebuilds from scratch
+#   --debug             Build with CMAKE_BUILD_TYPE=Debug 
+#   --clean             Clean rebuild from scratch: cmake --fresh (wipe the
+#                       configure cache) + --clean-first (clean build artifacts)
 #   --ninja             Use Ninja generator instead of the default (Unix Makefiles)
 #   --build_dir DIR     Build directory (default: $TURBO_STACK_ROOT/build/default)
 #   --infra FMS2|TIM    Infrastructure backend (default: FMS2). The chosen
@@ -45,6 +47,7 @@ fi
 build_dir="$TURBO_STACK_ROOT/build/default"
 build_type="Release"
 debug=false
+clean=false
 ninja=false
 infra=""
 parallel=""
@@ -54,6 +57,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --build_dir)    build_dir="$2"; shift 2 ;;
         --debug)        debug=true; shift ;;
+        --clean)        clean=true; shift ;;
         --ninja)        ninja=true; shift ;;
         --infra)        infra="$2"; shift 2 ;;
         --parallel|-j)  parallel="$2"; shift 2 ;;
@@ -71,10 +75,8 @@ source_dir="$TURBO_STACK_ROOT"
 # Generate
 cmake_generate_options=()
 [[ "$ninja" == true ]] && cmake_generate_options+=("-G" "Ninja")
-if [[ "$debug" == true ]]; then
-    build_type="Debug"
-    cmake_generate_options+=("--fresh")
-fi
+[[ "$debug" == true ]] && build_type="Debug"
+[[ "$clean" == true ]] && cmake_generate_options+=("--fresh")
 cmake_generate_options+=("-DCMAKE_BUILD_TYPE=$build_type")
 if [[ -n "$infra" ]]; then
     cmake_generate_options+=("-DMOM6_INFRA=$infra")
@@ -87,9 +89,7 @@ cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 # default).
 cmake_build_options=()
 [[ -n "$parallel" ]] && cmake_build_options+=("--parallel" "$parallel")
-if [[ "$debug" == true ]]; then
-    cmake_build_options+=("--clean-first")
-fi
+[[ "$clean" == true ]] && cmake_build_options+=("--clean-first")
 cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
 
 # Test
