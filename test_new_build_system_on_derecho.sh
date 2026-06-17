@@ -92,12 +92,11 @@ run_tim=true
 
 # Configuration -------------------------------------------------------------------------
 
-TURBO_STACK_ROOT="${TURBO_STACK_ROOT:-$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" && pwd)}"
+export TURBO_STACK_ROOT="${TURBO_STACK_ROOT:-$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" && pwd)}"
 if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
     echo "Error: TURBO_STACK_ROOT could not be resolved." >&2
     exit 1
 fi
-
 
 # URLs and branches for each fetched dep.  These should be the PR branches that
 # implement the new CMake build system but are not yet pinned by turbo-stack's
