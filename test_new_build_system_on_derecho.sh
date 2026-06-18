@@ -92,11 +92,51 @@ run_tim=true
 
 # Configuration -------------------------------------------------------------------------
 
-export TURBO_STACK_ROOT="${TURBO_STACK_ROOT:-$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" && pwd)}"
-if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
-    echo "Error: TURBO_STACK_ROOT could not be resolved." >&2
+# Resolve TURBO_STACK_ROOT automatically.
+# No single source is reliable across both batch and interactive runs (a batch
+# job's script is copied to the PBS spool dir, so self-location fails there), so
+# we try each candidate in order and validate it against a known repo file before
+# trusting it. A wrong guess is rejected rather than silently used.
+_resolve_turbo_stack_root() {
+    local candidate args script
+    local marker="scripts/fetch_source.sh"
+
+    # 0. explicit override, if someone really wants one
+    [[ -n "${TURBO_STACK_ROOT:-}" && -f "${TURBO_STACK_ROOT}/${marker}" ]] \
+        && { printf '%s\n' "$TURBO_STACK_ROOT"; return 0; }
+
+    # 1. self-location — correct for a direct run (interactive job or plain shell)
+    candidate=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd) || candidate=
+    [[ -n "$candidate" && -f "${candidate}/${marker}" ]] \
+        && { printf '%s\n' "$candidate"; return 0; }
+
+    # 2. PBS submit dir — correct for `qsub this_script.sh` run from the repo directory
+    [[ -n "${PBS_O_WORKDIR:-}" && -f "${PBS_O_WORKDIR}/${marker}" ]] \
+        && { printf '%s\n' "$PBS_O_WORKDIR"; return 0; }
+
+    # 3. reconstruct the submitted script path from PBS — correct for
+    #    `qsub path/to/this/script.sh` from any directory (PBS_O_WORKDIR is the submit
+    #    cwd, not the script's dir; the script is the last token of Submit_arguments)
+    if [[ -n "${PBS_JOBID:-}" ]] && command -v qstat >/dev/null 2>&1; then
+        args=$(qstat -f "$PBS_JOBID" 2>/dev/null | sed -n 's/^[[:space:]]*Submit_arguments = //p')
+        script=${args##* }
+        if [[ -n "$script" && "$script" != "--" ]]; then
+            [[ "$script" == /* ]] || script="${PBS_O_WORKDIR:-$PWD}/$script"
+            candidate=$(cd -P -- "$(dirname -- "$script")" 2>/dev/null && pwd) || candidate=
+            [[ -n "$candidate" && -f "${candidate}/${marker}" ]] \
+                && { printf '%s\n' "$candidate"; return 0; }
+        fi
+    fi
+
+    return 1
+}
+
+if ! TURBO_STACK_ROOT=$(_resolve_turbo_stack_root); then
+    echo "Error: could not locate the turbo-stack root automatically." >&2
+    echo "  As a last resort, set it explicitly: export TURBO_STACK_ROOT=/path/to/turbo-stack" >&2
     exit 1
 fi
+export TURBO_STACK_ROOT
 
 # URLs and branches for each fetched dep.  These should be the PR branches that
 # implement the new CMake build system but are not yet pinned by turbo-stack's
