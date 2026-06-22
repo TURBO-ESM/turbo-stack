@@ -9,13 +9,19 @@
 
 # Usage: ./test_new_build_system_on_derecho.sh [options]
 #
-# Drives the FMS2 and TIM build flavors of turbo-stack on Derecho end-to-end,
-# against the new-build-system PR branches in MOM6 / TIM / FMS.  Trusts the
-# caller to have turbo-stack already checked out at the branch and state they
-# want tested -- the script does NOT pull, switch branches, or update
-# submodules under $TURBO_STACK_ROOT.  All artifacts (fetched source clones,
-# dep cmake builds + installs, turbo-stack builds, logs) land under
-# $TURBO_BUILD_SYSTEM_TEST_DIR; nothing is written into $TURBO_STACK_ROOT.
+# Drives the FMS2 and TIM build flavors of turbo-stack on Derecho end-to-end.
+# By default it tests the MOM6 / TIM / FMS sources that turbo-stack pins as
+# submodules -- now that the CMake-build-system PRs are merged and the submodule
+# pins point at the merged commits.  Trusts the caller to have turbo-stack
+# already checked out at the branch and state they want tested, WITH its
+# submodules initialized (git submodule update --init --recursive) -- the script
+# does NOT pull, switch branches, or update submodules under $TURBO_STACK_ROOT.
+#
+# Any of MOM6 / TIM / FMS can optionally be overridden with an out-of-tree
+# checkout instead of its submodule -- e.g. to test an un-pinned PR branch or a
+# local dev tree (see fetch_<NAME> / <NAME>_ROOT below).  All artifacts (any
+# override clones, dep cmake builds + installs, turbo-stack builds, logs) land
+# under $TURBO_BUILD_SYSTEM_TEST_DIR; nothing is written into $TURBO_STACK_ROOT.
 #
 # Options:
 #   --only FMS2|TIM       Run only the named flavor (default: both)
@@ -42,13 +48,15 @@
 #                                /tmp/turbo_build_system_test if $TMPDIR is unset).
 #
 #   fetch_MOM6 / fetch_TIM / fetch_FMS
-#                                (default: true)  When true, this script clones
-#                                the configured PR branch into the override dir
-#                                and exports <NAME>_ROOT for downstream
-#                                build_dep calls.  Set to false to keep this
-#                                script out of the override dir entirely --
-#                                typically combined with an exported <NAME>_ROOT
-#                                pointing at a local dev tree.
+#                                (default: false)  When false (the default), the
+#                                source pinned by turbo-stack's submodule is
+#                                used.  When true, this script clones the
+#                                configured branch into the override dir and
+#                                exports <NAME>_ROOT, so that clone is used
+#                                INSTEAD of the submodule.  Set true to test an
+#                                un-pinned PR branch; or leave it false and
+#                                export <NAME>_ROOT yourself to test a local dev
+#                                tree.
 #
 #   MOM6_ROOT / TIM_ROOT / FMS_ROOT
 #                                Local checkouts to test against.  When set,
@@ -138,22 +146,24 @@ if ! TURBO_STACK_ROOT=$(_resolve_turbo_stack_root); then
 fi
 export TURBO_STACK_ROOT
 
-# URLs and branches for each fetched dep.  These should be the PR branches that
-# implement the new CMake build system but are not yet pinned by turbo-stack's
-# submodules.  Edit to point at other PRs / forks when testing different
-# combinations.  The fetch_<NAME> defaults below use `:=` so callers can flip
-# them off without editing this file (see header for examples).
-: "${fetch_MOM6:=true}"
+# Override sources, consulted ONLY when the matching fetch_<NAME> is true.  By
+# default fetch_<NAME> is false and the in-tree submodule is used instead.  The
+# branches below default to each repo's integration branch -- the merge target
+# of the CMake-build-system PRs -- so flipping a fetch on tests the latest tip
+# against the stack; edit a URL/branch to point at a specific PR or fork.  The
+# `:=` defaults let callers flip a fetch on without editing this file (e.g.
+# `fetch_MOM6=true ./test_new_build_system_on_derecho.sh`).
+: "${fetch_MOM6:=false}"
 MOM6_REPO_URL="https://github.com/TURBO-ESM/MOM6.git"
-MOM6_BRANCH="192-feature-cmake-build-system-for-MOM6"
+MOM6_BRANCH="dev/turbo"
 
-: "${fetch_TIM:=true}"
+: "${fetch_TIM:=false}"
 TIM_REPO_URL="https://github.com/TURBO-ESM/TIM.git"
-TIM_BRANCH="192-feature-cmake-build-system-for-TIM"
+TIM_BRANCH="main"
 
-: "${fetch_FMS:=true}"
+: "${fetch_FMS:=false}"
 FMS_REPO_URL="https://github.com/TURBO-ESM/FMS.git"
-FMS_BRANCH="192-feature-cmake-build-system-for-FMS"
+FMS_BRANCH="dev/turbo"
 
 # `:=` applies the default for TURBO_BUILD_SYSTEM_TEST_DIR when unset OR empty, so the
 # result is always non-empty.  TURBO_STACK_ROOT is required and validated above.
@@ -166,10 +176,11 @@ export TURBO_BUILD_SYSTEM_TEST_DIR
 # below before any filesystem state is created.
 log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 
-# Where the clones of the dependencies we will use instead of the submodules
-# from turbo-stack live.  These are populated by fetch_source below; build_dep
-# (called from the env script) then uses them instead of the submodules because
-# *_ROOT is set.
+# Where any override clones live (populated by fetch_source below only for the
+# components whose fetch_<NAME>=true).  When an override clone exists its
+# <NAME>_ROOT is exported, so build_dep (called from the env script) and
+# turbo-stack's CMakeLists use it instead of the submodule.  With the defaults
+# (all fetch_<NAME>=false) this directory stays empty and the submodules win.
 deps_that_override_submodules_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
 
 # Where we will build turbo-stack.  Each per-flavor block below points its own
@@ -223,11 +234,13 @@ mkdir -p "$TURBO_BUILD_SYSTEM_TEST_DIR" \
 
 # Clone or update the override repos ----------------------------------------------------
 
-# MOM6 / TIM / FMS are PR branches not yet pinned by turbo-stack's submodules.
-# fetch_source pulls each into $deps_that_override_submodules_dir and exports
-# the matching <NAME>_ROOT, which downstream build_dep calls (in the env
-# script) and turbo-stack's CMakeLists.txt then pick up via the env-var
-# precedence layer.
+# Optionally override a component's submodule with an out-of-tree clone.  For
+# each fetch_<NAME>=true, fetch_source pulls the configured branch into
+# $deps_that_override_submodules_dir and exports the matching <NAME>_ROOT, which
+# downstream build_dep calls (in the env script) and turbo-stack's CMakeLists.txt
+# then pick up via the env-var precedence layer -- taking priority over the
+# submodule.  With the defaults (all false) nothing is fetched and the
+# submodules are used as-is.
 cd "$deps_that_override_submodules_dir"
 
 if [[ "$fetch_MOM6" == true ]]; then
@@ -247,32 +260,58 @@ fi
 
 # Record what we're testing -------------------------------------------------------------
 
-# Print the SHA + branch of every checkout so a run is reproducible later --
-# paste this into the PR description or the post-mortem.
-# Tolerates an unset / empty repo_root: the script header documents a
-# `fetch_<NAME>=false <NAME>_ROOT=...` workflow, but a user who didn't export
-# the ROOT path would otherwise trip `set -u` here before any build runs.
-_print_version() {
-    local label="$1" repo_root="$2"
-    if [[ -z "$repo_root" ]]; then
-        printf "  %-12s @ <not set>\n" "$label"
+# Print the effective source of each component (SHA + branch) so a run is
+# reproducible later -- paste this into the PR description or the post-mortem.
+# Each component uses its in-tree submodule unless overridden by a set
+# <NAME>_ROOT (an override clone from fetch_<NAME>=true, or a local dev tree).
+_print_source() {
+    local label="$1" override_root="$2" submodule_path="$3"
+    local src kind
+    if [[ -n "$override_root" ]]; then
+        src="$override_root"; kind="override"
+    else
+        src="$submodule_path"; kind="submodule"
+    fi
+    if [[ ! -e "$src/.git" ]]; then
+        printf "  %-12s @ <uninitialized: %s>  (%s)\n" "$label" "$src" "$kind"
         return
     fi
     local sha branch
-    sha=$(git -C "$repo_root" rev-parse HEAD)
-    branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD)
-    printf "  %-12s @ %s  (branch %s)\n" "$label" "$sha" "$branch"
+    sha=$(git -C "$src" rev-parse HEAD)
+    branch=$(git -C "$src" rev-parse --abbrev-ref HEAD)
+    printf "  %-12s @ %s  (%s, branch %s)\n" "$label" "$sha" "$kind" "$branch"
 }
 
 echo
 echo "================================================================"
 echo "Testing matrix"
 echo "================================================================"
-_print_version "turbo-stack" "$TURBO_STACK_ROOT"
-_print_version "MOM6"        "${MOM6_ROOT:-}"
-_print_version "TIM"         "${TIM_ROOT:-}"
-_print_version "FMS"         "${FMS_ROOT:-}"
+printf "  %-12s @ %s  (branch %s)\n" "turbo-stack" \
+    "$(git -C "$TURBO_STACK_ROOT" rev-parse HEAD)" \
+    "$(git -C "$TURBO_STACK_ROOT" rev-parse --abbrev-ref HEAD)"
+_print_source "MOM6" "${MOM6_ROOT:-}" "$TURBO_STACK_ROOT/submodules/MOM6"
+_print_source "TIM"  "${TIM_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/TIM"
+_print_source "FMS"  "${FMS_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/FMS2"
 echo "================================================================"
+
+# Guard: a component sourced from its submodule (no <NAME>_ROOT override)
+# requires that submodule to be initialized -- this script deliberately does not
+# touch $TURBO_STACK_ROOT, so fail early with a clear remedy rather than deep
+# inside a cmake configure.
+_require_submodule() {
+    local label="$1" override_root="$2" submodule_path="$3" root_var="$4"
+    [[ -n "$override_root" ]] && return 0   # overridden -- submodule not needed
+    if [[ ! -f "$submodule_path/CMakeLists.txt" ]]; then
+        echo "Error: $label submodule at '$submodule_path' is not initialized." >&2
+        echo "       Initialize it first (this script will not modify \$TURBO_STACK_ROOT):" >&2
+        echo "         git -C \"\$TURBO_STACK_ROOT\" submodule update --init --recursive" >&2
+        echo "       Or test an out-of-tree source: set fetch_$label=true, or export $root_var=/path/to/$label" >&2
+        exit 1
+    fi
+}
+_require_submodule "MOM6" "${MOM6_ROOT:-}" "$TURBO_STACK_ROOT/submodules/MOM6"       "MOM6_ROOT"
+_require_submodule "TIM"  "${TIM_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/TIM"  "TIM_ROOT"
+_require_submodule "FMS"  "${FMS_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/FMS2" "FMS_ROOT"
 
 # Build shared deps once ----------------------------------------------------------------
 
