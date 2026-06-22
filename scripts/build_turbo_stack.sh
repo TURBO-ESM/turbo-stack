@@ -72,6 +72,18 @@ done
 
 source_dir="$TURBO_STACK_ROOT"
 
+# MOM6 is consumed as source by turbo-stack's CMakeLists (read via MOM6_ROOT
+# -> MOM6_SOURCE_DIR).  Unlike the infra backends (FMS/TIM, which fall back to
+# their submodule in build_dep.sh), MOM6 has no such fallback -- an unset
+# MOM6_ROOT makes the CMake configure FATAL_ERROR.  Default it here to the
+# in-tree submodule when the user hasn't pointed MOM6_ROOT at an external
+# checkout: keeps the documented "MOM6_ROOT default: submodule" contract honest
+# and lets `cmake -S "$source_dir"` resolve without further env setup.
+if [[ -z "${MOM6_ROOT:-}" ]]; then
+    export MOM6_ROOT="$TURBO_STACK_ROOT/submodules/MOM6"
+    echo "[build_turbo_stack] MOM6_ROOT unset -- defaulting to submodule: $MOM6_ROOT"
+fi
+
 # Generate
 cmake_generate_options=()
 [[ "$ninja" == true ]] && cmake_generate_options+=("-G" "Ninja")
