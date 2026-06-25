@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/fetch_source.sh
+# scripts/lib/fetch_source.sh
 #
 # SOURCED library.  Defines a `fetch_source` function that clones a git
 # repository (or fetches + hard-resets an existing checkout) into a given
@@ -8,12 +8,12 @@
 # Intended for source-only-consumed deps (e.g. MOM6, MARBL) that turbo-stack's
 # own CMakeLists.txt reads via <NAME>_ROOT but does not build separately.
 # Buildable deps (FMS, pFUnit, AMReX, TIM) should use `build_dep --clone`
-# from scripts/build_dep.sh instead, which handles cloning + building in one
+# from scripts/lib/build_dep.sh instead, which handles cloning + building in one
 # call.
 #
 # Usage (sourced once, called per repo):
 #
-#   source scripts/fetch_source.sh
+#   source scripts/lib/fetch_source.sh
 #
 #   fetch_source --name NAME --url URL --branch REF --dest DIR [--force]
 #

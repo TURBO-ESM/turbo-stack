@@ -5,11 +5,8 @@
 #
 # Requires a prepared environment: cmake + MPI compilers on PATH, and any
 # from-source deps installed so find_package(FMS|TIM|PFUNIT|AMReX) succeeds.
-# Either run via the orchestrator (scripts/build_with_spack.sh) or first
-# source a per-machine recipe under scripts/setup_environment/.
 #
-# Required environment variables:
-#   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
+# `TURBO_STACK_ROOT` is self-located (set it only to override).
 #
 # Options:
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug 
@@ -19,9 +16,8 @@
 #   --build_dir DIR     Build directory (default: $TURBO_STACK_ROOT/build/default)
 #   --infra FMS2|TIM    Infrastructure backend (default: FMS2). The chosen
 #                       backend must be discoverable via find_package on
-#                       CMAKE_PREFIX_PATH; build_dep.sh (called from the
-#                       per-machine env script) handles that for from-source
-#                       flavors.
+#                       CMAKE_PREFIX_PATH; the orchestrator/driver builds it
+#                       first via the turbo_build_* wrappers (scripts/lib/common.sh).
 #   --parallel N, -j N  Parallel build jobs for `cmake --build`.  When omitted,
 #                       cmake reads $CMAKE_BUILD_PARALLEL_LEVEL as its own
 #                       native default (and falls back to the generator's
@@ -38,10 +34,12 @@
 
 set -eo pipefail
 
-if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
-    echo "Error: TURBO_STACK_ROOT is not set." >&2
-    exit 1
-fi
+# Locate + source the shared library, then resolve TURBO_STACK_ROOT (self-
+# locating; an exported value is an optional override).  This script lives in
+# scripts/, so the shared library is the sibling lib/ subdir.
+# shellcheck source=/dev/null
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+turbo_resolve_stack_root
 
 # Default arguments
 build_dir="$TURBO_STACK_ROOT/build/default"
@@ -72,17 +70,9 @@ done
 
 source_dir="$TURBO_STACK_ROOT"
 
-# MOM6 is consumed as source by turbo-stack's CMakeLists (read via MOM6_ROOT
-# -> MOM6_SOURCE_DIR).  Unlike the infra backends (FMS/TIM, which fall back to
-# their submodule in build_dep.sh), MOM6 has no such fallback -- an unset
-# MOM6_ROOT makes the CMake configure FATAL_ERROR.  Default it here to the
-# in-tree submodule when the user hasn't pointed MOM6_ROOT at an external
-# checkout: keeps the documented "MOM6_ROOT default: submodule" contract honest
-# and lets `cmake -S "$source_dir"` resolve without further env setup.
-if [[ -z "${MOM6_ROOT:-}" ]]; then
-    export MOM6_ROOT="$TURBO_STACK_ROOT/submodules/MOM6"
-    echo "[build_turbo_stack] MOM6_ROOT unset -- defaulting to submodule: $MOM6_ROOT"
-fi
+# MOM6 is consumed as source by turbo-stack's CMake (read via MOM6_ROOT) and has
+# no build_dep fallback, so default it to the in-tree submodule when unset.
+turbo_default_mom6_root
 
 # Generate
 cmake_generate_options=()

@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/build_dep.sh
+# scripts/lib/build_dep.sh
 #
 # SOURCED library.  Defines a `build_dep` function that builds and installs
 # one cmake-based dependency, with three source-discovery modes and a sentinel
@@ -7,7 +7,7 @@
 #
 # Usage (sourced once, called per dep):
 #
-#   source scripts/build_dep.sh
+#   source scripts/lib/build_dep.sh
 #
 #   build_dep <name>
 #       [--source PATH | --clone --url URL --ref REF --clone-dest DIR]

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Usage: ./scripts/build_with_spack.sh [options]
+# Usage: ./scripts/build_local_with_spack_env.sh [options]
 #
 # One-command build for the Spack flavor: sources
 # scripts/setup_environment/spack_local_environment.sh, builds the selected
-# infra backend (FMS for FMS2, TIM for --infra TIM) from source via build_dep,
-# then calls scripts/build_turbo_stack.sh to configure, build, and test.  Spack
+# infra backend (FMS for FMS2, TIM for --infra TIM) via the turbo_build_*
+# wrappers, then calls scripts/build_turbo_stack.sh to configure/build/test.  Spack
 # provides only cmake/MPI/NetCDF/pFUnit/AMReX; FMS is intentionally not in
 # spack.yaml because turbo-stack tracks features ahead of the released FMS
 # package.
@@ -13,9 +13,8 @@
 # scripts/setup_environment/<machine>.sh manually and call
 # scripts/build_turbo_stack.sh directly.  See scripts/README.md for details.
 #
-# Required environment variables:
-#   SPACK_ROOT          Path to your Spack installation
-#   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
+# Required: SPACK_ROOT (your Spack installation).  TURBO_STACK_ROOT is
+# self-located (set it only to override).
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
@@ -40,10 +39,10 @@
 #   --recreate-spack-env    Delete and recreate the Spack env from scratch
 #
 # Examples:
-#   build_with_spack.sh                              # configure + build + test
-#   build_with_spack.sh --debug                      # full clean rebuild
-#   build_with_spack.sh --infra TIM --clean          # full clean rebuild with TIM backend
-#   build_with_spack.sh --recreate-spack-env --clean # recreate spack env then full clean rebuild
+#   build_local_with_spack_env.sh                              # configure + build + test
+#   build_local_with_spack_env.sh --debug                      # full clean rebuild
+#   build_local_with_spack_env.sh --infra TIM --clean          # full clean rebuild with TIM backend
+#   build_local_with_spack_env.sh --recreate-spack-env --clean # recreate spack env then full clean rebuild
 
 set -eo pipefail
 
@@ -65,16 +64,18 @@ while [[ $# -gt 0 ]]; do
         --build_dir)          build_dir="$2"; shift 2 ;;
         --parallel|-j)        parallel="$2"; shift 2 ;;
         *)
-            echo "Error: unknown option '$1' to build_with_spack.sh" >&2
+            echo "Error: unknown option '$1' to build_local_with_spack_env.sh" >&2
             exit 1
             ;;
     esac
 done
 
-if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
-    echo "Error: TURBO_STACK_ROOT is not set." >&2
-    exit 1
-fi
+# Locate + source the shared library, then resolve TURBO_STACK_ROOT (self-
+# locating; an exported value is an optional override).  This script lives in
+# scripts/, so the shared library is the sibling lib/ subdir.
+# shellcheck source=/dev/null
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+turbo_resolve_stack_root
 
 # Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every
 # `cmake --build` in the rest of the pipeline (FMS/TIM deps + turbo-stack) picks
@@ -89,36 +90,39 @@ else
     deps_build_root="$TURBO_STACK_ROOT/deps/default"
 fi
 
-# --- Stage 1: environment setup (Spack flavor) ---------------------------
+# Guard the submodules this build consumes (skipped when the matching *_ROOT
+# overrides).  pFUnit + AMReX come from spack here, so only MOM6 / MARBL and the
+# selected infra backend need an initialized submodule.
+turbo_require_submodule submodules/MOM6  MOM6  MOM6_ROOT
+turbo_require_submodule submodules/MARBL MARBL
+if [[ "$infra" == "TIM" ]]; then
+    turbo_require_submodule submodules/infra/TIM TIM TIM_ROOT
+else
+    turbo_require_submodule submodules/infra/FMS2 FMS FMS_ROOT
+fi
+
+# --- Tier 1: toolchain (spack env; no dependency builds) -----------------
 env_args=()
 [[ "$recreate_spack_env" == true ]] && env_args+=(--recreate)
 # shellcheck source=/dev/null
 source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
 
-# --- Stage 1b: build the infra backend from source ---------------------
-# FMS2 and TIM are mutually exclusive, so build only the selected backend.
-# FMS used to come from spack, but turbo-stack tracks features ahead of the
-# released package, so we defer to $FMS_ROOT (or the submodule fallback when
-# FMS_ROOT is unset) to avoid quietly linking a stale version.  TIM has never
-# been in spack.
-# shellcheck source=/dev/null
-source "$TURBO_STACK_ROOT/scripts/build_dep.sh"
-
-if [[ "$infra" == "FMS2" ]]; then
-    build_dep fms \
-        --build-dir "$deps_build_root/build/fms" \
-        --install-prefix "$deps_build_root/install" \
-        -- -D64BIT=ON -D32BIT=OFF -DFPIC=ON -DOPENMP=OFF
-fi
+# --- Tier 2: build the infra backend from source -------------------------
+# Spack provides pFUnit + AMReX; FMS is intentionally NOT in spack (turbo-stack
+# tracks features ahead of the released package) and TIM has never been, so
+# build the selected backend from its submodule (or its $<NAME>_ROOT override).
+# FMS2 and TIM are mutually exclusive.  Canonical flags live in
+# scripts/lib/common.sh's turbo_build_* wrappers.
 
 if [[ "$infra" == "TIM" ]]; then
-    build_dep tim \
-        --build-dir "$deps_build_root/build/tim" \
-        --install-prefix "$deps_build_root/install" \
-        -- -D64BIT=ON -D32BIT=OFF
+    turbo_build_tim "$deps_build_root/build" "$deps_build_root/install"
 fi
 
-# --- Stage 2: configure + build + test -----------------------------------
+if [[ "$infra" == "FMS2" ]]; then
+    turbo_build_fms "$deps_build_root/build" "$deps_build_root/install"
+fi
+
+# --- Tier 3: configure + build + test turbo-stack ------------------------
 build_args=()
 [[ "$debug"     == true ]] && build_args+=(--debug)
 [[ "$clean"     == true ]] && build_args+=(--clean)

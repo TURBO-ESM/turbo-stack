@@ -8,56 +8,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Requires `TURBO_STACK_ROOT` (and, for the spack flavor, `SPACK_ROOT`) to be set in your shell profile. See [`scripts/README.md`](scripts/README.md) for the full reference.
+Scripts self-locate `TURBO_STACK_ROOT` (set it only to override; `SPACK_ROOT` is needed for the spack flavor). See [`scripts/README.md`](scripts/README.md) for the full reference, including the **dependency tier contract** (`docs/dependency_tiers.png`).
 
-### 2-step pipeline
+### 3-stage pipeline
 
 ```
-setup environment (toolchain + any from-source deps)  →  build turbo-stack
+Tier-1 toolchain (modules/spack; builds nothing)  →  Tier-2 deps (explicit turbo_build_*)  →  build turbo-stack
 ```
 
-Different flavors fill in step 1 differently; step 2 is always the same. Per-machine env scripts under `scripts/setup_environment/` own the call list of `build_dep` invocations for that machine.
+Different machines fill in stage 1 (and which Tier-2 deps need building) differently; stage 3 is always the same. The `setup_environment/` recipes are **toolchain-only** — they build no dependencies. The single-backend builders run all three stages; the end-to-end test drivers run a builder once per backend over the shared core in `scripts/lib/common.sh`.
+
+### Local test, both backends (end-to-end)
+
+```bash
+./test_turbo_stack_locally.sh                      # spack; builds + ctests FMS2 and TIM
+./test_turbo_stack_locally.sh --only TIM --clean   # one backend, from scratch
+```
+
+Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict.
 
 ### Local build (spack flavor, one command)
 
 ```bash
-scripts/build_with_spack.sh                              # build (default backend infra FMS2, Release)
-scripts/build_with_spack.sh --debug                      # Debug build
-scripts/build_with_spack.sh --clean                      # Clean rebuild from scratch
-scripts/build_with_spack.sh --infra TIM                  # infra is FMS2 as default; --infra TIM also builds TIM from source
-scripts/build_with_spack.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
+scripts/build_local_with_spack_env.sh                              # build (default backend infra FMS2, Release)
+scripts/build_local_with_spack_env.sh --debug                      # Debug build
+scripts/build_local_with_spack_env.sh --clean                      # Clean rebuild from scratch
+scripts/build_local_with_spack_env.sh --infra TIM                  # infra is FMS2 as default; --infra TIM also builds TIM from source
+scripts/build_local_with_spack_env.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
 ```
 
-`build_with_spack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`, `--recreate-spack-env`.
+`build_local_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`, `--recreate-spack-env`.
 
-### Explicit two-step (any flavor; faster iteration)
+### Explicit, iterative (any flavor; faster iteration)
 
 ```bash
-# spack flavor
-source scripts/setup_environment/spack_local_environment.sh
-scripts/build_turbo_stack.sh
-# (for --infra TIM, also `source scripts/build_dep.sh` + a `build_dep tim ...` call first)
-
-# module flavor (laptop emulation of Derecho — temp until derecho_cpu_gcc_openmpi.sh is fully verified)
-source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
-scripts/build_turbo_stack.sh
+source scripts/lib/common.sh                                 # turbo_build_* + helpers
+source scripts/setup_environment/spack_local_environment.sh  # Tier-1 (spack); builds nothing
+deps="$TURBO_STACK_ROOT/deps/default"
+turbo_build_fms "$deps/build" "$deps/install"                # Tier-2 (spack supplies pFUnit/AMReX)
+scripts/build_turbo_stack.sh                                 # Tier-3 (FMS2); --infra TIM after turbo_build_tim
 ```
+
+The `setup_environment/` recipes only set up the toolchain — build Tier-2 deps explicitly via the `turbo_build_*` wrappers (canonical flags live in `scripts/lib/common.sh`).
 
 ### Script structure
 
 | Script | Role | How invoked |
 |---|---|---|
-| `scripts/build_with_spack.sh` | Orchestrator: runs the full pipeline for the spack flavor | exec'd |
-| `scripts/setup_environment/<flavor>.sh` | Step 1 — toolchain load + per-machine `build_dep` calls | sourced |
-| `scripts/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
-| `scripts/fetch_source.sh` | Library — defines `fetch_source` for source-only-consumed deps (MOM6, MARBL) | sourced |
-| `scripts/build_turbo_stack.sh` | Step 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
+| `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier-2 canonical flags), matrix/verdict | sourced |
+| `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
+| `scripts/build_local_with_spack_env.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / modules) | exec'd |
+| `scripts/setup_environment/<flavor>.sh` | Stage 1 — Tier-1 toolchain ONLY (no dep builds) | sourced |
+| `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
+| `scripts/lib/fetch_source.sh` | Library — defines `fetch_source` for source-only-consumed deps (MOM6, MARBL) | sourced |
+| `scripts/build_turbo_stack.sh` | Stage 3 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
 `build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`.
 
 ### Where dep builds + installs land
 
-The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{build,install}/`. With no `--build_dir`, deps land at `$TURBO_STACK_ROOT/deps/default/`. To override the deps location independently of the turbo-stack build dir, source the env script directly with `--deps-build-root DIR`.
+The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{build,install}/`. With no `--build_dir`, deps land at `$TURBO_STACK_ROOT/deps/default/`; the end-to-end test drivers build each backend under `$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir). In the explicit flow you pass the build/install roots straight to the `turbo_build_*` wrappers.
 
 ### Parallel build jobs
 
@@ -70,15 +80,12 @@ The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{bu
 ```bash
 export MOM6_ROOT=$HOME/projects/MOM6
 export FMS_ROOT=$HOME/projects/FMS
-source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
-scripts/build_turbo_stack.sh
+./test_turbo_stack_locally.sh    # matrix shows each component as (override) vs (submodule)
 ```
 
 ### Spack environment
 
-Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS and TIM are intentionally not in spack: `build_with_spack.sh` always calls `build_dep fms` (and `build_dep tim` when `--infra TIM`) so the build uses the local source tree (`$FMS_ROOT`/`$TIM_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
-
-A second spack env defined in `spack/derecho_modules_emulation_with_spack.yaml` provides *just* the toolchain (cmake, MPI, NetCDF) — used by the temporary emulation driver to exercise the from-source path on a laptop until Derecho access is back.
+Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS and TIM are intentionally not in spack: `build_local_with_spack_env.sh` builds the selected backend via `turbo_build_fms`/`turbo_build_tim` (in `scripts/lib/common.sh`) from the local source tree (`$FMS_ROOT`/`$TIM_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
 
 **AMReX mini-app tests** are built with CMake separately (see `src/amrex_mini_app/CMakeLists.txt`). They use GoogleTest (C++) and require HDF5.
 
@@ -87,17 +94,18 @@ A second spack env defined in `spack/derecho_modules_emulation_with_spack.yaml` 
 ### Component Relationships
 
 ```
-build_with_spack.sh                                        ─── orchestrator (spack flavor)
-  └─→ setup_environment/spack_local_environment.sh           step 1: toolchain (sourced)
-  └─→ build_dep.sh + `build_dep tim ...`                     only when --infra TIM (sourced)
-  └─→ build_turbo_stack.sh                                   step 2: configure+build+test (exec'd)
+build_local_with_spack_env.sh                                        ─── orchestrator (spack flavor)
+  └─→ setup_environment/spack_local_environment.sh           Tier 1: toolchain (sourced)
+  └─→ turbo_build_fms / turbo_build_tim  (lib/common.sh)     Tier 2: selected backend
+  └─→ build_turbo_stack.sh                                   Tier 3: configure+build+test (exec'd)
         ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
         ├─→ cmake build
         └─→ ctest
 
 build_on_derecho.sh                                        ─── orchestrator (Derecho module flavor)
-  └─→ setup_environment/derecho_cpu_gcc_openmpi.sh           step 1: modules + build_dep × 4 (sourced)
-  └─→ build_turbo_stack.sh                                   step 2 (exec'd)
+  └─→ setup_environment/derecho_cpu_gcc_openmpi.sh           Tier 1: Lmod modules only (sourced)
+  └─→ turbo_build_{pfunit,fms,amrex,tim}  (lib/common.sh)    Tier 2: deps (per --infra)
+  └─→ build_turbo_stack.sh                                   Tier 3 (exec'd)
 
 CMakeLists.txt (repo root)
   ├─→ TURBO::infra_r8  (interface lib wrapping the backend: FMS::fms_r8 or TIM::tim_r8)

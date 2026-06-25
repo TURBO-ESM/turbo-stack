@@ -1,11 +1,39 @@
 # `scripts/`
 
-Build orchestration for turbo-stack. The directory is organized around a **2-step pipeline**:
+Build orchestration for turbo-stack.
 
-1. **Set up the environment** — get a working toolchain (compiler, MPI, NetCDF, CMake) on `PATH` AND build/install any dependencies the toolchain doesn't provide.
-2. **Build turbo-stack** — `cmake` configure + build + `ctest`.
+## Dependency contract (tiers)
 
-Different machines/flavors fill in step 1 differently; step 2 is always the same.
+turbo-stack classifies every dependency by **its build policy** — see
+`docs/dependency_tiers.png` (and `docs/dependency_tiers_prompt.md` to regenerate):
+
+| Tier | Policy | Members |
+|------|--------|---------|
+| **1 — Prerequisites** | turbo-stack *never* builds these; you provide them (modules / spack / OS packages) | compilers, MPI, NetCDF, CMake ≥ 3.24, make/ninja, FFTW, HDF5 |
+| **2 — Convenience-built** | turbo-stack *can* build these from a submodule (`build_dep` → `find_package`); you may supply your own instead | AMReX, pFUnit, FMS, TIM |
+| **3 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`) | turbo-stack, MOM6, MARBL |
+
+"Our code" is not a tier: the repos we co-develop — **FMS, TIM** (Tier 2) and
+**MOM6** (Tier 3) — are the ones hot-swappable via `*_ROOT` (default: the pinned
+submodule). MARBL is pinned-submodule-only.
+
+## Pipeline (3 stages)
+
+The directory is organized around a **3-stage pipeline** (see
+`docs/turbo_stack_pipeline.png`):
+
+1. **Tier-1 toolchain** — a `setup_environment/<flavor>.sh` recipe (sourced) puts
+   a compiler / MPI / NetCDF / CMake on `PATH`. **These recipes build nothing** —
+   they only prepare the shell.
+2. **Tier-2 deps** — the caller *explicitly* builds the convenience deps the
+   toolchain didn't already provide, via the `turbo_build_*` wrappers in
+   `lib/common.sh` (the canonical per-dep cmake flags live there, once).
+3. **Build turbo-stack** — `build_turbo_stack.sh` runs cmake configure + build + `ctest`.
+
+Different machines fill in stage 1 (and which Tier-2 deps need building)
+differently; stage 3 is always the same. The single-backend builders (`build_*`)
+run all three stages; the end-to-end test drivers run a builder once per backend
+via the shared core in `lib/common.sh`.
 
 ---
 
@@ -14,17 +42,21 @@ Different machines/flavors fill in step 1 differently; step 2 is always the same
 ```
 scripts/
   README.md                                   # ← this file
-  build_with_spack.sh                         # ORCHESTRATOR — spack flavor one-command (steps 1+2)
-  build_dep.sh                                # library — defines build_dep() (sourced)
-  fetch_source.sh                             # library — defines fetch_source() (sourced)
-  build_turbo_stack.sh                        # STEP 2 — cmake configure + build + ctest (exec'd)
-  setup_environment/                          # STEP 1 — one file per flavor/machine (all sourced)
-    spack_local_environment.sh                             # generic: spack env activation, no from-source deps
-    emulate_derecho_modules_locally_with_spack.sh          # TEMP: emulate Derecho on a laptop via a minimal spack env + from-source deps
-    derecho_cpu_gcc_openmpi.sh                             # real Derecho via Lmod modules (CPU, gcc, OpenMPI) + from-source deps
-```
+  lib/                                        # sourced libraries:
+    common.sh                                 #   SHARED CORE — root resolution, arg parsing, turbo_build_*, matrix/verdict
+    build_dep.sh                              #   build_dep() — build one cmake dep (+ rebuild sentinel)
+    fetch_source.sh                           #   fetch_source() — clone/fetch a source-only dep
+  build_local_with_spack_env.sh                         # ORCHESTRATOR — spack flavor, single backend
+  build_on_derecho.sh                         # ORCHESTRATOR — Derecho (Lmod modules), single backend
+  build_turbo_stack.sh                        # STAGE 3 — cmake configure + build + ctest (exec'd)
+  setup_environment/                          # STAGE 1 — Tier-1 toolchain ONLY, one file per flavor (sourced)
+    spack_local_environment.sh                #   spack env activation
+    derecho_cpu_gcc_openmpi.sh                #   real Derecho via Lmod modules (CPU, gcc, OpenMPI)
 
-Future per-machine orchestrators (`build_on_derecho.sh`, `build_on_derecho_with_gpus.sh`, …) sit alongside `build_with_spack.sh` at the top level.
+# (repo top level) — end-to-end drivers, BOTH backends:
+test_turbo_stack_locally.sh                   # local (spack)
+test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
+```
 
 ---
 
@@ -33,40 +65,51 @@ Future per-machine orchestrators (`build_on_derecho.sh`, `build_on_derecho_with_
 ### One-command (spack flavor)
 
 ```bash
-scripts/build_with_spack.sh                    # configure + build + test
-scripts/build_with_spack.sh --debug            # incremental Debug build
-scripts/build_with_spack.sh --clean            # clean rebuild from scratch
-scripts/build_with_spack.sh --infra TIM        # spack env + from-source TIM (spack does not package TIM)
+scripts/build_local_with_spack_env.sh                    # configure + build + test
+scripts/build_local_with_spack_env.sh --debug            # incremental Debug build
+scripts/build_local_with_spack_env.sh --clean            # clean rebuild from scratch
+scripts/build_local_with_spack_env.sh --infra TIM        # spack env + from-source TIM (spack does not package TIM)
 ```
 
-`build_with_spack.sh` runs all steps. For `--infra TIM` it calls `build_dep tim` inline after `setup_environment/spack_local_environment.sh` because spack provides FMS/pFUnit/AMReX but not TIM.
+`build_local_with_spack_env.sh` runs all stages. It builds the selected backend via `turbo_build_fms`/`turbo_build_tim` after sourcing `setup_environment/spack_local_environment.sh` — spack provides pFUnit/AMReX but neither FMS nor TIM.
 
-### Explicit two-step (any flavor; iterative development)
-
-Source the env recipe once per shell, then run `build_turbo_stack.sh` as many times as you like:
+### Both backends, one command (end-to-end test)
 
 ```bash
-# spack flavor
-source scripts/setup_environment/spack_local_environment.sh
-scripts/build_turbo_stack.sh                   # for --infra TIM you also need:
-                                               #   source scripts/build_dep.sh
-                                               #   build_dep tim --build-dir ... --install-prefix ... -- -D64BIT=ON -D32BIT=OFF
-                                               #   scripts/build_turbo_stack.sh --infra TIM
-
-# module flavor (Derecho)
-source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh    # loads modules AND builds FMS/pFUnit/AMReX/TIM via build_dep
-scripts/build_turbo_stack.sh
-
-# laptop-as-Derecho emulation
-source scripts/setup_environment/emulate_derecho_modules_locally_with_spack.sh
-scripts/build_turbo_stack.sh
+./test_turbo_stack_locally.sh                  # local (spack)
+./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
 ```
+
+Each runs the real single-backend builder once per backend (each in its own
+process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
+a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  Both
+support the `fetch_*` / `*_ROOT` overrides described below.
+
+### Explicit, iterative (any flavor)
+
+Stage 1 (toolchain) is sourced once per shell; then explicitly build the Tier-2
+deps you need and run `build_turbo_stack.sh` as often as you like:
+
+```bash
+source scripts/lib/common.sh                                   # turbo_build_* wrappers + helpers
+source scripts/setup_environment/spack_local_environment.sh    # Tier-1 (spack); builds NOTHING
+deps="$TURBO_STACK_ROOT/deps/default"
+turbo_build_fms "$deps/build" "$deps/install"                  # Tier-2 (spack supplies pFUnit/AMReX)
+scripts/build_turbo_stack.sh                                   # Tier-3 (FMS2)
+# TIM backend instead:
+turbo_build_tim "$deps/build" "$deps/install"
+scripts/build_turbo_stack.sh --infra TIM
+```
+
+On a modules machine, swap stage 1 for
+`source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh` and also build the
+deps the modules don't provide (`turbo_build_pfunit`, `turbo_build_amrex`).
 
 ---
 
 ## The `build_dep` function
 
-`scripts/build_dep.sh` defines a function — sourced once, called per dep:
+`scripts/lib/build_dep.sh` defines a function — sourced once, called per dep:
 
 ```bash
 build_dep <name>
@@ -102,7 +145,7 @@ Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_st
 
 ## The `fetch_source` function
 
-`scripts/fetch_source.sh` is for **source-only-consumed** deps — MOM6, MARBL — that turbo-stack's CMakeLists.txt reads via `<NAME>_ROOT` but doesn't build separately:
+`scripts/lib/fetch_source.sh` is for **source-only-consumed** deps — MOM6, MARBL — that turbo-stack's CMakeLists.txt reads via `<NAME>_ROOT` but doesn't build separately:
 
 ```bash
 fetch_source --name NAME --url URL --branch REF --dest DIR [--force]
@@ -116,18 +159,21 @@ For *buildable* deps (FMS, pFUnit, AMReX, TIM) that you want to clone from a for
 
 ---
 
-## Overriding which source a build_dep call uses
+## Overriding which source a build uses (hot-swap)
 
-To iterate against a local dev tree (no cloning, no submodule):
+To iterate against a local dev tree of a co-developed repo (no cloning, no
+submodule), export its `*_ROOT` before building:
 
 ```bash
 export MOM6_ROOT=/home/me/projects/MOM6
 export FMS_ROOT=/home/me/projects/FMS
-source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh
-scripts/build_turbo_stack.sh
+scripts/test_turbo_stack_locally.sh        # or build_local_with_spack_env.sh, or the explicit flow
 ```
 
-The env script's build_dep calls pick up `$FMS_ROOT` via the env-var precedence layer; MOM6's CMakeLists reads `$MOM6_ROOT` directly.
+`turbo_build_fms` (→ `build_dep`) picks up `$FMS_ROOT` via the source-resolution
+precedence below; MOM6's CMakeLists reads `$MOM6_ROOT` directly. The testing
+matrix printed at the top of each driver shows whether each component resolved to
+its submodule or to an override.
 
 ---
 
@@ -135,16 +181,15 @@ The env script's build_dep calls pick up `$FMS_ROOT` via the env-var precedence 
 
 The orchestrators derive the deps location from `--build_dir`:
 
-- `build_with_spack.sh --build_dir /scratch/foo` → deps land at `/scratch/foo/deps/{build,install}/`.
+- `build_local_with_spack_env.sh --build_dir /scratch/foo` → deps land at `/scratch/foo/deps/{build,install}/`.
 - `build_on_derecho.sh --build_dir /scratch/foo` → same.
 - Neither orchestrator given a `--build_dir`: deps land at `$TURBO_STACK_ROOT/deps/default/`.
 
-The orchestrators don't expose a separate flag for the deps location; `--build_dir` is the single knob. Power users who need deps in a path *unrelated* to the turbo-stack build dir can source an env script directly with its `--deps-build-root` flag:
+- The end-to-end test drivers build each backend independently under
+  `$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir).
 
-```bash
-source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh --deps-build-root /scratch/shared-deps
-scripts/build_turbo_stack.sh --build_dir /scratch/my-build
-```
+In the explicit flow you pass the `build` and `install` roots straight to the
+`turbo_build_*` wrappers, so any layout is possible.
 
 ---
 
@@ -154,7 +199,7 @@ scripts/build_turbo_stack.sh --build_dir /scratch/my-build
 
 ```bash
 export CMAKE_BUILD_PARALLEL_LEVEL=32
-scripts/build_with_spack.sh                 # no --parallel needed
+scripts/build_local_with_spack_env.sh                 # no --parallel needed
 ```
 
 When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
@@ -163,14 +208,16 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
 
 ---
 
-## Required environment
+## Environment
 
-Set these in your shell profile (e.g. `~/.bashrc`):
-
-- `TURBO_STACK_ROOT` — path to your turbo-stack clone.
-- `SPACK_ROOT` — path to a Spack installation (only needed for the spack flavor).
+- `TURBO_STACK_ROOT` — **optional**; every entry point self-locates its own
+  checkout (via `lib/common.sh`). Set it only to override — a warning fires if an
+  exported value disagrees with the script's own location (the multi-checkout
+  footgun).
+- `SPACK_ROOT` — required for the spack flavor (local builds).
 
 Optional, for testing against local dev trees:
 
-- `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT`, `PFUNIT_ROOT`, `AMREX_ROOT` — when set, override the corresponding submodule default.
-- `CMAKE_BUILD_PARALLEL_LEVEL` — when set, controls the default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs" above).
+- `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` — hot-swap a co-developed repo's source
+  (default: the pinned submodule). `PFUNIT_ROOT`, `AMREX_ROOT` are also honored by `build_dep`.
+- `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").

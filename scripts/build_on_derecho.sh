@@ -1,15 +1,12 @@
 #!/bin/bash
 # Usage: ./scripts/build_on_derecho.sh [options]
 #
-# Required environment variables (set these in your shell profile, e.g. ~/.bashrc):
-#   TURBO_STACK_ROOT    Path to your turbo-stack repository clone
+# `TURBO_STACK_ROOT` is self-located (set it only to override). See
+# scripts/README.md for the dependency tier model.
 #
-# Optional environment variables (override the corresponding submodule when set):
-#   MOM6_ROOT           Path to a MOM6 source checkout (default: submodule)
-#   FMS_ROOT            Path to an FMS source checkout (default: submodule)
-#   TIM_ROOT            Path to a TIM source checkout (default: submodule)
-#   PFUNIT_ROOT         Path to a pFUnit source checkout (default: submodule)
-#   AMREX_ROOT          Path to an AMReX source checkout (default: submodule)
+# Optional environment variables (hot-swap a dep's source; default = submodule):
+#   MOM6_ROOT / FMS_ROOT / TIM_ROOT   out-of-tree source overrides
+#   PFUNIT_ROOT / AMREX_ROOT          also honored by build_dep
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
@@ -21,9 +18,6 @@
 #                           land: $DIR/deps/build/<name>/ and
 #                           $DIR/deps/install/.  When --build_dir is omitted,
 #                           deps land at $TURBO_STACK_ROOT/deps/default/.
-#                           Power users who need deps in a path unrelated to
-#                           the turbo-stack build dir can source the env
-#                           script directly with its --deps-build-root flag.
 #   --infra FMS2|TIM        Infrastructure backend (default: FMS2, passed
 #                           through to build_turbo_stack.sh).
 #   --parallel N, -j N      Parallel build jobs.  Exported as
@@ -60,24 +54,61 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "${TURBO_STACK_ROOT:-}" ]]; then
-    echo "Error: TURBO_STACK_ROOT is not set." >&2
-    exit 1
-fi
+# Locate + source the shared library, then resolve TURBO_STACK_ROOT (self-
+# locating; an exported value is an optional override).  This script lives in
+# scripts/, so the shared library is the sibling lib/ subdir.
+# shellcheck source=/dev/null
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+turbo_resolve_stack_root
 
 # Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every
 # `cmake --build` in the rest of the pipeline (deps + turbo-stack) picks
 # this up without further flag plumbing.
 [[ -n "$parallel" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$parallel"
 
-# --- Stage 1: environment setup + dependency builds (Derecho) -----------
-# When --build_dir is given, place deps next to it ($build_dir/deps).  Else
-# let the env script use its own default ($TURBO_STACK_ROOT/deps/default).
-env_args=()
-[[ -n "$build_dir" ]] && env_args=(--deps-build-root "$build_dir/deps")
-source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh" "${env_args[@]}"
+# Where the from-source Tier-2 deps build + install: $build_dir/deps when given,
+# else $TURBO_STACK_ROOT/deps/default.
+if [[ -n "$build_dir" ]]; then
+    deps_build_root="$build_dir/deps"
+else
+    deps_build_root="$TURBO_STACK_ROOT/deps/default"
+fi
 
-# --- Stage 2: configure + build + test -----------------------------------
+# Guard the submodules this build consumes (skipped when the matching *_ROOT
+# overrides).  Derecho's modules provide none of the Tier-2 deps, so pFUnit and
+# the per-infra deps are all built from submodule.
+turbo_require_submodule submodules/MOM6   MOM6   MOM6_ROOT
+turbo_require_submodule submodules/MARBL  MARBL
+turbo_require_submodule submodules/pFUnit pFUnit PFUNIT_ROOT
+if [[ "$infra" == "TIM" ]]; then
+    turbo_require_submodule submodules/infra/TIM TIM   TIM_ROOT
+    turbo_require_submodule submodules/amrex     AMReX AMREX_ROOT
+else
+    turbo_require_submodule submodules/infra/FMS2 FMS  FMS_ROOT
+fi
+
+# --- Tier 1: toolchain (Lmod modules only; no dependency builds) ---------
+# shellcheck source=/dev/null
+source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh"
+
+# --- Tier 2: build deps explicitly ---------------------------------------
+# Derecho's modules provide none of these, so build from submodule (or each
+# $<NAME>_ROOT override).  Canonical flags live in scripts/lib/common.sh.
+# pFUnit is always needed (unit tests); the infra backend -- plus AMReX, which
+# TIM links -- only for the selected --infra.
+
+turbo_build_pfunit "$deps_build_root/build" "$deps_build_root/install"
+
+if [[ "$infra" == "TIM" ]]; then
+    turbo_build_amrex "$deps_build_root/build" "$deps_build_root/install"
+    turbo_build_tim   "$deps_build_root/build" "$deps_build_root/install"
+fi
+
+if [[ "$infra" == "FMS2" ]]; then
+    turbo_build_fms   "$deps_build_root/build" "$deps_build_root/install"
+fi
+
+# --- Tier 3: configure + build + test turbo-stack ------------------------
 build_args=()
 [[ "$debug"      == true ]] && build_args+=(--debug)
 [[ "$clean"      == true ]] && build_args+=(--clean)
