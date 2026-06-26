@@ -6,7 +6,7 @@ prompt describes the *classification*, not exact dot syntax, so it stays valid a
 
 Render with: `dot -Tpng -o docs/dependency_tiers.png docs/dependency_tiers.dot`.
 
-This figure is the **contract companion** to `dependency_dag.png`. The DAG shows build-time *link*
+This figure is the **contract companion** to `cmake_dependency_dag.png`. The DAG shows build-time *link*
 relationships (what links what); this figure shows turbo-stack's *build policy* toward each
 dependency — what it never builds, what it optionally builds, what it always builds. Same nodes,
 grouped differently.

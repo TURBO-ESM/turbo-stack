@@ -109,7 +109,7 @@ contains
 
   @test(npes=[4])
   subroutine test_functionality(this)
-    class (MOM_comms_infra_test_case), intent(inout) :: this
+    class (module_under_test_case), intent(inout) :: this
     ! module level parameters for test and calls to appropiate module APIs.
 
     ! @assert* calls

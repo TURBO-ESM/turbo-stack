@@ -83,7 +83,7 @@ digraph turbo_stack_build_pipeline {
         style=filled; color="#d8f0d8"; fontname="Helvetica-Bold";
         margin=14;
 
-        cmake_config [label="cmake configure\n-DTURBO_INFRA=FMS2|TIM",
+        cmake_config [label="cmake configure\n-DMOM6_INFRA=FMS2|TIM",
                       fillcolor="#a3e0a3", style=filled];
         cmake_build  [label="cmake --build\n(reads CMAKE_BUILD_PARALLEL_LEVEL)",
                       fillcolor="#a3e0a3", style=filled];
