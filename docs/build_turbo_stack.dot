@@ -1,0 +1,117 @@
+digraph turbo_stack_build_pipeline {
+    rankdir=TB;
+    compound=true;
+    newrank=true;
+    node [shape=box, fontname="Helvetica", fontsize=11];
+    edge [fontsize=9];
+    splines=ortho;
+
+    // ── Stage 1 — env + deps (sourced) ───────────────────────────────────────
+    subgraph cluster_stage1 {
+        label="Environment";
+        style=filled; color="#dce8f5"; fontname="Helvetica-Bold";
+        margin=14;
+        ordering=out;
+
+        subgraph cluster_toolchain {
+            label="Tools ";
+            style=filled; color="white";
+
+            compilers        [label="Compilers",
+                            fillcolor="#bcd4ec", style=filled];
+            cmake [label="CMake",
+                            fillcolor="#bcd4ec", style=filled];
+            make_or_ninja [label="make or ninja",
+                            fillcolor="#bcd4ec", style=filled];
+        }
+
+        subgraph tier_1_packages {
+                mpi_install    [label="MPI install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
+                netcdf_install  [label="NetCDF install",  shape=cylinder, fillcolor="#bcd4ec", style=filled];
+                hdf5_install    [label="HDF5 install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
+        }
+
+        // Source-resolution annotation sits at the toolchain rank, beside the
+        // toolchain boxes, so it doesn't widen the build_dep cluster.
+        subgraph cluster_builddeps {
+            label="submodules";
+            style=filled; color="white";
+
+            fms_install    [label="FMS install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
+            pfunit_install [label="pFUnit install", shape=cylinder, fillcolor="#bcd4ec", style=filled];
+            amrex_install  [label="AMReX install",  shape=cylinder, fillcolor="#bcd4ec", style=filled];
+            tim_install    [label="TIM install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
+        }
+
+        // All nodes in same rank, left to right ordering
+        { rank=same; compilers; cmake; make_or_ninja; mpi_install; netcdf_install; hdf5_install; fms_install; pfunit_install; amrex_install; tim_install; }
+
+        // Invisible edges to maintain left-to-right order
+        compilers -> cmake [style=invis, weight=10];
+        cmake -> make_or_ninja [style=invis, weight=10];
+        make_or_ninja -> mpi_install [style=invis, weight=10];
+        mpi_install -> netcdf_install [style=invis, weight=10];
+        netcdf_install -> hdf5_install [style=invis, weight=10];
+        hdf5_install -> fms_install [style=invis, weight=10];
+        fms_install -> pfunit_install [style=invis, weight=10];
+        pfunit_install -> amrex_install [style=invis, weight=10];
+        amrex_install -> tim_install [style=invis];
+
+        stage1_outputs [label="Expected environment  (shell state)\nPATH · CC, CXX, FC  ·  CMAKE_PREFIX_PATH  ·  PFUNIT_DIR",
+                        fillcolor="#c8e6c9", style=filled];
+    }
+
+    // Tier 1 Installs 
+    mpi_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
+    netcdf_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
+    hdf5_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
+
+    // Tier 2 Installs 
+    fms_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
+    pfunit_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH and PFUNIT_DIR"];
+    amrex_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
+    tim_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
+
+    compilers     -> stage1_outputs [xlabel="CC, CXX, FC"];
+    cmake         -> stage1_outputs [xlabel="PATH"];
+    make_or_ninja -> stage1_outputs [xlabel="PATH"];
+
+
+    // ── Stage 2 — build turbo-stack (exec'd) ─────────────────────────────────
+    subgraph cluster_stage2 {
+        label="build_turbo_stack.sh";
+        style=filled; color="#d8f0d8"; fontname="Helvetica-Bold";
+        margin=14;
+
+        cmake_config [label="cmake configure\n-DTURBO_INFRA=FMS2|TIM",
+                      fillcolor="#a3e0a3", style=filled];
+        cmake_build  [label="cmake --build\n(reads CMAKE_BUILD_PARALLEL_LEVEL)",
+                      fillcolor="#a3e0a3", style=filled];
+        ctest_node   [label="ctest\n(pFUnit unit tests)",
+                      shape=ellipse, fillcolor="#52c452", style=filled];
+
+
+        subgraph cluster_turbo_stack_build_output {
+            label="turbo stack build output";
+            style=filled; color="white";
+
+            //marbl_install         [label="MARBL install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
+            mom6_install         [label="MOM6 install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
+            turbo_stack_install  [label="turbo-stack unit tests",    fillcolor="#bcd4ec", style=filled];
+
+            //marbl_install -> mom6_install
+            mom6_install -> turbo_stack_install;
+        }
+
+    }
+
+        cmake_config -> cmake_build;
+        cmake_build  -> mom6_install [lhead=cluster_turbo_stack_build_output];
+        cmake_build  -> ctest_node;
+        turbo_stack_install  -> ctest_node;
+
+    // ── Environment → build_turbo_stack.sh hand-off (THE central message) ─────────────────────
+    stage1_outputs -> cmake_config [lhead=cluster_stage2, penwidth=2,
+        xlabel="Shell state crosses the stage boundary —\nbuild_trubo_stake has no other knowledge of Tier1 and Tier2 Setup before."];
+
+}
