@@ -103,7 +103,9 @@ cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
 # with a tidy log line instead of a confusing empty-ctest error.
 turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
 if [[ "$turbo_build_unit_tests" == "ON" ]]; then
-    ctest --test-dir "$build_dir" --output-on-failure
+    # --no-tests=error: fail if zero tests were registered, so a misconfigured
+    # suite can't report a vacuous green (matches the legacy tests Makefile).
+    ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
 else
     echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=${turbo_build_unit_tests:-<unset>} -- skipping ctest"
 fi

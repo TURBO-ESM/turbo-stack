@@ -23,9 +23,6 @@
 #   TURBO_STACK_ROOT             turbo-stack clone (optional; self-located)
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Artifact root (default: $TMPDIR/turbo_build_system_test)
 #   MOM6_ROOT / FMS_ROOT / TIM_ROOT      Out-of-tree source overrides (dev trees)
-#   fetch_MOM6 / fetch_TIM / fetch_FMS   (default false) clone the configured
-#                                branch and use it instead of the submodule
-#                                (to test an un-pinned PR branch locally)
 
 set -euo pipefail
 

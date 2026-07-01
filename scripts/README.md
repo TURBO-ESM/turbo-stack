@@ -45,7 +45,6 @@ scripts/
   lib/                                        # sourced libraries:
     common.sh                                 #   SHARED CORE — root resolution, arg parsing, turbo_build_*, matrix/verdict
     build_dep.sh                              #   build_dep() — build one cmake dep (+ rebuild sentinel)
-    fetch_source.sh                           #   fetch_source() — clone/fetch a source-only dep
   build_local_with_spack_env.sh                         # ORCHESTRATOR — spack flavor, single backend
   build_on_derecho.sh                         # ORCHESTRATOR — Derecho (Lmod modules), single backend
   build_turbo_stack.sh                        # STAGE 3 — cmake configure + build + ctest (exec'd)
@@ -113,7 +112,6 @@ deps the modules don't provide (`turbo_build_pfunit`, `turbo_build_amrex`).
 
 ```bash
 build_dep <name>
-    [--source PATH | --clone --url URL --ref REF --clone-dest DIR]
     --build-dir DIR
     --install-prefix DIR
     [--rebuild]
@@ -125,10 +123,8 @@ Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_st
 
 **Source resolution** (first match wins):
 
-1. `--source PATH` — explicit override on the call.
-2. `--clone --url U --ref R --clone-dest DIR` — clone into `DIR`, also exports `$<NAME>_ROOT`.
-3. `$<NAME>_ROOT` env var — set externally (e.g. by `fetch_source.sh` or by the user).
-4. **Submodule fallback** — per-name table inside `build_dep.sh`:
+1. `$<NAME>_ROOT` env var — set externally (export it to point at a local clone, e.g. a fork or PR branch you cloned yourself).
+2. **Submodule fallback** — per-name table inside `build_dep.sh`:
 
    | `<name>` | submodule path |
    |---|---|
@@ -140,22 +136,6 @@ Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_st
 **Sentinel**: `<build-dir>/.installed` is a small KV file recording the source SHA, source path, install prefix, and a sha256 of the (sorted) cmake args. Skip-on-rerun fires only when all four match. Flipping a cmake flag (e.g. `-DAMReX_GPU_BACKEND=CUDA`) triggers a rebuild.
 
 **Side effects on success**: appends `$install_prefix` to `CMAKE_PREFIX_PATH` with a dedup guard. For `name=pfunit`, also exports `PFUNIT_DIR` pointing at the versioned cmake-dir glob.
-
----
-
-## The `fetch_source` function
-
-`scripts/lib/fetch_source.sh` is for **source-only-consumed** deps — MOM6, MARBL — that turbo-stack's CMakeLists.txt reads via `<NAME>_ROOT` but doesn't build separately:
-
-```bash
-fetch_source --name NAME --url URL --branch REF --dest DIR [--force]
-```
-
-Idempotent clone-or-fetch + recursive submodule update; `--branch REF` accepts a branch, tag, or commit SHA (branch → tracking branch; tag/SHA → detached HEAD). Exports `<NAME_UPPER>_ROOT="$dest"`.
-
-`--url` is required (no default) — see the script header for the rationale.
-
-For *buildable* deps (FMS, pFUnit, AMReX, TIM) that you want to clone from a fork or branch, use `build_dep --clone --url ... --ref ... --clone-dest ...` instead. That handles cloning and building in one call.
 
 ---
 

@@ -20,6 +20,11 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "IntelLLVM|Intel")
     set(_turbo_fortran_flags
         -r8
         -convert big_endian -assume byterecl
+        # Intel defaults to -assume norealloc_lhs, but MOM6/MARBL rely on F2003
+        # auto-reallocation of an allocatable LHS (the legacy mkmf Intel
+        # templates set this). Dropping it risks shape-mismatch crashes or
+        # silently wrong results under the Intel/oneAPI backend.
+        -assume realloc_lhs
         -ftz -traceback -fp-model source -no-fma
         -fpp -Wp,-w
     )

@@ -70,6 +70,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ "$infra" != "FMS2" && "$infra" != "TIM" ]]; then
+    echo "Error: --infra must be FMS2 or TIM (got '$infra')" >&2
+    exit 1
+fi
+
 # Locate + source the shared library, then resolve TURBO_STACK_ROOT (self-
 # locating; an exported value is an optional override).  This script lives in
 # scripts/, so the shared library is the sibling lib/ subdir.

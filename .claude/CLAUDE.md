@@ -60,7 +60,6 @@ The `setup_environment/` recipes only set up the toolchain — build Tier-2 deps
 | `scripts/build_local_with_spack_env.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / modules) | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 — Tier-1 toolchain ONLY (no dep builds) | sourced |
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
-| `scripts/lib/fetch_source.sh` | Library — defines `fetch_source` for source-only-consumed deps (MOM6, MARBL) | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 3 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
 `build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`.
@@ -75,7 +74,7 @@ The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{bu
 
 ### Source-tree overrides
 
-`build_dep` resolves each dep's source via (first match wins): `--source PATH`, `--clone --url ... --ref ...`, `$<NAME>_ROOT` env var, or the corresponding submodule. So overriding any single dep with a local dev tree is:
+`build_dep` resolves each dep's source via (first match wins): `$<NAME>_ROOT` env var, or the corresponding submodule. So overriding any single dep with a local dev tree is:
 
 ```bash
 export MOM6_ROOT=$HOME/projects/MOM6

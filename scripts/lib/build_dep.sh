@@ -2,18 +2,17 @@
 # scripts/lib/build_dep.sh
 #
 # SOURCED library.  Defines a `build_dep` function that builds and installs
-# one cmake-based dependency, with three source-discovery modes and a sentinel
-# that skips rebuilds when nothing has changed.
+# one cmake-based dependency, resolving its source from $<NAME>_ROOT or the
+# in-tree submodule, with a sentinel that skips rebuilds when nothing changed.
 #
 # Usage (sourced once, called per dep):
 #
 #   source scripts/lib/build_dep.sh
 #
 #   build_dep <name>
-#       [--source PATH | --clone --url URL --ref REF --clone-dest DIR]
 #       --build-dir DIR
 #       --install-prefix DIR
-#       [--rebuild] [--force]
+#       [--rebuild]
 #       [--parallel N | -j N]
 #       -- [cmake args...]
 #
@@ -24,29 +23,20 @@
 #     once for the whole pipeline should export CMAKE_BUILD_PARALLEL_LEVEL.
 #
 # Source resolution (first match wins):
-#   1. --source PATH                       explicit override
-#   2. --clone --url U --ref R             clone into --clone-dest, also
-#      --clone-dest DIR                    exports <NAME>_ROOT for downstream
-#   3. $<NAME>_ROOT env var                set externally (e.g. by fetch_source.sh
-#                                          or by the user)
-#   4. Submodule fallback                  per-name table inside this script
+#   1. $<NAME>_ROOT env var   set externally (export in your shell to point at
+#                             a local dev tree, e.g. a fork or PR branch you
+#                             cloned yourself)
+#   2. Submodule fallback     per-name table inside this script
 #
 # Valid <name> values: fms, pfunit, amrex, tim.
 #
-# --force: when --clone targets an existing checkout, permit the destructive
-#   update (reset --hard + submodule --force) even if that checkout has
-#   uncommitted changes.  Without it, build_dep refuses rather than discard
-#   them ($<NAME>_ROOT may point at a tree you are actively editing).
-#
 # Required environment:
 #   TURBO_STACK_ROOT  Path to your turbo-stack repository clone (used by the
-#                     submodule fallback in mode 4; not strictly required when
-#                     mode 1/2/3 supplies the source).
+#                     submodule fallback; not required when $<NAME>_ROOT is set).
 #
 # Side effects on success:
 #   - Appends $install_prefix to CMAKE_PREFIX_PATH (with dedup guard).
 #   - For name=pfunit: exports PFUNIT_DIR pointing at the versioned cmake dir.
-#   - For --clone: exports <NAME>_ROOT pointing at the clone destination.
 
 # Helper: expose a dep's install prefix to find_package(...) for downstream
 # cmake invocations.  Called by build_dep both on the rebuild path and on the
@@ -62,26 +52,26 @@ _build_dep_expose_install() {
     # pFUnit installs into $_install_prefix/PFUNIT-X.Y/ -- a versioned subdir
     # that find_package(PFUNIT) does not auto-walk via CMAKE_PREFIX_PATH alone.
     if [[ "$_name" == "pfunit" ]]; then
+        # Glob + `-d` test rather than `ls ... | head`: a pipeline whose `ls`
+        # matches nothing exits non-zero and, under `set -eo pipefail`, would
+        # abort the whole build right after a successful install. This loop is
+        # pipefail-safe and silently no-ops when the versioned dir is absent.
         local _pfunit_cmake_dir
-        _pfunit_cmake_dir=$(ls -d "$_install_prefix"/PFUNIT-*/cmake 2>/dev/null | head -n1)
-        if [[ -n "$_pfunit_cmake_dir" ]]; then
-            export PFUNIT_DIR="$_pfunit_cmake_dir"
-        fi
+        for _pfunit_cmake_dir in "$_install_prefix"/PFUNIT-*/cmake; do
+            if [[ -d "$_pfunit_cmake_dir" ]]; then
+                export PFUNIT_DIR="$_pfunit_cmake_dir"
+                break
+            fi
+        done
     fi
 }
 
 build_dep() {
     # --- Parse arguments ------------------------------------------------
     local _name=""
-    local _source=""
-    local _clone=false
-    local _url=""
-    local _ref=""
-    local _clone_dest=""
     local _build_dir=""
     local _install_prefix=""
     local _rebuild=false
-    local _force=false
     local _parallel=""
     local _cmake_args=()
 
@@ -94,15 +84,9 @@ build_dep() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --source)         _source="$2"; shift 2 ;;
-            --clone)          _clone=true; shift ;;
-            --url)            _url="$2"; shift 2 ;;
-            --ref)            _ref="$2"; shift 2 ;;
-            --clone-dest)     _clone_dest="$2"; shift 2 ;;
             --build-dir)      _build_dir="$2"; shift 2 ;;
             --install-prefix) _install_prefix="$2"; shift 2 ;;
             --rebuild)        _rebuild=true; shift ;;
-            --force)          _force=true; shift ;;
             --parallel|-j)    _parallel="$2"; shift 2 ;;
             --)               shift; _cmake_args=("$@"); break ;;
             *)
@@ -121,17 +105,6 @@ build_dep() {
         echo "Error: build_dep $_name: --install-prefix is required" >&2
         return 1
     fi
-    if [[ -n "$_source" && "$_clone" == true ]]; then
-        echo "Error: build_dep $_name: --source and --clone are mutually exclusive" >&2
-        return 1
-    fi
-    if [[ "$_clone" == true ]]; then
-        if [[ -z "$_url" || -z "$_ref" || -z "$_clone_dest" ]]; then
-            echo "Error: build_dep $_name: --clone requires --url, --ref, and --clone-dest" >&2
-            return 1
-        fi
-    fi
-
     # Map <name> to the conventional $<NAME>_ROOT env var name.
     local _root_var=""
     case "$_name" in
@@ -145,7 +118,7 @@ build_dep() {
             ;;
     esac
 
-    # Submodule fallback path for this dep (used in mode 4).
+    # Submodule fallback path for this dep (used when $<NAME>_ROOT is unset).
     local _submodule_path=""
     case "$_name" in
         fms)    _submodule_path="$TURBO_STACK_ROOT/submodules/infra/FMS2" ;;
@@ -156,66 +129,7 @@ build_dep() {
 
     # --- Resolve source -------------------------------------------------
     local _resolved=""
-    if [[ -n "$_source" ]]; then
-        _resolved="$_source"
-        echo "[build_dep] $_name: source = $_resolved (explicit --source)"
-    elif [[ "$_clone" == true ]]; then
-        mkdir -p "$(dirname "$_clone_dest")"
-        # `git clone --branch` and `origin/$ref` only accept branch/tag refs;
-        # `origin/$ref` further only exists for branches.  Branches, tags, and
-        # SHAs each need a different checkout path so the docs' "branch, tag,
-        # or commit" promise actually holds across reruns.
-        local _ref_is_sha=false
-        if [[ "$_ref" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-            _ref_is_sha=true
-        fi
-        if [[ -d "$_clone_dest/.git" ]]; then
-            # The update below (reset --hard, submodule --force) would discard
-            # uncommitted work in $_clone_dest -- which is exported as
-            # <NAME>_ROOT, so editing it between runs is natural.  Refuse unless
-            # --force is the explicit opt-in.
-            if [[ "$_force" != true && -n "$(git -C "$_clone_dest" status --porcelain 2>/dev/null)" ]]; then
-                echo "Error: build_dep $_name: $_clone_dest has uncommitted changes." >&2
-                echo "       Commit or stash them, or pass --force to discard and update." >&2
-                return 1
-            fi
-            echo "[build_dep] $_name: $_clone_dest exists -- fetching to $_ref"
-            if [[ "$_ref_is_sha" == true ]]; then
-                git -C "$_clone_dest" fetch origin || return 1
-                git -C "$_clone_dest" checkout --detach "$_ref" || return 1
-            else
-                # Fetch with --tags so both branches and tags become resolvable
-                # locally, then check out the right ref kind.  Branches keep
-                # the existing tracking-branch behavior; tags go to detached
-                # HEAD (the only sane option since tags don't move).
-                git -C "$_clone_dest" fetch --tags origin "$_ref" || return 1
-                if git -C "$_clone_dest" show-ref --verify --quiet "refs/remotes/origin/$_ref"; then
-                    git -C "$_clone_dest" checkout -B "$_ref" "origin/$_ref" || return 1
-                    git -C "$_clone_dest" reset --hard "origin/$_ref" || return 1
-                elif git -C "$_clone_dest" show-ref --verify --quiet "refs/tags/$_ref"; then
-                    git -C "$_clone_dest" checkout --detach "refs/tags/$_ref" || return 1
-                else
-                    echo "Error: build_dep $_name: ref '$_ref' is neither a branch nor a tag on origin (and not a recognized SHA)" >&2
-                    return 1
-                fi
-            fi
-            git -C "$_clone_dest" submodule update --init --recursive --force || return 1
-        else
-            echo "[build_dep] $_name: cloning $_url ($_ref) into $_clone_dest"
-            if [[ "$_ref_is_sha" == true ]]; then
-                git clone --recurse-submodules -- "$_url" "$_clone_dest" || return 1
-                git -C "$_clone_dest" checkout --detach "$_ref" || return 1
-                git -C "$_clone_dest" submodule update --init --recursive --force || return 1
-            else
-                # `git clone --branch` accepts both branch and tag refs; for
-                # tags it lands on detached HEAD, which is what we want.
-                git clone --branch "$_ref" --recurse-submodules -- "$_url" "$_clone_dest" || return 1
-            fi
-        fi
-        _resolved="$_clone_dest"
-        # Export <NAME>_ROOT so downstream callers find the same source.
-        export "$_root_var=$_clone_dest"
-    elif [[ -n "${!_root_var:-}" ]]; then
+    if [[ -n "${!_root_var:-}" ]]; then
         _resolved="${!_root_var}"
         echo "[build_dep] $_name: source = $_resolved (from \$$_root_var)"
     else

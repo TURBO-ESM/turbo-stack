@@ -62,7 +62,7 @@ fi
 source "$SPACK_ROOT/share/spack/setup-env.sh"
 
 # --- Create and install ---
-if spack env list | grep -qw "$spack_environment_name"; then
+if spack env list | grep -Fqw "$spack_environment_name"; then
     echo "Environment '$spack_environment_name' already exists."
     echo "  To use it:      spack env activate $spack_environment_name"
     echo "  To rebuild it:  spack env rm $spack_environment_name && $0 $spack_environment_name $spack_environment_yaml_file"

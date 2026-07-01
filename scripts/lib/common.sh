@@ -141,8 +141,8 @@ _turbo_print_source() {
         return
     fi
     local sha branch
-    sha=$(git -C "$src" rev-parse HEAD)
-    branch=$(git -C "$src" rev-parse --abbrev-ref HEAD)
+    sha=$(git -C "$src" rev-parse HEAD 2>/dev/null) || sha="<unknown>"
+    branch=$(git -C "$src" rev-parse --abbrev-ref HEAD 2>/dev/null) || branch="<unknown>"
     printf "  %-12s @ %s  (%s, branch %s)\n" "$label" "$sha" "$kind" "$branch"
 }
 
@@ -203,9 +203,6 @@ turbo_default_mom6_root() {
 _turbo_ensure_build_dep() {
     declare -F build_dep >/dev/null 2>&1 || source "$TURBO_STACK_ROOT/scripts/lib/build_dep.sh"
 }
-_turbo_ensure_fetch_source() {
-    declare -F fetch_source >/dev/null 2>&1 || source "$TURBO_STACK_ROOT/scripts/lib/fetch_source.sh"
-}
 
 turbo_build_fms() {
     _turbo_ensure_build_dep
@@ -215,8 +212,10 @@ turbo_build_fms() {
 
 turbo_build_pfunit() {
     _turbo_ensure_build_dep
+    # -DSKIP_OPENMP=YES works around a clang bug where find_package(PFUNIT)
+    # fails to locate OpenMP (carried over from the legacy pfunit-utils build).
     build_dep pfunit --build-dir "$1/pfunit" --install-prefix "$2" \
-        -- -DSKIP_MPI=NO -DSKIP_ESMF=YES -DENABLE_TESTS=OFF
+        -- -DSKIP_MPI=NO -DSKIP_ESMF=YES -DSKIP_OPENMP=YES -DENABLE_TESTS=OFF
 }
 
 turbo_build_amrex() {
@@ -270,34 +269,15 @@ turbo_verdict() {
     fi
 }
 
-# ── Opt-in source overrides (clone a branch instead of using the submodule) ──
-# For each fetch_<NAME>=true, clone the configured branch into <override_dir> and
-# export <NAME>_ROOT, so build_dep / turbo-stack's CMake use it instead of the
-# submodule.  Off by default (all fetch_<NAME>=false -> submodules win).  URL and
-# branch are overridable via <NAME>_REPO_URL / <NAME>_BRANCH.  Shared by both
-# end-to-end test drivers.
-turbo_fetch_overrides() {
-    local override_dir="$1"
-    : "${fetch_MOM6:=false}"; : "${fetch_TIM:=false}"; : "${fetch_FMS:=false}"
-    [[ "$fetch_MOM6" == true || "$fetch_TIM" == true || "$fetch_FMS" == true ]] || return 0
-    _turbo_ensure_fetch_source
-    mkdir -p "$override_dir"
-    [[ "$fetch_MOM6" == true ]] && fetch_source --name MOM6 \
-        --url "${MOM6_REPO_URL:-https://github.com/TURBO-ESM/MOM6.git}" \
-        --branch "${MOM6_BRANCH:-dev/turbo}" --dest "$override_dir/MOM6"
-    [[ "$fetch_TIM" == true ]] && fetch_source --name TIM \
-        --url "${TIM_REPO_URL:-https://github.com/TURBO-ESM/TIM.git}" \
-        --branch "${TIM_BRANCH:-main}" --dest "$override_dir/TIM"
-    [[ "$fetch_FMS" == true ]] && fetch_source --name FMS \
-        --url "${FMS_REPO_URL:-https://github.com/TURBO-ESM/FMS.git}" \
-        --branch "${FMS_BRANCH:-dev/turbo}" --dest "$override_dir/FMS"
-    return 0
-}
+# ── Source overrides ─────────────────────────────────────────────────────────
+# To swap a component's source for the submodule, export $<NAME>_ROOT (pointing
+# at a local clone) before running a driver; build_dep and turbo-stack's CMake
+# pick it up. There is no built-in clone step -- clone the fork/branch yourself.
 
 # ── Run the end-to-end test driver for one machine ───────────────────────────
 # The full driver body shared by both end-to-end test drivers: derive the
-# artifact layout from $TURBO_BUILD_SYSTEM_TEST_DIR, honor --clean, fetch any
-# opt-in overrides, print the provenance matrix, then run the single-backend
+# artifact layout from $TURBO_BUILD_SYSTEM_TEST_DIR, honor --clean, print the
+# provenance matrix, then run the single-backend
 # <builder> once per selected backend (TURBO_RUN_FMS2 / TURBO_RUN_TIM) in its own
 # process under <test_dir>/turbo-stack-with-<backend>, and print a verdict.
 # Returns non-zero if any selected backend failed.  The ONLY per-machine input is
@@ -307,7 +287,6 @@ turbo_run_test_driver() {
     : "${TURBO_BUILD_SYSTEM_TEST_DIR:=${TMPDIR:-/tmp}/turbo_build_system_test}"
     export TURBO_BUILD_SYSTEM_TEST_DIR
     local log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
-    local override_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/deps_that_override_submodules"
 
     if [[ "${TURBO_CLEAN:-false}" == true ]]; then
         turbo_validate_clean_paths "$TURBO_BUILD_SYSTEM_TEST_DIR" "$TURBO_STACK_ROOT" || return 1
@@ -316,7 +295,6 @@ turbo_run_test_driver() {
     fi
     mkdir -p "$log_dir"
 
-    turbo_fetch_overrides "$override_dir"          # opt-in; no-op unless fetch_*=true
     [[ -n "${TURBO_JOBS:-}" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$TURBO_JOBS"
 
     turbo_print_matrix                             # record what's being tested

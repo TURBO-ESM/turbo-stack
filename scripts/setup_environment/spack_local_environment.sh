@@ -59,7 +59,7 @@ source "$SPACK_ROOT/share/spack/setup-env.sh"
 
 # --- Optionally tear down the env ----------------------------------------
 if [[ "$_recreate" == true ]]; then
-    if spack env list | grep -qw "$_env_name"; then
+    if spack env list | grep -Fqw "$_env_name"; then
         echo "Removing Spack environment '$_env_name' ..."
         if ! spack env rm -y "$_env_name"; then
             echo "Error: failed to remove spack env '$_env_name'" >&2
@@ -70,7 +70,7 @@ fi
 
 # --- Optionally (re)create the env ---------------------------------------
 if [[ "$_recreate" == true || "$_create_if_missing" == true ]]; then
-    if ! spack env list | grep -qw "$_env_name"; then
+    if ! spack env list | grep -Fqw "$_env_name"; then
         if ! bash "$TURBO_STACK_ROOT/spack/create_spack_environment.sh" "$_env_name"; then
             echo "Error: failed to create spack env '$_env_name'" >&2
             return 1 2>/dev/null || exit 1

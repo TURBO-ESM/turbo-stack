@@ -5,8 +5,14 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # MOM6_SOURCE_DIR must be resolved before including MOM6Options (which sets
 # MOM6_INFRA and MOM6_MEMORY_MODE — the canonical definitions for both repos).
-if(NOT DEFINED MOM6_SOURCE_DIR)
-    set(MOM6_SOURCE_DIR "$ENV{MOM6_ROOT}" CACHE PATH "Path to MOM6 source directory")
+# MOM6_ROOT (env) is the canonical source selector used by the build scripts, so
+# when it is set it wins on every configure -- changing it takes effect without a
+# fresh cache. An explicit -DMOM6_SOURCE_DIR is honored only when MOM6_ROOT is
+# unset.
+if(DEFINED ENV{MOM6_ROOT} AND NOT "$ENV{MOM6_ROOT}" STREQUAL "")
+    set(MOM6_SOURCE_DIR "$ENV{MOM6_ROOT}" CACHE PATH "Path to MOM6 source directory" FORCE)
+elseif(NOT DEFINED MOM6_SOURCE_DIR)
+    set(MOM6_SOURCE_DIR "" CACHE PATH "Path to MOM6 source directory")
 endif()
 if(NOT MOM6_SOURCE_DIR)
     message(FATAL_ERROR

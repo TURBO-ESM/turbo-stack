@@ -26,6 +26,14 @@ endfunction()
 # Pass additional libraries under test via LINK_LIBRARIES.
 function(add_mom_test TEST_FILE)
     cmake_parse_arguments(TEST "" "" "LINK_LIBRARIES" ${ARGN})
+    # Mirror add_mom_tests' guard: reject stray/positional args (e.g. the old
+    # `add_mom_test(name PFUNIT_FILE file.pf)` form) instead of silently
+    # registering a broken target.
+    if(TEST_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR
+            "add_mom_test: unexpected arguments '${TEST_UNPARSED_ARGUMENTS}'. "
+            "Usage: add_mom_test(file.pf [LINK_LIBRARIES lib1 lib2 ...]).")
+    endif()
     get_filename_component(TEST_TARGET ${TEST_FILE} NAME_WE)
 
     set(_pfunit_other_sources "")
