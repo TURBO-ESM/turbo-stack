@@ -112,6 +112,6 @@ digraph turbo_stack_build_pipeline {
 
     // ── Environment → build_turbo_stack.sh hand-off (THE central message) ─────────────────────
     stage1_outputs -> cmake_config [lhead=cluster_stage2, penwidth=2,
-        xlabel="Shell state crosses the stage boundary —\nbuild_trubo_stake has no other knowledge of Tier1 and Tier2 Setup before."];
+        xlabel="Shell state crosses the stage boundary —\nbuild_turbo_stack.sh has no knowledge of the Tier-1/Tier-2\nsetup beyond what that shell state carries."];
 
 }

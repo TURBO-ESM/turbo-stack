@@ -7,7 +7,7 @@
 #
 # Pairs with scripts/build_turbo_stack.sh, which assumes the environment has
 # already been prepared by this script (or an equivalent module/from-source
-# flavor).  See setup_env_separation_plan.md for the contract.
+# flavor).  See scripts/README.md for the contract.
 #
 # Usage:
 #   source scripts/setup_environment/spack_local_environment.sh [options]

@@ -95,7 +95,7 @@ module subroutine_tests
 
   @testCase()
   type, extends(MOM_MPI_test_case) :: module_under_test_case
-  end type module_under_test
+  end type module_under_test_case
 
 contains
 ...
@@ -111,7 +111,7 @@ contains
   @test(npes=[4])
   subroutine test_functionality(this)
     class (module_under_test_case), intent(inout) :: this
-    ! module level parameters for test and calls to appropiate module APIs.
+    ! module level parameters for test and calls to appropriate module APIs.
 
     ! @assert* calls
   end subroutine test_functionality

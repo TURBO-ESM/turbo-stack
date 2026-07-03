@@ -18,7 +18,7 @@ set(LEGACY_TESTS_DIR ${CMAKE_CURRENT_LIST_DIR}/../tests)
 
 # Required variables needed to be set by user.
 set(INFRA "" CACHE STRING "High level name of infrastructure library to use for linking.")
-set(PATH_TO_BACKEND_LIB "" CACHE STRING "Path to MOM6 backend library that conatins lib${INFRA}.a and needed *.mod files")
+set(PATH_TO_BACKEND_LIB "" CACHE STRING "Path to MOM6 backend library that contains lib${INFRA}.a and needed *.mod files")
 set(PATH_TO_LIBINFRA "" CACHE STRING "Path to MOM6 infra library that contains libinfra-${INFRA}.a and needed *.mod files")
 set(COMPILER_REAL_FLAGS "" CACHE STRING "Compiler specific flags to modify handling of real data types.")
 
