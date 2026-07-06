@@ -18,12 +18,15 @@
 #                       backend must be discoverable via find_package on
 #                       CMAKE_PREFIX_PATH; the orchestrator/driver builds it
 #                       first via the turbo_build_* wrappers (scripts/lib/common.sh).
+#   --tests             Also build pFUnit unit tests and run ctest.  Default:
+#                       off -- a plain build produces just the executable.
 #   --parallel N, -j N  Parallel build jobs for `cmake --build`.  When omitted,
 #                       cmake reads $CMAKE_BUILD_PARALLEL_LEVEL as its own
 #                       native default (and falls back to the generator's
 #                       default if neither is set: 1 for Make, nproc for Ninja).
 #                       Orchestrators set CMAKE_BUILD_PARALLEL_LEVEL once for
 #                       the whole pipeline; --parallel is for per-call override.
+#   -h, --help          Print this usage text and exit.
 #   --                  End of options to this script.  Anything after `--` is
 #                       appended verbatim to `cmake --build`, e.g.
 #                         ... -- -v                 (cmake's own --verbose)
@@ -34,20 +37,22 @@
 
 set -eo pipefail
 
-# Locate + source the shared library, then resolve TURBO_STACK_ROOT (self-
+# Source the shared library first (no side effects; just defines functions) so
+# --help works while parsing.  TURBO_STACK_ROOT is resolved after parsing (self-
 # locating; an exported value is an optional override).  This script lives in
 # scripts/, so the shared library is the sibling lib/ subdir.
 # shellcheck source=/dev/null
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
-turbo_resolve_stack_root
 
-# Default arguments
-build_dir="$TURBO_STACK_ROOT/build/default"
+# Default arguments.  The $build_dir default depends on TURBO_STACK_ROOT, so it
+# is filled in after root resolution below.
+build_dir=""
 build_type="Release"
 debug=false
 clean=false
 ninja=false
 infra=""
+with_tests=false
 parallel=""
 
 # Command line argument parsing
@@ -58,7 +63,9 @@ while [[ $# -gt 0 ]]; do
         --clean)        clean=true; shift ;;
         --ninja)        ninja=true; shift ;;
         --infra)        infra="$2"; shift 2 ;;
+        --tests)        with_tests=true; shift ;;
         --parallel|-j)  parallel="$2"; shift 2 ;;
+        -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
         --)             shift; break ;;
         *)
             echo "Error: unknown option '$1' to build_turbo_stack.sh" >&2
@@ -67,6 +74,11 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Resolve TURBO_STACK_ROOT now that --help has had its chance to exit, then fill
+# in the $build_dir default relative to it.
+turbo_resolve_stack_root
+: "${build_dir:=$TURBO_STACK_ROOT/build/default}"
 
 source_dir="$TURBO_STACK_ROOT"
 
@@ -82,6 +94,15 @@ cmake_generate_options=()
 cmake_generate_options+=("-DCMAKE_BUILD_TYPE=$build_type")
 if [[ -n "$infra" ]]; then
     cmake_generate_options+=("-DMOM6_INFRA=$infra")
+fi
+
+# Unit tests are opt-in.  Always pass the option explicitly (ON/OFF) so toggling
+# --tests takes effect on an existing build dir without --clean/--fresh --
+# a stale cached value would otherwise stick.
+if [[ "$with_tests" == true ]]; then
+    cmake_generate_options+=("-DTURBO_BUILD_UNIT_TESTS=ON")
+else
+    cmake_generate_options+=("-DTURBO_BUILD_UNIT_TESTS=OFF")
 fi
 
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"

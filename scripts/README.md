@@ -28,7 +28,7 @@ The directory is organized around a **3-stage pipeline** (see
 2. **Tier-2 deps** — the caller *explicitly* builds the convenience deps the
    toolchain didn't already provide, via the `turbo_build_*` wrappers in
    `lib/common.sh` (the canonical per-dep cmake flags live there, once).
-3. **Build turbo-stack** — `build_turbo_stack.sh` runs cmake configure + build + `ctest`.
+3. **Build turbo-stack** — `build_turbo_stack.sh` runs cmake configure + build (and `ctest` when `--tests` is given; unit tests are opt-in).
 
 Different machines fill in stage 1 (and which Tier-2 deps need building)
 differently; stage 3 is always the same. The single-backend builders (`build_*`)
@@ -47,7 +47,7 @@ scripts/
     build_dep.sh                              #   build_dep() — build one cmake dep (+ rebuild sentinel)
   build_local_with_spack_env.sh                         # ORCHESTRATOR — spack flavor, single backend
   build_on_derecho.sh                         # ORCHESTRATOR — Derecho (Lmod modules), single backend
-  build_turbo_stack.sh                        # STAGE 3 — cmake configure + build + ctest (exec'd)
+  build_turbo_stack.sh                        # STAGE 3 — cmake configure + build (+ ctest with --tests) (exec'd)
   setup_environment/                          # STAGE 1 — Tier-1 toolchain ONLY, one file per flavor (sourced)
     spack_local_environment.sh                #   spack env activation
     derecho_cpu_gcc_openmpi.sh                #   real Derecho via Lmod modules (CPU, gcc, OpenMPI)
@@ -64,10 +64,11 @@ test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ### One-command (spack flavor)
 
 ```bash
-scripts/build_local_with_spack_env.sh                    # configure + build + test
+scripts/build_local_with_spack_env.sh                    # configure + build (default backend: TIM)
+scripts/build_local_with_spack_env.sh --tests            # also build + run the pFUnit unit tests
 scripts/build_local_with_spack_env.sh --debug            # incremental Debug build
-scripts/build_local_with_spack_env.sh --clean            # clean rebuild from scratch
-scripts/build_local_with_spack_env.sh --infra TIM        # spack env + from-source TIM (spack does not package TIM)
+scripts/build_local_with_spack_env.sh --clean            # clean rebuild from scratch (deps + turbo-stack)
+scripts/build_local_with_spack_env.sh --infra FMS2       # FMS2 backend instead of the default TIM
 ```
 
 `build_local_with_spack_env.sh` runs all stages. It builds the selected backend via `turbo_build_fms`/`turbo_build_tim` after sourcing `setup_environment/spack_local_environment.sh` — spack provides pFUnit/AMReX but neither FMS nor TIM.
@@ -94,7 +95,7 @@ source scripts/lib/common.sh                                   # turbo_build_* w
 source scripts/setup_environment/spack_local_environment.sh    # Tier-1 (spack); builds NOTHING
 deps="$TURBO_STACK_ROOT/deps/default"
 turbo_build_fms "$deps/build" "$deps/install"                  # Tier-2 (spack supplies pFUnit/AMReX)
-scripts/build_turbo_stack.sh                                   # Tier-3 (FMS2)
+scripts/build_turbo_stack.sh --infra FMS2                      # Tier-3 (add --tests to build + run ctest)
 # TIM backend instead:
 turbo_build_tim "$deps/build" "$deps/install"
 scripts/build_turbo_stack.sh --infra TIM

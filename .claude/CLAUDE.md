@@ -30,14 +30,15 @@ Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the rea
 ### Local build (spack flavor, one command)
 
 ```bash
-scripts/build_local_with_spack_env.sh                              # build (default backend infra FMS2, Release)
+scripts/build_local_with_spack_env.sh                              # build (default backend infra TIM, Release)
 scripts/build_local_with_spack_env.sh --debug                      # Debug build
-scripts/build_local_with_spack_env.sh --clean                      # Clean rebuild from scratch
-scripts/build_local_with_spack_env.sh --infra TIM                  # infra is FMS2 as default; --infra TIM also builds TIM from source
+scripts/build_local_with_spack_env.sh --clean                      # Clean rebuild from scratch (deps + turbo-stack)
+scripts/build_local_with_spack_env.sh --tests                      # also build + run the pFUnit unit tests
+scripts/build_local_with_spack_env.sh --infra FMS2                 # FMS2 backend instead of the default TIM
 scripts/build_local_with_spack_env.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
 ```
 
-`build_local_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`, `--recreate-spack-env`.
+`build_local_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
 
 ### Explicit, iterative (any flavor; faster iteration)
 
@@ -46,7 +47,8 @@ source scripts/lib/common.sh                                 # turbo_build_* + h
 source scripts/setup_environment/spack_local_environment.sh  # Tier-1 (spack); builds nothing
 deps="$TURBO_STACK_ROOT/deps/default"
 turbo_build_fms "$deps/build" "$deps/install"                # Tier-2 (spack supplies pFUnit/AMReX)
-scripts/build_turbo_stack.sh                                 # Tier-3 (FMS2); --infra TIM after turbo_build_tim
+scripts/build_turbo_stack.sh --infra FMS2                    # Tier-3; use --infra TIM after turbo_build_tim,
+                                                             # add --tests to also build + run ctest
 ```
 
 The `setup_environment/` recipes only set up the toolchain — build Tier-2 deps explicitly via the `turbo_build_*` wrappers (canonical flags live in `scripts/lib/common.sh`).
@@ -62,7 +64,9 @@ The `setup_environment/` recipes only set up the toolchain — build Tier-2 deps
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 3 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
-`build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--parallel N`.
+`build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`.
+
+Unit tests are **opt-in**: pass `--tests` to any orchestrator (or `build_turbo_stack.sh`) to build pFUnit + the suite and run `ctest`; a plain build produces just the executable. The end-to-end `test_turbo_stack_*.sh` drivers always force them on.
 
 ### Where dep builds + installs land
 
@@ -133,8 +137,8 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 
 ### Infrastructure Backends
 
-- **FMS2** — traditional Flexible Modeling System; the stable default path
-- **TIM** — TURBO Infrastructure for MOM; new AMReX-backed layer under active development (CMake integration in progress)
+- **TIM** — TURBO Infrastructure for MOM; AMReX-backed layer. The **default** backend (orchestrators use it when `--infra` is unset).
+- **FMS2** — traditional Flexible Modeling System; the reference backend, selected with `--infra FMS2`.
 
 ### Language Split
 

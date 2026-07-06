@@ -24,7 +24,9 @@
 # Options:
 #   --only FMS2|TIM     Run only the named flavor (default: both)
 #   --parallel N, -j N  Parallel build jobs (default: 128 = one Derecho node)
-#   --clean             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch)
+#   --clean             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
+#                       clears Tier-2 deps + Tier-3, same as the orchestrators)
+#   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
 #   TURBO_STACK_ROOT             turbo-stack clone (optional; self-located)

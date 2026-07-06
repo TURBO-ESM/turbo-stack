@@ -33,6 +33,25 @@
 [[ -n "${_TURBO_COMMON_SH:-}" ]] && return 0
 _TURBO_COMMON_SH=1
 
+# ── Usage / --help ───────────────────────────────────────────────────────────
+# Print a script's own leading comment block as its usage text: skip the
+# shebang, then echo the contiguous "#" header lines (leading "# " stripped),
+# stopping at the first non-comment line.  Every user-facing script keeps its
+# usage in that header, so --help stays in sync from one source of truth.
+turbo_print_header_usage() {
+    local file="$1" line stripped shebang_seen=false
+    [[ -r "$file" ]] || { echo "usage: (no header found for '$file')"; return 0; }
+    while IFS= read -r line; do
+        if [[ "$shebang_seen" == false && "$line" == '#!'* ]]; then
+            shebang_seen=true
+            continue
+        fi
+        [[ "$line" == '#'* ]] || break
+        stripped="${line#\#}"          # drop leading '#'
+        printf '%s\n' "${stripped# }"  # drop one following space, keep indent
+    done < "$file"
+}
+
 # ── Root resolution ──────────────────────────────────────────────────────────
 # Resolve, validate, export, and announce TURBO_STACK_ROOT.  common.sh always
 # lives at <root>/scripts/lib/common.sh, so its own path is the most reliable
@@ -95,6 +114,7 @@ turbo_parse_driver_args() {
             --only)        TURBO_ONLY="$2"; shift 2 ;;
             --parallel|-j) TURBO_JOBS="$2"; shift 2 ;;
             --clean)       TURBO_CLEAN=true; shift ;;
+            -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1'" >&2; return 1 ;;
         esac
     done
@@ -288,9 +308,15 @@ turbo_run_test_driver() {
     export TURBO_BUILD_SYSTEM_TEST_DIR
     local log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 
+    # --clean here wipes the whole artifact dir, which holds BOTH the Tier-2 dep
+    # builds/installs (under each backend's deps/) and the Tier-3 turbo-stack
+    # build.  That is the same thing --clean means in the single-backend
+    # orchestrators (build_on_derecho.sh / build_local_with_spack_env.sh), which
+    # remove their Tier-2 deps dir and pass --clean to build_turbo_stack.sh for
+    # Tier 3.  One definition of "clean" across every entry point: Tier 2 + Tier 3.
     if [[ "${TURBO_CLEAN:-false}" == true ]]; then
         turbo_validate_clean_paths "$TURBO_BUILD_SYSTEM_TEST_DIR" "$TURBO_STACK_ROOT" || return 1
-        echo "[--clean] removing all artifacts under $TURBO_BUILD_SYSTEM_TEST_DIR"
+        echo "[--clean] removing all artifacts (Tier-2 deps + Tier-3) under $TURBO_BUILD_SYSTEM_TEST_DIR"
         rm -rf "$TURBO_BUILD_SYSTEM_TEST_DIR"
     fi
     mkdir -p "$log_dir"
@@ -303,12 +329,12 @@ turbo_run_test_driver() {
     local fms2_rc=0 tim_rc=0
     if [[ "${TURBO_RUN_FMS2:-true}" == true ]]; then
         turbo_run_flavor "FMS2 build+test" "$log_dir/turbo-stack-with-FMS2.log" \
-            bash "$builder" --infra FMS2 --build_dir "$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-FMS2"
+            bash "$builder" --infra FMS2 --build_dir "$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-FMS2" --tests
         fms2_rc=$TURBO_LAST_RC
     fi
     if [[ "${TURBO_RUN_TIM:-true}" == true ]]; then
         turbo_run_flavor "TIM build+test" "$log_dir/turbo-stack-with-TIM.log" \
-            bash "$builder" --infra TIM --build_dir "$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-TIM"
+            bash "$builder" --infra TIM --build_dir "$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-TIM" --tests
         tim_rc=$TURBO_LAST_RC
     fi
 
