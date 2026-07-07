@@ -15,7 +15,7 @@
 #                       configure cache) + --clean-first (clean build artifacts)
 #   --ninja             Use Ninja generator instead of the default (Unix Makefiles)
 #   --build_dir DIR     Build directory (default: $TURBO_STACK_ROOT/build/default)
-#   --infra FMS2|TIM    Infrastructure backend (default: FMS2). The chosen
+#   --infra FMS2|TIM    Infrastructure backend (default: TIM). The chosen
 #                       backend must be discoverable via find_package on
 #                       CMAKE_PREFIX_PATH; the orchestrator/driver builds it
 #                       first via the turbo_build_* wrappers (scripts/lib/common.sh).
@@ -39,9 +39,9 @@
 set -eo pipefail
 
 # Source the shared library first (no side effects; just defines functions) so
-# --help works while parsing.  TURBO_STACK_ROOT is resolved after parsing (self-
-# locating; an exported value is an optional override).  This script lives in
-# scripts/, so the shared library is the sibling lib/ subdir.
+# --help works while parsing.  TURBO_STACK_ROOT is resolved after parsing (from
+# this script's own location).  This script lives in scripts/, so the shared
+# library is the sibling lib/ subdir.
 # shellcheck source=/dev/null
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
@@ -52,7 +52,7 @@ build_type="Release"
 debug=false
 clean=false
 ninja=false
-infra=""
+infra="TIM"
 with_tests=false
 parallel=""
 
@@ -93,9 +93,10 @@ cmake_generate_options=()
 [[ "$debug" == true ]] && build_type="Debug"
 [[ "$clean" == true ]] && cmake_generate_options+=("--fresh")
 cmake_generate_options+=("-DCMAKE_BUILD_TYPE=$build_type")
-if [[ -n "$infra" ]]; then
-    cmake_generate_options+=("-DMOM6_INFRA=$infra")
-fi
+# Always pass -DMOM6_INFRA (default TIM) so switching backends -- including
+# switching back to the default by dropping --infra -- takes effect on an
+# existing build dir instead of a previous choice sticking in the cache.
+cmake_generate_options+=("-DMOM6_INFRA=$infra")
 
 # Unit tests are opt-in.  Always pass the option explicitly (ON/OFF) so toggling
 # --tests takes effect on an existing build dir without --clean/--fresh --
@@ -117,17 +118,22 @@ cmake_build_options=()
 cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
 
 # Test
-# Honor TURBO_BUILD_UNIT_TESTS: when CMake configured with the option OFF,
-# the tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing to
-# run.  Read the resolved value from the CMake cache and run ctest only when
-# it is the canonical truthy literal that option() writes: ON.  Anything else
-# -- OFF, an unreadable cache, or a hand-edited non-canonical value -- skips
-# with a tidy log line instead of a confusing empty-ctest error.
+# Honor TURBO_BUILD_UNIT_TESTS: when CMake configured with the option OFF, the
+# tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing to run.
+# Read the resolved value from the CMake cache and run ctest when it is
+# CMake-truthy.  CMake treats 1 / ON / YES / TRUE / Y (any case) as true and
+# everything else (OFF / 0 / NO / FALSE / empty / unreadable cache) as false;
+# match that same set so a truthy-but-not-"ON" value (e.g. a build dir configured
+# with -DTURBO_BUILD_UNIT_TESTS=TRUE, which still builds the suite) can't skip
+# ctest and report a vacuous green.
 turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
-if [[ "$turbo_build_unit_tests" == "ON" ]]; then
-    # --no-tests=error: fail if zero tests were registered, so a misconfigured
-    # suite can't report a vacuous green (matches the legacy tests Makefile).
-    ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
-else
-    echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=${turbo_build_unit_tests:-<unset>} -- skipping ctest"
-fi
+case "$(printf '%s' "${turbo_build_unit_tests:-}" | tr '[:lower:]' '[:upper:]')" in
+    1|ON|YES|TRUE|Y)
+        # --no-tests=error: fail if zero tests were registered, so a misconfigured
+        # suite can't report a vacuous green (matches the legacy tests Makefile).
+        ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
+        ;;
+    *)
+        echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=${turbo_build_unit_tests:-<unset>} -- skipping ctest"
+        ;;
+esac
