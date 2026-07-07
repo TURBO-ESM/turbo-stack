@@ -1,12 +1,11 @@
 #!/bin/bash
 # Usage: ./scripts/build_on_derecho.sh [options]
 #
-# `TURBO_STACK_ROOT` is self-located (set it only to override). See
-# scripts/README.md for the dependency tier model.
+# `TURBO_STACK_ROOT` is self-located from this script (build the checkout you run
+# from). See scripts/README.md for the dependency tier model.
 #
 # Optional environment variables (hot-swap a dep's source; default = submodule):
 #   MOM6_ROOT / FMS_ROOT / TIM_ROOT   out-of-tree source overrides
-#   PFUNIT_ROOT / AMREX_ROOT          also honored by build_dep
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
@@ -74,8 +73,8 @@ if [[ "$infra" != "FMS2" && "$infra" != "TIM" ]]; then
     exit 1
 fi
 
-# Resolve TURBO_STACK_ROOT (self-locating; an exported value is an optional
-# override).
+# Resolve TURBO_STACK_ROOT (self-locating; a mismatching exported value is a
+# hard error -- see turbo_resolve_stack_root).
 turbo_resolve_stack_root
 
 # Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every

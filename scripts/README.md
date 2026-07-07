@@ -191,14 +191,16 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
 
 ## Environment
 
-- `TURBO_STACK_ROOT` — **optional**; every entry point self-locates its own
-  checkout (via `lib/common.sh`). Set it only to override — a warning fires if an
-  exported value disagrees with the script's own location (the multi-checkout
-  footgun).
+- `TURBO_STACK_ROOT` — normally **not set**; every entry point self-locates its
+  own checkout (via `lib/common.sh`), so you build the checkout you run from.
+  turbo-stack is a top-level orchestrator, so there is no "root override" — to
+  build a different copy, run *its* scripts. If an exported `TURBO_STACK_ROOT`
+  disagrees with the script's own location the script hard-errors (unset it)
+  rather than silently using the other copy (the multi-checkout footgun).
 - `SPACK_ROOT` — required for the spack flavor (local builds).
 
 Optional, for testing against local dev trees:
 
 - `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` — hot-swap a co-developed repo's source
-  (default: the pinned submodule). `PFUNIT_ROOT`, `AMREX_ROOT` are also honored by `build_dep`.
+  (default: the pinned submodule).
 - `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").

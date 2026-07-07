@@ -14,7 +14,7 @@
 # scripts/build_turbo_stack.sh directly.  See scripts/README.md for details.
 #
 # Required: SPACK_ROOT (your Spack installation).  TURBO_STACK_ROOT is
-# self-located (set it only to override).
+# self-located from this script (build the checkout you run from).
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
@@ -89,8 +89,8 @@ if [[ "$infra" != "FMS2" && "$infra" != "TIM" ]]; then
     exit 1
 fi
 
-# Resolve TURBO_STACK_ROOT (self-locating; an exported value is an optional
-# override).
+# Resolve TURBO_STACK_ROOT (self-locating; a mismatching exported value is a
+# hard error -- see turbo_resolve_stack_root).
 turbo_resolve_stack_root
 
 # Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every

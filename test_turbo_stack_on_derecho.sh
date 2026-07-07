@@ -47,15 +47,15 @@ set -euo pipefail
 # in-repo library; common.sh then self-locates and exports TURBO_STACK_ROOT.
 _self="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
 _common=""
-for _cand in "${TURBO_STACK_ROOT:-}" "$_self" "${PBS_O_WORKDIR:-}"; do
+for _cand in "$_self" "${PBS_O_WORKDIR:-}"; do
     [[ -n "$_cand" && -f "$_cand/scripts/lib/common.sh" ]] && { _common="$_cand/scripts/lib/common.sh"; break; }
 done
-[[ -n "$_common" ]] || { echo "Error: cannot locate scripts/lib/common.sh; set TURBO_STACK_ROOT=/path/to/turbo-stack." >&2; exit 1; }
+[[ -n "$_common" ]] || { echo "Error: cannot locate scripts/lib/common.sh; run this driver from inside a turbo-stack checkout." >&2; exit 1; }
 # shellcheck source=/dev/null
 source "$_common"
-turbo_resolve_stack_root
 
 TURBO_JOBS=128                 # default: one full Derecho compute node
 turbo_parse_driver_args "$@"
+turbo_resolve_stack_root
 
 turbo_run_test_driver "$TURBO_STACK_ROOT/scripts/build_on_derecho.sh"

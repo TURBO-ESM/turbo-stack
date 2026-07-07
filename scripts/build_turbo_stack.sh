@@ -6,7 +6,8 @@
 # Requires a prepared environment: cmake + MPI compilers on PATH, and any
 # from-source deps installed so find_package(FMS|TIM|PFUNIT|AMReX) succeeds.
 #
-# `TURBO_STACK_ROOT` is self-located (set it only to override).
+# `TURBO_STACK_ROOT` is self-located from this script (build the checkout you
+# run from).
 #
 # Options:
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug 

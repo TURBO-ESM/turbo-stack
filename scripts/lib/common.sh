@@ -56,23 +56,39 @@ turbo_print_header_usage() {
 # Resolve, validate, export, and announce TURBO_STACK_ROOT.  common.sh always
 # lives at <root>/scripts/lib/common.sh, so its own path is the most reliable
 # anchor -- it is the real file even in a PBS spool run (only the submitted
-# driver script is copied to the spool, not the libraries it sources).  An
-# exported TURBO_STACK_ROOT is honored as an explicit override but WARNS when it
-# disagrees with this checkout -- the multi-copy footgun reviewers flagged.
+# driver script is copied to the spool, not the libraries it sources).
+#
+# turbo-stack is a top-level orchestrator: you build the checkout you run from,
+# so there is no "root override" -- the script's own location always wins.
+#   1. This script's own checkout wins.  A stale exported TURBO_STACK_ROOT that
+#      DISAGREES with this checkout is a hard error (unset it), so it can never
+#      silently steer the build onto another copy -- the footgun reviewers
+#      flagged.  TURBO_STACK_ROOT is never USED to select the root; it is only
+#      read to catch that mismatch.
+#   2. Fallbacks, only when the script cannot locate itself (e.g. an unusual PBS
+#      spool): PBS_O_WORKDIR, then the qsub'd script's directory.
+#
+# To point turbo-stack at a local dev tree of a co-developed *dependency*, use
+# the submodule overrides (MOM6_ROOT / FMS_ROOT / TIM_ROOT).
 turbo_resolve_stack_root() {
     local marker="scripts/lib/common.sh"
     local self=""
     self=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd) || self=""
 
     local resolved=""
-    if [[ -n "${TURBO_STACK_ROOT:-}" && -f "${TURBO_STACK_ROOT}/${marker}" ]]; then
-        resolved="$TURBO_STACK_ROOT"
-        if [[ -n "$self" && -f "${self}/${marker}" && "$self" != "$resolved" ]]; then
-            echo "[common] WARNING: exported TURBO_STACK_ROOT=$resolved differs from this" >&2
-            echo "[common]          checkout ($self). Using the exported value -- unset" >&2
-            echo "[common]          TURBO_STACK_ROOT to use the checkout you launched from." >&2
+    if [[ -n "$self" && -f "${self}/${marker}" ]]; then
+        # Self-location wins.  Refuse to guess when an exported value disagrees.
+        if [[ -n "${TURBO_STACK_ROOT:-}" ]]; then
+            local exported_abs=""
+            exported_abs=$(cd -P -- "$TURBO_STACK_ROOT" 2>/dev/null && pwd) || exported_abs="$TURBO_STACK_ROOT"
+            if [[ "$exported_abs" != "$self" ]]; then
+                echo "Error: exported TURBO_STACK_ROOT=$TURBO_STACK_ROOT disagrees with the" >&2
+                echo "       checkout this script lives in ($self)." >&2
+                echo "       TURBO_STACK_ROOT is not used to select the checkout; unset it and" >&2
+                echo "       run the scripts from the copy you want to build." >&2
+                return 1
+            fi
         fi
-    elif [[ -n "$self" && -f "${self}/${marker}" ]]; then
         resolved="$self"
     elif [[ -n "${PBS_O_WORKDIR:-}" && -f "${PBS_O_WORKDIR}/${marker}" ]]; then
         resolved="$PBS_O_WORKDIR"
@@ -91,7 +107,7 @@ turbo_resolve_stack_root() {
 
     if [[ -z "$resolved" ]]; then
         echo "Error: could not locate the turbo-stack root." >&2
-        echo "  Run from inside a turbo-stack checkout, or set TURBO_STACK_ROOT=/path/to/turbo-stack." >&2
+        echo "  Run the script from inside a turbo-stack checkout." >&2
         return 1
     fi
     export TURBO_STACK_ROOT="$resolved"
