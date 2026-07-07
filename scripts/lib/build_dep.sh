@@ -208,14 +208,28 @@ build_dep() {
             return 0
         fi
 
-        if [[ "$_saved_sha" != "$_sha" ]]; then
-            echo "[build_dep] $_name source changed (${_saved_sha:0:8} -> ${_sha:0:8}) -- rebuilding"
-        elif [[ "$_saved_tree" != "$_tree" ]]; then
-            echo "[build_dep] $_name has uncommitted changes since last build -- rebuilding"
+        # A pure *source* change (new commit or uncommitted edits) with the same
+        # source path, cmake args, and install prefix is rebuilt incrementally:
+        # reconfigure is a near-no-op and `cmake --build` recompiles only what
+        # changed.  Only wipe the build dir for a change CMake cannot absorb in
+        # place -- a different source directory, cmake args, or install prefix
+        # (where a stale cache would otherwise linger).  --rebuild forces a wipe.
+        if [[ "$_saved_src" == "$_src_abs" \
+           && "$_saved_prefix" == "$_install_prefix" \
+           && "$_saved_hash" == "$_cmake_args_hash" ]]; then
+            if [[ "$_saved_sha" != "$_sha" ]]; then
+                echo "[build_dep] $_name source changed (${_saved_sha:0:8} -> ${_sha:0:8}) -- incremental rebuild"
+            else
+                echo "[build_dep] $_name has uncommitted changes since last build -- incremental rebuild"
+            fi
         else
-            echo "[build_dep] $_name config changed (cmake args or paths differ) -- rebuilding"
+            if [[ "$_saved_src" != "$_src_abs" ]]; then
+                echo "[build_dep] $_name source path changed -- clean rebuild"
+            else
+                echo "[build_dep] $_name config changed (cmake args or install prefix) -- clean rebuild"
+            fi
+            rm -rf "$_build_dir"
         fi
-        rm -rf "$_build_dir"
     fi
 
     # --- Configure + build + install ------------------------------------
