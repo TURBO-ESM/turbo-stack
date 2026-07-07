@@ -9,7 +9,7 @@ turbo-stack classifies every dependency by **its build policy** — see
 
 | Tier | Policy | Members |
 |------|--------|---------|
-| **1 — Prerequisites** | turbo-stack *never* builds these; you provide them (modules / spack / OS packages) | compilers, MPI, NetCDF, CMake ≥ 3.24, make/ninja, FFTW, HDF5 |
+| **1 — Prerequisites** | turbo-stack *never* builds these; you provide them (modules / spack / OS packages) | compilers, MPI, NetCDF, CMake ≥ 3.24, make/ninja, HDF5 |
 | **2 — Convenience-built** | turbo-stack *can* build these from a submodule (`build_dep` → `find_package`); you may supply your own instead | AMReX, pFUnit, FMS, TIM |
 | **3 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`) | turbo-stack, MOM6, MARBL |
 
