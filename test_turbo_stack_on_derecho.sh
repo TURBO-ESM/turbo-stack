@@ -5,7 +5,14 @@
 #PBS -l select=1:ncpus=128:mpiprocs=128:mem=100GB
 #PBS -l walltime=01:00:00
 #PBS -j oe
-#PBS -V
+
+# NOTE: intentionally no `#PBS -V`.  The job must be self-contained so it tests
+# the *pinned submodules* (see below), not whatever TURBO_STACK_ROOT / MOM6_ROOT
+# / FMS_ROOT / TIM_ROOT or modules happen to be set in the submit shell.  The
+# driver re-establishes the Tier-1 toolchain and self-locates TURBO_STACK_ROOT
+# via PBS_O_WORKDIR (which PBS sets regardless of -V), so nothing from the login
+# environment is needed.  Use `qsub -v VAR=...` for an explicit, per-submission
+# override.
 
 # Usage: ./test_turbo_stack_on_derecho.sh [options]
 #
