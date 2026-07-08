@@ -1,16 +1,16 @@
 #!/bin/bash
 # scripts/setup_environment/derecho_cpu_gcc_openmpi.sh
 #
-# SOURCED.  Tier-1 toolchain ONLY: loads Derecho's CPU / gcc / OpenMPI toolchain
-# via Lmod (compiler, CMake, MPI, NetCDF).  It does NOT build any dependencies
-# and has no side effects beyond preparing the shell -- the Tier-2 convenience
-# deps (FMS / pFUnit / AMReX / TIM) are built explicitly by the caller via the
-# turbo_build_* wrappers in scripts/lib/common.sh.  See
-# docs/dependency_tiers_prompt.md for the tier model.
+# SOURCED.  Stage-1 (environment setup) toolchain step ONLY: loads Derecho's
+# CPU / gcc / OpenMPI toolchain via Lmod (compiler, CMake, MPI, NetCDF).  It does
+# NOT build any dependencies and has no side effects beyond preparing the shell --
+# the upstream submodule deps (AMReX/pFUnit = Tier 1.5; FMS/TIM = Tier 2) are built
+# explicitly by the caller via the turbo_build_* wrappers in scripts/lib/common.sh.
+# See docs/dependency_tiers_prompt.md for the tier model.
 #
 # Usage:  source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh
 
-# --- Toolchain (Tier 1) ------------------------------------------------
+# --- Toolchain (Stage 1 env setup; Tier 1) -----------------------------
 module purge
 module load gcc cmake openmpi netcdf #pfunit
 

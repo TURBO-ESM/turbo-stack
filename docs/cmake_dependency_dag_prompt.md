@@ -14,18 +14,20 @@ Generate a Graphviz dot file at `docs/cmake_dependency_dag.dot` showing the buil
 - Group nodes into labelled clusters by origin (see below).
 - Use dashed edges for conditional / hot-swap relationships.
 - **Use `xlabel=` (not `label=`) for any edge that carries a text label.** Graphviz's orthogonal router does not support inline edge labels; `xlabel` places the text externally and avoids the layout warning.
-- Diamond nodes for INTERFACE adapter targets (backend-agnostic wrappers).
+- Diamond nodes for INTERFACE adapter targets (backend-agnostic wrappers). The diamond shape alone
+  conveys "INTERFACE" — label such nodes with just the target name (e.g. `TURBO::infra_r8`), no extra
+  annotation text in the label.
 - Ellipse nodes for executables and test suites.
 - **Never use `lhead=cluster_*` on edges.** All arrows must point to specific named nodes, even when the target lives inside a cluster. Using `lhead` collapses multiple distinct edges into a single arrow at the cluster boundary, hiding which library is actually being linked.
 
 ### Clusters and their nodes
 
-**External** — yellow fill (`#fffacd`):
+**External** — cluster fill `#f5f5dc`; dependency nodes yellow (`#fffacd`):
 - `HDF5`
 - `NetCDF::NetCDF_C` → depends on HDF5
 - `NetCDF::NetCDF_Fortran` → depends on NetCDF_C
 - `MPI::MPI_Fortran`
-- `AMReX (+fortran)`
+- `AMReX`
 - `PFUNIT::pfunit`
 
 **FMS2 (FMS_ROOT)** — blue fill (`#dce8f5`):
@@ -34,12 +36,13 @@ Generate a Graphviz dot file at `docs/cmake_dependency_dag.dot` showing the buil
 **TIM repo (TIM_ROOT)** — orange fill (`#fde8d8`):
 - `TIM::tim_r8` → AMReX, NetCDF_C, NetCDF_Fortran, MPI
 
-**TURBO::infra_r8 (INTERFACE — turbo-stack CMake)** — diamond, green fill (`#c8e6c9`):
+**TURBO::infra_r8** — diamond, green fill (`#c8e6c9`):
 - Hot-swap wrapper: dashed edge to `FMS::fms_r8` labelled `MOM6_INFRA=FMS2`
 - Dashed edge to `TIM::tim_r8` labelled `MOM6_INFRA=TIM`
 - The backend is selected by the `MOM6_INFRA` CMake cache variable (defined in
-  MOM6's `cmake/MOM6Options.cmake`; the build scripts set it via `--infra`). Only
-  one of the two dashed edges is live in any given build.
+  MOM6's `cmake/MOM6Options.cmake`; the turbo-stack build scripts default to TIM
+  and always pass `-DMOM6_INFRA`, set via `--infra`). Only one of the two dashed
+  edges is live in any given build.
 - Solid edge to `NetCDF::NetCDF_C` (always present). turbo-stack attaches it
   explicitly so `libnetcdf.so`'s absolute path lands on every link line that uses
   TURBO::infra_r8 — FMS/TIM only carry NetCDF_Fortran, whose bare `-lnetcdf` flag
@@ -63,8 +66,9 @@ sources that depend on model modules compile straight into `ocean`.
 - `MOM6 (executable)` ellipse → ocean (private)  (dark green `#2e8b57`, white font)
 
 **turbo-stack tests/** — tan fill (`#f0e8d8`):
-(turbo-stack builds `tests/`, wired in by the root CMakeLists; `tests-legacy/` is a
-dead tree kept for reference and is not added as a subdirectory — ignore it.)
+(turbo-stack builds `tests/` when `TURBO_BUILD_UNIT_TESTS=ON` — opt-in via the
+orchestrators' `--tests` flag — wired in by the root CMakeLists; `tests-legacy/`
+is a dead tree kept for reference and is not added as a subdirectory — ignore it.)
 - `pFUnit unit tests` ellipse, labelled `(executable)` (like `MOM6 (executable)`) → MOM6::framework, MOM6::infra, TURBO::infra_r8, PFUNIT::pfunit
   - The node carries `(executable)` rather than a test count, so it needs no edit
     when tests are added or removed.

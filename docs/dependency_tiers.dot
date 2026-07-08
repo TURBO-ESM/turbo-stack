@@ -1,0 +1,83 @@
+digraph turbo_stack_tiers { rankdir=TB; compound=true;
+    newrank=true;
+    node [shape=box, fontname="Helvetica", fontsize=11];
+    edge [fontsize=9, fontname="Helvetica"];
+    splines=ortho;
+
+    label="turbo-stack dependency contract — tiers classify turbo-stack's BUILD POLICY, not ownership";
+    labelloc=t; fontname="Helvetica-Bold"; fontsize=13;
+
+    // ── Tier 3 — code turbo-stack builds (always inline) ──────────────────────
+    subgraph cluster_tier3 {
+        label="Tier 3 — Code turbo-stack builds\n\nSource: turbo-stack always has it's own source; MARBL\nalways via submodule; MOM6 via submodule or override.\n\nBUILD: turbo-stack ALWAYS compiles it inline (add_subdirectory)";
+        style=filled; color="#d8f0d8"; fontname="Helvetica-Bold";
+
+        // MOM6 declared first -> rendered rightmost, giving its MOM6_ROOT
+        // hot-swap line a clean east-side entry in the right margin.
+        t3_mom6  [label="MOM6",        fillcolor="#90ee90", style=filled];
+        t3_turbo [label="turbo-stack", fillcolor="#c8e6c9", style=filled];
+        t3_marbl [label="MARBL",       fillcolor="#d8b4fe", style=filled];
+        {rank=same; t3_mom6; t3_turbo; t3_marbl;}
+    }
+
+    // ── Tier 2 — internal (we develop) submodule libraries ────────────────────
+    subgraph cluster_tier2 {
+        label="Tier 2 — Internal (we develop) upstream libraries.\n\nSource: turbo-stack CAN get it via submodules but option to\noverride and bring your own development source branch or fork.\n\nBuild: turbo-stack CAN build it OR you supply a PREBUILT install\non CMAKE_PREFIX_PATH (find_package)";
+        style=filled; color="#fdeede"; fontname="Helvetica-Bold";
+
+        t2_fms    [label="FMS",    fillcolor="#add8e6", style=filled];
+        t2_tim    [label="TIM",    fillcolor="#ffcc99", style=filled];
+        // Two invisible spacers keep FMS/TIM in the right half of the band (as
+        // when Tier 2 had four members), so the TIM_ROOT hot-swap label lands in
+        // the clear right margin instead of over the cluster title.
+        t2_padB [style=invis, width=1.0];
+        t2_padA [style=invis, width=1.0];
+        {rank=same; t2_fms; t2_tim; t2_padB; t2_padA;}
+    }
+
+    // ── Tier 1.5 — externals that are submodules ──────────────────────────────
+    subgraph cluster_tier1_5 {
+        label="Tier 1.5 — External upstream libraries that are submodules.\n\nSource: turbo-stack CAN get it via submodules.\n\nBuild: turbo-stack CAN build the source in the submodule OR you\nprovide a prebuilt install on CMAKE_PREFIX_PATH (find_package)";
+        style=filled; color="#f5f5dc"; fontname="Helvetica-Bold";
+
+        // Declared first -> rendered rightmost, so visual L->R is pFUnit, AMReX.
+        t15_amrex  [label="AMReX",  fillcolor="#fffacd", style=filled];
+        t15_pfunit [label="pFUnit", fillcolor="#fffacd", style=filled];
+        {rank=same; t15_amrex; t15_pfunit;}
+    }
+
+    // ── Tier 1 — external tools/libraries that are not submodules ─────────────
+    subgraph cluster_tier1 {
+        label="Tier 1 — External tools and upstream libraries that are not\nsubmodules.\n\nSource: turbo-stack NEVER gets it for you.\n\nBuild: turbo-stack NEVER builds these; you supply them PREBUILT\n(modules / OS packages / spack / hand compiled / etc...)";
+        style=filled; color="#f5f5dc"; fontname="Helvetica-Bold";
+
+        // Declared in reverse: this layout renders a rank right-to-left, so the
+        // visual L->R order is compilers, MPI, CMake, make/ninja, NetCDF, HDF5.
+        t1_hdf5   [label="HDF5",                fillcolor="#fffacd", style=filled];
+        t1_netcdf [label="NetCDF\n(C+Fortran)", fillcolor="#fffacd", style=filled];
+        t1_make   [label="make / ninja",        fillcolor="#fffacd", style=filled];
+        t1_cmake  [label="CMake >= 3.24",       fillcolor="#fffacd", style=filled];
+        t1_mpi    [label="MPI",                 fillcolor="#fffacd", style=filled];
+        t1_cc     [label="C/C++/Fortran\ncompilers", fillcolor="#fffacd", style=filled];
+        {rank=same; t1_hdf5; t1_netcdf; t1_make; t1_cmake; t1_mpi; t1_cc;}
+    }
+
+    // Stack the tiers as vertical bands (consumers on top -> prerequisites at the
+    // bottom).  One invisible edge per boundary sets the order;
+    // rank=same above keeps each tier a single horizontal band.  The spine is
+    // anchored on each band's RIGHTMOST node so it stays a straight vertical line.
+    t3_mom6   -> t2_fms    [style=invis, weight=10];
+    t2_fms    -> t15_amrex [style=invis, weight=10];
+    t15_amrex -> t1_hdf5   [style=invis, weight=10];
+
+    // Hot-swap cross-cut: the co-developed TURBO-ESM repos (NOT a tier).
+    // constraint=false so these annotations do not perturb the banded layout.
+    hotswap [shape=note, fillcolor="#fff2cc", style=filled, fontsize=10,
+             label="*_ROOT = bring your own SOURCE\n(turbo-stack still builds it; co-developed repos)\ndefault = pinned submodule"];
+    // Each hot-swap target is the RIGHTMOST node in its tier, so these dashed
+    // lines enter from the east side and stay in the clear right margin instead
+    // of crossing the bold cluster-label text at the top of each band.
+    hotswap -> t3_mom6 [style=dashed, penwidth=1.4, color="#a06000", arrowhead=odot, constraint=false, xlabel="MOM6_ROOT"];
+    hotswap -> t2_fms  [style=dashed, penwidth=1.4, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT"];
+    hotswap -> t2_tim  [style=dashed, penwidth=1.4, color="#a06000", arrowhead=odot, constraint=false, xlabel="TIM_ROOT"];
+}

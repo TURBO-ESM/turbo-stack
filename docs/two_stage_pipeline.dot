@@ -1,4 +1,4 @@
-digraph turbo_stack_build_pipeline {
+digraph two_stage_pipeline {
     rankdir=TB;
     compound=true;
     newrank=true;
@@ -25,7 +25,7 @@ digraph turbo_stack_build_pipeline {
                             fillcolor="#bcd4ec", style=filled];
         }
 
-        subgraph tier_1_packages {
+        subgraph external_prebuilt_packages {
                 mpi_install    [label="MPI install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
                 netcdf_install  [label="NetCDF install",  shape=cylinder, fillcolor="#bcd4ec", style=filled];
                 hdf5_install    [label="HDF5 install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
@@ -61,12 +61,12 @@ digraph turbo_stack_build_pipeline {
                         fillcolor="#c8e6c9", style=filled];
     }
 
-    // Tier 1 Installs 
+    // External non-submodule installs (Tier 1): MPI / NetCDF / HDF5
     mpi_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     netcdf_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     hdf5_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
 
-    // Tier 2 Installs 
+    // Submodule dep installs (Tier 1.5: AMReX/pFUnit; Tier 2: FMS/TIM)
     fms_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     pfunit_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH and PFUNIT_DIR"];
     amrex_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
@@ -83,11 +83,11 @@ digraph turbo_stack_build_pipeline {
         style=filled; color="#d8f0d8"; fontname="Helvetica-Bold";
         margin=14;
 
-        cmake_config [label="cmake configure\n-DMOM6_INFRA=FMS2|TIM",
+        cmake_config [label="cmake configure\n-DMOM6_INFRA=TIM|FMS2 (default TIM)",
                       fillcolor="#a3e0a3", style=filled];
         cmake_build  [label="cmake --build\n(reads CMAKE_BUILD_PARALLEL_LEVEL)",
                       fillcolor="#a3e0a3", style=filled];
-        ctest_node   [label="ctest\n(pFUnit unit tests)",
+        ctest_node   [label="ctest — pFUnit unit tests\n(opt-in: --tests / TURBO_BUILD_UNIT_TESTS=ON)",
                       shape=ellipse, fillcolor="#52c452", style=filled];
 
 
@@ -107,11 +107,11 @@ digraph turbo_stack_build_pipeline {
 
         cmake_config -> cmake_build;
         cmake_build  -> mom6_install [lhead=cluster_turbo_stack_build_output];
-        cmake_build  -> ctest_node;
+        cmake_build  -> ctest_node [xlabel="--tests"];
         turbo_stack_install  -> ctest_node;
 
     // ── Environment → build_turbo_stack.sh hand-off (THE central message) ─────────────────────
     stage1_outputs -> cmake_config [lhead=cluster_stage2, penwidth=2,
-        xlabel="Shell state crosses the stage boundary —\nbuild_turbo_stack.sh has no knowledge of the Tier-1/Tier-2\nsetup beyond what that shell state carries."];
+        xlabel="Shell state crosses the stage boundary —\nbuild_turbo_stack.sh has no knowledge of the Stage-1 environment\nsetup beyond what that shell state carries."];
 
 }

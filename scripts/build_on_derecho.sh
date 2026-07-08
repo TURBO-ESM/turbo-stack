@@ -9,9 +9,9 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean                 Clean rebuild from scratch.  Removes the Tier-2 dep
-#                           builds/installs AND passes cmake --fresh
-#                           --clean-first to the Tier-3 turbo-stack build.
+#   --clean                 Clean rebuild from scratch.  Removes the Stage-1
+#                           upstream dep builds/installs AND passes cmake --fresh
+#                           --clean-first to the Stage-2 turbo-stack build.
 #   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
 #                           through to build_turbo_stack.sh).
 #   --tests                 Also build pFUnit + the unit-test suite and run
@@ -35,7 +35,7 @@
 #   build_on_derecho.sh                        # TIM backend, build the executable
 #   build_on_derecho.sh --tests                # also build + run the unit tests
 #   build_on_derecho.sh --infra FMS2           # FMS2 backend instead of TIM
-#   build_on_derecho.sh --debug --clean        # clean Debug rebuild (deps + Tier 3)
+#   build_on_derecho.sh --debug --clean        # clean Debug rebuild (deps + turbo-stack)
 
 set -eo pipefail
 
@@ -82,7 +82,7 @@ turbo_resolve_stack_root
 # this up without further flag plumbing.
 [[ -n "$parallel" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$parallel"
 
-# Where the from-source Tier-2 deps build + install: $build_dir/deps when given,
+# Where the from-source upstream deps build + install: $build_dir/deps when given,
 # else $TURBO_STACK_ROOT/deps/default.
 if [[ -n "$build_dir" ]]; then
     deps_build_root="$build_dir/deps"
@@ -90,19 +90,19 @@ else
     deps_build_root="$TURBO_STACK_ROOT/deps/default"
 fi
 
-# --clean covers Tier 2 as well as Tier 3: wipe the dep builds/installs here, and
-# forward --clean to build_turbo_stack.sh (cmake --fresh --clean-first) below.
-# This is the same "Tier 2 + Tier 3" definition the end-to-end driver uses (see
-# scripts/lib/common.sh).
+# --clean covers the Stage-1 deps as well as the Stage-2 build: wipe the dep
+# builds/installs here, and forward --clean to build_turbo_stack.sh (cmake
+# --fresh --clean-first) below.  This is the same "deps + turbo-stack" definition
+# the end-to-end driver uses (see scripts/lib/common.sh).
 if [[ "$clean" == true ]]; then
     turbo_validate_clean_paths "$deps_build_root" || exit 1
-    echo "[--clean] removing Tier-2 dep artifacts under $deps_build_root"
+    echo "[--clean] removing upstream dep artifacts under $deps_build_root"
     rm -rf "$deps_build_root"
 fi
 
 # Guard the submodules this build consumes (skipped when the matching *_ROOT
-# overrides).  Derecho's modules provide none of the Tier-2 deps, so pFUnit and
-# the per-infra deps are all built from submodule.
+# overrides).  Derecho's modules provide none of the upstream submodule deps, so
+# pFUnit and the per-infra deps are all built from submodule.
 turbo_require_submodule submodules/MOM6   MOM6   MOM6_ROOT
 turbo_require_submodule submodules/MARBL  MARBL
 [[ "$with_tests" == true ]] && turbo_require_submodule submodules/pFUnit pFUnit PFUNIT_ROOT
@@ -113,11 +113,11 @@ else
     turbo_require_submodule submodules/infra/FMS2 FMS  FMS_ROOT
 fi
 
-# --- Tier 1: toolchain (Lmod modules only; no dependency builds) ---------
+# --- Stage 1 (env setup) · toolchain: Lmod modules only; no dependency builds ---
 # shellcheck source=/dev/null
 source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh"
 
-# --- Tier 2: build deps explicitly ---------------------------------------
+# --- Stage 1 (env setup) · build upstream deps (Tier 1.5 + Tier 2) explicitly ---
 # Derecho's modules provide none of these, so build from submodule (or each
 # $<NAME>_ROOT override).  Canonical flags live in scripts/lib/common.sh.
 # pFUnit is built only when --tests is given; the infra backend -- plus
@@ -136,7 +136,7 @@ if [[ "$infra" == "FMS2" ]]; then
     turbo_build_fms   "$deps_build_root/build" "$deps_build_root/install"
 fi
 
-# --- Tier 3: configure + build + test turbo-stack ------------------------
+# --- Stage 2 · build turbo-stack (Tier 3): configure + build + test ------
 build_args=()
 [[ "$debug"      == true ]] && build_args+=(--debug)
 [[ "$clean"      == true ]] && build_args+=(--clean)

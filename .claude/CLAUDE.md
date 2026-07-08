@@ -10,13 +10,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Scripts self-locate `TURBO_STACK_ROOT` from their own location — you build the checkout you run from (`SPACK_ROOT` is needed for the spack flavor). To build against a local dev tree of a co-developed dependency, set its submodule override (`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT`). See [`scripts/README.md`](scripts/README.md) for the full reference, including the **dependency tier contract** (`docs/dependency_tiers.png`).
 
-### 3-stage pipeline
+### Two-stage pipeline
 
 ```
-Tier-1 toolchain (modules/spack; builds nothing)  →  Tier-2 deps (explicit turbo_build_*)  →  build turbo-stack
+Stage 1 — environment setup (machine-specific):  toolchain [Tier 1]  +  turbo_build_* deps [AMReX/pFUnit = Tier 1.5, FMS/TIM = Tier 2]
+Stage 2 — build turbo-stack (uniform):           build_turbo_stack.sh  →  Tier 3 (turbo-stack, MOM6, MARBL)
 ```
 
-Different machines fill in stage 1 (and which Tier-2 deps need building) differently; stage 3 is always the same. The `setup_environment/` recipes are **toolchain-only** — they build no dependencies. The single-backend builders run all three stages; the end-to-end test drivers run a builder once per backend over the shared core in `scripts/lib/common.sh`.
+The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is what a machine actually runs (contrast `docs/dependency_tiers.png` with `docs/build_test_orchestration.png`). Only Stage 1 differs between machines — the toolchain provider, and which upstream deps come prebuilt vs are built from the submodule (e.g. spack supplies AMReX/pFUnit, Derecho builds them). Stage 2 is always the same. The `setup_environment/` recipes are **toolchain-only** — they build no dependencies; the upstream deps are built explicitly via `turbo_build_*`. The single-backend builders run both stages; the end-to-end test drivers run a builder once per backend over the shared core in `scripts/lib/common.sh`.
 
 ### Local test, both backends (end-to-end)
 
@@ -44,25 +45,25 @@ scripts/build_local_with_spack_env.sh --recreate-spack-env --clean # nuke + recr
 
 ```bash
 source scripts/lib/common.sh                                 # turbo_build_* + helpers
-source scripts/setup_environment/spack_local_environment.sh  # Tier-1 (spack); builds nothing
+source scripts/setup_environment/spack_local_environment.sh  # Stage 1: toolchain (spack); builds nothing → Tier 1
 deps="$TURBO_STACK_ROOT/deps/default"
-turbo_build_fms "$deps/build" "$deps/install"                # Tier-2 (spack supplies pFUnit/AMReX)
-scripts/build_turbo_stack.sh --infra FMS2                    # Tier-3; use --infra TIM after turbo_build_tim,
+turbo_build_fms "$deps/build" "$deps/install"                # Stage 1: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
+scripts/build_turbo_stack.sh --infra FMS2                    # Stage 2: build turbo-stack (Tier 3); use --infra TIM after turbo_build_tim,
                                                              # add --tests to also build + run ctest
 ```
 
-The `setup_environment/` recipes only set up the toolchain — build Tier-2 deps explicitly via the `turbo_build_*` wrappers (canonical flags live in `scripts/lib/common.sh`).
+The `setup_environment/` recipes only set up the toolchain — build the upstream deps (Tier 1.5 + Tier 2) explicitly via the `turbo_build_*` wrappers (canonical flags live in `scripts/lib/common.sh`).
 
 ### Script structure
 
 | Script | Role | How invoked |
 |---|---|---|
-| `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier-2 canonical flags), matrix/verdict | sourced |
+| `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), matrix/verdict | sourced |
 | `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
 | `scripts/build_local_with_spack_env.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / modules) | exec'd |
-| `scripts/setup_environment/<flavor>.sh` | Stage 1 — Tier-1 toolchain ONLY (no dep builds) | sourced |
+| `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
-| `scripts/build_turbo_stack.sh` | Stage 3 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
+| `scripts/build_turbo_stack.sh` | Stage 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
 `build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`.
 
@@ -98,17 +99,17 @@ Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, 
 
 ```
 build_local_with_spack_env.sh                                        ─── orchestrator (spack flavor)
-  └─→ setup_environment/spack_local_environment.sh           Tier 1: toolchain (sourced)
-  └─→ turbo_build_fms / turbo_build_tim  (lib/common.sh)     Tier 2: selected backend
-  └─→ build_turbo_stack.sh                                   Tier 3: configure+build+test (exec'd)
+  └─→ setup_environment/spack_local_environment.sh           Stage 1: toolchain (sourced)
+  └─→ turbo_build_fms / turbo_build_tim  (lib/common.sh)     Stage 1: build selected backend dep (Tier 2)
+  └─→ build_turbo_stack.sh                                   Stage 2: configure+build+test (exec'd)
         ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
         ├─→ cmake build
         └─→ ctest
 
 build_on_derecho.sh                                        ─── orchestrator (Derecho module flavor)
-  └─→ setup_environment/derecho_cpu_gcc_openmpi.sh           Tier 1: Lmod modules only (sourced)
-  └─→ turbo_build_{pfunit,fms,amrex,tim}  (lib/common.sh)    Tier 2: deps (per --infra)
-  └─→ build_turbo_stack.sh                                   Tier 3 (exec'd)
+  └─→ setup_environment/derecho_cpu_gcc_openmpi.sh           Stage 1: Lmod modules only (sourced)
+  └─→ turbo_build_{pfunit,fms,amrex,tim}  (lib/common.sh)    Stage 1: build deps per --infra (Tier 1.5 + Tier 2)
+  └─→ build_turbo_stack.sh                                   Stage 2 (exec'd)
 
 CMakeLists.txt (repo root)
   ├─→ TURBO::infra_r8  (interface lib wrapping the backend: FMS::fms_r8 or TIM::tim_r8)

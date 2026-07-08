@@ -5,10 +5,10 @@
 # driver args, then hands off to turbo_run_test_driver (scripts/lib/common.sh),
 # which builds + ctests each selected backend (FMS2, TIM) by running the real
 # single-backend builder scripts/build_local_with_spack_env.sh in its own process
-# -- a full, independent Tier-1 -> Tier-2 -> Tier-3 run per backend -- and prints
-# a per-backend matrix/verdict.  The Derecho analogue, test_turbo_stack_on_derecho.sh,
+# -- a full, independent Stage-1 (env setup) -> Stage-2 (build turbo-stack) run
+# per backend -- and prints a per-backend matrix/verdict.  The Derecho analogue, test_turbo_stack_on_derecho.sh,
 # is identical except for its toolchain (Lmod modules) and builder.  See
-# docs/turbo_stack_pipeline_prompt.md and docs/dependency_tiers_prompt.md.
+# docs/build_test_orchestration_prompt.md and docs/dependency_tiers_prompt.md.
 #
 # Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules; the builder
 # guards them.  Nothing is written into $TURBO_STACK_ROOT.
@@ -17,7 +17,7 @@
 #   --only FMS2|TIM     Run only the named flavor (default: both)
 #   --parallel N, -j N  Parallel build jobs (default: nproc)
 #   --clean             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
-#                       clears Tier-2 deps + Tier-3, same as the orchestrators)
+#                       clears deps + turbo-stack build, same as the orchestrators)
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):

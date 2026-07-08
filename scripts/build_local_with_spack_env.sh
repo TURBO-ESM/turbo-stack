@@ -18,9 +18,9 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean                 Clean rebuild from scratch.  Removes the Tier-2 dep
-#                           builds/installs AND passes cmake --fresh
-#                           --clean-first to the Tier-3 turbo-stack build.
+#   --clean                 Clean rebuild from scratch.  Removes the Stage-1
+#                           upstream dep builds/installs AND passes cmake --fresh
+#                           --clean-first to the Stage-2 turbo-stack build.
 #   --ninja                 Use Ninja generator (passed through)
 #   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
 #                           through).  Builds the selected backend from source:
@@ -46,7 +46,7 @@
 #   build_local_with_spack_env.sh                       # TIM backend, build the executable
 #   build_local_with_spack_env.sh --tests               # also build + run the unit tests
 #   build_local_with_spack_env.sh --infra FMS2          # FMS2 backend instead of TIM
-#   build_local_with_spack_env.sh --debug --clean       # clean Debug rebuild (deps + Tier 3)
+#   build_local_with_spack_env.sh --debug --clean       # clean Debug rebuild (deps + turbo-stack)
 #   build_local_with_spack_env.sh --recreate-spack-env  # recreate the spack env, then build
 
 set -eo pipefail
@@ -106,13 +106,13 @@ else
     deps_build_root="$TURBO_STACK_ROOT/deps/default"
 fi
 
-# --clean covers Tier 2 as well as Tier 3: wipe the dep builds/installs here, and
-# forward --clean to build_turbo_stack.sh (cmake --fresh --clean-first) below.
-# This is the same "Tier 2 + Tier 3" definition the end-to-end driver uses (see
-# scripts/lib/common.sh).
+# --clean covers the Stage-1 deps as well as the Stage-2 build: wipe the dep
+# builds/installs here, and forward --clean to build_turbo_stack.sh (cmake
+# --fresh --clean-first) below.  This is the same "deps + turbo-stack" definition
+# the end-to-end driver uses (see scripts/lib/common.sh).
 if [[ "$clean" == true ]]; then
     turbo_validate_clean_paths "$deps_build_root" || exit 1
-    echo "[--clean] removing Tier-2 dep artifacts under $deps_build_root"
+    echo "[--clean] removing upstream dep artifacts under $deps_build_root"
     rm -rf "$deps_build_root"
 fi
 
@@ -127,14 +127,14 @@ else
     turbo_require_submodule submodules/infra/FMS2 FMS FMS_ROOT
 fi
 
-# --- Tier 1: toolchain (spack env; no dependency builds) -----------------
+# --- Stage 1 (env setup) · toolchain: spack env; no dependency builds ----
 env_args=()
 [[ "$recreate_spack_env" == true ]] && env_args+=(--recreate)
 # shellcheck source=/dev/null
 source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
 
-# --- Tier 2: build the infra backend from source -------------------------
-# Spack provides pFUnit + AMReX; FMS is intentionally NOT in spack (turbo-stack
+# --- Stage 1 (env setup) · build the infra backend dep (Tier 2) from source ---
+# Spack provides pFUnit + AMReX (Tier 1.5); FMS is intentionally NOT in spack (turbo-stack
 # tracks features ahead of the released package) and TIM has never been, so
 # build the selected backend from its submodule (or its $<NAME>_ROOT override).
 # FMS2 and TIM are mutually exclusive.  Canonical flags live in
@@ -148,7 +148,7 @@ if [[ "$infra" == "FMS2" ]]; then
     turbo_build_fms "$deps_build_root/build" "$deps_build_root/install"
 fi
 
-# --- Tier 3: configure + build + test turbo-stack ------------------------
+# --- Stage 2 · build turbo-stack (Tier 3): configure + build + test ------
 build_args=()
 [[ "$debug"     == true ]] && build_args+=(--debug)
 [[ "$clean"     == true ]] && build_args+=(--clean)

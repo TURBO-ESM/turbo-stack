@@ -5,25 +5,25 @@
 # machine-INDEPENDENT primitives shared by the end-to-end test drivers
 # (test_turbo_stack_locally.sh, test_turbo_stack_on_derecho.sh) and
 # the thinner entry points (build_turbo_stack.sh, build_local_with_spack_env.sh,
-# build_on_derecho.sh).  Each driver supplies only its machine-specific Tier-1
+# build_on_derecho.sh).  Each driver supplies only its machine-specific Stage-1
 # toolchain step (spack vs Lmod modules); everything here is common.
 #
 # The dependency model these functions implement is documented in
 # docs/dependency_tiers_prompt.md (the build-policy contract) and the pipeline in
-# docs/turbo_stack_pipeline_prompt.md.
+# docs/build_test_orchestration_prompt.md.
 #
 # Source AFTER `set -euo pipefail` in the caller; every function is written to be
 # safe under nounset/errexit.  Sourcing has NO side effects beyond defining
 # functions -- in particular it does NOT load modules or build anything (that is
-# the whole point of keeping Tier 1 out of "setup" and dep builds explicit).
+# the whole point of keeping the toolchain out of "setup" and dep builds explicit).
 #
 # Two patterns compose these functions:
 #   * single-backend builder (build_local_with_spack_env.sh / build_on_derecho.sh):
 #       turbo_resolve_stack_root
 #       turbo_require_submodule ...                            # guard the deps it builds
-#       <source the machine's Tier-1 toolchain env script>     # builds nothing
-#       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim)   # explicit Tier 2
-#       build_turbo_stack.sh --infra X                         # Tier 3 (defaults MOM6_ROOT)
+#       <source the machine's Stage-1 toolchain env script>   # builds nothing
+#       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim)   # Stage 1: build deps (Tier 1.5 + Tier 2)
+#       build_turbo_stack.sh --infra X                         # Stage 2: build turbo-stack (Tier 3; defaults MOM6_ROOT)
 #   * end-to-end test driver (test_turbo_stack_locally.sh / _on_derecho.sh):
 #       turbo_resolve_stack_root
 #       TURBO_JOBS=<default>; turbo_parse_driver_args "$@"
@@ -231,8 +231,8 @@ turbo_default_mom6_root() {
     fi
 }
 
-# ── Tier-2 build wrappers (canonical flags — single source of truth) ─────────
-# Build a convenience dependency from its submodule (or its $<NAME>_ROOT
+# ── Upstream-dep build wrappers (Stage 1; Tier 1.5 + Tier 2 canonical flags) ──
+# Build an upstream dependency from its submodule (or its $<NAME>_ROOT
 # override, resolved inside build_dep).  Args: <build_root> <install_prefix>.
 # The per-dep cmake flags live here ONLY -- a flag change edits one place, not
 # every machine env script.
@@ -324,15 +324,16 @@ turbo_run_test_driver() {
     export TURBO_BUILD_SYSTEM_TEST_DIR
     local log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 
-    # --clean here wipes the whole artifact dir, which holds BOTH the Tier-2 dep
-    # builds/installs (under each backend's deps/) and the Tier-3 turbo-stack
+    # --clean here wipes the whole artifact dir, which holds BOTH the Stage-1 dep
+    # builds/installs (under each backend's deps/) and the Stage-2 turbo-stack
     # build.  That is the same thing --clean means in the single-backend
     # orchestrators (build_on_derecho.sh / build_local_with_spack_env.sh), which
-    # remove their Tier-2 deps dir and pass --clean to build_turbo_stack.sh for
-    # Tier 3.  One definition of "clean" across every entry point: Tier 2 + Tier 3.
+    # remove their deps dir and pass --clean to build_turbo_stack.sh for the
+    # turbo-stack build.  One definition of "clean" across every entry point:
+    # Stage-1 deps + Stage-2 build.
     if [[ "${TURBO_CLEAN:-false}" == true ]]; then
         turbo_validate_clean_paths "$TURBO_BUILD_SYSTEM_TEST_DIR" "$TURBO_STACK_ROOT" || return 1
-        echo "[--clean] removing all artifacts (Tier-2 deps + Tier-3) under $TURBO_BUILD_SYSTEM_TEST_DIR"
+        echo "[--clean] removing all artifacts (deps + turbo-stack build) under $TURBO_BUILD_SYSTEM_TEST_DIR"
         rm -rf "$TURBO_BUILD_SYSTEM_TEST_DIR"
     fi
     mkdir -p "$log_dir"

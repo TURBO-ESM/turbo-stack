@@ -9,7 +9,7 @@
 # NOTE: intentionally no `#PBS -V`.  The job must be self-contained so it tests
 # the *pinned submodules* (see below), not whatever TURBO_STACK_ROOT / MOM6_ROOT
 # / FMS_ROOT / TIM_ROOT or modules happen to be set in the submit shell.  The
-# driver re-establishes the Tier-1 toolchain and self-locates TURBO_STACK_ROOT
+# driver re-establishes the Stage-1 toolchain and self-locates TURBO_STACK_ROOT
 # via PBS_O_WORKDIR (which PBS sets regardless of -V), so nothing from the login
 # environment is needed.  Use `qsub -v VAR=...` for an explicit, per-submission
 # override.
@@ -20,9 +20,9 @@
 # common driver args, then hands off to turbo_run_test_driver (scripts/lib/common.sh),
 # which builds + ctests each selected backend (FMS2, TIM) by running the real
 # single-backend builder scripts/build_on_derecho.sh in its own process -- a full,
-# independent Tier-1 -> Tier-2 -> Tier-3 run per backend -- and prints a per-backend
-# matrix/verdict.  The local analogue, test_turbo_stack_locally.sh, is identical
-# except for its toolchain (spack) and builder.  See docs/turbo_stack_pipeline_prompt.md
+# independent Stage-1 (env setup) -> Stage-2 (build turbo-stack) run per backend --
+# and prints a per-backend matrix/verdict.  The local analogue, test_turbo_stack_locally.sh, is identical
+# except for its toolchain (spack) and builder.  See docs/build_test_orchestration_prompt.md
 # and docs/dependency_tiers_prompt.md.
 #
 # Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules; the builder
@@ -32,7 +32,7 @@
 #   --only FMS2|TIM     Run only the named flavor (default: both)
 #   --parallel N, -j N  Parallel build jobs (default: 128 = one Derecho node)
 #   --clean             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
-#                       clears Tier-2 deps + Tier-3, same as the orchestrators)
+#                       clears deps + turbo-stack build, same as the orchestrators)
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
