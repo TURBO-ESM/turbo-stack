@@ -51,109 +51,33 @@
 
 set -eo pipefail
 
-# Source the shared library first (no side effects; just defines functions), so
-# --help and the --clean guard are available while parsing.  This script lives
-# in scripts/, so the shared library is the sibling lib/ subdir.
+# Source the shared library (defines the builder core + helpers; no side effects).
+# This script lives in scripts/, so the shared library is the sibling lib/ subdir.
 # shellcheck source=/dev/null
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
-recreate_spack_env=false
-debug=false
-clean=false
-ninja=false
-infra="TIM"
-with_tests=false
-build_dir=""
-parallel=""
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --recreate-spack-env) recreate_spack_env=true; shift ;;
-        --debug)              debug=true; shift ;;
-        --clean)              clean=true; shift ;;
-        --ninja)              ninja=true; shift ;;
-        --infra)              infra="$2"; shift 2 ;;
-        --tests)              with_tests=true; shift ;;
-        --build_dir)          build_dir="$2"; shift 2 ;;
-        --parallel|-j)        parallel="$2"; shift 2 ;;
-        -h|--help)            turbo_print_header_usage "$0"; exit 0 ;;
-        *)
-            echo "Error: unknown option '$1' to build_local_with_spack_env.sh" >&2
-            exit 1
-            ;;
+# Pre-strip the spack-only option before the common parser sees it (the shared
+# turbo_parse_builder_args rejects unknown flags, by design).
+_spack_recreate=false
+_args=()
+for _a in "$@"; do
+    case "$_a" in
+        --recreate-spack-env) _spack_recreate=true ;;
+        *)                    _args+=("$_a") ;;
     esac
 done
 
-if [[ "$infra" != "FMS2" && "$infra" != "TIM" ]]; then
-    echo "Error: --infra must be FMS2 or TIM (got '$infra')" >&2
-    exit 1
-fi
+# --- Stage 1 (env setup) · toolchain (machine-specific) ------------------------
+# Activate the Spack env, which supplies Tier 1 (cmake/MPI/NetCDF) AND Tier 1.5
+# (pFUnit/AMReX).  FMS/TIM are intentionally not in spack.yaml.
+turbo_flavor_setup_toolchain() {
+    local env_args=()
+    [[ "$_spack_recreate" == true ]] && env_args+=(--recreate)
+    # shellcheck source=/dev/null
+    source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
+}
 
-# Resolve TURBO_STACK_ROOT (self-locating; a mismatching exported value is a
-# hard error -- see turbo_resolve_stack_root).
-turbo_resolve_stack_root
-
-# Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every
-# `cmake --build` in the rest of the pipeline (FMS/TIM deps + turbo-stack) picks
-# this up without further flag plumbing.
-[[ -n "$parallel" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$parallel"
-
-# Where the inline FMS/TIM build_deps land their builds + installs: derive
-# from --build_dir if given, else fall back to $TURBO_STACK_ROOT/deps/default.
-if [[ -n "$build_dir" ]]; then
-    deps_build_root="$build_dir/deps"
-else
-    deps_build_root="$TURBO_STACK_ROOT/deps/default"
-fi
-
-# --clean covers the Stage-1 deps as well as the Stage-2 build: wipe the dep
-# builds/installs here, and forward --clean to build_turbo_stack.sh (cmake
-# --fresh --clean-first) below.  This is the same "deps + turbo-stack" definition
-# the end-to-end driver uses (see scripts/lib/common.sh).
-if [[ "$clean" == true ]]; then
-    turbo_validate_clean_paths "$deps_build_root" || exit 1
-    echo "[--clean] removing upstream dep artifacts under $deps_build_root"
-    rm -rf "$deps_build_root"
-fi
-
-# Guard the submodules this build consumes (skipped when the matching *_ROOT
-# overrides).  pFUnit + AMReX come from spack here, so only MOM6 / MARBL and the
-# selected infra backend need an initialized submodule.
-turbo_require_submodule submodules/MOM6  MOM6  MOM6_ROOT
-turbo_require_submodule submodules/MARBL MARBL
-if [[ "$infra" == "TIM" ]]; then
-    turbo_require_submodule submodules/infra/TIM TIM TIM_ROOT
-else
-    turbo_require_submodule submodules/infra/FMS2 FMS FMS_ROOT
-fi
-
-# --- Stage 1 (env setup) · toolchain: spack env; no dependency builds ----
-env_args=()
-[[ "$recreate_spack_env" == true ]] && env_args+=(--recreate)
-# shellcheck source=/dev/null
-source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
-
-# --- Stage 1 (env setup) · build the infra backend dep (Tier 2) from source ---
-# Spack provides pFUnit + AMReX (Tier 1.5); FMS is intentionally NOT in spack (turbo-stack
-# tracks features ahead of the released package) and TIM has never been, so
-# build the selected backend from its submodule (or its $<NAME>_ROOT override).
-# FMS2 and TIM are mutually exclusive.  Canonical flags live in
-# scripts/lib/common.sh's turbo_build_* wrappers.
-
-if [[ "$infra" == "TIM" ]]; then
-    turbo_build_tim "$deps_build_root/build" "$deps_build_root/install"
-fi
-
-if [[ "$infra" == "FMS2" ]]; then
-    turbo_build_fms "$deps_build_root/build" "$deps_build_root/install"
-fi
-
-# --- Stage 2 · build turbo-stack (Tier 3): configure + build + test ------
-build_args=()
-[[ "$debug"     == true ]] && build_args+=(--debug)
-[[ "$clean"     == true ]] && build_args+=(--clean)
-[[ "$ninja"     == true ]] && build_args+=(--ninja)
-[[ -n "$infra"           ]] && build_args+=(--infra "$infra")
-[[ "$with_tests" == true ]] && build_args+=(--tests)
-[[ -n "$build_dir"       ]] && build_args+=(--build_dir "$build_dir")
-bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"
+# Spack supplies Tier 1 + Tier 1.5, so build only Tier 2 (FMS for FMS2, TIM for
+# TIM) from the submodule.  turbo_run_backend_builder (scripts/lib/common.sh)
+# does the rest: arg parsing, --clean, submodule guards, the dep build, Stage 2.
+turbo_run_backend_builder --build-deps-from-tier 2 "${_args[@]}"

@@ -52,7 +52,7 @@ run a builder once per backend via the shared core in `lib/common.sh`.
 scripts/
   README.md                                   # ← this file
   lib/                                        # sourced libraries:
-    common.sh                                 #   SHARED CORE — root resolution, arg parsing, turbo_build_*, matrix/verdict
+    common.sh                                 #   SHARED CORE — root resolution, arg parsing, turbo_build_*, builder core (turbo_run_backend_builder), matrix/verdict
     build_dep.sh                              #   build_dep() — build one cmake dep (+ rebuild sentinel)
   build_local_with_spack_env.sh               # ORCHESTRATOR — spack flavor, single backend
   build_local_with_system_toolchain.sh        # ORCHESTRATOR — from-source local (bring-your-own toolchain), single backend

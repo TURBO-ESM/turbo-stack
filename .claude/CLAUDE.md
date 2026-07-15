@@ -71,7 +71,7 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 
 | Script | Role | How invoked |
 |---|---|---|
-| `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), matrix/verdict | sourced |
+| `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
 | `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
 | `scripts/build_local_with_spack_env.sh`, `build_local_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
@@ -111,23 +111,22 @@ Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, 
 ### Component Relationships
 
 ```
-build_local_with_spack_env.sh                                        ─── orchestrator (spack flavor)
-  └─→ setup_environment/spack_local_environment.sh           Stage 1: toolchain (sourced)
-  └─→ turbo_build_fms / turbo_build_tim  (lib/common.sh)     Stage 1: build selected backend dep (Tier 2)
-  └─→ build_turbo_stack.sh                                   Stage 2: configure+build+test (exec'd)
-        ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
-        ├─→ cmake build
-        └─→ ctest
+Single-backend builders — thin wrappers.  Each defines turbo_flavor_setup_toolchain
+and calls turbo_run_backend_builder (lib/common.sh), differing only in the toolchain
+recipe and the lowest dependency TIER it must build from submodule (the first the
+toolchain does NOT provide prebuilt — see docs/dependency_tiers.png):
 
-build_local_with_system_toolchain.sh                                 ─── orchestrator (from-source local; bring-your-own toolchain)
-  └─→ setup_environment/local_toolchain_on_path.sh          Stage 1: verify toolchain on PATH (sourced; builds nothing)
-  └─→ turbo_build_{pfunit,fms,amrex,tim}  (lib/common.sh)    Stage 1: build deps per --infra (Tier 1.5 + Tier 2)
-  └─→ build_turbo_stack.sh                                   Stage 2 (exec'd)
-
-build_on_derecho.sh                                        ─── orchestrator (Derecho module flavor)
-  └─→ setup_environment/derecho_cpu_gcc_openmpi.sh           Stage 1: Lmod modules only (sourced)
-  └─→ turbo_build_{pfunit,fms,amrex,tim}  (lib/common.sh)    Stage 1: build deps per --infra (Tier 1.5 + Tier 2)
-  └─→ build_turbo_stack.sh                                   Stage 2 (exec'd)
+  build_local_with_spack_env.sh          toolchain = spack env     (provides Tier 1 + 1.5) → build from Tier 2
+  build_local_with_system_toolchain.sh   toolchain = your PATH     (provides Tier 1)       → build from Tier 1.5
+  build_on_derecho.sh                    toolchain = Lmod modules  (provides Tier 1)       → build from Tier 1.5
+      │
+      └─→ turbo_run_backend_builder (lib/common.sh) — the shared Stage-1+Stage-2 body:
+            ├─→ turbo_flavor_setup_toolchain          Stage 1: source the toolchain recipe (builds nothing)
+            ├─→ turbo_build_{pfunit,amrex,fms,tim}    Stage 1: build the submodule dep tiers not provided
+            └─→ build_turbo_stack.sh                  Stage 2: configure + build + ctest (exec'd)
+                  ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
+                  ├─→ cmake build
+                  └─→ ctest
 
 CMakeLists.txt (repo root)
   ├─→ TURBO::infra_r8  (interface lib wrapping the backend: FMS::fms_r8 or TIM::tim_r8)

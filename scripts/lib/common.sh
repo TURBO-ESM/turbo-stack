@@ -267,6 +267,152 @@ turbo_build_tim() {
         -- -D64BIT=ON -D32BIT=OFF
 }
 
+# ── Single-backend builder core (Stage 1 + Stage 2; machine-independent) ──────
+# The shared body of every single-backend builder (build_local_with_spack_env.sh,
+# build_local_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
+# supplies only the two machine-specific facts:
+#   1. a turbo_flavor_setup_toolchain function that puts the Tier-1 toolchain on
+#      PATH (sourced; builds nothing), and
+#   2. the lowest dependency TIER it must build from submodule
+#      (--build-deps-from-tier) -- i.e. the first tier the toolchain does NOT
+#      hand you prebuilt.  See docs/dependency_tiers.png:
+#        spack   provides Tier 1 + 1.5 (cmake/MPI/NetCDF + pFUnit/AMReX) -> build from Tier 2
+#        modules provides Tier 1 only                                    -> build from Tier 1.5
+#        on-PATH provides Tier 1 only (user sets it up)                  -> build from Tier 1.5
+# Tier 2 (FMS/TIM) is always built from submodule (no flavor packages it); Tier 3
+# (turbo-stack/MOM6/MARBL) is built in Stage 2 by build_turbo_stack.sh.
+
+# Parse the flags common to every single-backend builder into TURBO_B_* globals.
+# --help/errors exit the calling builder (this runs during its execution).
+turbo_parse_builder_args() {
+    TURBO_B_DEBUG=false; TURBO_B_CLEAN=false; TURBO_B_NINJA=false
+    TURBO_B_INFRA="TIM"; TURBO_B_TESTS=false; TURBO_B_BUILD_DIR=""; TURBO_B_PARALLEL=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --debug)       TURBO_B_DEBUG=true; shift ;;
+            --clean)       TURBO_B_CLEAN=true; shift ;;
+            --ninja)       TURBO_B_NINJA=true; shift ;;
+            --infra)       TURBO_B_INFRA="$2"; shift 2 ;;
+            --tests)       TURBO_B_TESTS=true; shift ;;
+            --build_dir)   TURBO_B_BUILD_DIR="$2"; shift 2 ;;
+            --parallel|-j) TURBO_B_PARALLEL="$2"; shift 2 ;;
+            -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
+            *) echo "Error: unknown option '$1' to $(basename -- "$0")" >&2; exit 1 ;;
+        esac
+    done
+    if [[ "$TURBO_B_INFRA" != "FMS2" && "$TURBO_B_INFRA" != "TIM" ]]; then
+        echo "Error: --infra must be FMS2 or TIM (got '$TURBO_B_INFRA')" >&2; exit 1
+    fi
+}
+
+# The buildable submodule tiers are 1.5 and 2; a flavor builds "from" the lowest
+# one its toolchain didn't supply.  Only "from 1.5" includes Tier 1.5; Tier 2 is
+# always built, so it needs no predicate.
+_turbo_builds_tier_1_5() { [[ "$1" == "1.5" ]]; }
+
+# Guard the submodules this build consumes -- the always-inline Tier-3 sources
+# (MOM6/MARBL) plus the members of each tier being built from submodule.  Each
+# guard is skipped when the dep's *_ROOT override is set.  Reads TURBO_B_*.
+turbo_guard_builder_submodules() {
+    local from_tier="$1"
+    turbo_require_submodule submodules/MOM6  MOM6  MOM6_ROOT
+    turbo_require_submodule submodules/MARBL MARBL
+    if _turbo_builds_tier_1_5 "$from_tier"; then
+        [[ "$TURBO_B_TESTS" == true ]] && turbo_require_submodule submodules/pFUnit pFUnit PFUNIT_ROOT
+        [[ "$TURBO_B_INFRA" == "TIM" ]] && turbo_require_submodule submodules/amrex AMReX AMREX_ROOT
+    fi
+    if [[ "$TURBO_B_INFRA" == "TIM" ]]; then
+        turbo_require_submodule submodules/infra/TIM TIM TIM_ROOT
+    else
+        turbo_require_submodule submodules/infra/FMS2 FMS FMS_ROOT
+    fi
+}
+
+# Build, from <deps_build_root>/{build,install}, the submodule dep tiers this
+# flavor doesn't get prebuilt.  Tier 1.5 = pFUnit (only with --tests) + AMReX
+# (only for TIM); Tier 2 = the selected backend (FMS for FMS2, TIM for TIM).
+turbo_build_builder_dep_tiers() {
+    local deps_build_root="$1" from_tier="$2"
+    local b="$deps_build_root/build" p="$deps_build_root/install"
+    if _turbo_builds_tier_1_5 "$from_tier"; then
+        [[ "$TURBO_B_TESTS" == true ]] && turbo_build_pfunit "$b" "$p"
+        [[ "$TURBO_B_INFRA" == "TIM" ]] && turbo_build_amrex "$b" "$p"
+    fi
+    if [[ "$TURBO_B_INFRA" == "TIM" ]]; then
+        turbo_build_tim "$b" "$p"
+    else
+        turbo_build_fms "$b" "$p"
+    fi
+}
+
+# The full single-backend builder body.  A flavor script defines
+# turbo_flavor_setup_toolchain, then calls:
+#   turbo_run_backend_builder --build-deps-from-tier {1.5|2} "$@"
+# ("$@" being the user's CLI args).  Runs Stage 1 (toolchain + submodule dep
+# tiers) then Stage 2 (build_turbo_stack.sh).
+turbo_run_backend_builder() {
+    local from_tier="1.5"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --build-deps-from-tier) from_tier="$2"; shift 2 ;;
+            --) shift; break ;;
+            *) break ;;
+        esac
+    done
+    case "$from_tier" in
+        1.5|2) ;;
+        *) echo "Error: --build-deps-from-tier must be 1.5 or 2 (got '$from_tier')" >&2; return 1 ;;
+    esac
+    if ! declare -F turbo_flavor_setup_toolchain >/dev/null 2>&1; then
+        echo "Error: builder must define turbo_flavor_setup_toolchain before calling turbo_run_backend_builder" >&2
+        return 1
+    fi
+
+    turbo_parse_builder_args "$@"
+    # Resolve TURBO_STACK_ROOT (self-locating; a mismatching exported value is a
+    # hard error -- see turbo_resolve_stack_root).
+    turbo_resolve_stack_root
+
+    # Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every
+    # `cmake --build` downstream (deps + turbo-stack) picks it up with no plumbing.
+    [[ -n "$TURBO_B_PARALLEL" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$TURBO_B_PARALLEL"
+
+    # Where the from-source upstream deps build + install: $build_dir/deps when
+    # given, else $TURBO_STACK_ROOT/deps/default.
+    local deps_build_root
+    if [[ -n "$TURBO_B_BUILD_DIR" ]]; then
+        deps_build_root="$TURBO_B_BUILD_DIR/deps"
+    else
+        deps_build_root="$TURBO_STACK_ROOT/deps/default"
+    fi
+
+    # --clean covers Stage-1 deps as well as the Stage-2 build: wipe the dep
+    # builds/installs here, and forward --clean to build_turbo_stack.sh below.
+    if [[ "$TURBO_B_CLEAN" == true ]]; then
+        turbo_validate_clean_paths "$deps_build_root" || return 1
+        echo "[--clean] removing upstream dep artifacts under $deps_build_root"
+        rm -rf "$deps_build_root"
+    fi
+
+    turbo_guard_builder_submodules "$from_tier"
+
+    # --- Stage 1 (env setup) · toolchain (flavor hook; sources a recipe) ------
+    turbo_flavor_setup_toolchain
+
+    # --- Stage 1 (env setup) · build the submodule dep tiers -----------------
+    turbo_build_builder_dep_tiers "$deps_build_root" "$from_tier"
+
+    # --- Stage 2 · build turbo-stack (Tier 3): configure + build + test ------
+    local build_args=()
+    [[ "$TURBO_B_DEBUG" == true ]] && build_args+=(--debug)
+    [[ "$TURBO_B_CLEAN" == true ]] && build_args+=(--clean)
+    [[ "$TURBO_B_NINJA" == true ]] && build_args+=(--ninja)
+    [[ -n "$TURBO_B_INFRA" ]]      && build_args+=(--infra "$TURBO_B_INFRA")
+    [[ "$TURBO_B_TESTS" == true ]] && build_args+=(--tests)
+    [[ -n "$TURBO_B_BUILD_DIR" ]]  && build_args+=(--build_dir "$TURBO_B_BUILD_DIR")
+    bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"
+}
+
 # ── Run one labeled command, tee'd, capturing its rc ─────────────────────────
 # Used by the end-to-end test drivers to invoke the real single-backend builder
 # (build_local_with_spack_env.sh / build_on_derecho.sh) once per backend, so each
