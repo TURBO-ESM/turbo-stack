@@ -66,6 +66,17 @@ _build_dep_expose_install() {
     fi
 }
 
+# Portable SHA-256 of stdin, emitting "<hex>  <name>".  Linux ships sha256sum;
+# macOS (a documented local-dev path) ships `shasum` but not sha256sum, so fall
+# back to it.  Both keep the leading hex field, so callers still `cut -d' ' -f1`.
+_turbo_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum
+    else
+        shasum -a 256
+    fi
+}
+
 build_dep() {
     # --- Parse arguments ------------------------------------------------
     local _name=""
@@ -163,7 +174,7 @@ build_dep() {
         if [[ -n "$_dirty" ]]; then
             local _diff_hash
             _diff_hash=$( { git -C "$_resolved" diff HEAD 2>/dev/null; printf '%s\n' "$_dirty"; } \
-                | sha256sum | cut -d' ' -f1)
+                | _turbo_sha256 | cut -d' ' -f1)
             _tree="${_sha}-dirty-${_diff_hash:0:16}"
         fi
     fi
@@ -174,9 +185,9 @@ build_dep() {
     # cmake-args hash: sort first so flag order doesn't matter, then sha256.
     local _cmake_args_hash
     if [[ ${#_cmake_args[@]} -eq 0 ]]; then
-        _cmake_args_hash=$(echo -n "" | sha256sum | cut -d' ' -f1)
+        _cmake_args_hash=$(echo -n "" | _turbo_sha256 | cut -d' ' -f1)
     else
-        _cmake_args_hash=$(printf '%s\n' "${_cmake_args[@]}" | LC_ALL=C sort | sha256sum | cut -d' ' -f1)
+        _cmake_args_hash=$(printf '%s\n' "${_cmake_args[@]}" | LC_ALL=C sort | _turbo_sha256 | cut -d' ' -f1)
     fi
 
     local _sentinel="$_build_dir/.installed"

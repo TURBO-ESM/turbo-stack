@@ -122,13 +122,25 @@ turbo_resolve_stack_root() {
 #                   before calling to control the no-flag value)
 #   TURBO_RUN_FMS2  true | false   (derived from --only)
 #   TURBO_RUN_TIM   true | false
+#
+# _turbo_opt_needs_value guards value-taking options in a parse loop: it errors
+# clearly when no argument follows, instead of consuming a nonexistent "$2" --
+# which under the drivers' `set -u` aborts with a cryptic "unbound variable".
+# Call it first in the case arm, before touching "$2":
+#   --foo) _turbo_opt_needs_value "$1" "$#" || return 1; FOO="$2"; shift 2 ;;
+_turbo_opt_needs_value() {
+    if [[ "$2" -lt 2 ]]; then
+        echo "Error: option '$1' requires a value" >&2
+        return 1
+    fi
+}
 turbo_parse_driver_args() {
     TURBO_ONLY=""
     TURBO_CLEAN=false
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --only)        TURBO_ONLY="$2"; shift 2 ;;
-            --parallel|-j) TURBO_JOBS="$2"; shift 2 ;;
+            --only)        _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_ONLY="$2"; shift 2 ;;
+            --parallel|-j) _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_JOBS="$2"; shift 2 ;;
             --clean)       TURBO_CLEAN=true; shift ;;
             -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1'" >&2; return 1 ;;
@@ -292,10 +304,10 @@ turbo_parse_builder_args() {
             --debug)       TURBO_B_DEBUG=true; shift ;;
             --clean)       TURBO_B_CLEAN=true; shift ;;
             --ninja)       TURBO_B_NINJA=true; shift ;;
-            --infra)       TURBO_B_INFRA="$2"; shift 2 ;;
+            --infra)       _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_INFRA="$2"; shift 2 ;;
             --tests)       TURBO_B_TESTS=true; shift ;;
-            --build_dir)   TURBO_B_BUILD_DIR="$2"; shift 2 ;;
-            --parallel|-j) TURBO_B_PARALLEL="$2"; shift 2 ;;
+            --build_dir)   _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_BUILD_DIR="$2"; shift 2 ;;
+            --parallel|-j) _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_PARALLEL="$2"; shift 2 ;;
             -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1' to $(basename -- "$0")" >&2; exit 1 ;;
         esac

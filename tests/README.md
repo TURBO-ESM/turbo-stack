@@ -29,7 +29,7 @@ add_mom_test(test_module.pf LINK_LIBRARIES MOM6::infra)
 ### Runtime file requirements
 CMake provides the utility to add runtime files to the test directory.  For example, tests requiring `mpp` require a Fortran namelist file named `input.nml` residing in the same directory as the test binary.
 
-To add a small file to the test runtime directory, add the source file needed (for example, `input.nl` ) to the `tests/config` directory.
+To add a small file to the test runtime directory, add the source file needed (for example, `input.nml`) to the `tests/config` directory.
 
 Then in the CMakeLists.txt for that test, call the helper (defined in
 `cmake/add_mom_test.cmake`) that copies `config/input.nml` into the test's build directory:

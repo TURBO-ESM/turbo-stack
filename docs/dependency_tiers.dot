@@ -9,7 +9,7 @@ digraph turbo_stack_tiers { rankdir=TB; compound=true;
 
     // ── Tier 3 — code turbo-stack builds (always inline) ──────────────────────
     subgraph cluster_tier3 {
-        label="Tier 3 — Code turbo-stack builds\n\nSource: turbo-stack always has it's own source; MARBL\nalways via submodule; MOM6 via submodule or override.\n\nBUILD: turbo-stack ALWAYS compiles it inline (add_subdirectory)";
+        label="Tier 3 — Code turbo-stack builds\n\nSource: turbo-stack always has its own source; MARBL\nalways via submodule; MOM6 via submodule or override.\n\nBUILD: turbo-stack ALWAYS compiles it inline (add_subdirectory)";
         style=filled; color="#d8f0d8"; fontname="Helvetica-Bold";
 
         // MOM6 declared first -> rendered rightmost, giving its MOM6_ROOT
