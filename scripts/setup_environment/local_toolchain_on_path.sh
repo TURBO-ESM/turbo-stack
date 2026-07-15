@@ -48,7 +48,7 @@ done
 [[ -z "$_turbo_cxx" ]] && _turbo_missing+=("a C++ MPI compiler (mpicxx or mpic++)")
 
 command -v mpicc >/dev/null 2>&1 || _turbo_missing+=("mpicc")
-command -v cmake >/dev/null 2>&1 || _turbo_missing+=("cmake (>= 3.24)")
+command -v cmake >/dev/null 2>&1 || _turbo_missing+=("cmake")
 
 if [[ ${#_turbo_missing[@]} -gt 0 ]]; then
     echo "Error: your local toolchain is incomplete -- these are not on PATH:" >&2

@@ -59,13 +59,13 @@ parallel=""
 # Command line argument parsing
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --build_dir)    build_dir="$2"; shift 2 ;;
+        --build_dir)    _turbo_opt_needs_value "$1" "$#" || exit 1; build_dir="$2"; shift 2 ;;
         --debug)        debug=true; shift ;;
         --clean)        clean=true; shift ;;
         --ninja)        ninja=true; shift ;;
-        --infra)        infra="$2"; shift 2 ;;
+        --infra)        _turbo_opt_needs_value "$1" "$#" || exit 1; infra="$2"; shift 2 ;;
         --tests)        with_tests=true; shift ;;
-        --parallel|-j)  parallel="$2"; shift 2 ;;
+        --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || exit 1; parallel="$2"; shift 2 ;;
         -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
         --)             shift; break ;;
         *)

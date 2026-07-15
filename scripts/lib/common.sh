@@ -164,7 +164,7 @@ turbo_validate_clean_paths() {
     local d
     for d in "$@"; do
         case "$d" in
-            "" | / | "$HOME")
+            "" | / | . | .. | "$HOME")
                 echo "Refusing to operate on '$d': path is too broad." >&2
                 return 1 ;;
         esac
@@ -491,6 +491,15 @@ turbo_run_test_driver() {
     # Stage-1 deps + Stage-2 build.
     if [[ "${TURBO_CLEAN:-false}" == true ]]; then
         turbo_validate_clean_paths "$TURBO_BUILD_SYSTEM_TEST_DIR" "$TURBO_STACK_ROOT" || return 1
+        # Never wipe the checkout: refuse if the artifact dir resolves to (or
+        # contains) the repo root -- e.g. TURBO_BUILD_SYSTEM_TEST_DIR set to it.
+        local _td _sr
+        _td=$(cd -P -- "$TURBO_BUILD_SYSTEM_TEST_DIR" 2>/dev/null && pwd) || _td="$TURBO_BUILD_SYSTEM_TEST_DIR"
+        _sr=$(cd -P -- "$TURBO_STACK_ROOT" 2>/dev/null && pwd) || _sr="$TURBO_STACK_ROOT"
+        if [[ "$_td" == "$_sr" || "$_sr" == "$_td"/* ]]; then
+            echo "Refusing --clean: TURBO_BUILD_SYSTEM_TEST_DIR ($_td) is or contains the repo root ($_sr)." >&2
+            return 1
+        fi
         echo "[--clean] removing all artifacts (deps + turbo-stack build) under $TURBO_BUILD_SYSTEM_TEST_DIR"
         rm -rf "$TURBO_BUILD_SYSTEM_TEST_DIR"
     fi
