@@ -22,7 +22,7 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 ### Narrative the figure must land
 - **Every labelled box is a script; the steps inside it are what that script does.**  Put this idea
   in the graph title.
-- There are **two machine paths** that share the tail.  Each path is: a **test driver** (loops the
+- There are **three machine paths** that share the tail.  Each path is: a **test driver** (loops the
   backends) → a **single-backend builder** (does Stage 1: environment setup — toolchain + deps) → the
   **shared `build_turbo_stack.sh`** (Stage 2) → verdict.  The driver does NOT re-implement the stages
   — it runs the real builder a user would run, once per backend, each in its own process.
@@ -44,24 +44,27 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 ### Visual language
 - Test-driver ellipses `#fffacd`.
 - Path A (local · spack) builder cluster fill `#e7eff8`; Path B (Derecho · Lmod modules) builder
-  cluster fill `#fbeee6`.  Cluster label = the builder script name + "(run once per backend)",
-  `labeljust=l`.
+  cluster fill `#fbeee6`; Path C (local · system toolchain already on PATH) builder cluster fill
+  `#efe9f6`.  Cluster label = the builder script name + "(run once per backend)", `labeljust=l`.
 - Stage-1 toolchain box `#bcd4ec`; Stage-1 deps box `#c8e6c9`; shared Stage-2 ellipse `#90ee90`; verdict box `#c8e6c9`.
 - `common.sh` note: `shape=note` `#dce8f5`.  Overrides note: `shape=note` `#fff2cc`.
 - `rankdir=TB`, `splines=ortho`, `compound=true`, `newrank=true`.  Edge text via `xlabel=`.  Point
   edges at specific nodes (never `lhead=cluster_*`).
 
 ### Nodes & flow
-- Two **test-driver** ellipses at `{rank=same}`: `test_turbo_stack_locally.sh` and
-  `test_turbo_stack_on_derecho.sh (qsub / bash)`, each labelled with "parse args · loop backends ·
-  print verdict".
-- Two **builder clusters** (the boxes ARE the builder scripts), each containing a Stage-1 toolchain
+- Three **test-driver** ellipses at `{rank=same}`: `test_turbo_stack_locally.sh`,
+  `test_turbo_stack_on_derecho.sh (qsub / bash)`, and `test_turbo_stack_with_system_toolchain.sh`,
+  each labelled with "parse args · loop backends · print verdict".
+- Three **builder clusters** (the boxes ARE the builder scripts), each containing a Stage-1 toolchain
   box → Stage-1 deps box:
   - `build_local_with_spack_env.sh`: toolchain = source `spack_local_environment.sh` (builds nothing
     → Tier 1); deps = the selected backend only — `turbo_build_fms` for FMS2 or `turbo_build_tim` for
     TIM (mutually exclusive; both Tier 2); pFUnit / AMReX (Tier 1.5) come from spack.
   - `build_on_derecho.sh`: toolchain = source `derecho_cpu_gcc_openmpi.sh` (builds nothing → Tier 1);
     deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim` (pFUnit/AMReX = Tier 1.5; FMS/TIM = Tier 2).
+  - `build_local_with_system_toolchain.sh`: toolchain = source `local_toolchain_on_path.sh` (verify
+    only, builds nothing → Tier 1); deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim` (all from
+    submodule, like Derecho) — the bring-your-own-toolchain local path (no spack, no modules).
 - Each driver → its builder's Stage-1 toolchain node (xlabel "loop: --infra FMS2, then TIM").
 - Each builder's Stage-1 deps node → the shared **`build_turbo_stack.sh`** ellipse (xlabel "exec"); its
   label notes "exec'd by each builder" + "Stage 2: cmake configure/build → ctest (Tier 3)".  Unit tests

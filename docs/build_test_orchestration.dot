@@ -18,7 +18,9 @@ digraph build_test_orchestration {
            shape=ellipse, fillcolor="#fffacd", style=filled];
     d_drv [label="test_turbo_stack_on_derecho.sh  (qsub / bash)\nparse args · loop backends · print verdict",
            shape=ellipse, fillcolor="#fffacd", style=filled];
-    {rank=same; l_drv; d_drv;}
+    s_drv [label="test_turbo_stack_with_system_toolchain.sh\nparse args · loop backends · print verdict",
+           shape=ellipse, fillcolor="#fffacd", style=filled];
+    {rank=same; l_drv; s_drv; d_drv;}
 
     // ── Path A builder: the box IS build_local_with_spack_env.sh.  Its steps are
     //    Stage 1 (environment setup): source the toolchain, then build the deps ──
@@ -39,6 +41,15 @@ digraph build_test_orchestration {
         d_env -> d_deps;
     }
 
+    // ── Path C builder: build_local_with_system_toolchain.sh ──────────────────
+    subgraph cluster_sbld {
+        label="build_local_with_system_toolchain.sh  (run once per backend)"; labeljust=l;
+        style=filled; color="#efe9f6"; fontname="Helvetica-Bold";
+        s_env  [label="Stage 1 · toolchain: source local_toolchain_on_path.sh\n(verify only, builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
+        s_deps [label="Stage 1 · deps: turbo_build_pfunit ; _fms ; _amrex ; _tim\n(pFUnit/AMReX = Tier 1.5; FMS/TIM = Tier 2)", fillcolor="#c8e6c9", style=filled];
+        s_env -> s_deps;
+    }
+
     // ── Shared: both builders exec the same Stage-2 script ────────────────────
     bld [label="build_turbo_stack.sh --infra X   (exec'd by each builder)\nStage 2: cmake configure/build -> ctest (Tier 3)",
         shape=ellipse, fillcolor="#90ee90", style=filled];
@@ -46,13 +57,16 @@ digraph build_test_orchestration {
 
     // Driver loops its builder (enters at Stage 1); builder execs Stage 2.
     l_drv -> l_env [xlabel="loop: --infra FMS2, then TIM"];
+    s_drv -> s_env [xlabel="loop: --infra FMS2, then TIM"];
     d_drv -> d_env [xlabel="loop: --infra FMS2, then TIM"];
     l_deps -> bld [xlabel="exec"];
+    s_deps -> bld [xlabel="exec"];
     d_deps -> bld [xlabel="exec"];
     bld -> verdict;
 
     // common.sh is sourced by every script (dashed; doesn't constrain layout).
     core -> l_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
+    core -> s_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
     core -> d_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
 
     // Overrides (default = pinned submodule).  Only the co-developed repos
@@ -60,6 +74,7 @@ digraph build_test_orchestration {
     hotswap [shape=note, fillcolor="#fff2cc", style=filled, fontsize=10,
              label="Overrides (default = pinned submodule):\nfetch_* clones a branch · *_ROOT points at a dev tree"];
     hotswap -> l_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
+    hotswap -> s_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
     hotswap -> d_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
     hotswap -> bld   [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="MOM6_ROOT"];
 }

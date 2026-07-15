@@ -26,7 +26,7 @@ The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is w
 ./test_turbo_stack_locally.sh --only TIM --clean   # one backend, from scratch
 ```
 
-Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict.
+Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict. `test_turbo_stack_with_system_toolchain.sh` is the same for a bring-your-own toolchain already on `PATH` (no spack).
 
 ### Local build (spack flavor, one command)
 
@@ -40,6 +40,19 @@ scripts/build_local_with_spack_env.sh --recreate-spack-env --clean # nuke + recr
 ```
 
 `build_local_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
+
+### Local build (from source, one command)
+
+The closest replacement for the old `build.sh` on a laptop/workstation: bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` — system packages, Homebrew, an OS module system, or an already-activated Spack/Conda env) and turbo-stack builds **all** upstream submodule deps from source (pFUnit/AMReX + FMS/TIM), then builds turbo-stack. No spack, no modules; nothing is fetched — everything comes from `submodules/`.
+
+```bash
+scripts/build_local_with_system_toolchain.sh                    # build (default backend infra TIM, Release)
+scripts/build_local_with_system_toolchain.sh --tests            # also build + run the pFUnit unit tests
+scripts/build_local_with_system_toolchain.sh --infra FMS2       # FMS2 backend instead of the default TIM
+scripts/build_local_with_system_toolchain.sh --clean            # clean rebuild from scratch (deps + turbo-stack)
+```
+
+`build_local_with_system_toolchain.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`. It sources `setup_environment/local_toolchain_on_path.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
 
 ### Explicit, iterative (any flavor; faster iteration)
 
@@ -60,7 +73,7 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 |---|---|---|
 | `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), matrix/verdict | sourced |
 | `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
-| `scripts/build_local_with_spack_env.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / modules) | exec'd |
+| `scripts/build_local_with_spack_env.sh`, `build_local_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
@@ -105,6 +118,11 @@ build_local_with_spack_env.sh                                        ─── o
         ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
         ├─→ cmake build
         └─→ ctest
+
+build_local_with_system_toolchain.sh                                 ─── orchestrator (from-source local; bring-your-own toolchain)
+  └─→ setup_environment/local_toolchain_on_path.sh          Stage 1: verify toolchain on PATH (sourced; builds nothing)
+  └─→ turbo_build_{pfunit,fms,amrex,tim}  (lib/common.sh)    Stage 1: build deps per --infra (Tier 1.5 + Tier 2)
+  └─→ build_turbo_stack.sh                                   Stage 2 (exec'd)
 
 build_on_derecho.sh                                        ─── orchestrator (Derecho module flavor)
   └─→ setup_environment/derecho_cpu_gcc_openmpi.sh           Stage 1: Lmod modules only (sourced)

@@ -21,8 +21,9 @@
 # which builds + ctests each selected backend (FMS2, TIM) by running the real
 # single-backend builder scripts/build_on_derecho.sh in its own process -- a full,
 # independent Stage-1 (env setup) -> Stage-2 (build turbo-stack) run per backend --
-# and prints a per-backend matrix/verdict.  The local analogue, test_turbo_stack_locally.sh, is identical
-# except for its toolchain (spack) and builder.  See docs/build_test_orchestration_prompt.md
+# and prints a per-backend matrix/verdict.  Its local siblings, test_turbo_stack_locally.sh
+# (spack) and test_turbo_stack_with_system_toolchain.sh (bring-your-own toolchain on PATH), are
+# identical except for their toolchain and builder.  See docs/build_test_orchestration_prompt.md
 # and docs/dependency_tiers_prompt.md.
 #
 # Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules; the builder

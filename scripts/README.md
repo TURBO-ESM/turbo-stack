@@ -54,15 +54,18 @@ scripts/
   lib/                                        # sourced libraries:
     common.sh                                 #   SHARED CORE — root resolution, arg parsing, turbo_build_*, matrix/verdict
     build_dep.sh                              #   build_dep() — build one cmake dep (+ rebuild sentinel)
-  build_local_with_spack_env.sh                         # ORCHESTRATOR — spack flavor, single backend
+  build_local_with_spack_env.sh               # ORCHESTRATOR — spack flavor, single backend
+  build_local_with_system_toolchain.sh        # ORCHESTRATOR — from-source local (bring-your-own toolchain), single backend
   build_on_derecho.sh                         # ORCHESTRATOR — Derecho (Lmod modules), single backend
   build_turbo_stack.sh                        # STAGE 2 — build turbo-stack: cmake configure + build (+ ctest with --tests) (exec'd)
   setup_environment/                          # STAGE 1 (env setup) — toolchain ONLY, one file per flavor (sourced)
     spack_local_environment.sh                #   spack env activation
+    local_toolchain_on_path.sh                #   generic local — toolchain already on PATH (no spack/modules)
     derecho_cpu_gcc_openmpi.sh                #   real Derecho via Lmod modules (CPU, gcc, OpenMPI)
 
 # (repo top level) — end-to-end drivers, BOTH backends:
 test_turbo_stack_locally.sh                   # local (spack)
+test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ```
 
@@ -82,17 +85,39 @@ scripts/build_local_with_spack_env.sh --infra FMS2       # FMS2 backend instead 
 
 `build_local_with_spack_env.sh` runs all stages. It builds the selected backend via `turbo_build_fms`/`turbo_build_tim` after sourcing `setup_environment/spack_local_environment.sh` — spack provides pFUnit/AMReX but neither FMS nor TIM.
 
+### One-command (from-source local — bring your own toolchain)
+
+```bash
+scripts/build_local_with_system_toolchain.sh                 # configure + build (default backend: TIM)
+scripts/build_local_with_system_toolchain.sh --tests         # also build + run the pFUnit unit tests
+scripts/build_local_with_system_toolchain.sh --infra FMS2    # FMS2 backend instead of the default TIM
+scripts/build_local_with_system_toolchain.sh --clean         # clean rebuild from scratch (deps + turbo-stack)
+```
+
+The closest replacement for the old `build.sh` on a laptop / workstation: you
+bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` —
+system packages, Homebrew, an OS module system, or an already-activated
+Spack/Conda env), and turbo-stack builds **all** of its upstream submodule deps
+from source — pFUnit + AMReX (Tier 1.5) and FMS/TIM (Tier 2) — then builds
+turbo-stack itself (Tier 3). Nothing is fetched; everything comes from
+`submodules/`. It sources `setup_environment/local_toolchain_on_path.sh` (which
+only *verifies* the toolchain is present — it builds nothing), then the
+`turbo_build_*` wrappers. Same shape as `build_on_derecho.sh`, minus the Lmod
+step. Prefer Spack to manage the whole toolchain? Use
+`build_local_with_spack_env.sh` instead.
+
 ### Both backends, one command (end-to-end test)
 
 ```bash
 ./test_turbo_stack_locally.sh                  # local (spack)
+./test_turbo_stack_with_system_toolchain.sh    # local (bring-your-own toolchain on PATH)
 ./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
 ```
 
 Each runs the real single-backend builder once per backend (each in its own
 process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
-a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  Both
-support the `fetch_*` / `*_ROOT` overrides described below.
+a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  All
+three support the `fetch_*` / `*_ROOT` overrides described below.
 
 ### Explicit, iterative (any flavor)
 
@@ -112,8 +137,11 @@ scripts/build_turbo_stack.sh --infra TIM
 ```
 
 On a modules machine, swap the toolchain step for
-`source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh` and also build the
-Tier-1.5 deps the modules don't provide (`turbo_build_pfunit`, `turbo_build_amrex`).
+`source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh`; on a generic local
+machine whose toolchain is already on `PATH`, swap it for
+`source scripts/setup_environment/local_toolchain_on_path.sh`. In both cases the
+toolchain provides no upstream deps, so also build the Tier-1.5 deps yourself
+(`turbo_build_pfunit`, `turbo_build_amrex`) alongside FMS/TIM.
 
 ---
 
@@ -173,8 +201,9 @@ its submodule or to an override.
 The orchestrators derive the deps location from `--build_dir`:
 
 - `build_local_with_spack_env.sh --build_dir /scratch/foo` → deps land at `/scratch/foo/deps/{build,install}/`.
+- `build_local_with_system_toolchain.sh --build_dir /scratch/foo` → same.
 - `build_on_derecho.sh --build_dir /scratch/foo` → same.
-- Neither orchestrator given a `--build_dir`: deps land at `$TURBO_STACK_ROOT/deps/default/`.
+- No orchestrator given a `--build_dir`: deps land at `$TURBO_STACK_ROOT/deps/default/`.
 
 - The end-to-end test drivers build each backend independently under
   `$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir).
