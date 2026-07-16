@@ -77,6 +77,17 @@ _turbo_sha256() {
     fi
 }
 
+# Guard a value-taking option in build_dep's parser: error if no argument
+# follows, instead of consuming a nonexistent "$2" (which under `set -u` aborts
+# with a cryptic "unbound variable").  Self-contained so build_dep.sh stays
+# usable when sourced on its own.  Call as: _build_dep_need_val "$1" "$#" || return 1
+_build_dep_need_val() {
+    if [[ "$2" -lt 2 ]]; then
+        echo "Error: build_dep: option '$1' requires a value" >&2
+        return 1
+    fi
+}
+
 build_dep() {
     # --- Parse arguments ------------------------------------------------
     local _name=""
@@ -95,10 +106,10 @@ build_dep() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --build-dir)      _build_dir="$2"; shift 2 ;;
-            --install-prefix) _install_prefix="$2"; shift 2 ;;
+            --build-dir)      _build_dep_need_val "$1" "$#" || return 1; _build_dir="$2"; shift 2 ;;
+            --install-prefix) _build_dep_need_val "$1" "$#" || return 1; _install_prefix="$2"; shift 2 ;;
             --rebuild)        _rebuild=true; shift ;;
-            --parallel|-j)    _parallel="$2"; shift 2 ;;
+            --parallel|-j)    _build_dep_need_val "$1" "$#" || return 1; _parallel="$2"; shift 2 ;;
             --)               shift; _cmake_args=("$@"); break ;;
             *)
                 echo "Error: unknown option '$1' to build_dep" >&2
