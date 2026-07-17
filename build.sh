@@ -252,14 +252,25 @@ if [[ "${INFRA}" == "TIM" ]]; then
   if [[ -z "${PIO_INSTALL_PATH}" && -n "${NCAR_ROOT_PARALLELIO}" ]]; then
     PIO_INSTALL_PATH="${NCAR_ROOT_PARALLELIO}"
   fi
-  if [[ -n "${PIO_INSTALL_PATH}" ]]; then
-    PIO_INCLUDE_FLAGS="-I${PIO_INSTALL_PATH}/include"
-    PIO_LINK_FLAGS="-L${PIO_INSTALL_PATH}/lib -lpioc"
-  else
-    echo "ERROR: ParallelIO not found. The TIM backend requires PIO2."
-    echo "       Load the parallelio module or set PIO_INSTALL_PATH."
-    exit 1
+  if [[ -z "${PIO_INSTALL_PATH}" ]]; then
+    echo "Path to ParallelIO not declared.  Downloading and building libpioc."
+    cd "${BLD_PATH}"
+    mkdir -p parallelio
+    cd parallelio
+
+    PIO_INSTALL_PATH="$(pwd)/install"
+
+    # Redeclaring variables needed because they are not exported
+    TEMPLATE=${TEMPLATE}                   \
+    JOBS=${JOBS}                           \
+    PIO_SRC_PATH=$(pwd)/src                \
+    PIO_BLD_PATH=$(pwd)/build              \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}   \
+    PIO_INSTALL_PATH=${PIO_INSTALL_PATH}   \
+      make -j${JOBS} -C ${ROOTDIR}/build-utils/pio-utils/ build_pio
   fi
+  PIO_INCLUDE_FLAGS="-I${PIO_INSTALL_PATH}/include"
+  PIO_LINK_FLAGS="-L${PIO_INSTALL_PATH}/lib -lpioc"
 
   # Check if AMREX_INSTALL_PATH was provided or if need to build from submodule first.
   if [[ -z "${AMREX_INSTALL_PATH}" ]]; then
