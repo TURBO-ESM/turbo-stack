@@ -276,8 +276,13 @@ if [[ "${INFRA}" == "TIM" ]]; then
     PIO_INSTALL_PATH=${PIO_INSTALL_PATH}   \
       make -j${JOBS} -C ${ROOTDIR}/build-utils/pio-utils/ build_pio
   fi
+  # libpioc may live in lib or lib64 depending on the install layout.
+  PIO_LIB_DIR="lib"
+  if [[ ! -e "${PIO_INSTALL_PATH}/lib/libpioc.a" && ! -e "${PIO_INSTALL_PATH}/lib/libpioc.so" && -d "${PIO_INSTALL_PATH}/lib64" ]]; then
+    PIO_LIB_DIR="lib64"
+  fi
   PIO_INCLUDE_FLAGS="-I${PIO_INSTALL_PATH}/include"
-  PIO_LINK_FLAGS="-L${PIO_INSTALL_PATH}/lib -lpioc"
+  PIO_LINK_FLAGS="-L${PIO_INSTALL_PATH}/${PIO_LIB_DIR} -lpioc"
 
   # Check if AMREX_INSTALL_PATH was provided or if need to build from submodule first.
   if [[ -z "${AMREX_INSTALL_PATH}" ]]; then
@@ -343,7 +348,7 @@ LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
 if [[ "${INFRA}" == "TIM" ]]; then
   INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
-  # -lstdc++ link flag needed for older ocmpilers (especially non llvm based ones)
+  # -lstdc++ link flag needed for older compilers (especially non llvm based ones)
   LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
 fi
 
