@@ -248,9 +248,16 @@ MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/
 
 # 0) Build AMReX if needed; also set -D_TIM for MOM6 build
 if [[ "${INFRA}" == "TIM" ]]; then
-  # ParallelIO (PIO2) dependency for TIM.
+  # ParallelIO (PIO2) dependency for TIM. Resolution order: caller-provided
+  # PIO_INSTALL_PATH, the Derecho parallelio module (NCAR_ROOT_PARALLELIO),
+  # a prebuilt install advertised via PIO (set by both the CI containers and
+  # the Derecho module), and finally a download-and-build of the pinned
+  # source tarball.
   if [[ -z "${PIO_INSTALL_PATH}" && -n "${NCAR_ROOT_PARALLELIO}" ]]; then
     PIO_INSTALL_PATH="${NCAR_ROOT_PARALLELIO}"
+  fi
+  if [[ -z "${PIO_INSTALL_PATH}" && -n "${PIO}" ]]; then
+    PIO_INSTALL_PATH="${PIO}"
   fi
   if [[ -z "${PIO_INSTALL_PATH}" ]]; then
     echo "Path to ParallelIO not declared.  Downloading and building libpioc."
