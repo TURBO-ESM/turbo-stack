@@ -1,0 +1,15 @@
+spack:
+  specs:
+    - cmake
+    - ninja
+    - gmake
+    - mpi
+    - netcdf-fortran
+    - pfunit +mpi
+    - amrex +fortran
+  view: true
+  concretizer:
+    unify: true
+  packages:
+    mpi:
+      require: openmpi

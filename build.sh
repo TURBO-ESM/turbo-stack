@@ -9,7 +9,7 @@ AMREX_ROOT=${ROOTDIR}/submodules/amrex
 INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
-UNIT_TEST_ROOT=${ROOTDIR}/tests
+UNIT_TEST_ROOT=${ROOTDIR}/tests-legacy
 
 # Default values for CLI arguments
 COMPILER="intel"
