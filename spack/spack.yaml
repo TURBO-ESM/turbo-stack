@@ -5,6 +5,7 @@ spack:
     - gmake
     - mpi
     - netcdf-fortran
+    - parallelio
     - pfunit +mpi
     - amrex +fortran
   view: true
