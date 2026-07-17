@@ -27,7 +27,7 @@ CFLAGS := -qno-opt-dynamic-align -fp-model precise -std=gnu99  -no-fma -qopt-rep
 CFLAGS_REPRO= -O2 -debug minimal
 CFLAGS_DEBUG = -O0 -g
 
-CXXFLAGS := -std=c++17
+CXXFLAGS := -std=c++20 -fp-model precise -no-fma
 
 ifeq ($(DEBUG),1)
   FFLAGS += $(FFLAGS_DEBUG)

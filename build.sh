@@ -228,13 +228,13 @@ if [ "$MACHINE" == "ncar" ]; then
     module reset
     case $COMPILER in
       "intel" )
-        module load ncarenv/25.10 intel/2025.2.1 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 cmake
+        module load ncarenv/25.10 intel/2025.2.1 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "gnu" )
-        module load ncarenv/25.10 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 cmake
+        module load ncarenv/25.10 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "nvhpc" )
-        module load ncarenv/25.10 cuda/12.9.0 hdf5/1.14.6 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 cmake
+        module load ncarenv/25.10 cuda/12.9.0 hdf5/1.14.6 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
@@ -248,6 +248,19 @@ MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/
 
 # 0) Build AMReX if needed; also set -D_TIM for MOM6 build
 if [[ "${INFRA}" == "TIM" ]]; then
+  # ParallelIO (PIO2) dependency for TIM.
+  if [[ -z "${PIO_INSTALL_PATH}" && -n "${NCAR_ROOT_PARALLELIO}" ]]; then
+    PIO_INSTALL_PATH="${NCAR_ROOT_PARALLELIO}"
+  fi
+  if [[ -n "${PIO_INSTALL_PATH}" ]]; then
+    PIO_INCLUDE_FLAGS="-I${PIO_INSTALL_PATH}/include"
+    PIO_LINK_FLAGS="-L${PIO_INSTALL_PATH}/lib -lpioc"
+  else
+    echo "ERROR: ParallelIO not found. The TIM backend requires PIO2."
+    echo "       Load the parallelio module or set PIO_INSTALL_PATH."
+    exit 1
+  fi
+
   # Check if AMREX_INSTALL_PATH was provided or if need to build from submodule first.
   if [[ -z "${AMREX_INSTALL_PATH}" ]]; then
     echo "Path to AMReX not declared.  Building AMReX through submodule."
@@ -296,8 +309,8 @@ fi
 
 # 1) Build Underlying Infrastructure Library
 if [[ "${INFRA}" == "TIM" ]]; then
-  INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS}"
-  INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS}"
+  INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
+  INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
 fi
 
 cd ${BLD_PATH}
@@ -311,9 +324,9 @@ make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.
 LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
 if [[ "${INFRA}" == "TIM" ]]; then
-  INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS}"
+  INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
   # -lstdc++ link flag needed for older ocmpilers (especially non llvm based ones)
-  LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS}"
+  LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
 fi
 
 # 2) Build MOM6 infra
