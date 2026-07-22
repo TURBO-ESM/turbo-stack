@@ -5,23 +5,15 @@
 # (cmake, openmpi, netcdf, pfunit, amrex) on every run. It is consumed by
 # .github/workflows/turbo-cmake-container-tests.yaml.
 #
-# This build is expensive (Spack compiles the toolchain deps from source), so it
-# runs only on demand, on a weekly schedule, and when the recipe changes -- NOT
-# on every push. Layer caching (type=gha) makes unchanged rebuilds cheap.
+# This build is expensive (Spack compiles the toolchain deps from source), so for
+# now it is triggered manually only (workflow_dispatch). Layer caching (type=gha)
+# keeps rebuilds cheap. To automate later, re-add a `push` trigger on the recipe
+# paths (spack/spack.yaml, spack/create_spack_environment.sh,
+# docker/Dockerfile.turbo-ci) and/or a weekly `schedule` for base-image updates.
 name: Build turbo-stack CI container
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'spack/spack.yaml'
-      - 'spack/create_spack_environment.sh'
-      - 'docker/Dockerfile.turbo-ci'
-      - '.dockerignore'
-      - '.github/workflows/build-turbo-ci-container.yaml'
-  schedule:
-    - cron: '0 6 * * 1'   # Mondays 06:00 UTC: pick up base-image / security updates
 
 permissions:
   contents: read
