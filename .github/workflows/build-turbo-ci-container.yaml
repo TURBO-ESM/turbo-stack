@@ -14,6 +14,21 @@ name: Build turbo-stack CI container
 
 on:
   workflow_dispatch:
+  # --- TEMPORARY: remove before merging PR #248 into main ----------------------
+  # workflow_dispatch is unavailable until this workflow lives on the default
+  # branch, so to validate the image build from this feature branch we trigger on
+  # push. Scoped to this branch AND to generator inputs only, so the (expensive)
+  # image rebuilds just when the recipe changes -- not on every commit.
+  push:
+    branches:
+      - 248-feature-turbo-specific-ci-containers-for-the-cmake-build-system
+    paths:
+      - docker/Dockerfile.turbo-ci
+      - .dockerignore
+      - spack/spack.yaml
+      - spack/create_spack_environment.sh
+      - .github/workflows/build-turbo-ci-container.yaml
+  # --- end TEMPORARY ----------------------------------------------------------
 
 permissions:
   contents: read
