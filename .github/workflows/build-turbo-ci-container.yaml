@@ -1,0 +1,67 @@
+# Producer: build the turbo-stack CI base image and push it to GHCR.
+#
+# The image bakes the repo's own Spack environment (spack/spack.yaml, env name
+# "turbo_stack") so that CI does not rebuild Tier-1/Tier-1.5 dependencies
+# (cmake, openmpi, netcdf, pfunit, amrex) on every run. It is consumed by
+# .github/workflows/turbo-cmake-container-tests.yaml.
+#
+# This build is expensive (Spack compiles the toolchain deps from source), so it
+# runs only on demand, on a weekly schedule, and when the recipe changes -- NOT
+# on every push. Layer caching (type=gha) makes unchanged rebuilds cheap.
+name: Build turbo-stack CI container
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'spack/spack.yaml'
+      - 'spack/create_spack_environment.sh'
+      - 'docker/Dockerfile.turbo-ci'
+      - '.dockerignore'
+      - '.github/workflows/build-turbo-ci-container.yaml'
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC: pick up base-image / security updates
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # No submodules: the image build only needs spack/ (see .dockerignore).
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # metadata-action lowercases the image name for GHCR automatically.
+          images: ghcr.io/${{ github.repository }}/turbo-ci
+          tags: |
+            type=raw,value=gcc-openmpi
+            type=sha,prefix=gcc-openmpi-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.turbo-ci
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

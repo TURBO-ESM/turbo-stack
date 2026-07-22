@@ -1,0 +1,58 @@
+# Consumer: exercise the NEW CMake build system inside the turbo-stack CI image.
+#
+# Runs scripts/build_local_with_spack_env.sh for both infra backends (TIM, FMS2)
+# inside ghcr.io/.../turbo-ci (built by build-turbo-ci-container.yaml). The image
+# already has SPACK_ROOT set and the "turbo_stack" Spack env installed, so the
+# script activates that env (no reinstall), builds only the selected Tier-2
+# backend from its submodule, then cmake-configures/builds turbo-stack and runs
+# ctest (unit tests are opt-in via --tests; ctest uses --no-tests=error).
+name: turbo-stack CMake build (container)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-test:
+    name: build+test (${{ matrix.infra }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        infra: [TIM, FMS2]
+    container:
+      # Lowercased github.repository (GHCR requires lowercase). Repo is
+      # TURBO-ESM/turbo-stack, so the image is under turbo-esm/turbo-stack.
+      image: ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      # Hosted ubuntu-latest runners have ~4 cores; parallelize every cmake --build
+      # in the pipeline (FMS/TIM deps + turbo-stack) without per-call flags.
+      CMAKE_BUILD_PARALLEL_LEVEL: "4"
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          # 'recursive' is the simple, correct choice. It also pulls AMReX/pFUnit,
+          # which the Spack flavor does NOT use (Spack provides them) -- harmless
+          # but heavy. Future optimization: submodules:false + a targeted
+          #   git submodule update --init --recursive -- \
+          #     submodules/MOM6 submodules/MARBL submodules/infra/FMS2 submodules/infra/TIM
+          submodules: recursive
+
+      - name: Allow git operations on the checkout (root container)
+        run: git config --global --add safe.directory '*'
+
+      - name: Build + test turbo-stack (${{ matrix.infra }})
+        # SPACK_ROOT comes from the image (ENV). This one command runs the whole
+        # Spack-flavor pipeline: activate env -> build backend -> cmake -> ctest.
+        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests

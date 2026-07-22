@@ -1,0 +1,89 @@
+# docker/Dockerfile.turbo-ci
+#
+# turbo-stack CI base image: Ubuntu + a system GCC/GFortran toolchain + Spack,
+# with the turbo-stack Spack environment ("turbo_stack") pre-created and
+# installed from the repo's own spack/spack.yaml
+# (cmake, ninja, gmake, openmpi, netcdf-fortran, pfunit +mpi, amrex +fortran).
+#
+# It is consumed by .github/workflows/turbo-cmake-container-tests.yaml, which runs
+#     scripts/build_local_with_spack_env.sh --infra {TIM|FMS2} --tests
+# inside this image. That script sources
+# scripts/setup_environment/spack_local_environment.sh, which finds the
+# pre-baked "turbo_stack" env and *activates it without reinstalling* (Tier 1 +
+# Tier 1.5 come from Spack), then builds only the Tier-2 backend (FMS or TIM)
+# from the submodule and runs cmake configure/build + ctest.
+#
+# The env name MUST be "turbo_stack" so it matches the default env name in
+# scripts/setup_environment/spack_local_environment.sh.
+#
+# Build context is the repo root (so spack/ is available to COPY):
+#     docker buildx build -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
+
+ARG BASE_IMAGE=ubuntu:24.04
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# --- 1) OS build tools + Spack bootstrap prerequisites + system GCC/GFortran ---
+# The system compiler is registered with Spack via `spack compiler find`, so no
+# compiler is rebuilt from source. Package list mirrors the Spack prerequisites
+# already used by the repo's amrex-mini-app CI, adapted to apt.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        gfortran \
+        ca-certificates \
+        curl \
+        git \
+        gpg \
+        lsb-release \
+        python3 \
+        python3-venv \
+        file \
+        bzip2 \
+        xz-utils \
+        zstd \
+        unzip \
+        zip \
+        patch \
+        tar \
+        gzip \
+        environment-modules \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- 2) Spack, pinned to a stable release for reproducibility ------------------
+ARG SPACK_REF=v1.2.2
+ENV SPACK_ROOT=/opt/spack
+RUN git clone --depth=1 --branch "${SPACK_REF}" https://github.com/spack/spack.git "${SPACK_ROOT}" \
+    && . "${SPACK_ROOT}/share/spack/setup-env.sh" \
+    && spack compiler find \
+    && spack compiler list \
+    && rm -rf "${SPACK_ROOT}/var/spack/cache"
+
+# --- 3) Bake the turbo_stack Spack environment via the repo's OWN recipe -------
+# create_spack_environment.sh does: spack env create -> concretize -> install.
+# It only needs SPACK_ROOT (set above) because we pass the spack.yaml path
+# explicitly, so no turbo-stack checkout is required at image-build time.
+COPY spack/spack.yaml                  /opt/turbo-spack/spack.yaml
+COPY spack/create_spack_environment.sh /opt/turbo-spack/create_spack_environment.sh
+# Expensive layer: concretize + install the whole dependency stack from source.
+# Kept as its own RUN so it caches independently of the best-effort cleanup below
+# (a cleanup change must not force a full dependency rebuild).
+RUN bash /opt/turbo-spack/create_spack_environment.sh turbo_stack /opt/turbo-spack/spack.yaml
+
+# Best-effort cache trimming. `spack clean -a` can abort on a symlink
+# ("Cannot call rmtree on a symbolic link"), so cleanup must never fail the build.
+RUN . "${SPACK_ROOT}/share/spack/setup-env.sh"; \
+    spack clean -a || true; \
+    rm -rf /root/.spack/cache "${SPACK_ROOT}/var/spack/cache" || true
+# NOTE: image slimming (`spack -e turbo_stack gc -y`) is intentionally deferred
+# until the pipeline is validated end-to-end, so gc can't silently remove
+# something the FMS/TIM builds need. Add it here once CI is green.
+
+# --- 4) Sanity check: the env exists and is installed --------------------------
+RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
+    && spack env list | grep -qw turbo_stack \
+    && spack -e turbo_stack find --no-groups
+
+# SPACK_ROOT is exported (ENV above) so scripts/build_local_with_spack_env.sh
+# finds it. The env is NOT auto-activated: the repo scripts own activation.
+CMD ["/bin/bash"]
