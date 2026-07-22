@@ -40,7 +40,7 @@ jobs:
       CMAKE_BUILD_PARALLEL_LEVEL: "4"
     steps:
       - name: Checkout (with submodules)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # 'recursive' is the simple, correct choice. It also pulls AMReX/pFUnit,
           # which the Spack flavor does NOT use (Spack provides them) -- harmless

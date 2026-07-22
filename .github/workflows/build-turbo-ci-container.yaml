@@ -24,14 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         # No submodules: the image build only needs spack/ (see .dockerignore).
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -39,7 +39,7 @@ jobs:
 
       - name: Compute image tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           # metadata-action lowercases the image name for GHCR automatically.
           images: ghcr.io/${{ github.repository }}/turbo-ci
@@ -48,7 +48,7 @@ jobs:
             type=sha,prefix=gcc-openmpi-,format=short
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile.turbo-ci
