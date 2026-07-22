@@ -84,6 +84,14 @@ RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
     && spack env list | grep -qw turbo_stack \
     && spack -e turbo_stack find --no-groups
 
+# OpenMPI 5 (PRRTE) refuses to launch as root by default. CI job containers
+# (GitHub Actions) and local `docker run` execute as root, and the pFUnit suites
+# launch via mpirun, so opt in here. Verified sufficient for openmpi@5 (the
+# mpirun wrapper forwards --allow-run-as-root to prterun). Harmless when the
+# image is run as a non-root user -- the guard only fires for uid 0.
+ENV OMPI_ALLOW_RUN_AS_ROOT=1 \
+    OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
 # SPACK_ROOT is exported (ENV above) so scripts/build_local_with_spack_env.sh
 # finds it. The env is NOT auto-activated: the repo scripts own activation.
 CMD ["/bin/bash"]
