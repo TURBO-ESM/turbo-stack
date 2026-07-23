@@ -6,8 +6,9 @@
 # .github/workflows/turbo-cmake-container-tests.yaml.
 #
 # This build is expensive (Spack compiles the toolchain deps from source), so for
-# now it is triggered manually only (workflow_dispatch). Layer caching (type=gha)
-# keeps rebuilds cheap. To automate later, re-add a `push` trigger on the recipe
+# now it is triggered manually only (workflow_dispatch). Layer caching (a GHCR
+# registry cache tag, turbo-ci:buildcache) keeps rebuilds cheap. To automate
+# later, re-add a `push` trigger on the recipe
 # paths (spack/spack.yaml, spack/create_spack_environment.sh,
 # docker/Dockerfile.turbo-ci) and/or a weekly `schedule` for base-image updates.
 name: Build turbo-stack CI container
@@ -70,5 +71,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Registry-backed layer cache stored as a :buildcache tag in GHCR.
+          # The GitHub Actions cache backend (type=gha) returns `not_found` on
+          # export here and aborts the in-flight image push, so it is unusable.
+          cache-from: type=registry,ref=ghcr.io/turbo-esm/turbo-stack/turbo-ci:buildcache
+          cache-to: type=registry,ref=ghcr.io/turbo-esm/turbo-stack/turbo-ci:buildcache,mode=max
