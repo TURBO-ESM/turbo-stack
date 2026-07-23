@@ -11,7 +11,13 @@ name: turbo-stack CMake build (container)
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+      # TEMPORARY (remove before merging PR #248): run the consumer on this
+      # feature branch to validate both backends against the freshly built
+      # image. workflow_dispatch is unavailable until this workflow is on the
+      # default branch, so a branch push is the only way to exercise it here.
+      - 248-feature-turbo-specific-ci-containers-for-the-cmake-build-system
   pull_request:
     branches: [main]
 
@@ -55,4 +61,4 @@ jobs:
       - name: Build + test turbo-stack (${{ matrix.infra }})
         # SPACK_ROOT comes from the image (ENV). This one command runs the whole
         # Spack-flavor pipeline: activate env -> build backend -> cmake -> ctest.
-        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests
+        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests #--build_dir build_turbo_stack_with_${{ matrix.infra }}
