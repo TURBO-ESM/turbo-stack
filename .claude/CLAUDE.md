@@ -166,9 +166,28 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 
 ## CI/CD
 
-GitHub Actions workflows (`.github/workflows/`) test against a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI libraries (MPICH, OpenMPI) on both `ubuntu-latest` and the custom `gha-runner-turbo` runner.
+GitHub Actions workflows (`.github/workflows/`) cover the two build systems in
+separate lanes, in different containers:
 
-Containers used: `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`; activated via `/container/config_env.sh`.
+| Lane | Build system | Container |
+|---|---|---|
+| `build-tests*.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | legacy mkmf `./build.sh` | `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`, activated via `/container/config_env.sh` |
+| `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
+
+The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
+libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
+`gha-runner-turbo` runner. The CMake lane is currently gcc + OpenMPI on
+`ubuntu-latest` only, for both infra backends (TIM, FMS2).
+
+The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
+(`turbo_stack`) so CI does not rebuild dependencies each run. It is **private**,
+and a `spack.yaml` change does not reach CI until the producer workflow is
+re-run manually (`gh workflow run build-turbo-ci-container.yaml`) — see
+[`docker/README.md`](../docker/README.md).
+
+Branches that trigger CI: `main` for the CMake lane; `main` plus the legacy
+`ci-tests` / `container-ci` branches for the mkmf lane. Any workflow can also be
+run against an arbitrary branch with `gh workflow run <file> --ref <branch>`.
 
 Clang-format (Google style, C++20, 120-char limit) is enforced on PRs and auto-applied on pushes to `main`.
 
