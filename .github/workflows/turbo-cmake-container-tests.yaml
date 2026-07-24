@@ -8,18 +8,17 @@
 # ctest (unit tests are opt-in via --tests; ctest uses --no-tests=error).
 name: turbo-stack CMake build (container)
 
+# Only main + PRs. The sibling workflows (build-tests.yaml, unit-tests.yaml) also
+# list the ci-tests/container-ci branches; that is not needed here -- to exercise
+# this workflow on a feature branch, dispatch it against that branch and the run
+# uses that branch's file:
+#     gh workflow run turbo-cmake-container-tests.yaml --ref <your-branch>
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      # TEMPORARY (remove before merging PR #248): run the consumer on this
-      # feature branch to validate both backends against the freshly built
-      # image. workflow_dispatch is unavailable until this workflow is on the
-      # default branch, so a branch push is the only way to exercise it here.
-      - 248-feature-turbo-specific-ci-containers-for-the-cmake-build-system
+    branches: ["main"]
   pull_request:
-    branches: [main]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -29,13 +28,19 @@ jobs:
   build-test:
     name: build+test (${{ matrix.infra }})
     runs-on: ubuntu-latest
+    # ~9 min when healthy. A deadlocked MPI test would otherwise hang for the 6 h
+    # default.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         infra: [TIM, FMS2]
     container:
-      # Lowercased github.repository (GHCR requires lowercase). Repo is
-      # TURBO-ESM/turbo-stack, so the image is under turbo-esm/turbo-stack.
+      # Must match `env.IMAGE` in build-turbo-ci-container.yaml. Hard-coded rather
+      # than derived: GHCR requires an all-lowercase path (the repo is
+      # TURBO-ESM/turbo-stack), and the `env` context is not available here.
+      # `gcc-openmpi` is a mutable tag -- a producer rebuild changes what CI
+      # tests. Pin a `gcc-openmpi-<sha>` tag to bisect an image regression.
       image: ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
       credentials:
         username: ${{ github.actor }}
@@ -67,4 +72,4 @@ jobs:
       - name: Build + test turbo-stack (${{ matrix.infra }})
         # SPACK_ROOT comes from the image (ENV). This one command runs the whole
         # Spack-flavor pipeline: activate env -> build backend -> cmake -> ctest.
-        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests #--build_dir build_turbo_stack_with_${{ matrix.infra }}
+        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests

@@ -5,39 +5,49 @@
 # (cmake, openmpi, netcdf, pfunit, amrex) on every run. It is consumed by
 # .github/workflows/turbo-cmake-container-tests.yaml.
 #
-# This build is expensive (Spack compiles the toolchain deps from source), so for
-# now it is triggered manually only (workflow_dispatch). Layer caching (a GHCR
-# registry cache tag, turbo-ci:buildcache) keeps rebuilds cheap. To automate
-# later, re-add a `push` trigger on the recipe
-# paths (spack/spack.yaml, spack/create_spack_environment.sh,
-# docker/Dockerfile.turbo-ci) and/or a weekly `schedule` for base-image updates.
+# This build is expensive -- ~1 hour, because Spack compiles the dependency stack
+# from source -- so it is manual only: no push or pull_request trigger. A merge
+# should never block on an image rebuild. Layer caching (a GHCR registry cache
+# tag, turbo-ci:buildcache) keeps incremental rebuilds cheap.
+#
+# Rebuild after changing a generator input (spack/spack.yaml,
+# spack/create_spack_environment.sh, docker/Dockerfile.turbo-ci): Actions ->
+# "Build turbo-stack CI container" -> Run workflow, or
+#     gh workflow run build-turbo-ci-container.yaml
+#
+# To validate a recipe change BEFORE merging it, dispatch against your branch --
+# the run uses that branch's Dockerfile and spack.yaml:
+#     gh workflow run build-turbo-ci-container.yaml --ref <your-branch>
+# That is safe: the mutable `gcc-openmpi` tag the consumer pulls is only
+# published from the default branch (see the tag list below), so a branch build
+# cannot hand the team an unvalidated image.
+#
+# Deferred on purpose: a weekly `schedule` to pick up base-image/CVE updates, and
+# a broader compiler matrix (clang / oneapi).
 name: Build turbo-stack CI container
 
 on:
   workflow_dispatch:
-  # --- TEMPORARY: remove before merging PR #248 into main ----------------------
-  # workflow_dispatch is unavailable until this workflow lives on the default
-  # branch, so to validate the image build from this feature branch we trigger on
-  # push. Scoped to this branch AND to generator inputs only, so the (expensive)
-  # image rebuilds just when the recipe changes -- not on every commit.
-  push:
-    branches:
-      - 248-feature-turbo-specific-ci-containers-for-the-cmake-build-system
-    paths:
-      - docker/Dockerfile.turbo-ci
-      - .dockerignore
-      - spack/spack.yaml
-      - spack/create_spack_environment.sh
-      - .github/workflows/build-turbo-ci-container.yaml
-  # --- end TEMPORARY ----------------------------------------------------------
 
 permissions:
   contents: read
   packages: write
 
+env:
+  # Single source of truth for the image ref. Spelled out literally rather than
+  # derived from ${{ github.repository }}, which is TURBO-ESM/turbo-stack --
+  # GHCR requires an all-lowercase path. The consumer
+  # (turbo-cmake-container-tests.yaml) repeats this literal because the `env`
+  # context is not available in `jobs.<job_id>.container.image`; keep the two in
+  # sync.
+  IMAGE: ghcr.io/turbo-esm/turbo-stack/turbo-ci
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # A full from-source Spack build is ~1 h; anything past 3 h means a hung
+    # fetch or compile, so fail rather than burn the 6 h default.
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -57,10 +67,15 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          # metadata-action lowercases the image name for GHCR automatically.
-          images: ghcr.io/${{ github.repository }}/turbo-ci
+          images: ${{ env.IMAGE }}
+          # `gcc-openmpi` is the mutable tag the consumer pulls. It is published
+          # ONLY from the default branch, so dispatching this workflow against a
+          # feature branch validates the recipe (the expensive, likely-to-fail
+          # part) without handing the team an unvalidated image.
+          # The sha-suffixed tag is always published: it is the immutable ref to
+          # point the consumer at when bisecting an image regression.
           tags: |
-            type=raw,value=gcc-openmpi
+            type=raw,value=gcc-openmpi,enable={{is_default_branch}}
             type=sha,prefix=gcc-openmpi-,format=short
 
       - name: Build and push
@@ -74,5 +89,5 @@ jobs:
           # Registry-backed layer cache stored as a :buildcache tag in GHCR.
           # The GitHub Actions cache backend (type=gha) returns `not_found` on
           # export here and aborts the in-flight image push, so it is unusable.
-          cache-from: type=registry,ref=ghcr.io/turbo-esm/turbo-stack/turbo-ci:buildcache
-          cache-to: type=registry,ref=ghcr.io/turbo-esm/turbo-stack/turbo-ci:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
