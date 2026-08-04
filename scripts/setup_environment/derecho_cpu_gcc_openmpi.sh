@@ -2,7 +2,7 @@
 # scripts/setup_environment/derecho_cpu_gcc_openmpi.sh
 #
 # SOURCED.  Stage-1 (environment setup) toolchain step ONLY: loads Derecho's
-# CPU / gcc / OpenMPI toolchain via Lmod (compiler, CMake, MPI, NetCDF).  It does
+# CPU / gcc / OpenMPI toolchain via Lmod (compiler, CMake, MPI, NetCDF, ParallelIO).
 # NOT build any dependencies and has no side effects beyond preparing the shell --
 # the upstream submodule deps (AMReX/pFUnit = Tier 1.5; FMS/TIM = Tier 2) are built
 # explicitly by the caller via the turbo_build_* wrappers in scripts/lib/common.sh.
@@ -12,7 +12,7 @@
 
 # --- Toolchain (Stage 1 env setup; Tier 1) -----------------------------
 module purge
-module load gcc cmake openmpi netcdf #pfunit
+module load gcc cmake openmpi netcdf parallelio #pfunit
 
 # Temporary fix so the correct C++ standard library is picked up for TIM, which
 # is built with gcc 14.3.0 on Derecho while the default compiler is still older.
