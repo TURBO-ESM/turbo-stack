@@ -3,7 +3,7 @@
 `Dockerfile.turbo-ci` builds the CI base image for the **CMake build system**
 (the spack flavor). It bakes the repo's own Spack environment — `spack/spack.yaml`,
 env name `turbo_stack` — so CI does not recompile the dependency stack (cmake,
-ninja, gmake, OpenMPI, netcdf-fortran, pFUnit, AMReX) on every run.
+ninja, gmake, OpenMPI, netcdf-fortran, ParallelIO, pFUnit, AMReX) on every run.
 
 Rebuilding that stack from source takes ~1 hour. Reusing a prebuilt image, a
 turbo-stack build + full pFUnit suite for one backend takes ~8–9 minutes.

@@ -3,7 +3,8 @@
 # turbo-stack CI base image: Ubuntu + a system GCC/GFortran toolchain + Spack,
 # with the turbo-stack Spack environment ("turbo_stack") pre-created and
 # installed from the repo's own spack/spack.yaml
-# (cmake, ninja, gmake, openmpi, netcdf-fortran, pfunit +mpi, amrex +fortran).
+# (cmake, ninja, gmake, openmpi, netcdf-fortran, parallelio, pfunit +mpi,
+# amrex +fortran).
 #
 # It is consumed by .github/workflows/turbo-cmake-container-tests.yaml, which runs
 #     scripts/build_local_with_spack_env.sh --infra {TIM|FMS2} --tests

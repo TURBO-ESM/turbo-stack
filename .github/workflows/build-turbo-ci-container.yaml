@@ -2,8 +2,8 @@
 #
 # The image bakes the repo's own Spack environment (spack/spack.yaml, env name
 # "turbo_stack") so that CI does not rebuild Tier-1/Tier-1.5 dependencies
-# (cmake, openmpi, netcdf, pfunit, amrex) on every run. It is consumed by
-# .github/workflows/turbo-cmake-container-tests.yaml.
+# (cmake, openmpi, netcdf, parallelio, pfunit, amrex) on every run. It is
+# consumed by .github/workflows/turbo-cmake-container-tests.yaml.
 #
 # This build is expensive -- ~1 hour, because Spack compiles the dependency stack
 # from source -- so it is manual only: no push or pull_request trigger. A merge
