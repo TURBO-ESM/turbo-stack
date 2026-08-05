@@ -56,6 +56,19 @@ jobs:
       # rather than baked into the image (harmless on many-core machines too).
       PRTE_MCA_rmaps_default_mapping_policy: ":oversubscribe"
     steps:
+      # Fail fast, BEFORE the (heavy, recursive) checkout. build_local_with_spack_env.sh
+      # calls spack_local_environment.sh without --no-create, so its default
+      # --create-if-missing applies: a missing env would NOT error, it would start a
+      # full ~1 h from-source dependency build and die on this job's timeout with no
+      # explanation. Assert the prebaked env up front instead.
+      - name: Assert the prebaked Spack env is present
+        run: |
+          . "$SPACK_ROOT/share/spack/setup-env.sh"
+          spack env list | grep -qw turbo_stack || {
+            echo "::error::Image is missing the 'turbo_stack' Spack env -- rebuild it with build-turbo-ci-container.yaml"
+            exit 1
+          }
+
       - name: Checkout (with submodules)
         uses: actions/checkout@v7
         with:
@@ -68,6 +81,19 @@ jobs:
 
       - name: Allow git operations on the checkout (root container)
         run: git config --global --add safe.directory '*'
+
+      # The image bakes spack.yaml at image-build time and the producer is manual, so
+      # the env CI runs against can silently lag the repo's spec (see docker/README.md).
+      # Compare the copy the image kept (Dockerfile.turbo-ci COPYs it to this path)
+      # against the checkout, and surface a PR annotation when they differ.
+      # Warn, not fail: the producer/consumer decoupling is deliberate, and the CMake
+      # lane does not need every spec in spack.yaml to be present.
+      - name: Warn if the image's Spack env is stale vs the checkout
+        run: |
+          if ! diff -q /opt/turbo-spack/spack.yaml spack/spack.yaml >/dev/null; then
+            echo "::warning::Baked spack.yaml differs from the checkout -- re-run build-turbo-ci-container.yaml to refresh the image"
+            diff -u /opt/turbo-spack/spack.yaml spack/spack.yaml || true
+          fi
 
       - name: Build + test turbo-stack (${{ matrix.infra }})
         # SPACK_ROOT comes from the image (ENV). This one command runs the whole

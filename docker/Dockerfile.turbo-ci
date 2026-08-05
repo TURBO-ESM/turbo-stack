@@ -81,9 +81,15 @@ RUN . "${SPACK_ROOT}/share/spack/setup-env.sh"; \
 # something the FMS/TIM builds need. Add it here once CI is green.
 
 # --- 4) Sanity check: the env exists and is installed --------------------------
+# `spack find` exits 0 even when specs in the env are NOT installed (it just marks
+# them "-"), so checking its exit status proves nothing. Assert the absence of any
+# "-" marker instead. The install above already fails the build via set -eo pipefail
+# in create_spack_environment.sh; this is the check that a partially-installed env
+# cannot slip through.
 RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
     && spack env list | grep -qw turbo_stack \
-    && spack -e turbo_stack find --no-groups
+    && spack -e turbo_stack find --no-groups \
+    && ! spack -e turbo_stack find --no-groups | grep -q '^ *- '
 
 # OpenMPI 5 (PRRTE) refuses to launch as root by default. CI job containers
 # (GitHub Actions) and local `docker run` execute as root, and the pFUnit suites

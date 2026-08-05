@@ -33,6 +33,14 @@ permissions:
   contents: read
   packages: write
 
+# One image build at a time. Two concurrent dispatches would race to push the same
+# mutable `gcc-openmpi` tag and would both export mode=max to the shared
+# :buildcache tag. Queue instead of cancel: a nearly-finished 1 h build should not
+# be thrown away by a second dispatch.
+concurrency:
+  group: turbo-ci-image
+  cancel-in-progress: false
+
 env:
   # Single source of truth for the image ref. Spelled out literally rather than
   # derived from ${{ github.repository }}, which is TURBO-ESM/turbo-stack --
