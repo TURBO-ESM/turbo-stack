@@ -78,8 +78,14 @@ The build context is the repo root, so `spack/` is available to `COPY`. Only
 context stays small even in an initialized checkout.
 
 ```bash
-docker buildx build -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
+docker buildx build --load -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
 ```
+
+`--load` is what puts the tag in your local image store, so the `docker run`
+below can find it. It is redundant on the default `docker` driver but required if
+you have a `docker-container` builder active (`docker buildx create --use`) —
+without it that driver discards the result and `docker run` fails with "Unable to
+find image".
 
 Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`) and `SPACK_REF`
 (default `v1.2.2`, pinned for reproducibility).

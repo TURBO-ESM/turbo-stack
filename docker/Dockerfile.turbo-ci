@@ -17,8 +17,10 @@
 # The env name MUST be "turbo_stack" so it matches the default env name in
 # scripts/setup_environment/spack_local_environment.sh.
 #
-# Build context is the repo root (so spack/ is available to COPY):
-#     docker buildx build -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
+# Build context is the repo root (so spack/ is available to COPY).  --load puts the
+# tag in the local image store: redundant on the default `docker` driver, required
+# with a `docker-container` builder, which otherwise discards the result.
+#     docker buildx build --load -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
 
 ARG BASE_IMAGE=ubuntu:24.04
 FROM ${BASE_IMAGE}
