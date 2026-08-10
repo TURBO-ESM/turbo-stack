@@ -28,6 +28,16 @@ The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is w
 
 Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict. `test_turbo_stack_with_system_toolchain.sh` is the same for a bring-your-own toolchain already on `PATH` (no spack).
 
+### Local test in the CI container (reproduce CI)
+
+```bash
+./test_turbo_stack_in_ci_container.sh              # both backends, in the image CI uses
+scripts/run_ci_container.sh --infra TIM --tests    # one backend
+scripts/run_ci_container.sh --shell                # interactive shell in the image
+```
+
+Runs exactly what `turbo-cmake-container-tests.yaml` runs (`build_local_with_spack_env.sh --infra X --tests`) inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the workflow's env (`CMAKE_BUILD_PARALLEL_LEVEL`, PRRTE oversubscribe), its `safe.directory` step, and its two guardrails (assert the prebaked `turbo_stack` env; warn when the image's baked `spack.yaml` lags the checkout). The checkout is mounted at its own path (so `TURBO_STACK_ROOT` matches inside and out); no host `SPACK_ROOT` is used — and an exported one pointing at a *different* checkout hard-errors, which is what you hit first when running from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched. Artifacts default to `$TMPDIR/turbo_ci_container_test/<checkout>` (per checkout, so worktrees don't collide) and are chowned back from root before the container exits. `run_ci_container.sh` options: the builder flags plus `--image`, `--pull`, `--shell`, `--as-me`, `--engine`, `--fix-ownership`.
+
 ### Local build (spack flavor, one command)
 
 ```bash
@@ -72,8 +82,9 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 | Script | Role | How invoked |
 |---|---|---|
 | `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
-| `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
+| `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_in_ci_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
 | `scripts/build_local_with_spack_env.sh`, `build_local_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
+| `scripts/run_ci_container.sh` | Wrapper — runs `build_local_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
@@ -217,6 +228,11 @@ The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
 and a `spack.yaml` change does not reach CI until the producer workflow is
 re-run manually (`gh workflow run build-turbo-ci-container.yaml`) — see
 [`docker/README.md`](../docker/README.md).
+
+The CMake lane can be reproduced locally in that same image without pushing a
+branch: `./test_turbo_stack_in_ci_container.sh` (both backends) or
+`scripts/run_ci_container.sh --infra TIM --tests` (one), plus `--shell` to debug
+inside it. See "Local test in the CI container" above.
 
 Branches that trigger CI: `main` for the CMake lane; `main` plus the legacy
 `ci-tests` / `container-ci` branches for the mkmf lane. Any workflow can also be

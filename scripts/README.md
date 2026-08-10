@@ -57,6 +57,7 @@ scripts/
   build_local_with_spack_env.sh               # ORCHESTRATOR — spack flavor, single backend
   build_local_with_system_toolchain.sh        # ORCHESTRATOR — from-source local (bring-your-own toolchain), single backend
   build_on_derecho.sh                         # ORCHESTRATOR — Derecho (Lmod modules), single backend
+  run_ci_container.sh                         # WRAPPER — runs build_local_with_spack_env.sh inside the CI container, single backend
   build_turbo_stack.sh                        # STAGE 2 — build turbo-stack: cmake configure + build (+ ctest with --tests) (exec'd)
   setup_environment/                          # STAGE 1 (env setup) — toolchain ONLY, one file per flavor (sourced)
     spack_local_environment.sh                #   spack env activation
@@ -67,6 +68,7 @@ scripts/
 test_turbo_stack_locally.sh                   # local (spack)
 test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
+test_turbo_stack_in_ci_container.sh           # inside the CI container (reproduce CI locally)
 ```
 
 ---
@@ -112,12 +114,40 @@ step. Prefer Spack to manage the whole toolchain? Use
 ./test_turbo_stack_locally.sh                  # local (spack)
 ./test_turbo_stack_with_system_toolchain.sh    # local (bring-your-own toolchain on PATH)
 ./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
+./test_turbo_stack_in_ci_container.sh          # inside the CI container (see below)
 ```
 
 Each runs the real single-backend builder once per backend (each in its own
 process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
-a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  All
-three support the `fetch_*` / `*_ROOT` overrides described below.
+a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  The
+three host-toolchain drivers support the `*_ROOT` overrides described below; the
+container driver deliberately does not (it reproduces CI, which tests the pinned
+submodules).
+
+### In the CI container (reproduce a CI failure)
+
+`turbo-cmake-container-tests.yaml` runs the spack flavor inside
+`ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, whose image bakes the env
+from `spack/spack.yaml`. These run the same thing on the same image locally:
+
+```bash
+./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
+scripts/run_ci_container.sh --infra TIM --tests    # one backend
+scripts/run_ci_container.sh --shell                # interactive shell in the image
+```
+
+`run_ci_container.sh` takes the usual builder flags and forwards them to
+`build_local_with_spack_env.sh` *inside* the container, adding only what the
+workflow adds (`CMAKE_BUILD_PARALLEL_LEVEL`, the PRRTE oversubscribe policy,
+`git config --global --add safe.directory '*'`, and the workflow's two guardrails —
+assert the prebaked `turbo_stack` env, warn when the image's baked `spack.yaml` lags
+the checkout). It mounts your checkout at its own path, so `TURBO_STACK_ROOT`
+resolves identically inside and out; no host `SPACK_ROOT` is needed or forwarded.
+Submodules are not fetched — initialize them first, as CI's checkout does. Artifacts
+default to `$TMPDIR/turbo_ci_container_test/<checkout>` (per checkout, so sibling
+worktrees don't collide), outside the clone, and are chowned back to you before the
+container exits (the container runs as root, like CI's job container).
+See `--help` and [`docker/README.md`](../docker/README.md).
 
 ### Explicit, iterative (any flavor)
 
@@ -280,5 +310,7 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
 Optional, for testing against local dev trees:
 
 - `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` — hot-swap a co-developed repo's source
-  (default: the pinned submodule).
+  (default: the pinned submodule). Not forwarded into the CI container.
 - `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").
+- `TURBO_CI_IMAGE`, `TURBO_CONTAINER_ENGINE` — image / container CLI for
+  `run_ci_container.sh` (defaults: the tag CI consumes, and `docker` then `podman`).

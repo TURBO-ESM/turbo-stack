@@ -141,9 +141,34 @@ Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`) and `SPACK_REF`
 
 ## Running the CI build locally
 
+Two scripts do this for you — same image, same commands, same environment as the
+consumer workflow, against a checkout whose submodules are already initialized
+(the container fetches nothing):
+
+```bash
+./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
+./test_turbo_stack_in_ci_container.sh --only TIM   # one backend
+scripts/run_ci_container.sh --infra TIM --tests    # one backend, directly
+scripts/run_ci_container.sh --shell                # interactive shell in the image
+```
+
+They handle both caveats below: artifacts default to
+`$TMPDIR/turbo_ci_container_test/<checkout>` — outside your clone, and keyed on the
+checkout so sibling worktrees never share a build dir — with their ownership handed
+back to you before the container exits, and the PRRTE oversubscribe policy is set.
+They also mirror the workflow's two guardrails: refuse an image with no prebaked
+`turbo_stack` env (which would otherwise silently start a ~1 h source build), and
+warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
+covers the rest — `--image` / `--pull` to pin or refresh the image, `--build_dir`,
+`--as-me`, `--fix-ownership`.
+
+Artifacts live on the bind mount, so they outlive the container: after a failure,
+`scripts/run_ci_container.sh --shell` drops you into the same build tree, where
+`ctest --test-dir <dir>` re-runs the suite with no rebuild.
+
 The image sets `SPACK_ROOT` but deliberately does **not** activate the Spack
-environment — the repo scripts own activation. Reproducing what CI does, against
-a checkout whose submodules are already initialized:
+environment — the repo scripts own activation. The raw recipe underneath, to run
+by hand:
 
 ```bash
 docker run --rm -it -v "$PWD:/work" -w /work \
@@ -152,7 +177,7 @@ docker run --rm -it -v "$PWD:/work" -w /work \
               && scripts/build_local_with_spack_env.sh --infra TIM --tests'
 ```
 
-Two caveats:
+Two caveats, if you do it by hand:
 
 - **Build artifacts land in your checkout owned by root**, since the container
   runs as root against a bind mount. Pass `--build_dir` to keep them somewhere
@@ -163,3 +188,7 @@ Two caveats:
   `PRTE_MCA_rmaps_default_mapping_policy=":oversubscribe"` (what the consumer
   workflow does). Running as root is already handled — the image sets
   `OMPI_ALLOW_RUN_AS_ROOT{,_CONFIRM}`, which OpenMPI 5 otherwise blocks.
+
+A non-root run (`--as-me`) works too, but Spack 1.x fetches its ~180 MB package
+repo into `$HOME` on first use and the image's copy of that cache belongs to
+root — so give the run a persistent `HOME` on the host, as that flag does.
