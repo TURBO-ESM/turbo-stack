@@ -56,6 +56,39 @@ A branch run publishes only `gcc-openmpi-<sha>`, never the shared `gcc-openmpi`
 tag, so it cannot hand the team an unvalidated image. To have CI actually *use*
 that image, point the consumer's `container.image` at the sha tag temporarily.
 
+### Why `spack.yaml` pins `target=x86_64_v3`
+
+Do not remove it. Spack's default is to concretize for the microarchitecture of
+whatever machine runs `spack concretize`, and to compile everything with flags
+for it. That is right on a workstation and wrong for a container image, which is
+built on one machine and run on another — here, produced on a hosted GitHub
+runner and consumed on a *different* hosted runner, from a fleet that mixes CPU
+generations.
+
+Without the pin, the target is decided by luck of the draw at image-build time.
+The 2026-08-06 image drew a runner with AVX-512 and concretized everything to
+`target=x86_64_v4`, `cmake` included. Consumer jobs that then landed on a runner
+without AVX-512 died inside Spack's own `cmake`:
+
+```
+build_dep.sh: line 91: Illegal instruction (core dumped) cmake -S ... -B ...
+```
+
+It reads as a flaky build, because it is decided per job by which CPU the runner
+drew — in one run the same `cmake` command configured fine in one job and
+SIGILL'd in another. It is not flaky; it is a portability bug that reappears on
+every producer rebuild until the target is stated.
+
+`x86_64_v3` is the AVX2 baseline (Intel Haswell 2013+, AMD Zen 2017+), which
+every hosted runner satisfies. To check what an image actually got:
+
+```bash
+docker run --rm --entrypoint bash <image> -lc \
+  '. $SPACK_ROOT/share/spack/setup-env.sh; spack -e turbo_stack find --format "{name} {arch}"'
+```
+
+Producer logs show the same thing without a pull — grep a run for `target=`.
+
 ## Pulling it locally
 
 The package is **private** — TURBO-ESM policy does not allow public packages —
