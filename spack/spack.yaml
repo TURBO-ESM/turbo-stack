@@ -11,18 +11,6 @@ spack:
   view: true
   concretizer:
     unify: true
-  # Deliberately NOT constraining `packages: all: target:` here. This file is
-  # shared by everyone who builds the Spack flavor locally
-  # (scripts/setup_environment/spack_local_environment.sh -> this spec), so a
-  # hard-coded x86 target would make concretization fail outright on an Apple
-  # Silicon laptop. Spack's per-host default is the right behaviour for a local
-  # build -- it is only wrong for a *container image*, which is built on one
-  # machine and run on another.
-  #
-  # The turbo-ci image therefore pins its own target at image-build time, via
-  # TURBO_SPACK_TARGET in create_spack_environment.sh (set by
-  # docker/Dockerfile.turbo-ci). See "Why the image pins a Spack target" in
-  # docker/README.md.
   packages:
     mpi:
       require: openmpi
