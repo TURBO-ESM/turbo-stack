@@ -11,17 +11,18 @@ spack:
   view: true
   concretizer:
     unify: true
+  # Deliberately NOT constraining `packages: all: target:` here. This file is
+  # shared by everyone who builds the Spack flavor locally
+  # (scripts/setup_environment/spack_local_environment.sh -> this spec), so a
+  # hard-coded x86 target would make concretization fail outright on an Apple
+  # Silicon laptop. Spack's per-host default is the right behaviour for a local
+  # build -- it is only wrong for a *container image*, which is built on one
+  # machine and run on another.
+  #
+  # The turbo-ci image therefore pins its own target at image-build time, via
+  # TURBO_SPACK_TARGET in create_spack_environment.sh (set by
+  # docker/Dockerfile.turbo-ci). See "Why the image pins a Spack target" in
+  # docker/README.md.
   packages:
-    all:
-      # Build for a portable baseline instead of the concretizing machine's CPU.
-      #
-      # Spack's default is target=<microarchitecture detected on the build host>,
-      # and it compiles everything with flags for it.  That is right for a
-      # compiling and running on the same machine but could be wrong for a container image,
-      # which gets built on one machine and run on another: the turbo-ci image is produced on a hosted
-      # GitHub runner and consumed on a *different* hosted runner, and that fleet
-      # is a mix of CPU generations. Pin it to x86_64_v3 to avoid this (assuming all runners can handle this).
-      require:
-        - target=x86_64_v3
     mpi:
       require: openmpi

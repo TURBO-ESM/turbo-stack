@@ -56,14 +56,24 @@ A branch run publishes only `gcc-openmpi-<sha>`, never the shared `gcc-openmpi`
 tag, so it cannot hand the team an unvalidated image. To have CI actually *use*
 that image, point the consumer's `container.image` at the sha tag temporarily.
 
-### Why `spack.yaml` pins `target=x86_64_v3`
+### Why the image pins a Spack target
 
-Do not remove it. Spack's default is to concretize for the microarchitecture of
-whatever machine runs `spack concretize`, and to compile everything with flags
-for it. That is right on a workstation and wrong for a container image, which is
-built on one machine and run on another — here, produced on a hosted GitHub
-runner and consumed on a *different* hosted runner, from a fleet that mixes CPU
+`Dockerfile.turbo-ci` sets `TURBO_SPACK_TARGET=x86_64_v3` (via `ARG
+SPACK_TARGET`) when it runs `create_spack_environment.sh`. Do not remove it.
+
+Spack's default is to concretize for the microarchitecture of whatever machine
+runs `spack concretize`, and to compile everything with flags for it. That is
+right on a workstation and wrong for a container image, which is built on one
+machine and run on another — here, produced on a hosted GitHub runner and
+consumed on a *different* hosted runner, from a fleet that mixes CPU
 generations.
+
+**The pin lives in the Dockerfile, not in `spack/spack.yaml`.** That spec is
+shared with local builds (`scripts/setup_environment/spack_local_environment.sh`
+→ the same `create_spack_environment.sh`), and an x86 level hard-coded there
+fails concretization outright on an Apple Silicon laptop — `require:` is a hard
+constraint, not a preference. Unset, `TURBO_SPACK_TARGET` leaves Spack's
+per-host default alone, which is what a local build wants.
 
 Without the pin, the target is decided by luck of the draw at image-build time.
 The 2026-08-06 image drew a runner with AVX-512 and concretized everything to
@@ -80,7 +90,13 @@ SIGILL'd in another. It is not flaky; it is a portability bug that reappears on
 every producer rebuild until the target is stated.
 
 `x86_64_v3` is the AVX2 baseline (Intel Haswell 2013+, AMD Zen 2017+), which
-every hosted runner satisfies. To check what an image actually got:
+every hosted runner satisfies. To build the image for a different baseline:
+
+```bash
+docker build --build-arg SPACK_TARGET=x86_64_v2 -f docker/Dockerfile.turbo-ci .
+```
+
+To check what an image actually got:
 
 ```bash
 docker run --rm --entrypoint bash <image> -lc \
