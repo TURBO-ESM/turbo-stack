@@ -17,21 +17,10 @@ spack:
       #
       # Spack's default is target=<microarchitecture detected on the build host>,
       # and it compiles everything with flags for it.  That is right for a
-      # workstation and wrong for a container image, which gets built on one
-      # machine and run on another: the turbo-ci image is produced on a hosted
+      # compiling and running on the same machine but could be wrong for a container image,
+      # which gets built on one machine and run on another: the turbo-ci image is produced on a hosted
       # GitHub runner and consumed on a *different* hosted runner, and that fleet
-      # is a mix of CPU generations.
-      #
-      # Left unset, the 2026-08-06 image concretized to target=x86_64_v4 -- the
-      # AVX-512 baseline -- because that producer happened to draw a runner with
-      # AVX-512.  Consumer jobs landing on a runner without it (AMD EPYC Zen 1-3,
-      # or Intel parts with AVX-512 fused off) then died in spack's own cmake:
-      #
-      #     build_dep.sh: line 91: Illegal instruction (core dumped) cmake -S ...
-      #
-      # x86_64_v3 is the AVX2 baseline (Haswell 2013+, Zen 2017+), which every
-      # hosted runner satisfies.  It is also the level the last known-good image
-      # effectively had (it concretized to `skylake`, an AVX2 target).
+      # is a mix of CPU generations. Pin it to x86_64_v3 to avoid this (assuming all runners can handle this).
       require:
         - target=x86_64_v3
     mpi:
