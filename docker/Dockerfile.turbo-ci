@@ -68,10 +68,24 @@ RUN git clone --depth=1 --branch "${SPACK_REF}" https://github.com/spack/spack.g
 # explicitly, so no turbo-stack checkout is required at image-build time.
 COPY spack/spack.yaml                  /opt/turbo-spack/spack.yaml
 COPY spack/create_spack_environment.sh /opt/turbo-spack/create_spack_environment.sh
+# Build for a portable baseline rather than for the machine doing the build.
+# Spack's default target is the microarchitecture it detects while concretizing,
+# which is correct locally and wrong here: this image is produced on one hosted
+# runner and consumed on a *different* one, from a fleet mixing CPU generations.
+# Unpinned, the 2026-08-06 image concretized to x86_64_v4 (AVX-512) because that
+# producer drew a runner with AVX-512, and consumer jobs on runners without it
+# died in Spack's own cmake with "Illegal instruction (core dumped)".
+#
+# x86_64_v3 is the AVX2 baseline (Haswell 2013+, Zen 2017+) that every hosted
+# runner satisfies. It lives here, not in spack.yaml, because that spec is shared
+# with local builds -- an x86 level hard-coded there fails concretization on an
+# Apple Silicon laptop. See docker/README.md.
+ARG SPACK_TARGET=x86_64_v3
 # Expensive layer: concretize + install the whole dependency stack from source.
 # Kept as its own RUN so it caches independently of the best-effort cleanup below
 # (a cleanup change must not force a full dependency rebuild).
-RUN bash /opt/turbo-spack/create_spack_environment.sh turbo_stack /opt/turbo-spack/spack.yaml
+RUN TURBO_SPACK_TARGET="${SPACK_TARGET}" \
+    bash /opt/turbo-spack/create_spack_environment.sh turbo_stack /opt/turbo-spack/spack.yaml
 
 # Best-effort cache trimming. `spack clean -a` can abort on a symlink
 # ("Cannot call rmtree on a symbolic link"), so cleanup must never fail the build.

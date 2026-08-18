@@ -14,6 +14,14 @@
 # Optional environment variables:
 #   TURBO_STACK_ROOT  Path to the turbo-stack repository root. Required when
 #                     using the default spack-yaml argument.
+#   TURBO_SPACK_TARGET  Microarchitecture to build for, e.g. x86_64_v3. When
+#                     unset (the normal case for a local build) Spack uses its
+#                     own default: the microarchitecture of THIS machine. Set it
+#                     only when the environment will run somewhere other than
+#                     where it is built -- that is, for a container image. It is
+#                     applied as a requirement, so an impossible value (an x86
+#                     level on Apple Silicon) fails concretization rather than
+#                     silently degrading.
 #
 # Creates a named Spack environment, installs all packages, and prints
 # the activation command. Does NOT activate — user must run the printed command.
@@ -72,6 +80,15 @@ fi
 echo "Creating Spack environment '$spack_environment_name' from $spack_environment_yaml_file ..."
 spack env create "$spack_environment_name" "$spack_environment_yaml_file"
 spack env activate "$spack_environment_name"
+
+# Portability pin for environments that run somewhere other than where they were
+# built (i.e. a container image). Applied here rather than in spack.yaml because
+# that spec is shared with local builds, where a hard-coded x86 level would break
+# concretization on an Apple Silicon machine.
+if [[ -n "${TURBO_SPACK_TARGET:-}" ]]; then
+    echo "Pinning target to $TURBO_SPACK_TARGET (TURBO_SPACK_TARGET) ..."
+    spack config add "packages:all:require:target=${TURBO_SPACK_TARGET}"
+fi
 
 echo "Concretizing ..."
 spack concretize
