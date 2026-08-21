@@ -100,6 +100,24 @@ export FMS_ROOT=$HOME/projects/FMS
 ./test_turbo_stack_locally.sh    # matrix shows each component as (override) vs (submodule)
 ```
 
+### Building a MOM6 branch instead of the pinned commit
+
+Two ways, neither needing a flag. Move the submodule onto the branch and leave
+`MOM6_ROOT` unset:
+
+```bash
+git -C submodules/MOM6 checkout dev/turbo-debug
+./test_turbo_stack_locally.sh
+git -C submodules/MOM6 checkout -
+```
+
+Or clone it elsewhere and point `MOM6_ROOT` there, which leaves the submodule
+untouched. MOM6's own submodules must be initialized either way.
+
+CI does the latter — `actions/checkout` puts the branch in a sibling directory
+and sets `MOM6_ROOT`. There is no turbo-stack-specific machinery for this: the
+build scripts only ever know about `MOM6_ROOT`.
+
 ### Spack environment
 
 Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS and TIM are intentionally not in spack: `build_local_with_spack_env.sh` builds the selected backend via `turbo_build_fms`/`turbo_build_tim` (in `scripts/lib/common.sh`) from the local source tree (`$FMS_ROOT`/`$TIM_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
@@ -177,7 +195,22 @@ separate lanes, in different containers:
 The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
 libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
 `gha-runner-turbo` runner. The CMake lane is currently gcc + OpenMPI on
-`ubuntu-latest` only, for both infra backends (TIM, FMS2).
+`ubuntu-latest` only, over 4 cells arranged as **two groups of two**:
+`turbo-cmake-container-tests.yaml` calls the reusable `cmake-build.yaml` once per
+MOM6 source, and each call fans out over the infra backends (TIM, FMS2).
+
+| Group | MOM6 source | Character |
+|---|---|---|
+| `MOM6 pinned` | the submodule commit | deterministic gate |
+| `MOM6 dev/turbo-debug` | tip of that branch, via `MOM6_ROOT` | tracks a moving external branch |
+
+Two jobs rather than a second matrix axis because they mean different things: a
+red box then names which MOM6 source broke, and either group can be given a
+different trigger or failure policy without touching the other. The
+`dev/turbo-debug` group exists because TURBO development happens on that branch,
+so the pFUnit suite has to run against it too — possible at all only because
+MOM6's CMake build system now lives on both branches, the same CMakeLists tree
+having been ported to `dev/turbo-debug`.
 
 The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
 (`turbo_stack`) so CI does not rebuild dependencies each run. It is **private**,

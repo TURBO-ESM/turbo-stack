@@ -26,10 +26,17 @@ contains
  
     rank = dble(this%getProcessRank())
    
-    !------------------------------- 
+    !-------------------------------
     ! allocate and initialize memory
     !-------------------------------
-    call actual_c%alloc(actual,lb=[0,0,-1],ub=[len1,len2,len3])
+    ! Allocate, then view, as two steps.  The one-step spelling
+    ! `alloc(actual,lb=,ub=)` is not portable across the MOM6 branches this
+    ! suite is built against: on dev/turbo-debug the pointer-associating
+    ! overloads moved out of the `alloc` generic into a new `allocView` one,
+    ! which dev/turbo does not have.  `allocReal` and the `view` generic are
+    ! spelled the same on both branches and for both infra backends.
+    call actual_c%allocReal(lb=[0,0,-1],ub=[len1,len2,len3])
+    call actual_c%view(actual)
     allocate(expected(0:len1,0:len2,-1:len3))
    
     actual = rank
