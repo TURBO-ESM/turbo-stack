@@ -213,6 +213,32 @@ In the explicit flow you pass the `build` and `install` roots straight to the
 
 ---
 
+## Passing CMake options through
+
+The orchestrators and `build_turbo_stack.sh` take `--cmake-arg ARG`, which
+appends `ARG` to the **configure** line:
+
+```bash
+scripts/build_local_with_spack_env.sh --infra TIM --tests \
+    --cmake-arg -DMOM6_ENABLE_TIM_BRIDGE=ON
+```
+
+Repeatable, and each occurrence contributes exactly one argument — so a value
+containing spaces or semicolons (a CMake list) survives without quoting games:
+
+```bash
+... --cmake-arg -DFOO=1 --cmake-arg '-DBAR=a;b'
+```
+
+Caller arguments are appended **last**, and CMake takes the final `-D` for a
+given variable, so `--cmake-arg` can override anything the script sets itself
+(`CMAKE_BUILD_TYPE`, `MOM6_INFRA`, `TURBO_BUILD_UNIT_TESTS`). Nothing is
+validated here: it goes to CMake verbatim and CMake decides what is legal.
+
+Note the distinction from `--`, which the builder also accepts: `--cmake-arg`
+targets `cmake` (configure), `--` targets `cmake --build`. They are independent
+and can be used together.
+
 ## Parallel build jobs
 
 `--parallel N` / `-j N` on the orchestrators exports `CMAKE_BUILD_PARALLEL_LEVEL=N`. Every downstream `cmake --build` invocation (deps + turbo-stack) picks it up natively without any flag plumbing. You can also set `CMAKE_BUILD_PARALLEL_LEVEL` in your shell profile / qsub directive / CI config to skip the CLI flag entirely:

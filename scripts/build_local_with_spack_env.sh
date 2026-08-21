@@ -39,6 +39,9 @@
 #                           picks it up natively, without any flag plumbing.
 #                           When omitted, cmake's own defaults apply (1 for
 #                           Make, nproc for Ninja).
+#   --cmake-arg ARG         Append ARG to the cmake configure line (repeatable),
+#                           e.g. --cmake-arg -DMOM6_ENABLE_TIM_BRIDGE=ON.  Each
+#                           occurrence contributes exactly one argument.
 #   --recreate-spack-env    Delete and recreate the Spack env from scratch
 #   -h, --help              Print this usage text and exit.
 #
