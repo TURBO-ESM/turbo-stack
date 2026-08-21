@@ -351,6 +351,9 @@ else
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
   ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p MOM6 -l "${LINKING_FLAGS}" -c "${FFLAGS} -Duse_libMPI -Duse_netCDF -DSPMD" path_names
+  # Append a recipe-less dependency rule so the library timestamps are tracked,
+  # and so a relink is triggered when the infra libraries are rebuilt.
+  echo "MOM6: ../MOM6-infra/${LIBINFRA} ../${INFRA}/lib${INFRA}.a" >> Makefile
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
