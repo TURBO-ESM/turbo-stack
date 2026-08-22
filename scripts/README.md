@@ -158,7 +158,10 @@ build_dep <name>
     -- [cmake args...]
 ```
 
-Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_stack.sh`'s own pass-through).
+Cmake args go after `--` (mirrors `cmake --build dir -- ...`).  Note this is
+`build_dep`'s own convention and is **not** the same as `build_turbo_stack.sh`'s
+`--`, which forwards to `cmake --build`; that script takes configure args via
+`--cmake-arg` instead.  See "Passing CMake options through" below.
 
 **Source resolution** (first match wins):
 
@@ -231,13 +234,33 @@ containing spaces or semicolons (a CMake list) survives without quoting games:
 ```
 
 Caller arguments are appended **last**, and CMake takes the final `-D` for a
-given variable, so `--cmake-arg` can override anything the script sets itself
-(`CMAKE_BUILD_TYPE`, `MOM6_INFRA`, `TURBO_BUILD_UNIT_TESTS`). Nothing is
-validated here: it goes to CMake verbatim and CMake decides what is legal.
+given variable, so `--cmake-arg` wins over anything the script sets itself.
+Nothing is validated: arguments reach CMake verbatim and CMake decides what is
+legal.
 
-Note the distinction from `--`, which the builder also accepts: `--cmake-arg`
-targets `cmake` (configure), `--` targets `cmake --build`. They are independent
-and can be used together.
+Two consequences worth knowing before you use it:
+
+**Do not override `MOM6_INFRA` or `TURBO_BUILD_UNIT_TESTS` this way.** On the
+orchestrators those two also drive *Stage 1* — which backend's dependencies get
+built, and whether pFUnit is built at all — and Stage 1 reads the script flags,
+not your cmake args. `--infra TIM --cmake-arg -DMOM6_INFRA=FMS2` builds TIM's
+dependencies and then configures for FMS2, which fails at `find_package(FMS)`
+after paying for the whole dep build. Use `--infra` and `--tests`; the
+orchestrators warn if a `--cmake-arg` sets either.
+
+**Values stick in the CMake cache.** Unlike `--infra` and `--tests` — which the
+builder always re-passes explicitly so dropping them reverts — a `--cmake-arg`
+is only passed when you give it. Set one, drop it on the next run in the same
+build directory, and the old value is still in `CMakeCache.txt`. This is ordinary
+CMake cache behaviour rather than something the script does, but it means "same
+command, same result" does not hold across runs that differ in `--cmake-arg`.
+Use `--clean` (or a fresh `--build_dir`) when that matters.
+
+Note the distinction from `--`, which **`build_turbo_stack.sh` alone** also
+accepts: `--cmake-arg` targets `cmake` (configure), `--` targets `cmake --build`.
+On that script the two are independent and can be combined. The orchestrators do
+not accept `--` at all — it is rejected as an unknown option — so `--cmake-arg`
+is the only passthrough available there.
 
 ## Parallel build jobs
 

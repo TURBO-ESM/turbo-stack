@@ -32,7 +32,7 @@
 #                       value containing spaces or semicolons needs no quoting
 #                       games:
 #                         ... --cmake-arg -DMOM6_ENABLE_TIM_BRIDGE=ON
-#                         ... --cmake-arg -DFOO=a;b --cmake-arg -DBAR=ON
+#                         ... --cmake-arg '-DFOO=a;b' --cmake-arg -DBAR=ON
 #                       Distinct from `--` below, which targets `cmake --build`.
 #                       Passed through verbatim: cmake, not this script, decides
 #                       what is valid.
