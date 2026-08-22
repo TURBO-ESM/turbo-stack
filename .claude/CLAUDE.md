@@ -39,7 +39,7 @@ scripts/build_local_with_spack_env.sh --infra FMS2                 # FMS2 backen
 scripts/build_local_with_spack_env.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
 ```
 
-`build_local_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
+`build_local_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--cmake-arg ARG`, `--recreate-spack-env`.
 
 ### Local build (from source, one command)
 
@@ -52,7 +52,7 @@ scripts/build_local_with_system_toolchain.sh --infra FMS2       # FMS2 backend i
 scripts/build_local_with_system_toolchain.sh --clean            # clean rebuild from scratch (deps + turbo-stack)
 ```
 
-`build_local_with_system_toolchain.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`. It sources `setup_environment/local_toolchain_on_path.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
+`build_local_with_system_toolchain.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--cmake-arg ARG`. It sources `setup_environment/local_toolchain_on_path.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
 
 ### Explicit, iterative (any flavor; faster iteration)
 
@@ -78,7 +78,9 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
-`build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`.
+`build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--cmake-arg ARG`.
+
+`--cmake-arg ARG` (repeatable) appends ARG to the cmake **configure** line — distinct from `--`, which `build_turbo_stack.sh` forwards to `cmake --build`. Do not use it to set `MOM6_INFRA` or `TURBO_BUILD_UNIT_TESTS`: those also drive Stage 1, so the orchestrators reject them at parse time. See [`scripts/README.md`](../scripts/README.md).
 
 Unit tests are **opt-in**: pass `--tests` to any orchestrator (or `build_turbo_stack.sh`) to build pFUnit + the suite and run `ctest`; a plain build produces just the executable. The end-to-end `test_turbo_stack_*.sh` drivers always force them on.
 

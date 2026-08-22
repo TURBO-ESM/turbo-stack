@@ -27,6 +27,15 @@
 #                       default if neither is set: 1 for Make, nproc for Ninja).
 #                       Orchestrators set CMAKE_BUILD_PARALLEL_LEVEL once for
 #                       the whole pipeline; --parallel is for per-call override.
+#   --cmake-arg ARG     Append ARG to the cmake *configure* line.  Repeatable;
+#                       each occurrence contributes exactly one argument, so a
+#                       value containing spaces or semicolons needs no quoting
+#                       games:
+#                         ... --cmake-arg -DMOM6_ENABLE_TIM_BRIDGE=ON
+#                         ... --cmake-arg '-DFOO=a;b' --cmake-arg -DBAR=ON
+#                       Distinct from `--` below, which targets `cmake --build`.
+#                       Passed through verbatim: cmake, not this script, decides
+#                       what is valid.
 #   -h, --help          Print this usage text and exit.
 #   --                  End of options to this script.  Anything after `--` is
 #                       appended verbatim to `cmake --build`, e.g.
@@ -55,6 +64,7 @@ ninja=false
 infra="TIM"
 with_tests=false
 parallel=""
+cmake_args=()
 
 # Command line argument parsing
 while [[ $# -gt 0 ]]; do
@@ -66,6 +76,7 @@ while [[ $# -gt 0 ]]; do
         --infra)        _turbo_opt_needs_value "$1" "$#" || exit 1; infra="$2"; shift 2 ;;
         --tests)        with_tests=true; shift ;;
         --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || exit 1; parallel="$2"; shift 2 ;;
+        --cmake-arg)    _turbo_opt_needs_value "$1" "$#" || exit 1; cmake_args+=("$2"); shift 2 ;;
         -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
         --)             shift; break ;;
         *)
@@ -106,6 +117,10 @@ if [[ "$with_tests" == true ]]; then
 else
     cmake_generate_options+=("-DTURBO_BUILD_UNIT_TESTS=OFF")
 fi
+
+# Caller-supplied configure arguments go last: cmake takes the final -D for a
+# given variable, so this lets a caller override anything set above.
+[[ ${#cmake_args[@]} -gt 0 ]] && cmake_generate_options+=("${cmake_args[@]}")
 
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 

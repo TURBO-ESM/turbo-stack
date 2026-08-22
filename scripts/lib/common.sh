@@ -299,6 +299,7 @@ turbo_build_tim() {
 turbo_parse_builder_args() {
     TURBO_B_DEBUG=false; TURBO_B_CLEAN=false; TURBO_B_NINJA=false
     TURBO_B_INFRA="TIM"; TURBO_B_TESTS=false; TURBO_B_BUILD_DIR=""; TURBO_B_PARALLEL=""
+    TURBO_B_CMAKE_ARGS=()
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --debug)       TURBO_B_DEBUG=true; shift ;;
@@ -308,6 +309,7 @@ turbo_parse_builder_args() {
             --tests)       TURBO_B_TESTS=true; shift ;;
             --build_dir)   _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_BUILD_DIR="$2"; shift 2 ;;
             --parallel|-j) _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_PARALLEL="$2"; shift 2 ;;
+            --cmake-arg)   _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_CMAKE_ARGS+=("$2"); shift 2 ;;
             -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1' to $(basename -- "$0")" >&2; exit 1 ;;
         esac
@@ -315,6 +317,23 @@ turbo_parse_builder_args() {
     if [[ "$TURBO_B_INFRA" != "FMS2" && "$TURBO_B_INFRA" != "TIM" ]]; then
         echo "Error: --infra must be FMS2 or TIM (got '$TURBO_B_INFRA')" >&2; exit 1
     fi
+    # MOM6_INFRA and TURBO_BUILD_UNIT_TESTS decide Stage 1 as well as Stage 2 --
+    # which backend's deps get built, and whether pFUnit is built at all -- and
+    # Stage 1 reads TURBO_B_INFRA/TURBO_B_TESTS, not cmake args.  Setting them
+    # this way builds one configuration and then configures another, which shows
+    # up as a find_package failure only after the whole dep build has been paid
+    # for.  Caught here, at parse time, rather than in Stage 2 for that reason.
+    local _ca
+    for _ca in ${TURBO_B_CMAKE_ARGS[@]+"${TURBO_B_CMAKE_ARGS[@]}"}; do
+        case "$_ca" in
+            -DMOM6_INFRA=*|-DTURBO_BUILD_UNIT_TESTS=*)
+                echo "Error: --cmake-arg '$_ca' would desynchronize Stage 1 from Stage 2." >&2
+                echo "       Stage 1 (which dependencies get built) reads --infra/--tests," >&2
+                echo "       not cmake args, so this builds one configuration and" >&2
+                echo "       compiles another.  Use --infra / --tests instead." >&2
+                exit 1 ;;
+        esac
+    done
 }
 
 # The buildable submodule tiers are 1.5 and 2; a flavor builds "from" the lowest
@@ -422,6 +441,14 @@ turbo_run_backend_builder() {
     [[ -n "$TURBO_B_INFRA" ]]      && build_args+=(--infra "$TURBO_B_INFRA")
     [[ "$TURBO_B_TESTS" == true ]] && build_args+=(--tests)
     [[ -n "$TURBO_B_BUILD_DIR" ]]  && build_args+=(--build_dir "$TURBO_B_BUILD_DIR")
+    # One --cmake-arg per collected value, so an argument containing spaces or
+    # semicolons survives intact.  Guarded because this file is required to be
+    # safe under `set -u`, where expanding an empty array is an error on older
+    # bash.
+    local _ca
+    if [[ ${#TURBO_B_CMAKE_ARGS[@]} -gt 0 ]]; then
+        for _ca in "${TURBO_B_CMAKE_ARGS[@]}"; do build_args+=(--cmake-arg "$_ca"); done
+    fi
     bash "$TURBO_STACK_ROOT/scripts/build_turbo_stack.sh" "${build_args[@]}"
 }
 
