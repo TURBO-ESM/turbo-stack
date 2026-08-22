@@ -107,7 +107,7 @@ else
     cmake_generate_options+=("-DTURBO_BUILD_UNIT_TESTS=OFF")
 fi
 
-cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
+turbo_phase_configure "$source_dir" "$build_dir" "${cmake_generate_options[@]}"
 
 # Build the code.  Pass --parallel only when the caller set it; otherwise
 # cmake reads CMAKE_BUILD_PARALLEL_LEVEL (or falls back to the generator's
@@ -115,25 +115,6 @@ cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 cmake_build_options=()
 [[ -n "$parallel" ]] && cmake_build_options+=("--parallel" "$parallel")
 [[ "$clean" == true ]] && cmake_build_options+=("--clean-first")
-cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
+turbo_phase_build "$build_dir" "${cmake_build_options[@]}" "$@"
 
-# Test
-# Honor TURBO_BUILD_UNIT_TESTS: when CMake configured with the option OFF, the
-# tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing to run.
-# Read the resolved value from the CMake cache and run ctest when it is
-# CMake-truthy.  CMake treats 1 / ON / YES / TRUE / Y (any case) as true and
-# everything else (OFF / 0 / NO / FALSE / empty / unreadable cache) as false;
-# match that same set so a truthy-but-not-"ON" value (e.g. a build dir configured
-# with -DTURBO_BUILD_UNIT_TESTS=TRUE, which still builds the suite) can't skip
-# ctest and report a vacuous green.
-turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
-case "$(printf '%s' "${turbo_build_unit_tests:-}" | tr '[:lower:]' '[:upper:]')" in
-    1|ON|YES|TRUE|Y)
-        # --no-tests=error: fail if zero tests were registered, so a misconfigured
-        # suite can't report a vacuous green (matches the legacy tests Makefile).
-        ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
-        ;;
-    *)
-        echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=${turbo_build_unit_tests:-<unset>} -- skipping ctest"
-        ;;
-esac
+turbo_phase_test "$build_dir"
