@@ -59,6 +59,8 @@ jobs:
           which mpicc
           mpicc --version 2>/dev/null || true
 
+      # NOTE: ./build.sh here is the legacy mkmf-based build at the repo root,
+      # not scripts/build_with_spack.sh (the CMake-based build).
       - name: Build MOM6 with TIM
         run: |
           ./build.sh --compiler ${COMPILER_FAMILY} --machine container --infra TIM

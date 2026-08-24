@@ -1,0 +1,101 @@
+# Consumer: exercise the NEW CMake build system inside the turbo-stack CI image.
+#
+# Runs scripts/build_local_with_spack_env.sh for both infra backends (TIM, FMS2)
+# inside ghcr.io/.../turbo-ci (built by build-turbo-ci-container.yaml). The image
+# already has SPACK_ROOT set and the "turbo_stack" Spack env installed, so the
+# script activates that env (no reinstall), builds only the selected Tier-2
+# backend from its submodule, then cmake-configures/builds turbo-stack and runs
+# ctest (unit tests are opt-in via --tests; ctest uses --no-tests=error).
+name: turbo-stack CMake build (container)
+
+# Only main + PRs. The sibling workflows (build-tests.yaml, unit-tests.yaml) also
+# list the ci-tests/container-ci branches; that is not needed here -- to exercise
+# this workflow on a feature branch, dispatch it against that branch and the run
+# uses that branch's file:
+#     gh workflow run turbo-cmake-container-tests.yaml --ref <your-branch>
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-test:
+    name: build+test (${{ matrix.infra }})
+    runs-on: ubuntu-latest
+    # ~9 min when healthy. A deadlocked MPI test would otherwise hang for the 6 h
+    # default.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        infra: [TIM, FMS2]
+    container:
+      # Must match `env.IMAGE` in build-turbo-ci-container.yaml. Hard-coded rather
+      # than derived: GHCR requires an all-lowercase path (the repo is
+      # TURBO-ESM/turbo-stack), and the `env` context is not available here.
+      # `gcc-openmpi` is a mutable tag -- a producer rebuild changes what CI
+      # tests. Pin a `gcc-openmpi-<sha>` tag to bisect an image regression.
+      image: ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      # Hosted ubuntu-latest runners have ~4 cores; parallelize every cmake --build
+      # in the pipeline (FMS/TIM deps + turbo-stack) without per-call flags.
+      CMAKE_BUILD_PARALLEL_LEVEL: "4"
+      # The pFUnit suites launch `mpirun -np 4` (@test(npes=[1,2,4])), but PRRTE
+      # (OpenMPI 5) sees only ~2 slots (physical cores) on the hosted runner and
+      # refuses to launch 4 procs ("not enough slots"). Let it oversubscribe so
+      # the MPI tests run in CI. This is a runner constraint, so it lives here
+      # rather than baked into the image (harmless on many-core machines too).
+      PRTE_MCA_rmaps_default_mapping_policy: ":oversubscribe"
+    steps:
+      # Fail fast, BEFORE the (heavy, recursive) checkout. build_local_with_spack_env.sh
+      # calls spack_local_environment.sh without --no-create, so its default
+      # --create-if-missing applies: a missing env would NOT error, it would start a
+      # full ~1 h from-source dependency build and die on this job's timeout with no
+      # explanation. Assert the prebaked env up front instead.
+      - name: Assert the prebaked Spack env is present
+        run: |
+          . "$SPACK_ROOT/share/spack/setup-env.sh"
+          spack env list | grep -qw turbo_stack || {
+            echo "::error::Image is missing the 'turbo_stack' Spack env -- rebuild it with build-turbo-ci-container.yaml"
+            exit 1
+          }
+
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v7
+        with:
+          # 'recursive' is the simple, correct choice. It also pulls AMReX/pFUnit,
+          # which the Spack flavor does NOT use (Spack provides them) -- harmless
+          # but heavy. Future optimization: submodules:false + a targeted
+          #   git submodule update --init --recursive -- \
+          #     submodules/MOM6 submodules/MARBL submodules/infra/FMS2 submodules/infra/TIM
+          submodules: recursive
+
+      - name: Allow git operations on the checkout (root container)
+        run: git config --global --add safe.directory '*'
+
+      # The image bakes spack.yaml at image-build time and the producer is manual, so
+      # the env CI runs against can silently lag the repo's spec (see docker/README.md).
+      # Compare the copy the image kept (Dockerfile.turbo-ci COPYs it to this path)
+      # against the checkout, and surface a PR annotation when they differ.
+      # Warn, not fail: the producer/consumer decoupling is deliberate, and the CMake
+      # lane does not need every spec in spack.yaml to be present.
+      - name: Warn if the image's Spack env is stale vs the checkout
+        run: |
+          if ! diff -q /opt/turbo-spack/spack.yaml spack/spack.yaml >/dev/null; then
+            echo "::warning::Baked spack.yaml differs from the checkout -- re-run build-turbo-ci-container.yaml to refresh the image"
+            diff -u /opt/turbo-spack/spack.yaml spack/spack.yaml || true
+          fi
+
+      - name: Build + test turbo-stack (${{ matrix.infra }})
+        # SPACK_ROOT comes from the image (ENV). This one command runs the whole
+        # Spack-flavor pipeline: activate env -> build backend -> cmake -> ctest.
+        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests

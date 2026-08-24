@@ -23,7 +23,7 @@ FPPFLAGS :=
 FFLAGS := $(FC_AUTO_R8) -fconvert=big-endian -ffree-line-length-none -ffixed-line-length-none -fallow-argument-mismatch  -fallow-invalid-boz -fcray-pointer -fno-range-check
 CFLAGS := -std=gnu99 -DHAVE_GETTID
 
-CXXFLAGS := -std=c++17
+CXXFLAGS := -std=c++20
 
 # Compilation Mode-specific flags
 ifeq ($(CODECOV),1)

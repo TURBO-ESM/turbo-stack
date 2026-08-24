@@ -9,7 +9,7 @@ AMREX_ROOT=${ROOTDIR}/submodules/amrex
 INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
-UNIT_TEST_ROOT=${ROOTDIR}/tests
+UNIT_TEST_ROOT=${ROOTDIR}/tests-legacy
 
 # Default values for CLI arguments
 COMPILER="intel"
@@ -228,13 +228,13 @@ if [ "$MACHINE" == "ncar" ]; then
     module reset
     case $COMPILER in
       "intel" )
-        module load ncarenv/25.10 intel/2025.2.1 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 cmake
+        module load ncarenv/25.10 intel/2025.2.1 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "gnu" )
-        module load ncarenv/25.10 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 cmake
+        module load ncarenv/25.10 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "nvhpc" )
-        module load ncarenv/25.10 cuda/12.9.0 hdf5/1.14.6 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 cmake
+        module load ncarenv/25.10 cuda/12.9.0 hdf5/1.14.6 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
@@ -248,6 +248,42 @@ MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/
 
 # 0) Build AMReX if needed; also set -D_TIM for MOM6 build
 if [[ "${INFRA}" == "TIM" ]]; then
+  # ParallelIO (PIO2) dependency for TIM. Resolution order: caller-provided
+  # PIO_INSTALL_PATH, the Derecho parallelio module (NCAR_ROOT_PARALLELIO),
+  # a prebuilt install advertised via PIO (set by both the CI containers and
+  # the Derecho module), and finally a download-and-build of the pinned
+  # source tarball.
+  if [[ -z "${PIO_INSTALL_PATH}" && -n "${NCAR_ROOT_PARALLELIO}" ]]; then
+    PIO_INSTALL_PATH="${NCAR_ROOT_PARALLELIO}"
+  fi
+  if [[ -z "${PIO_INSTALL_PATH}" && -n "${PIO}" ]]; then
+    PIO_INSTALL_PATH="${PIO}"
+  fi
+  if [[ -z "${PIO_INSTALL_PATH}" ]]; then
+    echo "Path to ParallelIO not declared.  Downloading and building libpioc."
+    cd "${BLD_PATH}"
+    mkdir -p parallelio
+    cd parallelio
+
+    PIO_INSTALL_PATH="$(pwd)/install"
+
+    # Redeclaring variables needed because they are not exported
+    TEMPLATE=${TEMPLATE}                   \
+    JOBS=${JOBS}                           \
+    PIO_SRC_PATH=$(pwd)/src                \
+    PIO_BLD_PATH=$(pwd)/build              \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}   \
+    PIO_INSTALL_PATH=${PIO_INSTALL_PATH}   \
+      make -j${JOBS} -C ${ROOTDIR}/build-utils/pio-utils/ build_pio
+  fi
+  # libpioc may live in lib or lib64 depending on the install layout.
+  PIO_LIB_DIR="lib"
+  if [[ ! -e "${PIO_INSTALL_PATH}/lib/libpioc.a" && ! -e "${PIO_INSTALL_PATH}/lib/libpioc.so" && -d "${PIO_INSTALL_PATH}/lib64" ]]; then
+    PIO_LIB_DIR="lib64"
+  fi
+  PIO_INCLUDE_FLAGS="-I${PIO_INSTALL_PATH}/include"
+  PIO_LINK_FLAGS="-L${PIO_INSTALL_PATH}/${PIO_LIB_DIR} -lpioc"
+
   # Check if AMREX_INSTALL_PATH was provided or if need to build from submodule first.
   if [[ -z "${AMREX_INSTALL_PATH}" ]]; then
     echo "Path to AMReX not declared.  Building AMReX through submodule."
@@ -296,8 +332,8 @@ fi
 
 # 1) Build Underlying Infrastructure Library
 if [[ "${INFRA}" == "TIM" ]]; then
-  INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS}"
-  INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS}"
+  INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
+  INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
 fi
 
 cd ${BLD_PATH}
@@ -311,9 +347,9 @@ make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.
 LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
 if [[ "${INFRA}" == "TIM" ]]; then
-  INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS}"
-  # -lstdc++ link flag needed for older ocmpilers (especially non llvm based ones)
-  LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS}"
+  INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
+  # -lstdc++ link flag needed for older compilers (especially non llvm based ones)
+  LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
 fi
 
 # 2) Build MOM6 infra

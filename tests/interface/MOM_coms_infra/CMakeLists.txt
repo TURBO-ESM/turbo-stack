@@ -34,8 +34,9 @@ set(MOM_COMS_INFRA_TESTS
   test_all_across_pes.pf
 )
 
-add_mom_tests(${MOM_COMS_INFRA_TESTS})
+add_mom_tests(
+    TEST_FILES ${MOM_COMS_INFRA_TESTS}
+    LINK_LIBRARIES MOM6::infra
+)
 
-
-# Copy namelist file to output directory to satisfy FMS requirement
-configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
+copy_dummy_fms_input_nml()

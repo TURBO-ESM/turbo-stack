@@ -26,7 +26,7 @@ FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -K
 CFLAGS = -gopt -time -Mnofma -DHAVE_GETTID
 CPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
 
-CXXFLAGS := --std=c++17
+CXXFLAGS := --std=c++20 -Mnofma -Kieee
 
 # Get compile flags based on target macros.
 

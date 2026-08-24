@@ -1,0 +1,80 @@
+digraph build_test_orchestration {
+    rankdir=TB;
+    compound=true;
+    newrank=true;
+    node [shape=box, fontname="Helvetica", fontsize=11];
+    edge [fontsize=9, fontname="Helvetica"];
+    splines=ortho;
+
+    label="turbo-stack build/test pipeline — each labelled box is a script; the steps inside it are what that script does";
+    labelloc=t; fontname="Helvetica-Bold"; fontsize=13;
+
+    // Shared helpers used by all scripts (substrate, not a flow step).
+    core [shape=note, fillcolor="#dce8f5", style=filled, fontsize=10,
+          label="scripts/lib/common.sh — shared helpers used by all scripts:\nroot self-location · arg parsing · turbo_build_* wrappers ·\nthe per-backend loop + verdict (turbo_run_test_driver)"];
+
+    // ── Test drivers (what each driver script does is in its label) ───────────
+    l_drv [label="test_turbo_stack_locally.sh\nparse args · loop backends · print verdict",
+           shape=ellipse, fillcolor="#fffacd", style=filled];
+    d_drv [label="test_turbo_stack_on_derecho.sh  (qsub / bash)\nparse args · loop backends · print verdict",
+           shape=ellipse, fillcolor="#fffacd", style=filled];
+    s_drv [label="test_turbo_stack_with_system_toolchain.sh\nparse args · loop backends · print verdict",
+           shape=ellipse, fillcolor="#fffacd", style=filled];
+    {rank=same; l_drv; s_drv; d_drv;}
+
+    // ── Path A builder: the box IS build_local_with_spack_env.sh.  Its steps are
+    //    Stage 1 (environment setup): source the toolchain, then build the deps ──
+    subgraph cluster_lbld {
+        label="build_local_with_spack_env.sh  (run once per backend)"; labeljust=l;
+        style=filled; color="#e7eff8"; fontname="Helvetica-Bold";
+        l_env  [label="Stage 1 · toolchain: source spack_local_environment.sh\n(builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
+        l_deps [label="Stage 1 · deps: turbo_build_fms | turbo_build_tim\n(FMS/TIM = Tier 2; spack supplies pFUnit/AMReX = Tier 1.5)", fillcolor="#c8e6c9", style=filled];
+        l_env -> l_deps;
+    }
+
+    // ── Path B builder: build_on_derecho.sh ───────────────────────────────────
+    subgraph cluster_dbld {
+        label="build_on_derecho.sh  (run once per backend)"; labeljust=l;
+        style=filled; color="#fbeee6"; fontname="Helvetica-Bold";
+        d_env  [label="Stage 1 · toolchain: source derecho_cpu_gcc_openmpi.sh\n(builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
+        d_deps [label="Stage 1 · deps: turbo_build_pfunit ; _fms ; _amrex ; _tim\n(pFUnit/AMReX = Tier 1.5; FMS/TIM = Tier 2)", fillcolor="#c8e6c9", style=filled];
+        d_env -> d_deps;
+    }
+
+    // ── Path C builder: build_local_with_system_toolchain.sh ──────────────────
+    subgraph cluster_sbld {
+        label="build_local_with_system_toolchain.sh  (run once per backend)"; labeljust=l;
+        style=filled; color="#efe9f6"; fontname="Helvetica-Bold";
+        s_env  [label="Stage 1 · toolchain: source local_toolchain_on_path.sh\n(verify only, builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
+        s_deps [label="Stage 1 · deps: turbo_build_pfunit ; _fms ; _amrex ; _tim\n(pFUnit/AMReX = Tier 1.5; FMS/TIM = Tier 2)", fillcolor="#c8e6c9", style=filled];
+        s_env -> s_deps;
+    }
+
+    // ── Shared: both builders exec the same Stage-2 script ────────────────────
+    bld [label="build_turbo_stack.sh --infra X   (exec'd by each builder)\nStage 2: cmake configure/build -> ctest (Tier 3)",
+        shape=ellipse, fillcolor="#90ee90", style=filled];
+    verdict [label="testing matrix + per-backend verdict (PASS / FAIL)\nprinted by the test driver", fillcolor="#c8e6c9", style=filled];
+
+    // Driver loops its builder (enters at Stage 1); builder execs Stage 2.
+    l_drv -> l_env [xlabel="loop: --infra FMS2, then TIM"];
+    s_drv -> s_env [xlabel="loop: --infra FMS2, then TIM"];
+    d_drv -> d_env [xlabel="loop: --infra FMS2, then TIM"];
+    l_deps -> bld [xlabel="exec"];
+    s_deps -> bld [xlabel="exec"];
+    d_deps -> bld [xlabel="exec"];
+    bld -> verdict;
+
+    // common.sh is sourced by every script (dashed; doesn't constrain layout).
+    core -> l_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
+    core -> s_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
+    core -> d_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
+
+    // Overrides (default = pinned submodule).  Only the co-developed repos
+    // (FMS/TIM, Tier 2; MOM6, Tier 3) have a *_ROOT source swap.
+    hotswap [shape=note, fillcolor="#fff2cc", style=filled, fontsize=10,
+             label="Overrides (default = pinned submodule):\nfetch_* clones a branch · *_ROOT points at a dev tree"];
+    hotswap -> l_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
+    hotswap -> s_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
+    hotswap -> d_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
+    hotswap -> bld   [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="MOM6_ROOT"];
+}
