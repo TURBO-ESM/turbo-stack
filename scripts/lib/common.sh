@@ -279,6 +279,41 @@ turbo_build_tim() {
         -- -D64BIT=ON -D32BIT=OFF
 }
 
+# ── Extra cmake args from the environment ────────────────────────────────────
+# turbo_split_cmake_args <out-array-name> <string> <var-name-for-messages>
+#
+# Splits a FLAGS-style string into an array, respecting quotes so that
+#     -DCMAKE_Fortran_FLAGS="-O2 -g"
+# stays one argument.  Plain word-splitting would break it at the space, which
+# matters because per-machine compiler flags are exactly what these variables
+# exist for.
+#
+# `eval` is the standard idiom for this and is appropriate here: the value comes
+# from the caller's own shell profile, qsub directive, or CI `env:` block -- the
+# same trust level as the command line they would otherwise type. It is not
+# reachable by anything the caller does not already control.
+#
+# Refuses MOM6_INFRA and TURBO_BUILD_UNIT_TESTS. Those also decide Stage 1 on the
+# orchestrators -- which backend's dependencies get built, and whether pFUnit is
+# built at all -- and Stage 1 reads --infra/--tests, not these variables. Setting
+# them here builds one configuration and then configures another, which surfaces
+# as a find_package failure only after the whole dependency build has been paid
+# for. Use --infra / --tests, which set both stages coherently.
+turbo_split_cmake_args() {
+    local _out="$1" _str="$2" _srcname="$3" _a
+    eval "$_out=($_str)"
+    eval "for _a in \"\${$_out[@]}\"; do
+              case \"\$_a\" in
+                  -DMOM6_INFRA=*|-DTURBO_BUILD_UNIT_TESTS=*)
+                      echo \"Error: $_srcname sets '\$_a', which also decides Stage 1.\" >&2
+                      echo \"       Stage 1 (which dependencies get built) reads --infra/--tests,\" >&2
+                      echo \"       not cmake args, so this builds one configuration and\" >&2
+                      echo \"       compiles another.  Use --infra / --tests instead.\" >&2
+                      exit 1 ;;
+              esac
+          done"
+}
+
 # ── Stage-2 phases (configure / build / test) ─────────────────────────────────
 # Stage 2 is three phases run in order by build_turbo_stack.sh.  They are
 # separate functions so a caller can run one at a time, which is what lets CI

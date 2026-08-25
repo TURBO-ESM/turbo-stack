@@ -277,18 +277,23 @@ takes the last `-D` for a given variable, so a machine can override
 `CMAKE_BUILD_TYPE` and friends. Anything passed on the command line (including
 `--` for the build phase) still comes last and wins over both.
 
-Two caveats:
+Split the way a shell would, so quoting works and per-machine compiler flags
+are expressible:
 
-- **Word-split on whitespace**, so `"-DA=1 -DB=2"` is two arguments. A value
-  *containing* a space cannot be expressed this way.
-- **Not re-passed when unset**, so a value set once persists in `CMakeCache.txt`
-  for that build directory. Ordinary CMake behaviour, but it means dropping the
-  variable does not revert the setting — use `--clean` or a fresh `--build_dir`.
+```bash
+TURBO_CMAKE_CONFIGURE_ARGS='-DA=1 -DCMAKE_Fortran_FLAGS="-O2 -g"'   # two arguments
+```
 
-Do not use them to set `MOM6_INFRA` or `TURBO_BUILD_UNIT_TESTS`. Those also
-decide Stage 1 on the orchestrators — which backend's dependencies get built, and
+One caveat: **the values are not re-passed when unset**, so one set once persists
+in `CMakeCache.txt` for that build directory. Ordinary CMake behaviour, but it
+means dropping the variable does not revert the setting — use `--clean` or a
+fresh `--build_dir`.
+
+`MOM6_INFRA` and `TURBO_BUILD_UNIT_TESTS` are **rejected**. Those also decide
+Stage 1 on the orchestrators — which backend's dependencies get built, and
 whether pFUnit is built at all — and Stage 1 reads `--infra`/`--tests`, not these
-variables. Setting them here builds one configuration and compiles another.
+variables. Setting them here would build one configuration and compile another,
+so it fails immediately instead. Use `--infra` and `--tests`.
 
 ## Parallel build jobs
 

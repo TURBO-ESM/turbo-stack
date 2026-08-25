@@ -129,8 +129,9 @@ TURBO_CMAKE_CONFIGURE_ARGS=-DMOM6_ENABLE_TIM_BRIDGE=ON ./test_turbo_stack_locall
 Variables rather than flags so a machine (profile, qsub directive,
 `setup_environment/` recipe) or a CI job can set them once without any script
 parsing or forwarding them — the same reasoning as `CMAKE_BUILD_PARALLEL_LEVEL`.
-Word-split on whitespace; appended after the scripts' own options so they
-override them. Not for `MOM6_INFRA` / `TURBO_BUILD_UNIT_TESTS`, which also drive
+Split the way a shell would, so `-DCMAKE_Fortran_FLAGS="-O2 -g"` stays one
+argument; appended after the scripts' own options so they override them.
+`MOM6_INFRA` / `TURBO_BUILD_UNIT_TESTS` are rejected, since those also drive
 Stage 1. See [`scripts/README.md`](../scripts/README.md).
 
 ### Spack environment

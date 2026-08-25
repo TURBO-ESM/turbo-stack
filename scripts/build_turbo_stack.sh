@@ -115,10 +115,11 @@ fi
 # applies to CMAKE_BUILD_PARALLEL_LEVEL.
 #
 # Placed after the options above so a machine can override what this script
-# chose; word-split deliberately, so "-DA=1 -DB=2" is two arguments.  A value
-# containing spaces cannot be expressed this way.
-# shellcheck disable=SC2206
-[[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]] && cmake_generate_options+=(${TURBO_CMAKE_CONFIGURE_ARGS})
+# chose.
+if [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]]; then
+    turbo_split_cmake_args _turbo_extra "$TURBO_CMAKE_CONFIGURE_ARGS" TURBO_CMAKE_CONFIGURE_ARGS
+    cmake_generate_options+=("${_turbo_extra[@]}")
+fi
 
 turbo_phase_configure "$source_dir" "$build_dir" "${cmake_generate_options[@]}"
 
@@ -129,8 +130,10 @@ cmake_build_options=()
 [[ -n "$parallel" ]] && cmake_build_options+=("--parallel" "$parallel")
 [[ "$clean" == true ]] && cmake_build_options+=("--clean-first")
 # As above, for the build phase (e.g. TURBO_CMAKE_BUILD_ARGS=-v).
-# shellcheck disable=SC2206
-[[ -n "${TURBO_CMAKE_BUILD_ARGS:-}" ]] && cmake_build_options+=(${TURBO_CMAKE_BUILD_ARGS})
+if [[ -n "${TURBO_CMAKE_BUILD_ARGS:-}" ]]; then
+    turbo_split_cmake_args _turbo_extra "$TURBO_CMAKE_BUILD_ARGS" TURBO_CMAKE_BUILD_ARGS
+    cmake_build_options+=("${_turbo_extra[@]}")
+fi
 
 turbo_phase_build "$build_dir" "${cmake_build_options[@]}" "$@"
 
