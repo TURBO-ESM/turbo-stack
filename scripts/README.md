@@ -252,6 +252,44 @@ In the explicit flow you pass the `build` and `install` roots straight to the
 
 ---
 
+## Machine- and run-specific CMake flags
+
+Two environment variables are appended to the CMake command lines:
+
+| Variable | Appended to |
+|---|---|
+| `TURBO_CMAKE_CONFIGURE_ARGS` | the `cmake` **configure** line |
+| `TURBO_CMAKE_BUILD_ARGS` | `cmake --build` |
+
+```bash
+TURBO_CMAKE_CONFIGURE_ARGS=-DMOM6_ENABLE_TIM_BRIDGE=ON ./test_turbo_stack_locally.sh
+TURBO_CMAKE_BUILD_ARGS=-v scripts/build_local_with_spack_env.sh --infra TIM
+```
+
+Variables rather than flags, for the same reason `CMAKE_BUILD_PARALLEL_LEVEL` is
+one: the need is *"on this machine, always pass X"* and *"for this run, also pass
+Y"*. A variable expresses both from a shell profile, a qsub directive, a flavor's
+`setup_environment/` recipe, or a CI `env:` block — and every entry point picks
+it up without any script parsing or forwarding it.
+
+They are appended **after** the options the scripts choose themselves, and CMake
+takes the last `-D` for a given variable, so a machine can override
+`CMAKE_BUILD_TYPE` and friends. Anything passed on the command line (including
+`--` for the build phase) still comes last and wins over both.
+
+Two caveats:
+
+- **Word-split on whitespace**, so `"-DA=1 -DB=2"` is two arguments. A value
+  *containing* a space cannot be expressed this way.
+- **Not re-passed when unset**, so a value set once persists in `CMakeCache.txt`
+  for that build directory. Ordinary CMake behaviour, but it means dropping the
+  variable does not revert the setting — use `--clean` or a fresh `--build_dir`.
+
+Do not use them to set `MOM6_INFRA` or `TURBO_BUILD_UNIT_TESTS`. Those also
+decide Stage 1 on the orchestrators — which backend's dependencies get built, and
+whether pFUnit is built at all — and Stage 1 reads `--infra`/`--tests`, not these
+variables. Setting them here builds one configuration and compiles another.
+
 ## Parallel build jobs
 
 `--parallel N` / `-j N` on the orchestrators exports `CMAKE_BUILD_PARALLEL_LEVEL=N`. Every downstream `cmake --build` invocation (deps + turbo-stack) picks it up natively without any flag plumbing. You can also set `CMAKE_BUILD_PARALLEL_LEVEL` in your shell profile / qsub directive / CI config to skip the CLI flag entirely:

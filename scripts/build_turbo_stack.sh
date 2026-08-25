@@ -107,6 +107,19 @@ else
     cmake_generate_options+=("-DTURBO_BUILD_UNIT_TESTS=OFF")
 fi
 
+# Machine- and run-specific configure flags.  An environment variable rather
+# than a flag: the need is "on this machine, always pass X" and "for this run,
+# also pass Y", which a variable expresses from a shell profile, a qsub
+# directive, a flavor's setup_environment recipe, or a CI `env:` block without
+# any script having to parse or forward it.  Same reasoning the repo already
+# applies to CMAKE_BUILD_PARALLEL_LEVEL.
+#
+# Placed after the options above so a machine can override what this script
+# chose; word-split deliberately, so "-DA=1 -DB=2" is two arguments.  A value
+# containing spaces cannot be expressed this way.
+# shellcheck disable=SC2206
+[[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]] && cmake_generate_options+=(${TURBO_CMAKE_CONFIGURE_ARGS})
+
 turbo_phase_configure "$source_dir" "$build_dir" "${cmake_generate_options[@]}"
 
 # Build the code.  Pass --parallel only when the caller set it; otherwise
@@ -115,6 +128,10 @@ turbo_phase_configure "$source_dir" "$build_dir" "${cmake_generate_options[@]}"
 cmake_build_options=()
 [[ -n "$parallel" ]] && cmake_build_options+=("--parallel" "$parallel")
 [[ "$clean" == true ]] && cmake_build_options+=("--clean-first")
+# As above, for the build phase (e.g. TURBO_CMAKE_BUILD_ARGS=-v).
+# shellcheck disable=SC2206
+[[ -n "${TURBO_CMAKE_BUILD_ARGS:-}" ]] && cmake_build_options+=(${TURBO_CMAKE_BUILD_ARGS})
+
 turbo_phase_build "$build_dir" "${cmake_build_options[@]}" "$@"
 
 turbo_phase_test "$build_dir"

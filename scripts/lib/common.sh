@@ -294,6 +294,7 @@ turbo_build_tim() {
 turbo_phase_configure() {
     local source_dir="$1" build_dir="$2"
     shift 2
+    echo "=== [phase] cmake configure -> $build_dir"
     cmake "$@" -S "$source_dir" -B "$build_dir"
 }
 
@@ -301,6 +302,7 @@ turbo_phase_configure() {
 turbo_phase_build() {
     local build_dir="$1"
     shift
+    echo "=== [phase] cmake build -> $build_dir"
     cmake --build "$build_dir" "$@"
 }
 
@@ -317,6 +319,7 @@ turbo_phase_build() {
 # green.
 turbo_phase_test() {
     local build_dir="$1"
+    echo "=== [phase] ctest -> $build_dir"
     local turbo_build_unit_tests
     turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
     case "$(printf '%s' "${turbo_build_unit_tests:-}" | tr '[:lower:]' '[:upper:]')" in
