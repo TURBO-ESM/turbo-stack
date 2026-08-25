@@ -93,6 +93,16 @@ jobs:
           #     submodules/MOM6 submodules/MARBL submodules/infra/FMS2 submodules/infra/TIM
           submodules: recursive
 
+      # '*' rather than an enumerated list: the ownership check applies per
+      # repository, and a recursive checkout is 16 of them -- the workspace, the
+      # seven submodules, their nested ones four levels down (pFUnit ->
+      # fArgParse -> gFTL-shared -> gFTL), plus mom6-ref and its two.
+      # safe.directory matches exact paths or '*' and has no prefix glob, so a
+      # list silently stops covering a submodule the day someone adds one.
+      # Nothing is traded away for the convenience: the check guards against
+      # another user on the same machine planting a repo, an ephemeral
+      # single-tenant job container has none, and the --global config this
+      # writes lives in the container root's HOME and dies with the job.
       - name: Allow git operations on the checkout (root container)
         run: git config --global --add safe.directory '*'
 

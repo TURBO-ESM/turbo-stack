@@ -212,20 +212,23 @@ git -C submodules/MOM6 checkout -          # put it back when done
 interrupted run cannot strand it on another ref:
 
 ```bash
-git clone --depth 1 -b dev/turbo-debug \
-    https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
-git -C /tmp/mom6-debug submodule update --init --recursive --depth 1
+git clone --depth 1 --recurse-submodules --shallow-submodules \
+    -b dev/turbo-debug https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
 MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_locally.sh
 ```
 
 MOM6's own submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized
 either way -- its top-level `CMakeLists.txt` hard-fails without them.
+`--shallow-submodules` is what carries `--depth 1` down into them; with
+`--recurse-submodules` alone they are cloned at full depth.
 
-CI does the second of these: the `MOM6 dev/turbo-debug` group checks the branch
-out with `actions/checkout` into a sibling directory and points `MOM6_ROOT`
-there, so the build scripts see nothing unusual. The testing matrix then reports
-MOM6 as an override at the real SHA, so a log says exactly which commit was
-tested.
+CI does the second of these, but through `actions/checkout` (`submodules:
+recursive`, `fetch-depth: 1`) rather than the commands above -- no workflow
+shells out to `git clone`, so there is no copy of this recipe to keep in sync.
+The `MOM6 dev/turbo-debug` group checks the branch out into a sibling directory
+and points `MOM6_ROOT` there, so the build scripts see nothing unusual. The
+testing matrix then reports MOM6 as an override at the real SHA, so a log says
+exactly which commit was tested.
 
 ---
 
