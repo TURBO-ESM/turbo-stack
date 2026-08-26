@@ -158,7 +158,9 @@ build_dep <name>
     -- [cmake args...]
 ```
 
-Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_stack.sh`'s own pass-through).
+Cmake args go after `--` (mirrors `cmake --build dir -- ...`).  This is `build_dep`'s
+own convention; `build_turbo_stack.sh` has no `--` pass-through -- extra cmake
+arguments there come from `TURBO_CMAKE_CONFIGURE_ARGS` / `TURBO_CMAKE_BUILD_ARGS`.
 
 **Source resolution** (first match wins):
 

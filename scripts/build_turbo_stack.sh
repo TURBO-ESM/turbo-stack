@@ -28,13 +28,13 @@
 #                       Orchestrators set CMAKE_BUILD_PARALLEL_LEVEL once for
 #                       the whole pipeline; --parallel is for per-call override.
 #   -h, --help          Print this usage text and exit.
-#   --                  End of options to this script.  Anything after `--` is
-#                       appended verbatim to `cmake --build`, e.g.
-#                         ... -- -v                 (cmake's own --verbose)
-#                         ... -- --target MOM6      (build a specific target)
-#                         ... -- -- -j 16           (forward -j 16 to the generator)
-#                       Unknown options that are NOT preceded by `--` are an
-#                       error (catches typos like --paralel).
+#
+# Extra arguments for cmake come from the environment, not from flags:
+#   TURBO_CMAKE_CONFIGURE_ARGS   appended to the cmake configure line
+#   TURBO_CMAKE_BUILD_ARGS       appended to `cmake --build`, e.g.
+#                                  TURBO_CMAKE_BUILD_ARGS=-v            (verbose)
+#                                  TURBO_CMAKE_BUILD_ARGS='--target MOM6'
+# Unknown options are an error, which catches typos like --paralel.
 
 set -eo pipefail
 
@@ -67,10 +67,10 @@ while [[ $# -gt 0 ]]; do
         --tests)        with_tests=true; shift ;;
         --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || exit 1; parallel="$2"; shift 2 ;;
         -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
-        --)             shift; break ;;
         *)
             echo "Error: unknown option '$1' to build_turbo_stack.sh" >&2
-            echo "       Pass unknown args after '--' to forward them to \`cmake --build\`." >&2
+            echo "       Extra cmake arguments come from TURBO_CMAKE_CONFIGURE_ARGS /" >&2
+            echo "       TURBO_CMAKE_BUILD_ARGS, not from flags." >&2
             exit 1
             ;;
     esac
@@ -137,6 +137,6 @@ if [[ -n "${TURBO_CMAKE_BUILD_ARGS:-}" ]]; then
 fi
 
 echo "=== [phase] cmake build -> $build_dir"
-cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
+cmake --build "$build_dir" "${cmake_build_options[@]}"
 
 turbo_run_ctest "$build_dir"
