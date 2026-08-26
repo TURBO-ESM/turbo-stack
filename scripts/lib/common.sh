@@ -332,45 +332,8 @@ turbo_split_cmake_args() {
     done
 }
 
-# ── Stage-2 phases (configure / build / test) ─────────────────────────────────
-# Stage 2 is three phases run in order by build_turbo_stack.sh.  They are
-# separate functions so a caller can run one at a time, which is what lets CI
-# report *which* phase failed instead of one opaque "build+test" step.
-#
-# Each takes an already-assembled option array from its caller: assembling those
-# options is the job of whichever entry point parsed the flags, not of this
-# library.  Keeping that split means these three stay usable by anything that
-# knows a build directory, including a future caller that is not
-# build_turbo_stack.sh.
-
-# turbo_phase_configure <source_dir> <build_dir> [cmake args...]
-turbo_phase_configure() {
-    local source_dir="$1" build_dir="$2"
-    shift 2
-    echo "=== [phase] cmake configure -> $build_dir"
-    cmake "$@" -S "$source_dir" -B "$build_dir"
-}
-
-# turbo_phase_build <build_dir> [cmake --build args...]
-turbo_phase_build() {
-    local build_dir="$1"
-    shift
-    echo "=== [phase] cmake build -> $build_dir"
-    cmake --build "$build_dir" "$@"
-}
-
-# turbo_phase_test <build_dir>
-#
-# Honors TURBO_BUILD_UNIT_TESTS: when CMake configured with the option OFF, the
-# tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing to run.
-# Reads the resolved value from the CMake cache rather than trusting a flag, so
-# this phase is correct even when invoked against a build dir configured by a
-# separate earlier call -- which is exactly what running the phases individually
-# does.  CMake treats 1 / ON / YES / TRUE / Y (any case) as true and everything
-# else (OFF / 0 / NO / FALSE / empty / unreadable cache) as false; match that
-# same set so a truthy-but-not-"ON" value can't skip ctest and report a vacuous
-# green.
-turbo_phase_test() {
+# ── ctest ────────────────────────────────────────────────────────────────────
+turbo_run_ctest() {
     local build_dir="$1"
     echo "=== [phase] ctest -> $build_dir"
     local turbo_build_unit_tests

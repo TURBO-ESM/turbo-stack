@@ -121,7 +121,8 @@ if [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]]; then
     cmake_generate_options+=("${TURBO_SPLIT_ARGS[@]}")
 fi
 
-turbo_phase_configure "$source_dir" "$build_dir" "${cmake_generate_options[@]}"
+echo "=== [phase] cmake configure -> $build_dir"
+cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 
 # Build the code.  Pass --parallel only when the caller set it; otherwise
 # cmake reads CMAKE_BUILD_PARALLEL_LEVEL (or falls back to the generator's
@@ -135,6 +136,7 @@ if [[ -n "${TURBO_CMAKE_BUILD_ARGS:-}" ]]; then
     cmake_build_options+=("${TURBO_SPLIT_ARGS[@]}")
 fi
 
-turbo_phase_build "$build_dir" "${cmake_build_options[@]}" "$@"
+echo "=== [phase] cmake build -> $build_dir"
+cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
 
-turbo_phase_test "$build_dir"
+turbo_run_ctest "$build_dir"
