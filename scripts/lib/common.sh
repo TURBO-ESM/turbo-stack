@@ -280,9 +280,9 @@ turbo_build_tim() {
 }
 
 # ── Extra cmake args from the environment ────────────────────────────────────
-# turbo_split_cmake_args <out-array-name> <string> <var-name-for-messages>
+# turbo_split_cmake_args <string> <var-name-for-messages>
 #
-# Splits a FLAGS-style string into an array, respecting quotes so that
+# Splits a FLAGS-style string into TURBO_SPLIT_ARGS, respecting quotes so that
 #     -DCMAKE_Fortran_FLAGS="-O2 -g"
 # stays one argument.  Plain word-splitting would break it at the space, which
 # matters because per-machine compiler flags are exactly what these variables
@@ -290,28 +290,46 @@ turbo_build_tim() {
 #
 # `eval` is the standard idiom for this and is appropriate here: the value comes
 # from the caller's own shell profile, qsub directive, or CI `env:` block -- the
-# same trust level as the command line they would otherwise type. It is not
-# reachable by anything the caller does not already control.
+# same trust level as the command line they would otherwise type.  It is not
+# reachable by anything the caller does not already control.  Note this means a
+# value containing $(...) is evaluated; that is inherent to the FLAGS-string
+# convention, and the alternative (a newline-delimited list read with mapfile)
+# would be exact but changes the convention.
 #
-# Refuses MOM6_INFRA and TURBO_BUILD_UNIT_TESTS. Those also decide Stage 1 on the
-# orchestrators -- which backend's dependencies get built, and whether pFUnit is
-# built at all -- and Stage 1 reads --infra/--tests, not these variables. Setting
-# them here builds one configuration and then configures another, which surfaces
-# as a find_package failure only after the whole dependency build has been paid
-# for. Use --infra / --tests, which set both stages coherently.
+# Refuses MOM6_INFRA and TURBO_BUILD_UNIT_TESTS.  Those also decide Stage 1 on
+# the orchestrators -- which backend's dependencies get built, and whether pFUnit
+# is built at all -- and Stage 1 reads --infra/--tests, not these variables.
+# Setting them here builds one configuration and then configures another, which
+# surfaces as a find_package failure only after the whole dependency build has
+# been paid for.  Use --infra / --tests, which set both stages coherently.
+#
+# The check normalizes every spelling cmake accepts, not just -DVAR=value:
+# -DVAR:TYPE=value carries a type suffix, and -D VAR=value detaches the -D into
+# its own argument.  Matching only the bare form would leave the desync reachable.
 turbo_split_cmake_args() {
-    local _out="$1" _str="$2" _srcname="$3" _a
-    eval "$_out=($_str)"
-    eval "for _a in \"\${$_out[@]}\"; do
-              case \"\$_a\" in
-                  -DMOM6_INFRA=*|-DTURBO_BUILD_UNIT_TESTS=*)
-                      echo \"Error: $_srcname sets '\$_a', which also decides Stage 1.\" >&2
-                      echo \"       Stage 1 (which dependencies get built) reads --infra/--tests,\" >&2
-                      echo \"       not cmake args, so this builds one configuration and\" >&2
-                      echo \"       compiles another.  Use --infra / --tests instead.\" >&2
-                      exit 1 ;;
-              esac
-          done"
+    local _str="$1" _srcname="$2" _a _name _want_val=false
+    eval "TURBO_SPLIT_ARGS=($_str)"
+    for _a in ${TURBO_SPLIT_ARGS[@]+"${TURBO_SPLIT_ARGS[@]}"}; do
+        if [[ "$_want_val" == true ]]; then
+            _name="$_a"; _want_val=false          # value of a detached -D
+        elif [[ "$_a" == "-D" ]]; then
+            _want_val=true; continue              # -D VAR=value
+        elif [[ "$_a" == -D* ]]; then
+            _name="${_a#-D}"                      # -DVAR=value / -DVAR:TYPE=value
+        else
+            continue
+        fi
+        _name="${_name%%=*}"                      # drop =value
+        _name="${_name%%:*}"                      # drop :TYPE
+        case "$_name" in
+            MOM6_INFRA|TURBO_BUILD_UNIT_TESTS)
+                echo "Error: $_srcname sets '$_name', which also decides Stage 1." >&2
+                echo "       Stage 1 (which dependencies get built) reads --infra/--tests," >&2
+                echo "       not cmake args, so this builds one configuration and" >&2
+                echo "       compiles another.  Use --infra / --tests instead." >&2
+                exit 1 ;;
+        esac
+    done
 }
 
 # ── Stage-2 phases (configure / build / test) ─────────────────────────────────

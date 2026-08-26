@@ -117,8 +117,8 @@ fi
 # Placed after the options above so a machine can override what this script
 # chose.
 if [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]]; then
-    turbo_split_cmake_args _turbo_extra "$TURBO_CMAKE_CONFIGURE_ARGS" TURBO_CMAKE_CONFIGURE_ARGS
-    cmake_generate_options+=("${_turbo_extra[@]}")
+    turbo_split_cmake_args "$TURBO_CMAKE_CONFIGURE_ARGS" TURBO_CMAKE_CONFIGURE_ARGS
+    cmake_generate_options+=("${TURBO_SPLIT_ARGS[@]}")
 fi
 
 turbo_phase_configure "$source_dir" "$build_dir" "${cmake_generate_options[@]}"
@@ -131,8 +131,8 @@ cmake_build_options=()
 [[ "$clean" == true ]] && cmake_build_options+=("--clean-first")
 # As above, for the build phase (e.g. TURBO_CMAKE_BUILD_ARGS=-v).
 if [[ -n "${TURBO_CMAKE_BUILD_ARGS:-}" ]]; then
-    turbo_split_cmake_args _turbo_extra "$TURBO_CMAKE_BUILD_ARGS" TURBO_CMAKE_BUILD_ARGS
-    cmake_build_options+=("${_turbo_extra[@]}")
+    turbo_split_cmake_args "$TURBO_CMAKE_BUILD_ARGS" TURBO_CMAKE_BUILD_ARGS
+    cmake_build_options+=("${TURBO_SPLIT_ARGS[@]}")
 fi
 
 turbo_phase_build "$build_dir" "${cmake_build_options[@]}" "$@"
