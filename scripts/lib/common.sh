@@ -335,7 +335,6 @@ turbo_split_cmake_args() {
 # ── ctest ────────────────────────────────────────────────────────────────────
 turbo_run_ctest() {
     local build_dir="$1"
-    echo "=== [phase] ctest -> $build_dir"
     local turbo_build_unit_tests
     turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
     case "$(printf '%s' "${turbo_build_unit_tests:-}" | tr '[:lower:]' '[:upper:]')" in
