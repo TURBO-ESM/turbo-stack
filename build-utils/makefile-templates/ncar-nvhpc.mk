@@ -19,7 +19,7 @@ MAKEFLAGS += --jobs=8
 LDFLAGS :=
 
 FC_AUTO_R8 = -r8
-FPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
+FPPFLAGS := $(shell pkg-config --cflags yaml-0.1) -DHAVE_FC_DO_CONCURRENT_LOCAL
 FFLAGS = $(FC_AUTO_R8) -Mnofma -i4 -gopt  -time -Mextend -byteswapio -Mflushz -Kieee -tp=zen3
 
 
@@ -33,16 +33,41 @@ CXXFLAGS := --std=c++20 -Mnofma -Kieee
 ifeq ($(DEBUG),1)
   FFLAGS += -O0 -g
   CFLAGS += -O0 -g
+  CXXFLAGS += -O0 -g
 else
     FFLAGS += -O2
     CFLAGS += -O2
+    CXXFLAGS += -O2
 endif
 
 ifeq ($(OFFLOAD),1)
-  FFLAGS += -mp=gpu -gpu=cc80 -fopenmp -stdpar -Minfo=accel
-  CFLAGS += -mp=gpu -gpu=cc80
-  LDFLAGS += -mp=gpu -lmpi_gtl_cuda
+  GPU_OPTS := cc80,mem:separate,nofma
+  FFLAGS += -mp=gpu -gpu=$(GPU_OPTS) -stdpar=gpu -Minfo=accel
+  CFLAGS += -mp=gpu -gpu=$(GPU_OPTS)
+  # --fmad=false matches the Fortran -Mnofma; -Xptxas -O2 pins the device-code
+  # optimization level. Exported so libamrex's nvcc compiles get it too.
+  export NVCC_APPEND_FLAGS := --fmad=false -Xptxas -O2
+  AMREX_GPU_FLAGS := -DAMReX_GPU_BACKEND=CUDA -DAMReX_CUDA_ARCH=8.0 -DAMReX_MPI=NO -DAMReX_DIFFERENT_COMPILER=ON
+  LDFLAGS += -mp=gpu -cuda -gpu=$(GPU_OPTS) -c++libs -lmpi_gtl_cuda
+
+  # TEMPORARY until the CMake build system lands: the AMReX TUs below must be
+  # compiled by nvcc, while every other C++ TU keeps CXX = CC.
+  # **NOTE:** New CUDA TUs must be added to CUDA_OBJS.
+  CUDA_OBJS := mom_continuity_ppm.o mom_interface_heights.o \
+               turbotmp_mom_continuity_ppm_bridge.o turbotmp_mom_interface_heights_bridge.o \
+               turbotmp_helper.o tim_profile.o tim_coms_infra.o
+  ifeq ($(DEBUG),1)
+    NVCC_OPT := -O0 -g
+  else
+    NVCC_OPT := -O2
+  endif
+  $(CUDA_OBJS): CXX := nvcc
+  $(CUDA_OBJS): CXXFLAGS := -x cu -arch=sm_80 --extended-lambda --expt-relaxed-constexpr \
+                            -std=c++17 -ccbin CC -lineinfo $(NVCC_OPT) \
+                            -Xcompiler -Mnofma -Xcompiler -Kieee
 endif
+
+CXXFLAGS += -Mnofma -Kieee
 
 # NetCDF Flags
 FFLAGS += $(shell nf-config --fflags)
