@@ -1,6 +1,6 @@
 # Call-tree conversion plan: `PressureForce`
 
-Entry point: `PressureForce`, `src/core/MOM_PressureForce.F90:43-86`.
+Entry point: `PressureForce`, `submodules/MOM6/src/core/MOM_PressureForce.F90:43-86`.
 Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 Cross-reference: `.claude/calltree-plans/shared_type_unions.md` — `tv`, `ADp` grown by this
 tree; the EOS runtime-polymorphism blocking prerequisite this tree makes unavoidable to face.

@@ -1,6 +1,6 @@
 # Call-tree conversion plan: `CorAdCalc`
 
-Entry point: `CorAdCalc`, `src/core/MOM_CoriolisAdv.F90:142-1350`.
+Entry point: `CorAdCalc`, `submodules/MOM6/src/core/MOM_CoriolisAdv.F90:142-1350`.
 Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 Cross-reference: `.claude/calltree-plans/shared_type_unions.md`, the authoritative source for
 `OBC`, `ADp`, `Waves`, and `pbv` (all grown or newly added by this tree).

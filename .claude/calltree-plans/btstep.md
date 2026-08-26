@@ -1,6 +1,6 @@
 # Call-tree conversion plan: `btstep`, `btcalc`, `bt_mass_source`, `set_dtbt`
 
-Four entry points, all `src/core/MOM_barotropic.F90`, all sharing the same private
+Four entry points, all `submodules/MOM6/src/core/MOM_barotropic.F90`, all sharing the same private
 `barotropic_CS`. `btstep` was surveyed and planned first (hence the filename); `btcalc`,
 `bt_mass_source`, and `set_dtbt` were added in a later session, mirroring the
 `vertvisc_family`/`set_viscosity_family` pattern of surveying same-file siblings together rather
@@ -11,7 +11,7 @@ Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 
 ## BLOCKING PREREQUISITE — must land before Phase 2 Stage 1 of *either* `btstep`'s or `continuity()`'s campaign touches `BT_cont`
 
-`BT_cont_type` (defined `src/core/MOM_variables.F90:317-352`, 16 fields: 12 allocatable
+`BT_cont_type` (defined `submodules/MOM6/src/core/MOM_variables.F90:317-352`, 16 fields: 12 allocatable
 2-D real arrays `FA_u_EE/FA_u_E0/FA_u_W0/FA_u_WW/uBT_WW/uBT_EE/FA_v_NN/FA_v_N0/FA_v_S0/FA_v_SS/vBT_SS/vBT_NN`,
 2 allocatable 3-D real arrays `h_u`/`h_v`, 2 `group_pass_type` handles `pass_polarity_BT`/`pass_FA_uv`)
 is dereferenced directly by **both** `MOM_continuity_PPM.F90` (the `continuity()` tree) and
