@@ -280,7 +280,7 @@ turbo_build_tim() {
 }
 
 # ── Extra cmake args from the environment ────────────────────────────────────
-# turbo_split_cmake_args <string> <var-name-for-messages>
+# turbo_split_cmake_args <string>
 #
 # Whitespace-splits a list of cmake arguments into TURBO_SPLIT_ARGS.
 #
@@ -288,29 +288,35 @@ turbo_build_tim() {
 # need to.  Compiler flags go through cmake's own FFLAGS / CFLAGS / CXXFLAGS, and
 # everything else here (-DFOO=ON, --target foo) is one token.  scripts/README.md
 # has the reasoning and the `cmake -C` alternative.
-#
-# MOM6_INFRA and TURBO_BUILD_UNIT_TESTS are refused: they also decide Stage 1,
-# which reads --infra/--tests rather than cmake args, so setting them here builds
-# one configuration and then configures another.
-#
-# The check matches every spelling cmake accepts -- -DVAR=, -DVAR:TYPE= and a
-# detached -D VAR= -- because matching only the bare form left that reachable.
 turbo_split_cmake_args() {
-    local _str="$1" _srcname="$2" _a _name _want_val=false
     # shellcheck disable=SC2206  # word-splitting is the point; see above
-    TURBO_SPLIT_ARGS=($_str)
+    TURBO_SPLIT_ARGS=($1)
+}
+
+# turbo_assert_no_stage1_cmake_args <string> <var-name-for-messages>
+#
+# Refuses cmake args that set MOM6_INFRA or TURBO_BUILD_UNIT_TESTS.  Those decide
+# Stage 1 as well as Stage 2 -- which backend's dependencies get built, and
+# whether pFUnit is built at all (see "Pipeline" in scripts/README.md) -- and
+# Stage 1 reads --infra/--tests, not cmake args.  Setting them this way builds one
+# configuration and then configures another.
+#
+# Matches every spelling cmake accepts: -DVAR=, -DVAR:TYPE= and a detached
+# -D VAR=.  Matching only the bare form left the desync reachable.
+turbo_assert_no_stage1_cmake_args() {
+    local _srcname="$2" _a _name _want_val=false
+    turbo_split_cmake_args "$1"
     for _a in ${TURBO_SPLIT_ARGS[@]+"${TURBO_SPLIT_ARGS[@]}"}; do
         if [[ "$_want_val" == true ]]; then
-            _name="$_a"; _want_val=false          # value of a detached -D
+            _name="$_a"; _want_val=false
         elif [[ "$_a" == "-D" ]]; then
-            _want_val=true; continue              # -D VAR=value
+            _want_val=true; continue
         elif [[ "$_a" == -D* ]]; then
-            _name="${_a#-D}"                      # -DVAR=value / -DVAR:TYPE=value
+            _name="${_a#-D}"
         else
             continue
         fi
-        _name="${_name%%=*}"                      # drop =value
-        _name="${_name%%:*}"                      # drop :TYPE
+        _name="${_name%%=*}"; _name="${_name%%:*}"
         case "$_name" in
             MOM6_INFRA|TURBO_BUILD_UNIT_TESTS)
                 echo "Error: $_srcname sets '$_name', which also decides Stage 1." >&2
@@ -358,6 +364,12 @@ turbo_parse_builder_args() {
     if [[ "$TURBO_B_INFRA" != "FMS2" && "$TURBO_B_INFRA" != "TIM" ]]; then
         echo "Error: --infra must be FMS2 or TIM (got '$TURBO_B_INFRA')" >&2; exit 1
     fi
+    # Checked here rather than in build_turbo_stack.sh: the invariant is that
+    # Stage 1 and Stage 2 agree, and Stage 1 is this layer's concern -- the Stage-2
+    # script neither runs it nor knows it exists.  Parse time, so it fails before
+    # any dependency is built.
+    [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]] && \
+        turbo_assert_no_stage1_cmake_args "$TURBO_CMAKE_CONFIGURE_ARGS" TURBO_CMAKE_CONFIGURE_ARGS
 }
 
 # The buildable submodule tiers are 1.5 and 2; a flavor builds "from" the lowest

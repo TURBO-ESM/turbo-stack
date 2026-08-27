@@ -304,11 +304,16 @@ in `CMakeCache.txt` for that build directory. Ordinary CMake behaviour, but it
 means dropping the variable does not revert the setting — use `--clean` or a
 fresh `--build_dir`.
 
-`MOM6_INFRA` and `TURBO_BUILD_UNIT_TESTS` are **rejected**. Those also decide
-Stage 1 on the orchestrators — which backend's dependencies get built, and
-whether pFUnit is built at all — and Stage 1 reads `--infra`/`--tests`, not these
-variables. Setting them here would build one configuration and compile another,
-so it fails immediately instead. Use `--infra` and `--tests`.
+`MOM6_INFRA` and `TURBO_BUILD_UNIT_TESTS` are **rejected by the orchestrators**.
+Those also decide [Stage 1](#pipeline-environment-setup--build-turbo-stack) —
+which backend's dependencies get built, and whether pFUnit is built at all — and
+Stage 1 reads `--infra`/`--tests`, not these variables. Setting them here would
+build one configuration and compile another, so it fails at argument-parse time,
+before any dependency is built. Use `--infra` and `--tests`.
+
+`build_turbo_stack.sh` on its own does *not* reject them: it is Stage 2, there is
+no Stage 1 in that invocation to disagree with, and a caller driving it directly
+is managing their own environment.
 
 ## Parallel build jobs
 
