@@ -276,15 +276,28 @@ it up without any script parsing or forwarding it.
 
 They are appended **after** the options the scripts choose themselves, and CMake
 takes the last `-D` for a given variable, so a machine can override
-`CMAKE_BUILD_TYPE` and friends. Anything passed on the command line (including
-`--` for the build phase) still comes last and wins over both.
+`CMAKE_BUILD_TYPE` and friends.
 
-Split the way a shell would, so quoting works and per-machine compiler flags
-are expressible:
+### Compiler flags go through CMake's own variables
+
+Split on whitespace, so **a single argument cannot contain a space**. That is a
+smaller limitation than it looks, because the case that needs one — per-machine
+compiler flags — is handled by CMake itself. It seeds `CMAKE_Fortran_FLAGS`,
+`CMAKE_C_FLAGS` and `CMAKE_CXX_FLAGS` from `FFLAGS`, `CFLAGS` and `CXXFLAGS` at
+first configure:
 
 ```bash
-TURBO_CMAKE_CONFIGURE_ARGS='-DA=1 -DCMAKE_Fortran_FLAGS="-O2 -g"'   # two arguments
+FFLAGS="-O2 -g" ./test_turbo_stack_locally.sh
 ```
+
+Same idea as `CMAKE_BUILD_PARALLEL_LEVEL` — CMake reads it natively, so no script
+has to forward anything. Everything the two `TURBO_CMAKE_*` variables are for
+(`-DSOME_OPTION=ON`, `--target foo`) is a single token, so whitespace splitting is
+enough and no `eval` is involved.
+
+If a genuinely space-containing option ever does come up, `cmake -C
+<initial-cache-file>` is the robust answer: the values live in CMake code rather
+than in a shell string, so no quoting question arises at all.
 
 One caveat: **the values are not re-passed when unset**, so one set once persists
 in `CMakeCache.txt` for that build directory. Ordinary CMake behaviour, but it

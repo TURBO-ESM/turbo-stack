@@ -282,19 +282,22 @@ turbo_build_tim() {
 # ── Extra cmake args from the environment ────────────────────────────────────
 # turbo_split_cmake_args <string> <var-name-for-messages>
 #
-# Splits a FLAGS-style string into TURBO_SPLIT_ARGS, respecting quotes so that
-#     -DCMAKE_Fortran_FLAGS="-O2 -g"
-# stays one argument.  Plain word-splitting would break it at the space, which
-# matters because per-machine compiler flags are exactly what these variables
-# exist for.
+# Splits a whitespace-separated list of cmake arguments into TURBO_SPLIT_ARGS.
 #
-# `eval` is the standard idiom for this and is appropriate here: the value comes
-# from the caller's own shell profile, qsub directive, or CI `env:` block -- the
-# same trust level as the command line they would otherwise type.  It is not
-# reachable by anything the caller does not already control.  Note this means a
-# value containing $(...) is evaluated; that is inherent to the FLAGS-string
-# convention, and the alternative (a newline-delimited list read with mapfile)
-# would be exact but changes the convention.
+# Plain word-splitting, deliberately: a value cannot contain a space.  That is
+# not the limitation it first appears, because the case that needs spaces --
+# per-machine compiler flags -- is already handled by cmake itself, which seeds
+# CMAKE_Fortran_FLAGS / CMAKE_C_FLAGS / CMAKE_CXX_FLAGS from FFLAGS / CFLAGS /
+# CXXFLAGS at first configure:
+#
+#     FFLAGS="-O2 -g" ./test_turbo_stack_locally.sh
+#
+# Everything else these variables are for (-DSOME_OPTION=ON, --target foo) is a
+# single token.  Splitting with `eval` would allow quoted values, at the cost of
+# evaluating any $(...) in the string; that is not worth it for a case cmake
+# already covers better.  If a genuinely space-containing option ever comes up,
+# `cmake -C <initial-cache>` is the robust answer -- the values live in cmake
+# code rather than a shell string.
 #
 # Refuses MOM6_INFRA and TURBO_BUILD_UNIT_TESTS.  Those also decide Stage 1 on
 # the orchestrators -- which backend's dependencies get built, and whether pFUnit
@@ -308,7 +311,8 @@ turbo_build_tim() {
 # its own argument.  Matching only the bare form would leave the desync reachable.
 turbo_split_cmake_args() {
     local _str="$1" _srcname="$2" _a _name _want_val=false
-    eval "TURBO_SPLIT_ARGS=($_str)"
+    # shellcheck disable=SC2206  # word-splitting is the point; see above
+    TURBO_SPLIT_ARGS=($_str)
     for _a in ${TURBO_SPLIT_ARGS[@]+"${TURBO_SPLIT_ARGS[@]}"}; do
         if [[ "$_want_val" == true ]]; then
             _name="$_a"; _want_val=false          # value of a detached -D
