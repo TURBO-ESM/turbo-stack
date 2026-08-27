@@ -282,33 +282,19 @@ turbo_build_tim() {
 # ── Extra cmake args from the environment ────────────────────────────────────
 # turbo_split_cmake_args <string> <var-name-for-messages>
 #
-# Splits a whitespace-separated list of cmake arguments into TURBO_SPLIT_ARGS.
+# Whitespace-splits a list of cmake arguments into TURBO_SPLIT_ARGS.
 #
-# Plain word-splitting, deliberately: a value cannot contain a space.  That is
-# not the limitation it first appears, because the case that needs spaces --
-# per-machine compiler flags -- is already handled by cmake itself, which seeds
-# CMAKE_Fortran_FLAGS / CMAKE_C_FLAGS / CMAKE_CXX_FLAGS from FFLAGS / CFLAGS /
-# CXXFLAGS at first configure:
+# Word-splitting rather than eval: a value cannot contain a space and does not
+# need to.  Compiler flags go through cmake's own FFLAGS / CFLAGS / CXXFLAGS, and
+# everything else here (-DFOO=ON, --target foo) is one token.  scripts/README.md
+# has the reasoning and the `cmake -C` alternative.
 #
-#     FFLAGS="-O2 -g" ./test_turbo_stack_locally.sh
+# MOM6_INFRA and TURBO_BUILD_UNIT_TESTS are refused: they also decide Stage 1,
+# which reads --infra/--tests rather than cmake args, so setting them here builds
+# one configuration and then configures another.
 #
-# Everything else these variables are for (-DSOME_OPTION=ON, --target foo) is a
-# single token.  Splitting with `eval` would allow quoted values, at the cost of
-# evaluating any $(...) in the string; that is not worth it for a case cmake
-# already covers better.  If a genuinely space-containing option ever comes up,
-# `cmake -C <initial-cache>` is the robust answer -- the values live in cmake
-# code rather than a shell string.
-#
-# Refuses MOM6_INFRA and TURBO_BUILD_UNIT_TESTS.  Those also decide Stage 1 on
-# the orchestrators -- which backend's dependencies get built, and whether pFUnit
-# is built at all -- and Stage 1 reads --infra/--tests, not these variables.
-# Setting them here builds one configuration and then configures another, which
-# surfaces as a find_package failure only after the whole dependency build has
-# been paid for.  Use --infra / --tests, which set both stages coherently.
-#
-# The check normalizes every spelling cmake accepts, not just -DVAR=value:
-# -DVAR:TYPE=value carries a type suffix, and -D VAR=value detaches the -D into
-# its own argument.  Matching only the bare form would leave the desync reachable.
+# The check matches every spelling cmake accepts -- -DVAR=, -DVAR:TYPE= and a
+# detached -D VAR= -- because matching only the bare form left that reachable.
 turbo_split_cmake_args() {
     local _str="$1" _srcname="$2" _a _name _want_val=false
     # shellcheck disable=SC2206  # word-splitting is the point; see above
