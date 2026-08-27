@@ -368,8 +368,12 @@ turbo_parse_builder_args() {
     # Stage 1 and Stage 2 agree, and Stage 1 is this layer's concern -- the Stage-2
     # script neither runs it nor knows it exists.  Parse time, so it fails before
     # any dependency is built.
-    [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]] && \
+    # An `if`, not `[[ ]] && cmd`: this is the last command in the function, so a
+    # false condition would make the function itself return 1 and kill the caller
+    # under `set -e`.
+    if [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]]; then
         turbo_assert_no_stage1_cmake_args "$TURBO_CMAKE_CONFIGURE_ARGS" TURBO_CMAKE_CONFIGURE_ARGS
+    fi
 }
 
 # The buildable submodule tiers are 1.5 and 2; a flavor builds "from" the lowest
