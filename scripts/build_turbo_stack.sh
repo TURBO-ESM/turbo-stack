@@ -137,4 +137,11 @@ fi
 
 cmake --build "$build_dir" "${cmake_build_options[@]}"
 
-turbo_run_ctest "$build_dir"
+# Unit tests are opt-in.  --tests is also what set -DTURBO_BUILD_UNIT_TESTS above,
+# and TURBO_CMAKE_CONFIGURE_ARGS is not allowed to override it, so the suite exists
+# exactly when this is true.  --no-tests=error: fail if zero tests were registered,
+# so a misconfigured suite cannot report a vacuous green (matches the legacy tests
+# Makefile).
+if [[ "$with_tests" == true ]]; then
+    ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
+fi

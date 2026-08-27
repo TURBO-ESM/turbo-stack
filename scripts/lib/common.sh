@@ -336,24 +336,6 @@ turbo_split_cmake_args() {
     done
 }
 
-# ── ctest ────────────────────────────────────────────────────────────────────
-turbo_run_ctest() {
-    local build_dir="$1"
-    local turbo_build_unit_tests
-    turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
-    case "$(printf '%s' "${turbo_build_unit_tests:-}" | tr '[:lower:]' '[:upper:]')" in
-        1|ON|YES|TRUE|Y)
-            # --no-tests=error: fail if zero tests were registered, so a
-            # misconfigured suite can't report a vacuous green (matches the
-            # legacy tests Makefile).
-            ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
-            ;;
-        *)
-            echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=${turbo_build_unit_tests:-<unset>} -- skipping ctest"
-            ;;
-    esac
-}
-
 # ── Single-backend builder core (Stage 1 + Stage 2; machine-independent) ──────
 # The shared body of every single-backend builder (build_local_with_spack_env.sh,
 # build_local_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
