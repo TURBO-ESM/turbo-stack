@@ -284,9 +284,10 @@ turbo_build_tim() {
 #
 # Whitespace-splits a list of cmake arguments into TURBO_SPLIT_ARGS.
 #
-# Word-splitting rather than eval: a value cannot contain a space and does not
-# need to.  Compiler flags go through cmake's own FFLAGS / CFLAGS / CXXFLAGS, and
-# everything else here (-DFOO=ON, --target foo) is one token.  scripts/README.md
+# Word-splitting rather than eval: no individual argument can contain a space, and
+# none needs to.  Compiler flags go through cmake's own FFLAGS / CFLAGS / CXXFLAGS,
+# and everything else here is space-free per argument -- `-DFOO=ON` is one, and
+# `--target foo` is two, neither with a space inside it.  scripts/README.md
 # has the reasoning and the `cmake -C` alternative.
 turbo_split_cmake_args() {
     # `set -f` because an unquoted expansion does pathname expansion as well as
@@ -294,11 +295,16 @@ turbo_split_cmake_args() {
     # otherwise become the file list of whatever directory the script happens to
     # be in.  Silent when it happens -- a pattern that matches nothing is left
     # alone -- so it would surface as a confusing cmake error, not as a glob.
-    # Restored immediately; no turbo script runs with noglob already on.
+    # Restored to whatever the caller had, rather than unconditionally off, so
+    # that `bash -f some-script.sh` keeps its noglob after this returns.
+    local _had_noglob
+    case $- in *f*) _had_noglob=true ;; *) _had_noglob=false ;; esac
     set -f
     # shellcheck disable=SC2206  # word-splitting is the point; see above
     TURBO_SPLIT_ARGS=($1)
-    set +f
+    if [[ "$_had_noglob" == false ]]; then
+        set +f
+    fi
 }
 
 # turbo_assert_no_stage1_cmake_args <string> <var-name-for-messages>

@@ -292,7 +292,8 @@ FFLAGS="-O2 -g" ./test_turbo_stack_locally.sh
 
 Same idea as `CMAKE_BUILD_PARALLEL_LEVEL` — CMake reads it natively, so no script
 has to forward anything. Everything the two `TURBO_CMAKE_*` variables are for
-(`-DSOME_OPTION=ON`, `--target foo`) is a single token, so whitespace splitting is
+(`-DSOME_OPTION=ON`, `--target foo`) is space-free argument by argument — `--target
+foo` is two arguments, but neither contains a space — so whitespace splitting is
 enough and no `eval` is involved.
 
 If a genuinely space-containing option ever does come up, `cmake -C
