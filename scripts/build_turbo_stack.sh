@@ -138,8 +138,10 @@ fi
 cmake --build "$build_dir" "${cmake_build_options[@]}"
 
 # Unit tests are opt-in.  --tests is also what set -DTURBO_BUILD_UNIT_TESTS above,
-# and TURBO_CMAKE_CONFIGURE_ARGS is not allowed to override it, so the suite exists
-# exactly when this is true.  --no-tests=error: fail if zero tests were registered,
+# so the suite normally exists exactly when this is true.  The orchestrators refuse
+# a TURBO_CMAKE_CONFIGURE_ARGS that sets TURBO_BUILD_UNIT_TESTS, which is what keeps
+# the two in step; run directly this script does not re-check, so overriding it here
+# and passing --tests anyway gets a --no-tests=error failure.  --no-tests=error: fail if zero tests were registered,
 # so a misconfigured suite cannot report a vacuous green (matches the legacy tests
 # Makefile).
 if [[ "$with_tests" == true ]]; then

@@ -289,8 +289,16 @@ turbo_build_tim() {
 # everything else here (-DFOO=ON, --target foo) is one token.  scripts/README.md
 # has the reasoning and the `cmake -C` alternative.
 turbo_split_cmake_args() {
+    # `set -f` because an unquoted expansion does pathname expansion as well as
+    # word-splitting, and only the splitting is wanted: `--target *` would
+    # otherwise become the file list of whatever directory the script happens to
+    # be in.  Silent when it happens -- a pattern that matches nothing is left
+    # alone -- so it would surface as a confusing cmake error, not as a glob.
+    # Restored immediately; no turbo script runs with noglob already on.
+    set -f
     # shellcheck disable=SC2206  # word-splitting is the point; see above
     TURBO_SPLIT_ARGS=($1)
+    set +f
 }
 
 # turbo_assert_no_stage1_cmake_args <string> <var-name-for-messages>

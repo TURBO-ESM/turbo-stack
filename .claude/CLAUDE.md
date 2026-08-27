@@ -133,7 +133,8 @@ Split on whitespace, so a single argument cannot contain a space — compiler fl
 go through CMake's own `FFLAGS` / `CFLAGS` / `CXXFLAGS`, which it seeds
 `CMAKE_<LANG>_FLAGS` from at first configure. Appended after the scripts' own
 options so they override them. `MOM6_INFRA` / `TURBO_BUILD_UNIT_TESTS` are
-rejected, since those also drive Stage 1. See
+rejected **by the orchestrators**, since those also drive Stage 1;
+`build_turbo_stack.sh` run directly is Stage 2 only and does not re-check. See
 [`scripts/README.md`](../scripts/README.md).
 
 ### Spack environment
