@@ -1,5 +1,35 @@
 # Call-tree conversion plan: `horizontal_viscosity`
 
+**STALE — Phase 1 needs to be redone before Phase 2/3 execution starts on this tree (found this
+session, verified against current source, not just a line-number drift).** Everything below this
+notice reflects the state of `MOM_hor_visc.F90` at Phase 1 survey time, which no longer matches
+the current source in ways that go beyond citation drift:
+
+1. **5 direct callees of `horizontal_viscosity` are missing from the descendant list entirely** —
+   `hor_visc_GME_setup` (called at line 298), `hor_visc_Leith_grad` (705), `hor_visc_Leithy_Ah`
+   (932), `hor_visc_backscatter_h` (1025), `hor_visc_backscatter_q` (1399). These aren't the
+   "Monolith split" section's proposed future subroutines (`hor_visc_core`/`hor_visc_GME`/
+   `hor_visc_QG_Leith`/`hor_visc_ZB2020`/`hor_visc_Leithy` — different names, different
+   boundaries) — they're pre-existing code the Phase 1 survey never enumerated as callees at all.
+   Two of them (`hor_visc_Leithy_Ah`, `hor_visc_GME_setup`) contain real, undocumented
+   `pass_var`/`pass_vector` halo-exchange calls (7 of 12 total in this file) that never surface
+   anywhere in this plan as a result.
+2. **The external signature this doc calls "frozen, do not change" is missing a parameter.** The
+   real current signature (`MOM_hor_visc.F90:273-274`) has `nkblock` right after `CS`, absent
+   from this doc's citation entirely.
+3. **The entry-point line-range citation (`270-2451`) points at the wrong code today** — the real
+   `horizontal_viscosity` subroutine is `273-2186`; line 2451 falls inside `hor_visc_backscatter_h`,
+   a separate subroutine. The doc's own "2182-line body" figure matches the stale `270-2451` range
+   almost exactly, suggesting the survey was done before the Leith/backscatter/Leithy/GME logic
+   was extracted into the five separate subroutines that exist in the source today.
+
+**Do not execute Phase 2 against this document as-is.** Re-run Phase 1's survey against the
+current `MOM_hor_visc.F90` first — the descendant list, the external signature, and the
+"Monolith split" section's premise (that this splitting is still *future* work) all need
+re-verifying, not just patching the specific gaps listed above.
+
+---
+
 Entry point: `horizontal_viscosity`, `src/parameterizations/lateral/MOM_hor_visc.F90:270-2451`.
 Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 

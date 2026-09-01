@@ -65,9 +65,9 @@ likely trivial; confirm during Stage 1.
 
 **Original decision (superseded): Montgomery now, FV deferred to a later pass.** Revisited and
 reversed. The original rationale was that the FV form (`PressureForce_FV_Bouss`/`_nonBouss`,
-1965 lines, 39-field private CS, ~23 EOS call sites woven throughout, plus `ALE`/
+1979 lines, 39-field private CS, ~23 EOS call sites woven throughout, plus `ALE`/
 `calc_tidal_forcing_legacy` dependencies FV alone reaches) is far larger/more complex than the
-Montgomery form (571 lines, 17-field CS, ~8 EOS call sites) — true, but deferring it created two
+Montgomery form (570 lines, 17-field CS, ~8 EOS call sites) — true, but deferring it created two
 real complications that don't exist if both forms convert together:
 
 1. **`Set_pbce_Bouss`/`Set_pbce_nonBouss` would have had to stay raw too**, purely because
@@ -127,12 +127,12 @@ changes *how many* call sites get this treatment, not the treatment itself.
 
 | Subroutine | Direct in-tree callees | Notes |
 |---|---|---|
-| `PressureForce_Mont_nonBouss` (70-384) | `Set_pbce_nonBouss` (in-tree, converts too) | `calc_SAL`/`calc_tidal_forcing` stay external |
-| `PressureForce_Mont_Bouss` (385-650) | `Set_pbce_Bouss` (in-tree, converts too) | `calc_SAL`/`calc_tidal_forcing` stay external |
-| `Set_pbce_nonBouss` (768-879) | none | EOS calls (`calculate_density`, `calculate_density_derivs`) stay external |
-| `Set_pbce_Bouss` (651-767) | none | same |
-| `PressureForce_FV_nonBouss` (122-937) | `Set_pbce_nonBouss` (in-tree, shared with Montgomery form) | EOS calls, `calc_SAL`, `calc_tidal_forcing`/`_legacy`, `TS_*_edge_values` all stay external |
-| `PressureForce_FV_Bouss` (947-2096) | `Set_pbce_Bouss` (in-tree, shared with Montgomery form) | same |
+| `PressureForce_Mont_nonBouss` (70-376) | `Set_pbce_nonBouss` (in-tree, converts too) | `calc_SAL`/`calc_tidal_forcing` stay external |
+| `PressureForce_Mont_Bouss` (385-647) | `Set_pbce_Bouss` (in-tree, converts too) | `calc_SAL`/`calc_tidal_forcing` stay external |
+| `Set_pbce_nonBouss` (774-883) | none | EOS calls (`calculate_density`, `calculate_density_derivs`) stay external |
+| `Set_pbce_Bouss` (651-770) | none | same |
+| `PressureForce_FV_nonBouss` (134-949) | `Set_pbce_nonBouss` (in-tree, shared with Montgomery form) | EOS calls, `calc_SAL`, `calc_tidal_forcing`/`_legacy`, `TS_*_edge_values` all stay external |
+| `PressureForce_FV_Bouss` (959-2121) | `Set_pbce_Bouss` (in-tree, shared with Montgomery form) | same |
 
 ## `tv`, `ADp` — see `shared_type_unions.md`
 

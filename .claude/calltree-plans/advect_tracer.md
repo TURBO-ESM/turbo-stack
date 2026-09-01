@@ -96,6 +96,52 @@ bundled this session — `create_config_bundle_type` on the 4 physics scalars (`
 precedent) and `pass_uhr_vhr_t_hprev` (infra type, leave alone by precedent — same treatment as
 `pass_var`/`pass_vector` themselves).
 
+## Ungrouping `pass_uhr_vhr_t_hprev` for testing — real ordering dependency (verified against source, this session)
+
+If `create_group_pass`/`do_group_pass` on `CS%pass_uhr_vhr_t_hprev` is ever replaced with individual
+`pass_var`/`pass_vector` calls for testing purposes (e.g. to get a capture fixture without needing
+the grouped-pass machinery), **the replacement calls must sit where `do_group_pass` currently sits
+(line 277), not where the `create_group_pass` registrations sit (lines 180-183).** Verified by
+reading the body directly: `uhr`/`vhr`/`hprev` are all registered into the group at 180-183, then
+zeroed and refilled with real data at 191-225 (`uhr`/`vhr` from `uhtr`/`vhtr` at 202/205, `hprev`
+from the thickness reconstruction or `vol_prev` at 212-222) — all *after* registration but *before*
+the deferred exchange at line 277 actually runs. The grouped form is correct because the exchange
+is deferred until after that fill; individual `pass_var`/`pass_vector` calls issued immediately at
+the registration points would exchange the stale pre-fill (zeroed) state instead. `Reg%Tr(m)%t`
+(registered at 183) is not written anywhere in that range — only its sibling diagnostic fields
+(`ad_x`/`ad_y`/`advection_xy`/`ad2d_x`/`ad2d_y`) are zeroed at 243-269 — so it's the one array in
+this group where placement wouldn't matter, but `uhr`/`vhr`/`hprev` are order-sensitive. This is a
+testing-methodology note, not a Phase 2/3 target-classification change — the grouped calls
+themselves are still "leave alone by precedent" per the `tracer_advect_CS` section above.
+
+## `create_group_pass`/`do_group_pass` does real message aggregation — AMReX has no equivalent today (verified against source, this session)
+
+Checked the actual FMS implementation (`infra/TIM/mpp/include/mpp_group_update.fh`,
+`MPP_DO_GROUP_UPDATE_`) rather than assume: `nsend`/`nrecv` are counts of **neighboring ranks**
+(up to 8), not counts of registered fields. All fields registered into one group
+(`uhr`/`vhr`/`hprev`/every tracer, here) get packed into one shared buffer per neighbor before a
+single `mpp_send`/`mpp_recv` per neighbor — so grouping genuinely reduces MPI message count from
+`(fields × neighbors)` to `(neighbors)`, regardless of the registered fields having different grid
+staggering (that only affects how the packing step lays out each field's own index range within
+the shared buffer, not whether they can be batched).
+
+**AMReX's closest equivalent — `FillBoundary(Vector<MF*> const& mf, ...)` in
+`AMReX_FabArrayCommI.H` — exists but does not do the same thing.** Its active implementation
+(`#if 1`, the branch that actually compiles) is:
+```cpp
+for (int i = 0; i < N; ++i) { mf[i]->FillBoundary_nowait(...); }
+for (int i = 0; i < N; ++i) { mf[i]->FillBoundary_finish(); }
+```
+— each `MultiFab` still sends its own separate per-neighbor messages; this only overlaps N
+independent exchanges' latency rather than packing them into fewer messages. A genuinely
+message-packing implementation (building combined per-neighbor send/recv tag lists spanning
+multiple `MultiFab`s) exists in the same file behind `#else` but is dead code in this AMReX
+checkout, never compiled. **So an eventual AMReX port of this group has no drop-in equivalent for
+the Fortran side's actual message-count reduction** — only the smaller latency-hiding benefit, or
+custom-authored packing if true parity with the Fortran communication pattern is wanted. Doesn't
+change any Phase 2/3 decision here (the group-pass calls stay external infra, per precedent) — a
+note for whoever eventually designs the C++/AMReX replacement for this halo exchange.
+
 ## Step 2 — target classification (fixed-rule items)
 
 | Target | Classification | Skill | Notes |

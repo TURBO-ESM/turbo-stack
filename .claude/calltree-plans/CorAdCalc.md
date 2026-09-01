@@ -238,6 +238,41 @@ This tree's contributions to the shared unions:
   touches the same two fields, not `por_layer_widthU`/`V`. Narrow (2 of 4 fields) — resolves as a
   union shadow directly, no Step 3 needed.
 
+## Blockers, current as of this check (verified against source and `shared_type_unions.md`, this session)
+
+Two real external-dependency blockers, plus unfinished survey work the doc itself already flags:
+
+**Blocking (external dependencies):**
+
+1. **The combined shared-infrastructure PR hasn't landed — same blocker as `btstep`.** `CorAdCalc`
+   needs `OBC`/`AD`/`Waves`/`pbv` as union shadows. Verified directly: `pbv`
+   (`porous_barrier_type`, `MOM_variables.F90:357-364`) is still 100% raw allocatable arrays
+   (`por_face_areaU`/`por_face_areaV`/`por_layer_widthU`/`por_layer_widthV`); no shadow container
+   type exists anywhere in the source tree for any of the four (grepped repo-wide for the obvious
+   naming pattern, zero matches); `MOM_CoriolisAdv.F90` itself still has 141 raw `OBC%`/`AD%`/
+   `Waves%`/`pbv%` dereferences. This is the same combined PR `btstep.md` is also waiting on, not
+   an independent piece of work — landing it unblocks both plans' Stage 2 at once.
+2. **`Waves`'s optional-struct status is separately unresolved, even once the shadow lands.**
+   `shared_type_unions.md`'s own tracking note explicitly names "`vertvisc`'s and `CorAdCalc`'s
+   `Waves` (`optional, pointer` in both)" as one of the still-open "optional struct dummy →
+   `bind(C)`-ready" instances — no sibling skill covers this. A second, independent gap on top of
+   item 1, specific to `Waves`.
+
+**Not external blockers, but real unfinished work — Stage 1 can't just mechanically execute
+without these being settled first (both already flagged in this doc, restated here so they're
+not missed alongside the blockers above):**
+
+3. **The setup→per-scheme subroutine interface isn't fully enumerated** — "which of setup's ~15
+   outputs each per-scheme subroutine actually needs as a new dummy" is explicitly left for
+   Stage 1 to work out, not resolved by this survey (only `q`/`abs_vort` confirmed necessary so
+   far).
+4. **`gradKE`'s split-or-not is flagged for confirmation, not decided** — default is "leave
+   unsplit," but the doc says this needs explicit confirmation rather than being assumed.
+
+**Downstream, Phase-3-stage item, not a Phase-2 blocker:** whether/how `generate_cpp_bridge`
+handles the WENO/UP3 family's fixed-size (non-container) array dummies is still unresolved — see
+"The WENO/UP3 kernel family — not container targets" above. Doesn't block Phase 2 on this tree.
+
 ## Step 2 — target classification (fixed-rule items)
 
 | Target | Classification | Skill | Notes |

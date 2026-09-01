@@ -9,7 +9,18 @@ than in isolation. Kept the original filename rather than renaming to something 
 across `shared_type_unions.md` and elsewhere for no functional benefit.
 Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 
-## BLOCKING PREREQUISITE — must land before Phase 2 Stage 1 of *either* `btstep`'s or `continuity()`'s campaign touches `BT_cont`
+## BLOCKING PREREQUISITE — RESOLVED (verified against source, this session)
+
+**`BT_cont_type`'s wholesale conversion has landed.** Checked all 5 named files directly: `MOM_variables.F90`
+defines all 14 array fields as `type(RealArray_t)` (`MOM_variables.F90:319-354`) and `alloc_BT_cont_type`
+uses `%alloc(...)`; `MOM_continuity_PPM.F90` passes `BT_cont` fields straight to the container-native
+`rec%add(...)` capture calls; `MOM_barotropic.F90` has 18 real `%view(...)` call sites on `BT_cont` fields
+and zero raw dereferences; `MOM_dynamics_split_RK2.F90`/`MOM_dynamics_split_RK2b.F90` both use
+`%associated()`/`%view()` for `h_u`/`h_v`. Everything below this notice that referred to this as blocking
+is now historical context, not a live blocker — see "Other blockers, current as of this check" further down
+for what's still actually open.
+
+## BLOCKING PREREQUISITE (historical — see resolution notice above) — must land before Phase 2 Stage 1 of *either* `btstep`'s or `continuity()`'s campaign touches `BT_cont`
 
 `BT_cont_type` (defined `submodules/MOM6/src/core/MOM_variables.F90:317-352`, 16 fields: 12 allocatable
 2-D real arrays `FA_u_EE/FA_u_E0/FA_u_W0/FA_u_WW/uBT_WW/uBT_EE/FA_v_NN/FA_v_N0/FA_v_S0/FA_v_SS/vBT_SS/vBT_NN`,
@@ -45,6 +56,38 @@ picked up.
 
 Once this lands, `BT_cont` arrives at every `btstep`-tree subroutine already container-based;
 none of Stage 2 (shadow container types) is needed for it.
+
+## Other blockers, current as of this check (verified against source and `shared_type_unions.md`, this session)
+
+Three real items still stand between here and a Phase 2 start, none of them resolved by the
+`BT_cont_type` work landing:
+
+1. **The combined shared-infrastructure PR (`ADp`/`OBC`/`forces`/`VarMix`/`Waves`/`pbv`/`tv`/
+   `vertvisc_type`/`MEKE` shadow types) has not landed.** Checked directly: `accel_diag_ptrs`
+   (`ADp`) in `MOM_variables.F90` is still 100% raw Fortran pointers (`real, pointer, dimension(:,:,:)`),
+   and no shadow container type for any of these 9 types exists anywhere in the source tree — grepped
+   repo-wide for the obvious naming pattern, zero matches. Per `shared_type_unions.md`'s own
+   sequencing note, `btstep`'s Stage 1 (TreeRoot split) doesn't need to wait for this — but Stage 2
+   does, and `btstep` needs both `ADp` and `OBC` as union shadows per its own Step 2/3 table above.
+   This blocks Phase 2 from getting past Stage 1.
+2. **`BTCL_u`/`BTCL_v` array-of-struct decomposition is still a genuine skill-catalog gap.** No
+   sibling skill decomposes a derived-type array into N field containers — the 11 subroutines
+   listed in the Step 2/3 table (`find_uhbt`, `find_duhbt_du`, `uhbt_to_ubt`, `find_vhbt`,
+   `find_dvhbt_dv`, `vhbt_to_vbt`, `set_local_BT_cont_types`, `adjust_local_BT_cont_types`,
+   `set_up_BT_OBC`, `btloop_eta_predictor`, `apply_u_velocity_OBCs`, `apply_v_velocity_OBCs`) need
+   hand-authored signature restructuring (flattening `BTCL_u`/`BTCL_v` into 10 separate field
+   containers each) before `convert_array_containers`'s downward pass can reach them. Nothing built
+   this capability this session — confirmed the same gap is still open for `tracer_type`/
+   `tracer_registry_type` in `advect_tracer.md` and `OBC%segment` in `shared_type_unions.md`, none
+   of which have been resolved either.
+3. **The "optional struct dummy" mechanism is still unresolved**, confirmed still open in
+   `shared_type_unions.md`'s own tracking note, which explicitly names `set_dtbt`'s `BT_cont`
+   parameter (`optional, pointer`) as one of the instances. Blocks Step 8
+   (`convert_present_to_associated`) for `set_dtbt` specifically — the other three entry points
+   (`btstep`, `btcalc`, `bt_mass_source`) aren't affected by this particular gap.
+
+Item 1 is the one actually blocking *all four* entry points in this plan from reaching Stage 2;
+items 2 and 3 block specific subroutines/entry points within the plan once Stage 2 is reachable.
 
 ## Hard precondition checks
 

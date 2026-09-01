@@ -153,11 +153,40 @@ See `shared_type_unions.md` for the full, current field lists. This tree's contr
   in the union). Not touched by `vertvisc_coef`/`vertvisc_remnant`/their callees.
 - **`forces`**: `vertvisc` adds `omega_w2x` (new) alongside `taux`/`tauy` (already in the
   union, same unconditional-dereference/no-`associated()`-check treatment as `btstep`).
-  `vertvisc_coef` adds `frac_shelf_u`/`frac_shelf_v` (new) — **not yet confirmed** whether these
-  are `pointer`+guarded or unconditional; check before finalizing the shadow's per-field
-  treatment, same care taken for `taux`/`tauy` vs. `rigidity_ice_u/v` in `btstep.md`.
+  `vertvisc_coef` adds `frac_shelf_u`/`frac_shelf_v` (new) — **confirmed, this session**:
+  `pointer`, guarded by `associated()` (`MOM_vert_friction.F90:1418,1605`, etc.) — the `OBC`-style
+  optional-pointer treatment, not the unconditional-dereference pattern `taux`/`tauy` use. No
+  longer an open question for finalizing the shadow's per-field treatment.
 - **`VarMix`**: `find_coupling_coef_gl90` adds `kdgl90_struct` (new) alongside
   `use_variable_mixing` (already in the union from `horizontal_viscosity`).
+
+## Blockers, current as of this check (verified against source and `shared_type_unions.md`, this session)
+
+**Blocking (external dependencies):**
+
+1. **The combined shared-infrastructure PR hasn't landed — same blocker as `btstep`/`CorAdCalc`,
+   and this family needs the largest set of types from it of any tree checked so far:** `visc`
+   (`vertvisc_type`), `tv`, `OBC`, `ADp`, `forces`, `VarMix`, `Waves` — seven types, all built once
+   by that PR per the Phase 2 execution order above. Verified directly: both `vertvisc_type`
+   (`MOM_variables.F90:260-`) and `thermo_var_ptrs`/`tv` (`MOM_variables.F90:81-`) are still 100%
+   raw allocatable/pointer arrays; combined with the repo-wide check (done while verifying
+   `btstep.md`) that found no shadow container type exists anywhere for any of the 9 types this PR
+   covers. Landing it unblocks Stage 2 for all three trees checked so far at once, not just this
+   one.
+2. **`Waves`'s optional-struct status is separately unresolved**, same still-open mechanism
+   tracked in `shared_type_unions.md`. Affects `vertvisc` only — its `Waves` dummy is
+   `optional, pointer`; `vertvisc_coef` and `vertvisc_remnant` have zero optional dummies, so
+   they're unaffected by this specific gap.
+
+**Not blocking, but real unfinished survey work:** `vertvisc_CS`'s bundle field list (dedicated
+section above) is explicitly partial — "not necessarily exhaustive... `create_config_bundle_type`'s
+own execution does the final sweep." Not wrong, just incomplete; doesn't stop Stage 1 or the
+TreeRoot split, only needs finishing before Stage 3 (`create_config_bundle_type`) actually runs.
+
+**Resolved by this check, not a blocker:** `forces%frac_shelf_u`/`frac_shelf_v`'s
+`pointer`-vs-unconditional question (previously flagged as "not yet confirmed" in the `OBC`/`ADp`/
+`forces`/`VarMix` section above) — confirmed `pointer`, `associated()`-guarded. See that section,
+now updated in place rather than left as an open question here too.
 
 ## `vertvisc_CS` — bundle by precedent (no fresh Step 3 needed)
 
