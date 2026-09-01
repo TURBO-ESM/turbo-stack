@@ -143,6 +143,13 @@ Detail: [`EOS_bridge_design.md`](../.claude/calltree-plans/EOS_bridge_design.md)
   tree calls it.
 - **Important: EOS itself blocks nothing.** Every EOS-touching tree's "leave alone, view-marshal"
   classification is permanent and works today regardless of this design's implementation status.
+- Size: 6752 lines total / 4501 code across the 8 in-scope EOS-form kernel files (`MOM_EOS_linear`/
+  `_UNESCO`/`_Wright`/`_Wright_full`/`_Wright_red`/`_Jackett06`/`_Roquet_rho`/`_Roquet_SpV.F90`) —
+  the actual per-form ports, not yet started except `buggy_Wright_EOS`. `TEOS10_EOS` deferred,
+  excluded (247 lines / 136 code, vendored GSW toolbox not counted). Separately, the bridge-seam
+  file being shimmed, `MOM_EOS.F90`, is 3024 lines / 2189 code total — only a handful of its
+  generic-interface concrete routines (`calculate_density_1d`/`_2d`, etc.) actually get a shim,
+  not the whole file.
 
 ## Shared infrastructure (`shared_type_unions.md`'s combined PR — what every 🔴 above is actually waiting on)
 Detail: [`shared_type_unions.md`](../.claude/calltree-plans/shared_type_unions.md)
@@ -165,6 +172,13 @@ Detail: [`shared_type_unions.md`](../.claude/calltree-plans/shared_type_unions.m
   stays blocked until all 12 stages land together.
 - Scope is broader than the trees above: also covers `set_viscous_BBL`/`set_viscous_ML`, not yet
   given a dedicated blocker-check pass.
+- Size: 1073 lines total / 572 code across the 13 derived-type definitions being shadowed —
+  `accel_diag_ptrs` (`ADp`), `OBC_segment_type`+`ocean_OBC_type` (`OBC`), `mech_forcing`
+  (`forces`), `VarMix_CS`, `wave_parameters_CS` (`Waves`), `porous_barrier_type` (`pbv`),
+  `thermo_var_ptrs` (`tv`), `vertvisc_type`, `MEKE_type`, `tracer_type`+`tracer_registry_type`
+  (`Reg`/`Tr`), and `BT_cont_type` (already ✅ done — 36/18 of the total). This is the size of the
+  *type definitions* driving each shadow's field list, not the (much larger) set of call sites
+  across the codebase that dereference them.
 
 ---
 
