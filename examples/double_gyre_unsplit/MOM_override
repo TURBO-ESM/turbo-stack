@@ -1,26 +1,7 @@
 ! double_gyre_unsplit -- the double_gyre experiment stepped with the UNSPLIT
 ! RK2 dynamics core instead of the default split RK2 + barotropic solver.
-!
-! MOM_input, MOM_memory.h, diag_table and input.nml are symlinks to
-! ../double_gyre, so the two experiments cannot drift apart in anything but the
-! overrides below.  Keep it that way: the coverage diff between them is only
-! meaningful while the dynamics core is the sole difference.
-
-! Drop the split time stepping and select RK2 (rather than the RK3 default)
-! for the unsplit core.  USE_RK2 is only read when SPLIT is false, and it
-! defaults to false, so it is load-bearing: without it this experiment would
-! exercise MOM_dynamics_unsplit.F90 instead of MOM_dynamics_unsplit_RK2.F90.
 #override SPLIT = False
 #override USE_RK2 = True
 
-! Required for stability, NOT a free choice.  With SPLIT = False there is no
-! barotropic solver, so the external gravity wave (c = sqrt(GFS*H) =
-! sqrt(0.98*2000) ~ 44 m/s) has to be resolved by the baroclinic step.  At this
-! grid spacing (0.5 deg) that caps DT near ~600-700 s; double_gyre's DT = 1200
-! blows up on model day 1 with "Excessive energy per unit mass forced model
-! termination".  DT = 1200 and 900 abort; 600, 400, 300 and 200 complete.
-!
-! Consequence for the coverage diff against double_gyre: that comparison is not
-! DT-matched, because no single DT is valid for both cores.  The dynamics
-! signal dwarfs it, but a few percent of any global delta is the time step.
+! Required for stability:
 #override DT = 300.0
