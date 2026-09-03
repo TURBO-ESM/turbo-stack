@@ -123,7 +123,7 @@ build scripts only ever know about `MOM6_ROOT`.
 cmake configure line and to `cmake --build` respectively, by every entry point:
 
 ```bash
-TURBO_CMAKE_CONFIGURE_ARGS=-DMOM6_ENABLE_TIM_BRIDGE=ON ./test_turbo_stack_locally.sh
+TURBO_CMAKE_CONFIGURE_ARGS=-DCMAKE_EXPORT_COMPILE_COMMANDS=ON ./test_turbo_stack_locally.sh
 ```
 
 Variables rather than flags so a machine (profile, qsub directive,

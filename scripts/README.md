@@ -264,7 +264,7 @@ Two environment variables are appended to the CMake command lines:
 | `TURBO_CMAKE_BUILD_ARGS` | `cmake --build` |
 
 ```bash
-TURBO_CMAKE_CONFIGURE_ARGS=-DMOM6_ENABLE_TIM_BRIDGE=ON ./test_turbo_stack_locally.sh
+TURBO_CMAKE_CONFIGURE_ARGS=-DCMAKE_EXPORT_COMPILE_COMMANDS=ON ./test_turbo_stack_locally.sh
 TURBO_CMAKE_BUILD_ARGS=-v scripts/build_local_with_spack_env.sh --infra TIM
 ```
 
