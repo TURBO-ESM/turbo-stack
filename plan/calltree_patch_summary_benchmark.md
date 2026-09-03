@@ -85,6 +85,17 @@ that's revisited, but not a scheduling blocker for any tree.
 `OBC`, `ADp`, `Waves`, `pbv`, `MEKE` — none of their gating flags change under `benchmark` (see
 the config-diff table above). Same treatment, same reasoning, no new work.
 
+## `advect_tracer`'s group-pass gap — not a `SPLIT` issue, resolved here
+
+Unrelated to `SPLIT`/`USE_RK2` (confirmed: `advect_tracer` is called from `step_MOM_tracer_dyn`
+unconditionally on the dynamics core, `MOM.F90:1000,1653` — identical 34/526-line coverage under
+both `double_gyre` and `double_gyre_unsplit`, so it belongs in the base file, not this one or the
+`double_gyre` patch). But `advect_tracer.md` separately flags that its `create_group_pass`/
+`do_group_pass` calls (an internal grouped halo-exchange optimization) are "genuinely exercised in
+`benchmark`, not in `double_gyre`" — a `benchmark`-specific gap, which is why it's noted here
+rather than in either double_gyre-tier file. If `advect_tracer`'s Phase 2 work needs to validate
+that code path specifically, `benchmark` is the config to use.
+
 ## Net effect on tree-level blockers
 
 | Tree | Change under this patch |
