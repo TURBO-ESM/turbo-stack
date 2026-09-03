@@ -252,6 +252,48 @@ In the explicit flow you pass the `build` and `install` roots straight to the
 
 ---
 
+## The MOM6 ↔ TIM AMReX bridge
+
+`turbo_build_tim` passes `-DTIM_ENABLE_MOM_BRIDGE=ON`, which builds
+`TIM::mom_bridge` — the C++ side of the AMReX kernels MOM6 calls from the
+`#ifdef _TIM` branches in `src/core/MOM_continuity_PPM.F90`.
+
+Whether those branches are *compiled and linked* is decided entirely in MOM6, by
+two gates that between them need no flag from turbo-stack and no CI plumbing:
+
+| Gate | Mechanism | Effect |
+|---|---|---|
+| **Branch** | the CMake block exists only on `dev/turbo-debug` | the pinned `dev/turbo` cells have no such block; nothing to switch off |
+| **Backend** | `if(MOM6_INFRA STREQUAL "TIM")` in `src/CMakeLists.txt` | FMS2 stays compiled out — it cannot provide `turbotmp_*_bridge` |
+
+So the four CI cells resolve themselves:
+
+| MOM6 source | backend | `_TIM` | links `TIM::mom_bridge` |
+|---|---|---|---|
+| pinned (`dev/turbo`) | FMS2 | no | no |
+| pinned (`dev/turbo`) | TIM | no | no |
+| `dev/turbo-debug` | FMS2 | no | no |
+| `dev/turbo-debug` | TIM | **yes** | **yes** |
+
+**Why the flag here is unconditional.** TIM always *provides* the bridge; MOM6
+decides whether to use it. Only MOM6 knows whether its sources carry the call
+sites, and `build_dep` folds its cmake args into the rebuild sentinel — varying
+them per lane would rebuild TIM on every backend switch.
+
+**This buys compile + link coverage, not kernel correctness.** The guards wrap one
+arm of a runtime dispatch (`ZONAL_EDGE_THICKNESS_MODE` and five siblings, each
+defaulting to `TIMH_runFORTRAN`), so defining `_TIM` compiles that arm in without
+executing it. What it catches is Fortran-interface-vs-C++-signature drift and
+missing exports, on every build — the likeliest breakage while the two repos are
+co-developed.
+
+**Ordering.** MOM6 hard-errors at configure when `MOM6_INFRA=TIM` and
+`TIM::mom_bridge` is absent, naming the TIM rebuild flag. Since the
+`dev/turbo-debug` CI cells track that branch's tip, TIM and this flag must be in
+place *before* MOM6's side merges, or the cell goes red in between.
+
+---
+
 ## Parallel build jobs
 
 `--parallel N` / `-j N` on the orchestrators exports `CMAKE_BUILD_PARALLEL_LEVEL=N`. Every downstream `cmake --build` invocation (deps + turbo-stack) picks it up natively without any flag plumbing. You can also set `CMAKE_BUILD_PARALLEL_LEVEL` in your shell profile / qsub directive / CI config to skip the CLI flag entirely:

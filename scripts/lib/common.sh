@@ -275,8 +275,14 @@ turbo_build_amrex() {
 
 turbo_build_tim() {
     _turbo_ensure_build_dep
+    # TIM_ENABLE_MOM_BRIDGE builds TIM::mom_bridge, the C++ side of the AMReX
+    # kernels MOM6 calls from its `#ifdef _TIM` branches.  Unconditional: TIM
+    # always *provides* the bridge, and MOM6's own CMake decides whether to link
+    # it (only MOM6 knows whether its branch has the call sites).  Keying it on
+    # the lane would also defeat build_dep's sentinel, which folds cmake args into
+    # its hash -- TIM would rebuild on every backend switch.  See scripts/README.md.
     build_dep tim --build-dir "$1/tim" --install-prefix "$2" \
-        -- -D64BIT=ON -D32BIT=OFF
+        -- -D64BIT=ON -D32BIT=OFF -DTIM_ENABLE_MOM_BRIDGE=ON
 }
 
 # ── Single-backend builder core (Stage 1 + Stage 2; machine-independent) ──────
