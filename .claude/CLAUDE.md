@@ -117,6 +117,25 @@ untouched. MOM6's own submodules must be initialized either way.
 CI does the latter — `actions/checkout` puts the branch in a sibling directory
 and sets `MOM6_ROOT`. There is no turbo-stack-specific machinery for this: the
 build scripts only ever know about `MOM6_ROOT`.
+### Machine- and run-specific CMake flags
+
+`TURBO_CMAKE_CONFIGURE_ARGS` and `TURBO_CMAKE_BUILD_ARGS` are appended to the
+cmake configure line and to `cmake --build` respectively, by every entry point:
+
+```bash
+TURBO_CMAKE_CONFIGURE_ARGS=-DCMAKE_EXPORT_COMPILE_COMMANDS=ON ./test_turbo_stack_locally.sh
+```
+
+Variables rather than flags so a machine (profile, qsub directive,
+`setup_environment/` recipe) or a CI job can set them once without any script
+parsing or forwarding them — the same reasoning as `CMAKE_BUILD_PARALLEL_LEVEL`.
+Split on whitespace, so a single argument cannot contain a space — compiler flags
+go through CMake's own `FFLAGS` / `CFLAGS` / `CXXFLAGS`, which it seeds
+`CMAKE_<LANG>_FLAGS` from at first configure. Appended after the scripts' own
+options so they override them. `MOM6_INFRA` / `TURBO_BUILD_UNIT_TESTS` are
+rejected **by the orchestrators**, since those also drive Stage 1;
+`build_turbo_stack.sh` run directly is Stage 2 only and does not re-check. See
+[`scripts/README.md`](../scripts/README.md).
 
 ### Spack environment
 

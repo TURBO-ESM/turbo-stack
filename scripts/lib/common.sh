@@ -279,6 +279,69 @@ turbo_build_tim() {
         -- -D64BIT=ON -D32BIT=OFF
 }
 
+# ── Extra cmake args from the environment ────────────────────────────────────
+# turbo_split_cmake_args <string>
+#
+# Whitespace-splits a list of cmake arguments into TURBO_SPLIT_ARGS.
+#
+# Word-splitting rather than eval: no individual argument can contain a space, and
+# none needs to.  Compiler flags go through cmake's own FFLAGS / CFLAGS / CXXFLAGS,
+# and everything else here is space-free per argument -- `-DFOO=ON` is one, and
+# `--target foo` is two, neither with a space inside it.  scripts/README.md
+# has the reasoning and the `cmake -C` alternative.
+turbo_split_cmake_args() {
+    # `set -f` because an unquoted expansion does pathname expansion as well as
+    # word-splitting, and only the splitting is wanted: `--target *` would
+    # otherwise become the file list of whatever directory the script happens to
+    # be in.  Silent when it happens -- a pattern that matches nothing is left
+    # alone -- so it would surface as a confusing cmake error, not as a glob.
+    # Restored to whatever the caller had, rather than unconditionally off, so
+    # that `bash -f some-script.sh` keeps its noglob after this returns.
+    local _had_noglob
+    case $- in *f*) _had_noglob=true ;; *) _had_noglob=false ;; esac
+    set -f
+    # shellcheck disable=SC2206  # word-splitting is the point; see above
+    TURBO_SPLIT_ARGS=($1)
+    if [[ "$_had_noglob" == false ]]; then
+        set +f
+    fi
+}
+
+# turbo_assert_no_stage1_cmake_args <string> <var-name-for-messages>
+#
+# Refuses cmake args that set MOM6_INFRA or TURBO_BUILD_UNIT_TESTS.  Those decide
+# Stage 1 as well as Stage 2 -- which backend's dependencies get built, and
+# whether pFUnit is built at all (see "Pipeline" in scripts/README.md) -- and
+# Stage 1 reads --infra/--tests, not cmake args.  Setting them this way builds one
+# configuration and then configures another.
+#
+# Matches every spelling cmake accepts: -DVAR=, -DVAR:TYPE= and a detached
+# -D VAR=.  Matching only the bare form left the desync reachable.
+turbo_assert_no_stage1_cmake_args() {
+    local _srcname="$2" _a _name _want_val=false
+    turbo_split_cmake_args "$1"
+    for _a in ${TURBO_SPLIT_ARGS[@]+"${TURBO_SPLIT_ARGS[@]}"}; do
+        if [[ "$_want_val" == true ]]; then
+            _name="$_a"; _want_val=false
+        elif [[ "$_a" == "-D" ]]; then
+            _want_val=true; continue
+        elif [[ "$_a" == -D* ]]; then
+            _name="${_a#-D}"
+        else
+            continue
+        fi
+        _name="${_name%%=*}"; _name="${_name%%:*}"
+        case "$_name" in
+            MOM6_INFRA|TURBO_BUILD_UNIT_TESTS)
+                echo "Error: $_srcname sets '$_name', which also decides Stage 1." >&2
+                echo "       Stage 1 (which dependencies get built) reads --infra/--tests," >&2
+                echo "       not cmake args, so this builds one configuration and" >&2
+                echo "       compiles another.  Use --infra / --tests instead." >&2
+                exit 1 ;;
+        esac
+    done
+}
+
 # ── Single-backend builder core (Stage 1 + Stage 2; machine-independent) ──────
 # The shared body of every single-backend builder (build_local_with_spack_env.sh,
 # build_local_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
@@ -314,6 +377,16 @@ turbo_parse_builder_args() {
     done
     if [[ "$TURBO_B_INFRA" != "FMS2" && "$TURBO_B_INFRA" != "TIM" ]]; then
         echo "Error: --infra must be FMS2 or TIM (got '$TURBO_B_INFRA')" >&2; exit 1
+    fi
+    # Checked here rather than in build_turbo_stack.sh: the invariant is that
+    # Stage 1 and Stage 2 agree, and Stage 1 is this layer's concern -- the Stage-2
+    # script neither runs it nor knows it exists.  Parse time, so it fails before
+    # any dependency is built.
+    # An `if`, not `[[ ]] && cmd`: this is the last command in the function, so a
+    # false condition would make the function itself return 1 and kill the caller
+    # under `set -e`.
+    if [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]]; then
+        turbo_assert_no_stage1_cmake_args "$TURBO_CMAKE_CONFIGURE_ARGS" TURBO_CMAKE_CONFIGURE_ARGS
     fi
 }
 

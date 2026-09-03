@@ -158,7 +158,9 @@ build_dep <name>
     -- [cmake args...]
 ```
 
-Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_stack.sh`'s own pass-through).
+CMake args go after `--` (mirrors `cmake --build dir -- ...`).  This is `build_dep`'s
+own convention; `build_turbo_stack.sh` has no `--` pass-through -- extra cmake
+arguments there come from `TURBO_CMAKE_CONFIGURE_ARGS` / `TURBO_CMAKE_BUILD_ARGS`.
 
 **Source resolution** (first match wins):
 
@@ -251,6 +253,68 @@ In the explicit flow you pass the `build` and `install` roots straight to the
 `turbo_build_*` wrappers, so any layout is possible.
 
 ---
+
+## Machine- and run-specific CMake flags
+
+Two environment variables are appended to the CMake command lines:
+
+| Variable | Appended to |
+|---|---|
+| `TURBO_CMAKE_CONFIGURE_ARGS` | the `cmake` **configure** line |
+| `TURBO_CMAKE_BUILD_ARGS` | `cmake --build` |
+
+```bash
+TURBO_CMAKE_CONFIGURE_ARGS=-DCMAKE_EXPORT_COMPILE_COMMANDS=ON ./test_turbo_stack_locally.sh
+TURBO_CMAKE_BUILD_ARGS=-v scripts/build_local_with_spack_env.sh --infra TIM
+```
+
+Variables rather than flags, for the same reason `CMAKE_BUILD_PARALLEL_LEVEL` is
+one: the need is *"on this machine, always pass X"* and *"for this run, also pass
+Y"*. A variable expresses both from a shell profile, a qsub directive, a flavor's
+`setup_environment/` recipe, or a CI `env:` block — and every entry point picks
+it up without any script parsing or forwarding it.
+
+They are appended **after** the options the scripts choose themselves, and CMake
+takes the last `-D` for a given variable, so a machine can override
+`CMAKE_BUILD_TYPE` and friends.
+
+### Compiler flags go through CMake's own variables
+
+Split on whitespace, so **a single argument cannot contain a space**. That is a
+smaller limitation than it looks, because the case that needs one — per-machine
+compiler flags — is handled by CMake itself. It seeds `CMAKE_Fortran_FLAGS`,
+`CMAKE_C_FLAGS` and `CMAKE_CXX_FLAGS` from `FFLAGS`, `CFLAGS` and `CXXFLAGS` at
+first configure:
+
+```bash
+FFLAGS="-O2 -g" ./test_turbo_stack_locally.sh
+```
+
+Same idea as `CMAKE_BUILD_PARALLEL_LEVEL` — CMake reads it natively, so no script
+has to forward anything. Everything the two `TURBO_CMAKE_*` variables are for
+(`-DSOME_OPTION=ON`, `--target foo`) is space-free argument by argument — `--target
+foo` is two arguments, but neither contains a space — so whitespace splitting is
+enough and no `eval` is involved.
+
+If a genuinely space-containing option ever does come up, `cmake -C
+<initial-cache-file>` is the robust answer: the values live in CMake code rather
+than in a shell string, so no quoting question arises at all.
+
+One caveat: **the values are not re-passed when unset**, so one set once persists
+in `CMakeCache.txt` for that build directory. Ordinary CMake behaviour, but it
+means dropping the variable does not revert the setting — use `--clean` or a
+fresh `--build_dir`.
+
+`MOM6_INFRA` and `TURBO_BUILD_UNIT_TESTS` are **rejected by the orchestrators**.
+Those also decide [Stage 1](#pipeline-environment-setup--build-turbo-stack) —
+which backend's dependencies get built, and whether pFUnit is built at all — and
+Stage 1 reads `--infra`/`--tests`, not these variables. Setting them here would
+build one configuration and compile another, so it fails at argument-parse time,
+before any dependency is built. Use `--infra` and `--tests`.
+
+`build_turbo_stack.sh` on its own does *not* reject them: it is Stage 2, there is
+no Stage 1 in that invocation to disagree with, and a caller driving it directly
+is managing their own environment.
 
 ## Parallel build jobs
 

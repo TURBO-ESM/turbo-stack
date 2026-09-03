@@ -28,13 +28,13 @@
 #                       Orchestrators set CMAKE_BUILD_PARALLEL_LEVEL once for
 #                       the whole pipeline; --parallel is for per-call override.
 #   -h, --help          Print this usage text and exit.
-#   --                  End of options to this script.  Anything after `--` is
-#                       appended verbatim to `cmake --build`, e.g.
-#                         ... -- -v                 (cmake's own --verbose)
-#                         ... -- --target MOM6      (build a specific target)
-#                         ... -- -- -j 16           (forward -j 16 to the generator)
-#                       Unknown options that are NOT preceded by `--` are an
-#                       error (catches typos like --paralel).
+#
+# Extra arguments for cmake come from the environment, not from flags:
+#   TURBO_CMAKE_CONFIGURE_ARGS   appended to the cmake configure line
+#   TURBO_CMAKE_BUILD_ARGS       appended to `cmake --build`, e.g.
+#                                  TURBO_CMAKE_BUILD_ARGS=-v            (verbose)
+#                                  TURBO_CMAKE_BUILD_ARGS='--target MOM6'
+# Unknown options are an error, which catches typos like --paralel.
 
 set -eo pipefail
 
@@ -67,10 +67,10 @@ while [[ $# -gt 0 ]]; do
         --tests)        with_tests=true; shift ;;
         --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || exit 1; parallel="$2"; shift 2 ;;
         -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
-        --)             shift; break ;;
         *)
             echo "Error: unknown option '$1' to build_turbo_stack.sh" >&2
-            echo "       Pass unknown args after '--' to forward them to \`cmake --build\`." >&2
+            echo "       Extra cmake arguments come from TURBO_CMAKE_CONFIGURE_ARGS /" >&2
+            echo "       TURBO_CMAKE_BUILD_ARGS, not from flags." >&2
             exit 1
             ;;
     esac
@@ -107,6 +107,20 @@ else
     cmake_generate_options+=("-DTURBO_BUILD_UNIT_TESTS=OFF")
 fi
 
+# Machine- and run-specific configure flags.  An environment variable rather
+# than a flag: the need is "on this machine, always pass X" and "for this run,
+# also pass Y", which a variable expresses from a shell profile, a qsub
+# directive, a flavor's setup_environment recipe, or a CI `env:` block without
+# any script having to parse or forward it.  Same reasoning the repo already
+# applies to CMAKE_BUILD_PARALLEL_LEVEL.
+#
+# Placed after the options above so a machine can override what this script
+# chose.
+if [[ -n "${TURBO_CMAKE_CONFIGURE_ARGS:-}" ]]; then
+    turbo_split_cmake_args "$TURBO_CMAKE_CONFIGURE_ARGS"
+    cmake_generate_options+=("${TURBO_SPLIT_ARGS[@]}")
+fi
+
 cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 
 # Build the code.  Pass --parallel only when the caller set it; otherwise
@@ -115,25 +129,21 @@ cmake "${cmake_generate_options[@]}" -S "$source_dir" -B "$build_dir"
 cmake_build_options=()
 [[ -n "$parallel" ]] && cmake_build_options+=("--parallel" "$parallel")
 [[ "$clean" == true ]] && cmake_build_options+=("--clean-first")
-cmake --build "$build_dir" "${cmake_build_options[@]}" "$@"
+# As above, for the build phase (e.g. TURBO_CMAKE_BUILD_ARGS=-v).
+if [[ -n "${TURBO_CMAKE_BUILD_ARGS:-}" ]]; then
+    turbo_split_cmake_args "$TURBO_CMAKE_BUILD_ARGS"
+    cmake_build_options+=("${TURBO_SPLIT_ARGS[@]}")
+fi
 
-# Test
-# Honor TURBO_BUILD_UNIT_TESTS: when CMake configured with the option OFF, the
-# tests/ subdir is skipped (see CMakeLists.txt) and ctest has nothing to run.
-# Read the resolved value from the CMake cache and run ctest when it is
-# CMake-truthy.  CMake treats 1 / ON / YES / TRUE / Y (any case) as true and
-# everything else (OFF / 0 / NO / FALSE / empty / unreadable cache) as false;
-# match that same set so a truthy-but-not-"ON" value (e.g. a build dir configured
-# with -DTURBO_BUILD_UNIT_TESTS=TRUE, which still builds the suite) can't skip
-# ctest and report a vacuous green.
-turbo_build_unit_tests=$(grep -m1 '^TURBO_BUILD_UNIT_TESTS:BOOL=' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)
-case "$(printf '%s' "${turbo_build_unit_tests:-}" | tr '[:lower:]' '[:upper:]')" in
-    1|ON|YES|TRUE|Y)
-        # --no-tests=error: fail if zero tests were registered, so a misconfigured
-        # suite can't report a vacuous green (matches the legacy tests Makefile).
-        ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
-        ;;
-    *)
-        echo "[build_turbo_stack] TURBO_BUILD_UNIT_TESTS=${turbo_build_unit_tests:-<unset>} -- skipping ctest"
-        ;;
-esac
+cmake --build "$build_dir" "${cmake_build_options[@]}"
+
+# Unit tests are opt-in.  --tests is also what set -DTURBO_BUILD_UNIT_TESTS above,
+# so the suite normally exists exactly when this is true.  The orchestrators refuse
+# a TURBO_CMAKE_CONFIGURE_ARGS that sets TURBO_BUILD_UNIT_TESTS, which is what keeps
+# the two in step; run directly this script does not re-check, so overriding it here
+# and passing --tests anyway gets a --no-tests=error failure.  --no-tests=error: fail if zero tests were registered,
+# so a misconfigured suite cannot report a vacuous green (matches the legacy tests
+# Makefile).
+if [[ "$with_tests" == true ]]; then
+    ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
+fi
