@@ -7,16 +7,30 @@ straining. **Every per-entry-point plan file references this file for these type
 duplicating or pointing at each other.** Update this file, not a per-entry-point plan, when a
 new tree needs one of these types.
 
-## Execution: one combined infrastructure PR, ahead of every entry point (user decision)
+## Execution: one combined infrastructure PR, ahead of every entry point (user decision — now empty)
 
-Every shadow type in this file **except `forces` and `vertvisc_type`** (see their own dedicated
-"Mechanism decision" section below — revised this session, no longer part of this combined PR) —
-`ADp`, `OBC`, `VarMix`, `Waves`, `pbv`, `tv`, `MEKE` via `create_shadow_container_type`;
+**Status: this PR has shrunk from 9 types to 0.** Originally covered `ADp`, `OBC`, `forces`,
+`VarMix`, `Waves`, `pbv`, `tv`, `vertvisc_type`, `MEKE`. `forces`/`vertvisc_type` moved out to
+their own local shadows in an earlier session (see "Mechanism decision" below). This session, the
+remaining seven — `OBC`, `ADp`, `tv`, `VarMix`, `Waves`, `pbv`, `MEKE` — were all **deferred until
+needed** (see "Mechanism decision 2" below), `OBC` included. `BT_cont_type`'s wholesale conversion
+(see below) is already done and is the only stage this PR ever actually completed. The remaining
+paragraphs in this section describe the original rationale for bundling multiple types into one
+PR — retained as historical record (it's still exactly why `forces`/`vertvisc_type` needed
+building once and shared when they were live shadow candidates, and would apply again if any of
+the seven deferred types gets un-deferred alongside another that shares its fields), not because
+anything is actively queued under it right now.
+
+Every shadow type in this file — historically, before the deferrals above — `ADp`, `OBC`,
+`forces`, `VarMix`, `Waves`, `pbv`, `tv`, `vertvisc_type`, `MEKE` via `create_shadow_container_type`;
 `tracer_registry_type`/`tracer_type` via its own hand-authored decomposition (no sibling skill
 covers it, see its section above); `BT_cont_type` via its own wholesale-conversion route (see
-below) — gets built **once**, on **one dedicated branch, landing as one combined PR**, before any
-entry point's own Phase 2 runs, not as a side effect of whichever entry point happens to reach
-Phase 2 Stage 2 first. Same principle across all three mechanisms, just different tooling per type.
+below) — was to get built **once**, on **one dedicated branch, landing as one combined PR**,
+before any entry point's own Phase 2 runs, not as a side effect of whichever entry point happens
+to reach Phase 2 Stage 2 first. Same principle across all three mechanisms, just different tooling
+per type. **Now that nothing remains active, this section is kept for the stage-numbering history
+below and as the template to reapply if/when any deferred type comes back into scope alongside
+another that shares its fields.**
 
 **Why**: without this, whichever entry-point PR runs Stage 2 first for a given type (say `OBC`)
 is the one that actually authors that type's definition and generic build/copy-back logic —
@@ -206,61 +220,119 @@ conversion efforts share the same field. Checked field-by-field:
 4. **`vertvisc_type%h_ML`** — folded into `tracer_hordiff`'s own tree-local shadow work, unrelated
    to the vertvisc-family cluster's shadow.
 
-**Net effect on the combined PR:** shrinks from 9 types to 7 (`OBC`, `ADp`, `tv`, `VarMix`,
-`Waves`, `pbv`, `MEKE`). The per-type sections for `forces` and `vertvisc_type` below, and the
-stage list immediately after this one, are updated to match.
+**Net effect on the combined PR (at the time):** shrinks from 9 types to 7 (`OBC`, `ADp`, `tv`,
+`VarMix`, `Waves`, `pbv`, `MEKE`). The per-type sections for `forces` and `vertvisc_type` below
+reflect this. **Superseded by "Mechanism decision 2" immediately below, which narrows the
+remaining 7 down to 1 (`OBC`).**
 
-### Stages within the combined PR
+## Mechanism decision 2: `OBC`/`ADp`/`tv`/`VarMix`/`Waves`/`pbv`/`MEKE` all deferred until needed — the precedent applied to itself too (user decision, this session, corrected)
 
-One branch, one PR, but **not** one unstaged commit — same commit/verify/push/CI-check/stop
-discipline as every entry-point plan's own Phase 2, applied here because ~8 types across 3
-different mechanisms is too much surface to verify in one shot, and because a real dependency
-exists between two of them (below). (`forces` and `vertvisc_type` are no longer part of this list
-— see "Mechanism decision" above; they're built as their own small, independently-scheduled local
-shadows, not staged into this PR.)
+Follow-up to the runtime exercise audit above, which found `OBC`/`ADp`/`tv`/`VarMix`/`Waves`/
+`pbv`/`MEKE` **all** PASSED-BUT-INERT under both `double_gyre` and `double_gyre_unsplit` — every
+guard check (`associated(...)`, `present(...)`, config flags) evaluates correctly, but no field
+carries real non-default data under either config. `forces`/`vertvisc_type` were the only two
+types with genuine live payload, and were already pulled out of this PR (see "Mechanism decision"
+above). **Decision: apply the same treatment `continuity()` already gave `OBC` historically to
+all seven remaining inert types, `OBC` included** — across every currently-active entry-point plan
+that touches any of them. (Corrected in-session: an earlier pass at this decision kept `OBC` itself
+active as the "anchor" rather than deferring it too — that was a misreading of the instruction.
+The whole point is that `OBC` was already sitting in this exact bucket via `continuity()`, so it
+belongs in the deferral, not outside it.)
 
-1. **`BT_cont_type` — wholesale conversion.** Independent of everything else in this file (its
-   own mechanism, its own five files — `MOM_variables.F90`, `MOM_continuity_PPM.F90`,
-   `MOM_barotropic.F90`, `MOM_dynamics_split_RK2.F90`, `MOM_dynamics_split_RK2b.F90`). See
-   `btstep.md`'s "BLOCKING PREREQUISITE" section for the full field list and reasoning — that
-   section's "track it as its own piece of work" now means "Stage 1 here," not a separately
-   scheduled effort.
-2. **`tracer_registry_type`/`tracer_type` — hand-authored decomposition.** Must land **before**
-   Stage 3, not just before entry points — `OBC`'s `segment(:)%tr_Reg` field is a pointer to a
-   nested `tracer_registry_type`, so `OBC`'s shadow can't marshal that field until `tracer_type`'s
-   own per-field container decomposition already exists. This is the one genuine ordering
-   dependency in this file; every other stage is independent of every other.
-3. **`OBC` — union shadow.** Depends on Stage 2 (above). Confirm the full current field list
-   (top-level + per-segment, including the `tr_Reg` nesting) against this file's `OBC` section
-   before building, since it has grown substantially across trees.
-4. **`ADp` — union shadow.** Mutually independent of every other remaining type. ~20 fields
-   across 5 trees (`btstep`, `horizontal_viscosity`, `vertvisc`, `CorAdCalc`, `PressureForce`) —
-   confirm the current full list against this file's `ADp` section before building.
-5. **`tv` — union shadow.** Independent. 7 fields touched (`SpV_avg`, `T`, `S`, `P_Ref`,
-   `eqn_of_state`, `varT`, `p_surf`) out of the widest-shared type in the campaign (101 files) —
-   `eqn_of_state` stays an opaque handle, no EOS-specific work needed here.
-   *(`ADp` and `tv` ordered first among the remaining types since `PressureForce` — the
-   recommended next entry-point plan to execute — needs both and nothing else in this group.)*
-6. **`pbv` — union shadow.** Independent, 4 fields, no open items.
-7. **`VarMix` — union shadow.** Independent. Moderate care needed: only ~14 of the underlying
-   type's ~89 fields are touched — confirm the current list (grown substantially from
-   `tracer_hordiff`) before carving out the shadow's field subset.
-8. **`Waves` — union shadow.** Independent, but **not mechanical like 4-7** — still carries the
-    unresolved "optional struct dummy" open item (`Waves` is `optional, pointer` in every
-    consuming tree). Building this shadow means resolving, at least for this one type, how the
-    shared build/copy-back API signals "not present" — genuine design work, not just authorship.
-    Isolated in its own stage precisely so it doesn't hold up 4-7 while that gets worked out.
-9. **`MEKE` — union shadow.** Independent, but has its own pre-check: `tracer_hordiff`'s 2 needed
-    fields (`Kh`, `KhTr_fac`) haven't been confirmed against `horizontal_viscosity`'s "most/all 15
-    fields" — itemize `horizontal_viscosity`'s exact field list first, so this shadow is built
-    complete on this pass rather than needing a later widening. Isolated in its own stage for the
-    same reason as `Waves`.
-10. **Whole-package verification, before the final commit.** Cross-check every shadow's field list
-   against what every entry-point plan (`btstep.md`, `horizontal_viscosity.md`,
-   `vertvisc_family.md`, `CorAdCalc.md`, `PressureForce.md`, `set_viscosity_family.md`,
-   `advect_tracer.md`, `tracer_hordiff.md`) actually records needing — confirm nothing is missing,
-   confirm each shadow's build/copy-back API is documented well enough for an entry-point's own
-   wrapper-side glue to consume it without re-deriving anything.
+**What "the same treatment as `OBC` in `continuity()`" means, concretely** (see the confirmation
+given earlier this session): `continuity()` never built a shadow for `OBC` at all — it dereferenced
+`OBC`'s fields as plain, unconverted Fortran, no `%view()`, no container, no marshalling boundary —
+and treated building a real shadow as strictly optional/non-blocking, revisited only when a later
+tree's need justified it. Applying that here, to all seven: `OBC`, `ADp`, `tv`, `VarMix`, `Waves`,
+`pbv`, `MEKE` are reclassified from `create_shadow_container_type`/union shadow to **"leave alone —
+view-marshal at call site,"** the same classification already used for confirmed-opaque leaves
+like `CDp`/`PointAccel_CS` — except here the types genuinely *are* dereferenced (not opaque), so
+"leave alone" means every wrapper keeps reading their fields with ordinary Fortran dot-notation
+exactly as the original code did, and no shadow gets built for any of them, in any tree, for now.
+
+**Why this is safe, not just convenient:** a shadow only matters once a subroutine's actual
+C++/AMReX bridge path runs and needs to read/write that type's data on the GPU side — for a type
+whose payload is always empty/false under every config this campaign currently targets, there is
+nothing yet to bridge. Building the shadow now would be marshalling machinery for data that cannot
+be exercised or verified today. Deferring costs nothing but the (currently unusable) ability to run
+these fields through the AMReX path immediately; revisit when a config that actually turns on the
+relevant physics package (open boundaries, shelf, waves, MEKE, active thermodynamics, variable
+mixing) comes into scope.
+
+**Net effect: the combined shared-infrastructure PR is now completely empty.** With `OBC` deferred
+too, there is no `create_shadow_container_type` work left for the combined PR to do at all — every
+tree's remaining dependency on it is gone. `BT_cont_type`'s wholesale conversion (done) and the
+`tracer_registry_type`/`tracer_type` hand-authored decomposition (still genuinely needed, directly,
+by `advect_tracer`/`tracer_hordiff` — not just as an `OBC%segment%tr_Reg` prerequisite, so this one
+doesn't go away) are the only pieces of "shared infrastructure" with any remaining status at all,
+and neither is part of the `create_shadow_container_type` mechanism this section is about.
+
+**Cascading effect on every entry-point plan's blockers** (detailed in each plan's own file, this
+is the summary): removing all seven types as things to wait on for a shadow leaves only each tree's
+own independent, unrelated blockers — `BTCL_u`/`BTCL_v` for `btstep`, `Reg`/`Tr` for
+`advect_tracer`/`tracer_hordiff` — as real remaining dependencies:
+
+| Tree | Combined-PR types before this session | Remaining after all deferrals |
+|---|---|---|
+| `btstep` | `ADp`, `OBC` | **none** from this mechanism — only its own `BTCL_u`/`BTCL_v` gap remains |
+| `CorAdCalc` | `OBC`, `ADp`, `Waves`, `pbv` | **none** — fully clear; `Waves`'s optional-struct-status blocker is also moot |
+| `horizontal_viscosity` | `ADp`, `MEKE`, `VarMix` (already `OBC`-free from an earlier redo) | **none** — fully clear |
+| `PressureForce` | `tv`, `ADp` | **none** — fully clear |
+| `vertvisc_family` | `tv`, `OBC`, `ADp`, `VarMix`, `Waves` | **none** from this mechanism — `Waves`'s optional-struct-status blocker is also moot |
+| `set_viscosity_family` | `tv`, `OBC` | **none** — fully clear |
+| `tracer_hordiff` | `MEKE`, `VarMix`, `tv` | **none** from this mechanism — `Reg`/`Tr` array-of-struct decomposition remains, unrelated; `MEKE`'s cross-tree field-reconciliation question is also moot |
+| `advect_tracer` | `OBC` | **none** from this mechanism — `Reg`/`Tr` array-of-struct decomposition remains, unrelated |
+
+Every tree in the campaign is now clear of `create_shadow_container_type` dependencies entirely
+**for the double_gyre_unsplit base and the double_gyre patch.** This is a real change to
+near-term scheduling, not just bookkeeping: `horizontal_viscosity`, `PressureForce`, `CorAdCalc`,
+`vertvisc_family`, and `set_viscosity_family` have **no remaining shared-infrastructure blocker of
+any kind** at those two tiers — only `btstep` (`BTCL_u`/`BTCL_v`) and `advect_tracer`/
+`tracer_hordiff` (`Reg`/`Tr`) still have a real blocker there, and both are independent
+array-of-struct-decomposition gaps, not shared-type shadow gaps.
+
+**This does not hold for a third tier, `benchmark`.** `tv` and `VarMix` specifically re-activate
+there (`ENABLE_THERMODYNAMICS=True`, `USE_VARIABLE_MIXING=True` — confirmed via coverage, real
+fields now computed, not just guard-checked) — see their own sections below and
+`plan/calltree_patch_summary_benchmark.md` for the full breakdown. `OBC`/`ADp`/`Waves`/`pbv`/`MEKE`
+stay deferred even under `benchmark` — none of their gating flags change.
+
+### Stages within the combined PR (now just `OBC` + its prerequisite — see "Mechanism decision 2" above)
+
+One branch, one PR — though with only one shadow type left, "combined" is now legacy framing (kept
+so the stage numbers below still line up with what earlier sessions call "Stage 1"). Same
+commit/verify/push/CI-check/stop discipline as every entry-point plan's own Phase 2 still applies
+whenever this picks back up. (`forces`/`vertvisc_type` were pulled out earlier — see "Mechanism
+decision" above; `OBC`/`ADp`/`tv`/`VarMix`/`Waves`/`pbv`/`MEKE` — all seven remaining
+`create_shadow_container_type` types — were deferred this session — see "Mechanism decision 2"
+above. Their old stage slots are removed below, not renumbered-and-kept, since none of them are
+scheduled at all right now.)
+
+1. **`BT_cont_type` — wholesale conversion. ✅ Done.** The only stage with any live status.
+   Independent of everything else in this file (its own mechanism, its own five files —
+   `MOM_variables.F90`, `MOM_continuity_PPM.F90`, `MOM_barotropic.F90`,
+   `MOM_dynamics_split_RK2.F90`, `MOM_dynamics_split_RK2b.F90`). See `btstep.md`'s "BLOCKING
+   PREREQUISITE" section for the full field list and reasoning.
+
+**No `create_shadow_container_type` stage is currently scheduled — this PR has nothing left to
+do.** `OBC`'s shadow (previously "Stage 3") is deferred along with the other six types (see
+"Mechanism decision 2" above). The `tracer_registry_type`/`tracer_type` hand-authored decomposition
+(previously "Stage 2," ordered ahead of `OBC`'s shadow specifically for the `segment(:)%tr_Reg`
+nesting) is **not deferred** — it's still genuinely needed, directly, by `advect_tracer` and
+`tracer_hordiff` for their own `Reg`/`Tr` dummies, independent of whether `OBC`'s shadow ever gets
+built. Track it as those two trees' own blocker (see their plan files and the blocker summary),
+not as a stage of this now-empty PR — it never needed the "combined, one-PR" treatment in the
+first place, since it's a single hand-authored decomposition, not multiple types needing
+coordinated ownership.
+
+**If `OBC`/`ADp`/`tv`/`VarMix`/`Waves`/`pbv`/`MEKE` are ever un-deferred** (a config that actually
+turns on open boundaries, shelf, wave, MEKE, thermodynamics, or variable-mixing physics comes into
+scope), each type's own section below still has its full field list preserved — pick this back up
+as new stages appended after Stage 1, not by reinserting the old numbering. Re-evaluate whether a
+"combined PR" framing is even still warranted at that point — with `forces`/`vertvisc_type` gone to
+local shadows already, un-deferring even a few of the remaining seven might be better handled the
+same way (scoped to exactly the trees that need each one) rather than automatically reconstituting
+a multi-type bundle.
 
 Each stage: do the work, verify, commit, push, check CI, stop and report — then wait, same rule
 as every entry-point plan's own Phase 2 (never start the next stage in the same turn, never
@@ -279,7 +351,15 @@ See `btstep.md`'s "BLOCKING PREREQUISITE" section (full reasoning retained there
 `btstep`). `horizontal_viscosity` and `vertvisc`/`vertvisc_coef`/`vertvisc_remnant` do not touch
 `BT_cont_type` at all — no update needed here.
 
-## `ADp` (`accel_diag_ptrs`) — union shadow
+## `ADp` (`accel_diag_ptrs`) — DEFERRED until needed (see "Mechanism decision 2" above)
+
+**Not being built now.** Confirmed PASSED-BUT-INERT under both double_gyre configs (every
+`present(ADp)` guard covered-true, but every `diag_*` field's ID gate is false since the relevant
+diagnostics aren't requested in `double_gyre`'s `diag_table` — see the runtime exercise audit
+above). Reclassified to "leave alone — view-marshal at call site" in every tree below: each
+wrapper keeps dereferencing `ADp%field` directly via plain Fortran, no shadow, until a config that
+actually requests these diagnostics comes into scope. Field list below preserved as reference for
+whenever this gets picked back up.
 
 Shared (15 files outside any conversion campaign), confirmed dereferenced (not opaque) by every
 tree below.
@@ -306,7 +386,18 @@ forward it opaquely (never dereference `ADp%field` themselves) — per the `writ
 opaque forwarding never needs the shadow at all; only `vertvisc`'s own top-level body (which
 does dereference the fields above directly) needs it.
 
-## `OBC` (`ocean_OBC_type`/`OBC_segment_type`) — union shadow
+## `OBC` (`ocean_OBC_type`/`OBC_segment_type`) — DEFERRED until needed (see "Mechanism decision 2" above)
+
+**Not being built now — corrected this session.** Confirmed PASSED-BUT-INERT under both
+double_gyre configs: `OBC_NUMBER_OF_SEGMENTS=0` (closed basin) means the pointer stays null all
+run, and every `associated(OBC)` guard downstream is covered-false (see the runtime exercise audit
+above). Reclassified to "leave alone — view-marshal at call site" in every tree below, same
+treatment `continuity()` already gave this exact type historically (see below) — extended here to
+`btstep`/`CorAdCalc`/`horizontal_viscosity`/`vertvisc_family`/`set_viscosity_family`/
+`advect_tracer` too, not just `continuity()`. This is the type that originally justified the whole
+combined-PR mechanism (widest cross-tree sharing, 44 files); deferring it rather than building its
+shadow removes the last live reason for that mechanism to exist at all. Field list below preserved
+as reference for whenever this gets picked back up — e.g. a config with actual open boundaries.
 
 Shared (44 files outside any conversion campaign, 13 of which deeply dereference it — see
 `btstep.md` for why wholesale conversion isn't tractable here, unlike `BT_cont_type`).
@@ -384,7 +475,18 @@ cluster (with `btstep`); every other row is either single-tree or already inside
 owns `vertvisc_type`'s own local shadow (next section) — no combined PR involvement for any `forces`
 field anymore.
 
-## `VarMix` (`VarMix_CS`) — union shadow (upgraded from tree-scoped to union)
+## `VarMix` (`VarMix_CS`) — DEFERRED for double_gyre/double_gyre_unsplit, UN-DEFERRED for the benchmark patch
+
+**Not being built for the double_gyre_unsplit base or the double_gyre patch.** Confirmed
+PASSED-BUT-INERT under both double_gyre configs — its `use_variable_mixing` guard is genuinely
+true (force-enabled by an unrelated default), but every real numeric field (`Res_fn_*`, `SN_*`,
+etc.) is never computed (`calc_resoln_function`/`calc_slope_functions` return early or aren't
+called at all — see the runtime exercise audit above). Reclassified to "leave alone — view-marshal
+at call site" for those two tiers. **Un-deferred for the `benchmark` patch**, which sets
+`USE_VARIABLE_MIXING=True` (vs. `False` under both double_gyre configs) — coverage confirms real
+fields now computed (`MOM_lateral_mixing_coeffs.F90`: 13.5%→34.9%). See
+`plan/calltree_patch_summary_benchmark.md` for the full tree-level breakdown. Field list below
+was already complete before the deferral — no re-survey needed to re-activate it.
 
 ~89 fields total, shared 12 files. Was tree-scoped to `horizontal_viscosity` alone; now a
 3-tree union with `vertvisc_coef` (via `find_coupling_coef_gl90`) and `tracer_hordiff`
@@ -401,7 +503,16 @@ field anymore.
 Still a modest fraction of the type's ~89 fields (10 of 89) — narrow shadow remains the right
 call, no Step 3 quantification needed even as a 3-tree union.
 
-## `Waves` (`wave_parameters_CS`) — promoted to union (was tree-scoped to `vertvisc` only)
+## `Waves` (`wave_parameters_CS`) — DEFERRED until needed (see "Mechanism decision 2" above)
+
+**Not being built now.** Confirmed PASSED-BUT-INERT under both double_gyre configs
+(`USE_WAVES=False`; guard covered-false, body never runs — the unsplit dynamics core doesn't even
+pass a `Waves` argument into `CorAdCalc` at all — see the runtime exercise audit above).
+Reclassified to "leave alone — view-marshal at call site" for `vertvisc`/`CorAdCalc`. This also
+makes the "optional struct dummy" open item below **moot for `Waves` specifically** — there's no
+shadow being built, so there's no "how does the shared build/copy-back API signal not-present"
+question to resolve for it right now. Field list preserved as reference for whenever this gets
+picked back up.
 
 `vertvisc` and `CorAdCalc` both need this now. **Correction to the file count**: `vertvisc`'s
 own survey said 14 files repo-wide; `CorAdCalc`'s survey, done more carefully (case-insensitive,
@@ -415,8 +526,15 @@ since the type is actually spelled `wave_parameters_CS` lowercase at its definit
 
 `Waves` is `optional, pointer` in both signatures — extends the optional-struct open item below.
 
-## `pbv` (`porous_barrier_type`) — new union (first appearance, already shared with a
-pre-existing, already-converted campaign)
+## `pbv` (`porous_barrier_type`) — DEFERRED until needed (see "Mechanism decision 2" above)
+
+**Not being built now, for `CorAdCalc`/`set_viscous_BBL` either** — extending the same treatment
+`continuity()` already gave this type (see below: `continuity()` left it fully raw from the
+start, never building a shadow at all). Confirmed PASSED-BUT-INERT under both double_gyre configs:
+fields are dereferenced unconditionally, but `USE_POROUS_BARRIER=False` means the values are
+always the trivial "fully open" default — the real geometry calculation in
+`MOM_porous_barriers.F90` never runs (see the runtime exercise audit above). Reclassified to
+"leave alone — view-marshal at call site" everywhere. Field list preserved as reference.
 
 4 fields (`MOM_variables.F90:355-362`, all public allocatable 3-D real arrays):
 `por_face_areaU`, `por_face_areaV`, `por_layer_widthU`, `por_layer_widthV`. Shared 10 files.
@@ -434,12 +552,26 @@ tree to need all 4 fields (`set_viscous_ML` doesn't take `pbv` at all).
 | `por_face_areaU`, `por_face_areaV` | continuity, CorAdCalc, set_viscous_BBL |
 | `por_layer_widthU`, `por_layer_widthV` | set_viscous_BBL |
 
-Narrow enough (all 4 of 4 fields, still just one small type) to resolve as a union shadow directly, no Step 3 needed — same
-shape as `OBC`'s reasoning (shared with an already-completed campaign that never converted the
-type itself, not a candidate for wholesale conversion the way `BT_cont_type` was, since
-continuity() adopting this shadow later is optional/non-blocking, same as `OBC`).
+Narrow enough (all 4 of 4 fields, still just one small type) that building a union shadow would
+have been mechanical, no Step 3 needed — but per "Mechanism decision 2" above, it's deferred
+instead, same reasoning as `OBC`: `continuity()` never converted the type itself, not a candidate
+for wholesale conversion the way `BT_cont_type` was, and `continuity()` (or any other tree)
+adopting a shadow later remains fully optional/non-blocking.
 
-## `tv` (`thermo_var_ptrs`) — promoted to union (was tree-scoped to `vertvisc_coef`/`vertvisc_remnant`)
+## `tv` (`thermo_var_ptrs`) — DEFERRED for double_gyre/double_gyre_unsplit, UN-DEFERRED for the benchmark patch
+
+**Not being built for the double_gyre_unsplit base or the double_gyre patch.** Confirmed
+PASSED-BUT-INERT under both double_gyre configs — `ENABLE_THERMODYNAMICS=False` means
+`tv%eqn_of_state` is never `associated`, `T`/`S` never populated (see the runtime exercise audit
+above and `EOS_bridge_design.md`'s corrected caveat). Reclassified to "leave alone —
+view-marshal at call site" for `PressureForce`, `tracer_hordiff`, `set_viscosity_family`, and the
+vertvisc-family cluster (`vertvisc_coef`/`vertvisc_remnant`) alike, for those two tiers only.
+**Un-deferred for the `benchmark` patch**, which sets `ENABLE_THERMODYNAMICS=True` — coverage
+confirms real EOS kernel execution now (`MOM_EOS.F90`: 0.3%→13.5%; the actual resolved form,
+`MOM_EOS_Wright_full.F90`: 0.0%→31.3% — the first real runtime validation of
+`EOS_bridge_design.md`'s tier-1 claim for this form). See `plan/calltree_patch_summary_benchmark.md`
+for the full tree-level breakdown. Field list below was already complete before the deferral — no
+re-survey needed to re-activate it.
 
 Shared 101 files repo-wide — the widest-shared type in the whole campaign. Every tree through
 `CorAdCalc` treated `tv` as purely opaque (0 field dereferences); `vertvisc_coef`/
@@ -518,7 +650,15 @@ boundary already visible in how the fields were grouped by consuming subroutine 
 `tracer_hordiff`'s separately-tracked `h_ML` is Tier 1 but init-only (not live-loop) — see the
 runtime exercise audit above.
 
-## `MEKE` (`MEKE_type`) — promoted to union (was tree-scoped to `horizontal_viscosity` alone)
+## `MEKE` (`MEKE_type`) — DEFERRED until needed (see "Mechanism decision 2" above)
+
+**Not being built now.** Confirmed PASSED-BUT-INERT under both double_gyre configs —
+`USE_MEKE=False`; `allocated(MEKE%mom_src/Ku/Au)` guards covered-false, `step_forward_MEKE` never
+invoked (see the runtime exercise audit above). Reclassified to "leave alone — view-marshal at
+call site" for `horizontal_viscosity`/`tracer_hordiff`. This also makes the cross-tree
+field-reconciliation open item below **moot for now** — no shadow is being built, so there's
+nothing to reconcile `tracer_hordiff`'s `Kh`/`KhTr_fac` against yet. Field list preserved as
+reference for whenever a MEKE-enabled config comes into scope.
 
 15 fields, shared 11 files. `horizontal_viscosity` dereferences most/all 15 (`Ku`/`Au` feed
 `Kh`/`Ah` directly, `mom_src` written) — exact field-by-field list not itemized in
@@ -564,8 +704,13 @@ separate from the `OBC%segment` decomposition gap.
 ## Open item — optional struct dummies (cross-referenced, not resolved)
 
 First flagged in `horizontal_viscosity.md` (`BT`/`TD`/`ADp`/`STOCH` all optional structs, `OBC`
-optional+pointer combo). `vertvisc`'s and `CorAdCalc`'s `Waves` (`optional, pointer` in both) is
-the same category. `set_dtbt`'s `BT_cont` (`optional, pointer`, confirmed opaque — see
-`btstep.md`) is another instance. No existing sibling skill covers "optional struct dummy →
-bind(C)-ready" — still unresolved, still deliberately not guessed through. Resolve once,
-wherever it's next picked up, and update this note for every plan file with an instance.
+optional+pointer combo). **`ADp`'s and `OBC`'s instances are now moot** — both deferred (see
+"Mechanism decision 2" above), no shadow being built for either, so there's no presence-semantics
+to design right now; `BT`/`TD`/`STOCH` are unrelated config-bundle/tree-scoped types, unaffected.
+`vertvisc`'s and `CorAdCalc`'s `Waves` (`optional, pointer` in both) was the same category — **also
+now moot**, same reason (deferred). `set_dtbt`'s `BT_cont` (`optional, pointer`, confirmed opaque
+— see `btstep.md`) is the **only instance still live** now, since `BT_cont_type` itself is
+wholesale-converted, not deferred. No existing sibling skill covers "optional struct dummy →
+bind(C)-ready" — still unresolved for this one live instance, still deliberately not guessed
+through. Resolve whenever `set_dtbt`'s Phase 2 picks it up, and update this note if any deferred
+type (`OBC` especially, given `horizontal_viscosity`'s combo) comes back into scope.

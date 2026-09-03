@@ -154,53 +154,62 @@ as the open item in `horizontal_viscosity.md` (`BT`/`TD`/`ADp`/`STOCH`/`OBC`).
 
 ## `OBC`, `ADp`, `forces`, `VarMix` — shadows grown by this tree
 
-`OBC`, `ADp`, `VarMix` are union shadows, part of the 7-type combined shared-infrastructure PR.
-`forces` is different as of this session — its `taux`/`tauy` are a shared shadow between `btstep`
-and this vertvisc-family cluster (not the combined PR), and `omega_w2x`/`frac_shelf_u/v` are local
-to this cluster's own shadow, alongside `vertvisc_type` itself (see below and
-`shared_type_unions.md`'s "Mechanism decision" section). See `shared_type_unions.md` for the full,
-current field lists. This tree's contributions:
-- **`OBC`**: `vertvisc` touches `number_of_segments`, `segment(:)%specified`,
-  `segment(:)%HI%JsdB`, `segment(:)%normal_vel` — all already in the union from other trees, no
-  new fields from `vertvisc` itself. `vertvisc_coef`/`find_coupling_coef`/`find_coupling_coef_k`
-  add **new top-level fields** `u_E_OBCs_on_PE`, `u_W_OBCs_on_PE`, `v_N_OBCs_on_PE`,
-  `v_S_OBCs_on_PE` (scalar logical) and `segnum_u`, `segnum_v` (allocatable integer arrays) —
-  note `segnum_u`/`segnum_v` are a **new field shape** for this union: top-level arrays on
-  `ocean_OBC_type` itself, not nested under `segment(:)`, so they don't need the
-  array-of-struct decomposition treatment — ordinary `convert_array_containers` once exposed by
-  the shadow. `find_coupling_coef_gl90` touches no `OBC` fields (no `OBC` dummy).
-- **`ADp`**: `vertvisc` adds `du_dt_visc`/`dv_dt_visc`, `du_dt_str`/`dv_dt_str`,
-  `du_dt_visc_gl90`/`dv_dt_visc_gl90` (new) alongside `diag_hfrac_u/v`, `visc_rem_u/v` (already
-  in the union). Not touched by `vertvisc_coef`/`vertvisc_remnant`/their callees.
+`OBC`, `ADp`, and `VarMix` were all **deferred this session** — confirmed PASSED-BUT-INERT under
+both double_gyre configs, reclassified to leave-alone/view-marshal (see `shared_type_unions.md`'s
+"Mechanism decision 2"; `OBC` corrected in-session — an earlier pass kept it active). `forces` is
+different again — its `taux`/`tauy` are a shared shadow
+between `btstep` and this vertvisc-family cluster (not the combined PR, not deferred — genuinely
+live), and `omega_w2x`/`frac_shelf_u/v` are local to this cluster's own shadow, alongside
+`vertvisc_type` itself (see below and `shared_type_unions.md`'s "Mechanism decision" section). See
+`shared_type_unions.md` for the full, current field lists. This tree's contributions:
+- **`OBC`** (**deferred this session**): `vertvisc` touches `number_of_segments`,
+  `segment(:)%specified`, `segment(:)%HI%JsdB`, `segment(:)%normal_vel` — all already in the union
+  from other trees, no new fields from `vertvisc` itself. `vertvisc_coef`/`find_coupling_coef`/
+  `find_coupling_coef_k` add **new top-level fields** `u_E_OBCs_on_PE`, `u_W_OBCs_on_PE`,
+  `v_N_OBCs_on_PE`, `v_S_OBCs_on_PE` (scalar logical) and `segnum_u`, `segnum_v` (allocatable
+  integer arrays) — note `segnum_u`/`segnum_v` are a **new field shape** for this union: top-level
+  arrays on `ocean_OBC_type` itself, not nested under `segment(:)`, so they don't need the
+  array-of-struct decomposition treatment — ordinary `convert_array_containers` if/when this
+  shadow is un-deferred. `find_coupling_coef_gl90` touches no `OBC` fields (no `OBC` dummy). Field
+  list preserved as reference; no shadow built now — confirmed PASSED-BUT-INERT.
+- **`ADp`** (**deferred this session**): `vertvisc` adds `du_dt_visc`/`dv_dt_visc`,
+  `du_dt_str`/`dv_dt_str`, `du_dt_visc_gl90`/`dv_dt_visc_gl90` (new) alongside `diag_hfrac_u/v`,
+  `visc_rem_u/v` (already in the union). Not touched by `vertvisc_coef`/`vertvisc_remnant`/their
+  callees. Field list preserved as reference; no shadow built now — confirmed PASSED-BUT-INERT.
 - **`forces`**: `vertvisc` adds `omega_w2x` (new) alongside `taux`/`tauy` (already in the
   union, same unconditional-dereference/no-`associated()`-check treatment as `btstep`).
   `vertvisc_coef` adds `frac_shelf_u`/`frac_shelf_v` (new) — **confirmed, this session**:
   `pointer`, guarded by `associated()` (`MOM_vert_friction.F90:1418,1605`, etc.) — the `OBC`-style
   optional-pointer treatment, not the unconditional-dereference pattern `taux`/`tauy` use. No
   longer an open question for finalizing the shadow's per-field treatment.
-- **`VarMix`**: `find_coupling_coef_gl90` adds `kdgl90_struct` (new) alongside
-  `use_variable_mixing` (already in the union from `horizontal_viscosity`).
+- **`VarMix`** (**deferred this session**): `find_coupling_coef_gl90` adds `kdgl90_struct` (new)
+  alongside `use_variable_mixing` (already in the union from `horizontal_viscosity`). Field list
+  preserved as reference; no shadow built now — confirmed PASSED-BUT-INERT.
 
 ## Blockers, current as of this check (verified against source and `shared_type_unions.md`, this session)
 
-**Blocking (external dependencies):**
+**No longer blocking (resolved by deferral):**
 
-1. **The combined shared-infrastructure PR hasn't landed — same blocker as `btstep`/`CorAdCalc`.**
-   As of this session, `forces` and `vertvisc_type` are **no longer part of that PR** — they moved
-   to a local shadow scoped to this vertvisc-family cluster (`vertvisc`/`vertvisc_coef`/
+1. ✅ **The combined shared-infrastructure PR is now completely empty — this family has zero
+   remaining `create_shadow_container_type` dependencies.** `forces` and `vertvisc_type` moved to
+   a local shadow scoped to this vertvisc-family cluster (`vertvisc`/`vertvisc_coef`/
    `vertvisc_remnant`/`set_viscous_BBL`/`set_viscous_ML`), buildable independently and immediately,
-   in parallel with the combined PR (see `shared_type_unions.md`'s "Mechanism decision" section).
-   This family still needs **five** types from the combined PR — `tv`, `OBC`, `ADp`, `VarMix`,
-   `Waves` — the largest remaining set of any tree checked so far, just two smaller than before.
-   Verified directly: `thermo_var_ptrs`/`tv` (`MOM_variables.F90:81-`) is still 100% raw
-   allocatable/pointer arrays; combined with the repo-wide check (done while verifying `btstep.md`)
-   that found no shadow container type exists anywhere for any of the 7 types this PR now covers.
-   Landing it unblocks the rest of Stage 2 for this and every other tree waiting on it — but this
-   family's `visc`/`forces`-subset shadow doesn't need to wait, and can start now.
-2. **`Waves`'s optional-struct status is separately unresolved**, same still-open mechanism
-   tracked in `shared_type_unions.md`. Affects `vertvisc` only — its `Waves` dummy is
-   `optional, pointer`; `vertvisc_coef` and `vertvisc_remnant` have zero optional dummies, so
-   they're unaffected by this specific gap.
+   in an earlier session (see `shared_type_unions.md`'s "Mechanism decision" section). `OBC`/`tv`/
+   `ADp`/`VarMix`/`Waves` were **deferred this session** — confirmed PASSED-BUT-INERT under both
+   double_gyre configs, reclassified to leave-alone/view-marshal (see that file's "Mechanism
+   decision 2" section; `OBC` corrected in-session, an earlier pass kept it active). None of the
+   five deferred types need to wait on anything, or block anything — they're just not being built
+   right now. This family's own `visc`/`forces`-subset shadow was never blocked either way.
+   **This holds for double_gyre_unsplit and double_gyre only** — `tv` and `VarMix` both
+   re-activate under the `benchmark` patch (`ENABLE_THERMODYNAMICS=True`/`USE_VARIABLE_MIXING=True`
+   there): `tv%SpV_avg` for `vertvisc_coef`/`vertvisc_remnant`, `VarMix%kdgl90_struct`/
+   `use_variable_mixing` for `find_coupling_coef_gl90`. Separately, `benchmark`'s
+   `BULKMIXEDLAYER=True` upgrades this cluster's own `nkml_visc_u`/`nkml_visc_v` fields from Tier 2
+   to Tier 1 within the already-active local shadow — not a new blocker, just newly validatable.
+   See `plan/calltree_patch_summary_benchmark.md`.
+2. ✅ **`Waves`'s optional-struct status is now moot, not blocking.** With `Waves` deferred, there's
+   no shadow being built for it, so there's no presence-semantics question to resolve for
+   `vertvisc`'s `Waves` dummy right now — revisit only if `Waves` gets un-deferred.
 
 **Not blocking, but real unfinished survey work:** `vertvisc_CS`'s bundle field list (dedicated
 section above) is explicitly partial — "not necessarily exhaustive... `create_config_bundle_type`'s
@@ -251,8 +260,7 @@ signatures — this open item only affects `vertvisc` within this family.
 | `G`, `GV` | shared grid/vertical-grid types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `US` | shared scaling type | same drop mechanism | **Inconsistently used across this family** — unused in `vertvisc_remnant`, `find_coupling_coef`, `find_coupling_coef_k`, `find_ustar_mech_forcing`; used in `vertvisc_limit_vel` (`US%m_s_to_L_T`) and presumably `vertvisc_coef`/`vertvisc` themselves. Flag every unused instance for the upward-pass drop decision, same as `btstep`/`horizontal_viscosity`. |
 | `visc` | shared, dereferenced by the whole vertvisc-family cluster | `create_shadow_container_type`, **local shadow scoped to this cluster** — not the combined PR | See dedicated section above and `shared_type_unions.md`'s "Mechanism decision" section. |
-| `tv` | shared, union (promoted) | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. |
-| `OBC`, `ADp`, `VarMix`, `Waves` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. `Waves` blocked on the optional-struct open item for the wrapper-side "is it present" handling. |
+| `OBC`, `tv`, `ADp`, `VarMix`, `Waves` | shared, DEFERRED | **leave alone — view-marshal at call site** (not `create_shadow_container_type` — moved out this session) | See `shared_type_unions.md`'s "Mechanism decision 2." All five confirmed PASSED-BUT-INERT under both double_gyre configs; `Waves`'s optional-struct open item is moot now too. |
 | `forces` | shared: `taux`/`tauy` with `btstep` (cross-cluster); `omega_w2x`/`frac_shelf_u/v` local to this cluster | `create_shadow_container_type`, **shared cross-cluster + cluster-local shadow** — not the combined PR | See `shared_type_unions.md`'s "Mechanism decision" section. |
 | `CDp` | confirmed opaque throughout | leave alone | No shadow needed. |
 | `PointAccel_CS` (`CS%PointAccel_CSp`) | confirmed opaque (only reaches excluded infra) | leave alone | No shadow needed. |
@@ -261,11 +269,10 @@ signatures — this open item only affects `vertvisc` within this family.
 ## Phase 2 execution order (for this family)
 
 1. **TreeRoot split** — three separate rename+wrapper pairs (see Step 1d above).
-2. **`create_shadow_container_type`** — every one of `visc`/`tv`/`OBC`/`ADp`/`forces`/`VarMix`/
-   `Waves`'s type definitions is built once by the combined shared-infrastructure PR
-   (`shared_type_unions.md`), not here. This stage's own work is just the wrapper-side glue —
-   instantiate each shadow from this tree's own dummies, use it, copy back — in each of the three
-   entry points' wrappers that need them.
+2. **`create_shadow_container_type`** — only `visc`/`forces`'s cluster-local (and cross-cluster,
+   for `forces%taux`/`tauy`) shadows need this now. `OBC`/`tv`/`ADp`/`VarMix`/`Waves` are all
+   deferred (see `shared_type_unions.md`'s "Mechanism decision 2") — no shadow, no wrapper-side
+   glue for any of them; each entry point forwards them raw, exactly as the original code did.
 3. **`create_config_bundle_type`** — `vertvisc_CS`, once, informed by the union of all three
    entry points' usage (no per-entry-point repeats needed since they share one CS and one
    bundle).

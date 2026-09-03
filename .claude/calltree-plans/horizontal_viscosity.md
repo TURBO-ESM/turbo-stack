@@ -12,6 +12,18 @@ passes raw `u_in`/`v_in` — same subroutine, same code path either way) — con
 identical file coverage under `double_gyre` (33.3%) and `double_gyre_unsplit` (31.9%). No patch
 needed.
 
+**Shared-infrastructure status, updated this session: fully clear.** `MEKE_type`/`VarMix_CS`/
+`accel_diag_ptrs` — this tree's only three ties to `shared_type_unions.md`'s combined PR — were
+all deferred (confirmed PASSED-BUT-INERT under both double_gyre configs; see that file's
+"Mechanism decision 2"). `OBC` was already dropped from this tree's needs in an earlier redo
+(QG-Leith/ZB2020 scoped out). This tree now has **zero remaining `create_shadow_container_type`
+dependencies on anything outside itself** — only `stochastic_CS` (tree-scoped, never externally
+blocked) and `hor_visc_CS` (its own private config bundle) remain, both fully within this plan's
+own control. Nothing left to wait on. **This holds for double_gyre_unsplit and double_gyre only**
+— `VarMix` re-activates under the `benchmark` patch (`USE_VARIABLE_MIXING=True` there), and this
+tree genuinely dereferences its real fields, so `benchmark` reintroduces a real `VarMix` shadow
+dependency. See `plan/calltree_patch_summary_benchmark.md`.
+
 ## Step 1a — external signature (frozen)
 
 ```fortran
@@ -90,9 +102,9 @@ started. Every one of the 8 subroutines above needs `convert_array_containers`.
 | Type | Dummy | Fields touched / total | Shared outside tree? | Classification |
 |---|---|---|---|---|
 | `hor_visc_CS` | `CS` | 131 / 131 | No — only the 4 dynamics files hold it, always opaquely as `CS%hor_visc` | `create_config_bundle_type` — see clustering below |
-| `MEKE_type` | `MEKE`, mandatory `intent(inout)` | 8 / — (`Au`,`Ku`,`GME_snk`,`mom_src`,`mom_src_bh` arrays; `backscatter_Ro_pow`,`backscatter_Ro_c` scalars) | **Yes** — 9 other files | `create_shadow_container_type` (Step 2's fixed default for a shared type with real array fields; no other active campaign needs it converted, so wholesale is not justified) |
-| `VarMix_CS` | `VarMix`, mandatory `intent(inout)` | 5 / — (`Res_fn_h`,`Res_fn_q`,`BS_struct` arrays; `Resoln_scaled_Kh`,`use_variable_mixing` scalars) | **Yes** — 9 other files | `create_shadow_container_type`, same reasoning |
-| `accel_diag_ptrs` | `ADp`, **optional**, `intent(in)` | 6 / — (`diag_hfrac_u`,`diag_hfrac_v`,`diag_hu`,`diag_hv`,`visc_rem_u`,`visc_rem_v`, all raw arrays) | **Yes** — 13 other files | `create_shadow_container_type` **+** `convert_present_to_associated`, grouped-optional (whole-struct) form, sequenced (Decision Q1) |
+| `MEKE_type` | `MEKE`, mandatory `intent(inout)` | 8 / — (`Au`,`Ku`,`GME_snk`,`mom_src`,`mom_src_bh` arrays; `backscatter_Ro_pow`,`backscatter_Ro_c` scalars) | **Yes** — 9 other files | **DEFERRED this session** — confirmed PASSED-BUT-INERT under both double_gyre configs (`USE_MEKE=False`); leave alone, view-marshal at call site, no shadow built now. See `shared_type_unions.md`'s "Mechanism decision 2." |
+| `VarMix_CS` | `VarMix`, mandatory `intent(inout)` | 5 / — (`Res_fn_h`,`Res_fn_q`,`BS_struct` arrays; `Resoln_scaled_Kh`,`use_variable_mixing` scalars) | **Yes** — 9 other files | **DEFERRED this session** — confirmed PASSED-BUT-INERT (guard true, real fields never computed); leave alone, view-marshal at call site. See `shared_type_unions.md`'s "Mechanism decision 2." |
+| `accel_diag_ptrs` | `ADp`, **optional**, `intent(in)` | 6 / — (`diag_hfrac_u`,`diag_hfrac_v`,`diag_hu`,`diag_hv`,`visc_rem_u`,`visc_rem_v`, all raw arrays) | **Yes** — 13 other files | **DEFERRED this session** — confirmed PASSED-BUT-INERT (diagnostics not requested in `double_gyre`'s `diag_table`); leave alone via plain `present()`/`associated()`, no shadow, no grouped-optional work needed now. See `shared_type_unions.md`'s "Mechanism decision 2." |
 | `stochastic_CS` | `STOCH`, **optional**, `intent(inout)` | 3 / — (`skeb_diss` array; `skeb_frict_coef`,`skeb_use_frict` scalars) | **Yes** — 7 other files | same combination as `ADp` (Decision Q1) |
 | `ocean_OBC_type` | `OBC`, bare **optional `pointer`** | not fully enumerated (nested `%segment` etc. not expanded) | Yes — 45 other files | `convert_present_to_associated`, bare-pointer form — `present()`/`associated()` both tested at the entry point (line 233/239), never forwarded to a descendant. Exactly the `BT_cont` class of target this skill family was corrected to catch. |
 | `barotropic_CS` | `BT`, optional, `intent(in)` | 0 direct — forwarded to `hor_visc_GME_setup`, itself only used via the external accessor `barotropic_get_tav(BT,...)` | Yes — 4 other files | **Leave alone, confirmed** — zero `present(BT)` anywhere; forwarding is guarded by `CS%use_GME`, a config flag, not `present()` |
@@ -162,9 +174,9 @@ a Phase 1 decision, per `continuity_PPM_CS`'s own precedent).
 | Target | Skill | Setting |
 |---|---|---|
 | `hor_visc_CS` | `create_config_bundle_type` | 3 clusters (`leith_CS`, `leithy_CS`, `gme_setup_CS`) + 1 catch-all (`hor_visc_general_CS`, ~109 fields) + 3 standalone (`id_BS_coeff_h`, `id_BS_coeff_q`, `num_smooth_gme`) + 2 leave-alone (`ZB2020`, `diag`) — Q2 |
-| `MEKE_type` | `create_shadow_container_type` | Shared, 9 files, 5 array + 2 scalar fields touched |
-| `VarMix_CS` | `create_shadow_container_type` | Shared, 9 files, 3 array + 2 scalar fields touched |
-| `accel_diag_ptrs` (`ADp`) | `create_shadow_container_type` + `convert_present_to_associated` (grouped-optional) | Shared, 13 files, all 6 touched fields raw arrays, optional-as-whole-struct — Q1 |
+| `MEKE_type` | **DEFERRED** — leave alone, view-marshal at call site | Shared, 9 files, 5 array + 2 scalar fields touched; PASSED-BUT-INERT, not built now |
+| `VarMix_CS` | **DEFERRED** — leave alone, view-marshal at call site | Shared, 9 files, 3 array + 2 scalar fields touched; PASSED-BUT-INERT, not built now |
+| `accel_diag_ptrs` (`ADp`) | **DEFERRED** — leave alone via plain `present()`/`associated()`, no shadow | Shared, 13 files, all 6 touched fields raw arrays; PASSED-BUT-INERT, not built now — grouped-optional (Q1) work no longer applies here |
 | `stochastic_CS` (`STOCH`) | `create_shadow_container_type` + `convert_present_to_associated` (grouped-optional) | Shared, 7 files, 1 array + 2 scalar fields, optional-as-whole-struct — Q1 |
 | `ocean_OBC_type` (`OBC`) | `convert_present_to_associated`, bare-pointer form | `present()`/`associated()` both tested at the entry point only |
 | `barotropic_CS` (`BT`), `thickness_diffuse_CS` (`TD`) | leave alone | Confirmed by grep — never `present()`-tested, only config-flag-guarded |
@@ -181,16 +193,18 @@ a Phase 1 decision, per `continuity_PPM_CS`'s own precedent).
    `horizontal_viscosity`'s own name with the frozen signature (Step 1a),
    calling `_TR`. Fix up the 6 external call sites' expectations (they
    don't change — same name, same signature — but confirm via grep after).
-2. **`create_shadow_container_type`**, per `MEKE_type`, `VarMix_CS`,
-   `accel_diag_ptrs`, `stochastic_CS` — 4 shadows, built/copied-back
-   inside the wrapper. Order among the 4 doesn't matter (independent types).
+2. **`create_shadow_container_type`**, per `stochastic_CS` (`STOCH`) only — 1 shadow, built
+   tree-locally (never blocked on the combined PR). `MEKE_type`/`VarMix_CS`/`accel_diag_ptrs`
+   are **deferred this session** (see "Mechanism decision 2" in `shared_type_unions.md`) — no
+   shadow for them now; the wrapper forwards them raw, exactly as the original code did.
 3. **`create_config_bundle_type`** for `hor_visc_CS` — 3 clusters +
    1 catch-all, per the section above; update `hor_visc_init`'s body to
    populate the new bundle types instead of 131 flat fields.
 4. **Optional-array containerization** — `hu_cont`/`hv_cont` via plain
    `convert_array_containers` (no combinatorial risk, per the
-   classification table); `OBC`/`ADp`/`STOCH`'s own optionality is
-   `convert_present_to_associated`'s job (item 8), not this item's.
+   classification table); `OBC`/`STOCH`'s own optionality is
+   `convert_present_to_associated`'s job (item 8), not this item's. `ADp`'s optionality is now
+   just plain `present()`/`associated()` on the raw (deferred) type, no grouped-optional work.
 5. **`convert_array_containers` — downward pass**, root to leaves:
    `horizontal_viscosity` → `hor_visc_Leith_grad`/`hor_visc_backscatter_h`/
    `hor_visc_backscatter_q`/`hor_visc_GME_setup`/`smooth_GME`/
@@ -247,8 +261,8 @@ entry point in this campaign family.
 | Target | Skill | Decision |
 |---|---|---|
 | `hor_visc_CS` | create_config_bundle_type | 3 clusters + 1 catch-all + 3 standalone + 2 leave-alone (Q2) |
-| `MEKE_type`, `VarMix_CS` | create_shadow_container_type | shared, array fields present, no wholesale justification |
-| `accel_diag_ptrs`, `stochastic_CS` | create_shadow_container_type + convert_present_to_associated | shadow then grouped-optional (Q1) |
+| `MEKE_type`, `VarMix_CS`, `accel_diag_ptrs` | **DEFERRED** — leave alone, view-marshal | confirmed PASSED-BUT-INERT under both double_gyre configs; no shared-infra dependency left on this tree from `shared_type_unions.md`'s combined PR at all |
+| `stochastic_CS` | create_shadow_container_type + convert_present_to_associated | shadow then grouped-optional (Q1) — tree-scoped, never blocked externally |
 | `ocean_OBC_type` | convert_present_to_associated | bare-pointer form, entry point only |
 | `barotropic_CS`, `thickness_diffuse_CS`, `thermo_var_ptrs`, `G`/`GV`/`US`, `ZB2020`, `diag` | leave alone | confirmed by grep |
 | `u,v,h,uh,vh,diffu,diffv` + all locals, 8 subroutines | convert_array_containers | top-down then bottom-up (Stages 5–6) |

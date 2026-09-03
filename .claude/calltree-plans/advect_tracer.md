@@ -61,7 +61,15 @@ scalars, `G`/`GV`/`US`, and an `advect_schemes` integer array. No calls to anyth
 file — no EOS, no halo-pass calls of their own (halo passes happen in `advect_tracer`'s own body,
 around the leaf calls, via `create_group_pass`/`do_group_pass`).
 
-## `OBC` — grows the union substantially (see `shared_type_unions.md`)
+## `OBC` — grows the union substantially (see `shared_type_unions.md`); DEFERRED this session
+
+**Not being built now.** Confirmed PASSED-BUT-INERT under both double_gyre configs
+(`OBC_NUMBER_OF_SEGMENTS=0`, closed basin) — reclassified to leave-alone/view-marshal, same
+treatment `continuity()` already gave this type historically, now extended here too. Field list
+below preserved as reference for whenever this gets picked back up. The `Reg`/`Tr` array-of-struct
+decomposition gap this section flags is unaffected by the deferral — still a real, separate
+blocker (see the blockers note below), since `advect_tracer` needs `Reg`/`Tr` directly for its own
+dummies, not just via `OBC%segment%tr_Reg`.
 
 `advect_tracer`/`advect_x`/`advect_y` dereference `OBC` far more deeply than any prior tree,
 including a **new field shape not seen before**: `segment(n)%tr_Reg`, a pointer to a full nested
@@ -158,7 +166,7 @@ note for whoever eventually designs the C++/AMReX replacement for this halo exch
 | `x_first_in`, `max_iter_in`, `update_vol_prev` | optional scalars | `convert_present_to_associated` | logical/integer/logical. |
 | `domore_u`, `domore_v` (in `advect_x`/`advect_y`) | mandatory raw **logical** array dummies | `convert_array_containers` | `LogicalArray_t` confirmed to exist in `array_container_lessons` alongside `RealArray_t`/`IntArray_t` (confirmed during `tracer_hordiff`'s survey, which hit the same shape in `find_neutral_surface_positions_discontinuous`/`mark_unstable_cells`) — ordinary classification, no gap. |
 | `advect_schemes` (in `advect_x`/`advect_y`) | mandatory raw integer array dummy | `convert_array_containers` | Standard `IntArray_t`. |
-| `OBC` | shared, union (grows substantially — see above) | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. |
+| `OBC` | shared, DEFERRED (grows substantially — see above) | **leave alone — view-marshal at call site** (not `create_shadow_container_type` — moved out this session) | See `shared_type_unions.md`'s "Mechanism decision 2." Confirmed PASSED-BUT-INERT under both double_gyre configs. |
 | `Reg`/`Tr` | shared, new type, array-of-struct | hand-authored decomposition (no sibling skill) | See dedicated section above. |
 | `G`, `GV`, `US` | shared grid/scaling types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `CS` (`tracer_advect_CS`) | private, 6 fields | `create_config_bundle_type`, physics-fields-only | See dedicated section above. |
@@ -166,12 +174,12 @@ note for whoever eventually designs the C++/AMReX replacement for this halo exch
 ## Phase 2 execution order
 
 1. **TreeRoot split** — `advect_tracer` → `advect_tracer_TR` + wrapper (Step 1d).
-2. **`create_shadow_container_type`** — `OBC`'s type definition and `Reg`/`Tr`'s hand-authored
-   decomposition are both built once by the combined shared-infrastructure PR
-   (`shared_type_unions.md`), not here — the `Reg`/`Tr` decomposition specifically is shared with
-   `tracer_hordiff`, authored once, not duplicated across the two plans. This stage's own work is
-   just the wrapper-side glue — instantiate each shadow from `advect_tracer_TR`'s own dummies,
-   use it, copy back.
+2. **No `create_shadow_container_type` stage needed for `OBC`** — deferred (see
+   `shared_type_unions.md`'s "Mechanism decision 2"); `advect_tracer_TR` forwards it raw, exactly
+   as the original code did. `Reg`/`Tr`'s hand-authored decomposition is still genuinely needed
+   (unaffected by `OBC`'s deferral — see the dedicated section above) and is shared with
+   `tracer_hordiff`, authored once, not duplicated across the two plans — this remains the real
+   blocker on this stage.
 3. **`create_config_bundle_type`** — `tracer_advect_CS`, once.
 4. **Optional-array containerization** — `vol_prev`, `uhr_out`, `vhr_out`: containerize first
    (item 5 below), then `convert_present_to_associated` (item 8) — never left raw, this tree is

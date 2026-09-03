@@ -3,7 +3,8 @@
 Entry point: `PressureForce`, `submodules/MOM6/src/core/MOM_PressureForce.F90:43-86`.
 Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 Cross-reference: `.claude/calltree-plans/shared_type_unions.md` — `tv`, `ADp` grown by this
-tree; the EOS runtime-polymorphism blocking prerequisite this tree makes unavoidable to face.
+tree (both deferred as of this session — see "Mechanism decision 2" there); the EOS
+runtime-polymorphism blocking prerequisite this tree makes unavoidable to face.
 
 No pre-existing audit doc existed for this entry point — surveyed fresh, though the file
 comparison tables in `hor_visc_call_tree_audit.md`/`vert_friction_call_tree_audit.md` had
@@ -15,6 +16,17 @@ frequency differs: twice per step under the split dynamics core (predictor + cor
 per step under unsplit RK2. Coverage confirms this is a wash, not a simplification
 (`MOM_PressureForce_FV.F90`: 21.2% vs. 20.6%; the Montgomery-form physics subroutines are already
 0%-covered under **both** configs, since `double_gyre` uses the FV form). No patch needed.
+
+**Shared-infrastructure status, updated this session: fully clear.** `tv` and `ADp` — this tree's
+only two ties to `shared_type_unions.md`'s combined PR — were both deferred (confirmed
+PASSED-BUT-INERT under both double_gyre configs: `ENABLE_THERMODYNAMICS=False` means
+`tv%eqn_of_state`/`T`/`S` are never populated; `ADp`'s diagnostics aren't requested — see that
+file's "Mechanism decision 2"). This tree now has **zero remaining `create_shadow_container_type`
+dependencies** — already wasn't blocked by EOS either (see below). Nothing left to wait on from
+shared infrastructure at all. **This holds for double_gyre_unsplit and double_gyre only** — `tv`
+re-activates under the `benchmark` patch (`ENABLE_THERMODYNAMICS=True` there), and this tree
+genuinely dereferences it pervasively, so `benchmark` reintroduces a real `tv` shadow dependency.
+See `plan/calltree_patch_summary_benchmark.md`.
 
 ## Hard precondition checks
 
@@ -28,7 +40,9 @@ per step under unsplit RK2. Coverage confirms this is a wash, not a simplificati
   line 328 and `PressureForce_FV_nonBouss` line 878) — an internal fan-in within the tree. Since
   both callers of each are in scope this phase (see below), this is not a complication —
   `Set_pbce_Bouss`/`_nonBouss` just each get converted once and called consistently from both.
-- `tv`, `ADp` are shared with other actively-converted trees — see `shared_type_unions.md`.
+- `tv`, `ADp` are shared with other actively-converted trees — see `shared_type_unions.md`. Both
+  **deferred this session** (confirmed PASSED-BUT-INERT under both double_gyre configs) —
+  reclassified to leave alone/view-marshal, no shadow built now.
   `ALE_CS`, `SAL_CS`, `tides_CSp`'s type are shared far more widely (11+ files) but confirmed
   fully opaque here — leave-alone, not a shadow candidate.
 - `MOM_EOS.F90`/`MOM_density_integrals.F90` are the widest-shared subsystem touched by any tree
@@ -141,15 +155,18 @@ changes *how many* call sites get this treatment, not the treatment itself.
 | `PressureForce_FV_nonBouss` (134-949) | `Set_pbce_nonBouss` (in-tree, shared with Montgomery form) | EOS calls, `calc_SAL`, `calc_tidal_forcing`/`_legacy`, `TS_*_edge_values` all stay external |
 | `PressureForce_FV_Bouss` (959-2121) | `Set_pbce_Bouss` (in-tree, shared with Montgomery form) | same |
 
-## `tv`, `ADp` — see `shared_type_unions.md`
+## `tv`, `ADp` — see `shared_type_unions.md` (both DEFERRED this session)
 
-Both grown by this tree, and now both forms' full footprint matters (not just Montgomery's).
-`tv` is the significant one: **every subroutine in this tree genuinely dereferences
-`tv%T`/`tv%S`/`tv%P_Ref`/`tv%eqn_of_state` directly** (plus `tv%varT` in `PressureForce_FV_Bouss`
-specifically) — the first tree in the whole campaign where `tv` isn't purely opaque or a
-one-field convenience shadow. Promoted `tv` from `vertvisc_coef`'s narrow tree-scoped shadow to
-a full union as a result. `ADp` gains `sal_u`/`sal_v`/`tides_u`/`tides_v` — used in
-`PressureForce_FV_Bouss`/`_nonBouss`'s diagnostics-posting blocks, now genuinely in scope.
+Both grown by this tree, and both forms' full footprint mattered (not just Montgomery's) while
+they were active — recorded here as reference, not current work. `tv` was the significant one:
+**every subroutine in this tree genuinely dereferences `tv%T`/`tv%S`/`tv%P_Ref`/`tv%eqn_of_state`
+directly** (plus `tv%varT` in `PressureForce_FV_Bouss` specifically) — the first tree in the whole
+campaign where `tv` wasn't purely opaque or a one-field convenience shadow, which is what promoted
+it from `vertvisc_coef`'s narrow tree-scoped shadow to a full union. `ADp` gained
+`sal_u`/`sal_v`/`tides_u`/`tides_v` — used in `PressureForce_FV_Bouss`/`_nonBouss`'s
+diagnostics-posting blocks. **Both confirmed PASSED-BUT-INERT under both double_gyre configs**
+(`ENABLE_THERMODYNAMICS=False`; the `sal_u`/`tides_u`-feeding diagnostics aren't requested) — no
+shadow being built now; the wrapper keeps dereferencing both types raw, exactly as today.
 
 ## `PressureForce_Mont_CS` and `PressureForce_FV_CS` — bundle by precedent (no fresh Step 3 needed)
 
@@ -176,7 +193,7 @@ pattern). Two separate `create_config_bundle_type` invocations, one per CS type.
 | `p_atm` (bare `pointer`, no `intent`/`optional`) | raw array dummy, pointer-presence idiom | `convert_array_containers` | Same pattern as several `btstep` dummies (`eta_PF_start`, `taux_bot`, etc.) — presence via `%associated()`, not `present()`. |
 | `G`, `GV` | shared grid/vertical-grid types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `US` | shared scaling type | same drop mechanism | Confirmed **never dereferenced at all** in `Set_pbce_Bouss`/`Set_pbce_nonBouss`; lightly dereferenced elsewhere (one field in `PressureForce_Mont_Bouss`/`_nonBouss`, a handful of scale-factor keyword args in `PressureForce_FV_Bouss`/`_nonBouss`). Flag every unused instance for the upward-pass drop decision. |
-| `tv`, `ADp` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. `tv%eqn_of_state` itself stays an opaque handle, forwarded into EOS calls, never dereferenced further — `T`/`S`/`P_Ref`/`varT` need real shadow-container treatment. |
+| `tv`, `ADp` | shared, DEFERRED | **leave alone — view-marshal at call site** (not `create_shadow_container_type` — moved out this session) | See `shared_type_unions.md`'s "Mechanism decision 2." Both confirmed PASSED-BUT-INERT under both double_gyre configs. |
 | `ALE_CSp` | confirmed opaque, shared 11 files | leave alone | Forwarded whole into `TS_*_edge_values` (itself left external) by `PressureForce_FV_Bouss`/`_nonBouss`; never dereferenced. |
 | `SAL_CSp`, `tides_CSp` | confirmed opaque throughout the whole campaign (also opaque in `barotropic_CS`) | leave alone | No shadow needed anywhere. |
 | `CS` (`PressureForce_Mont_CS`, `PressureForce_FV_CS`) | private, 17 and 39 fields respectively | `create_config_bundle_type`, physics-fields-only, two separate invocations | See dedicated section above. |
@@ -189,10 +206,10 @@ pattern). Two separate `create_config_bundle_type` invocations, one per CS type.
    wrapper. Dispatch logic (4-way `if`) stays in `PressureForce_TR`'s body — now calls
    uniformly-converted code on every path, no special marshalling needed at the dispatch level
    itself.
-2. **`create_shadow_container_type`** — `tv`/`ADp`'s type definitions are built once by the
-   combined shared-infrastructure PR (`shared_type_unions.md`), not here. This stage's own work
-   is just the wrapper-side glue — instantiate each shadow from `PressureForce_TR`'s own dummies,
-   use it, copy back.
+2. **No `create_shadow_container_type` stage needed** — `tv`/`ADp` are deferred (see
+   `shared_type_unions.md`'s "Mechanism decision 2"), so there's no shadow to build or wrapper-side
+   glue to write for them; `PressureForce_TR` dereferences both types raw, exactly as the original
+   code did.
 3. **`create_config_bundle_type`** — `PressureForce_Mont_CS` and `PressureForce_FV_CS`, two
    separate invocations.
 4. **Optional-array containerization** — `pbce`, `eta` (`PressureForce`/`Mont_*`/`FV_*` forms),

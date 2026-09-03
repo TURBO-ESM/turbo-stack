@@ -14,6 +14,16 @@ No pre-existing audit doc existed for either entry point.
 regardless of `SPLIT`. Confirmed exercised identically (identical 21.6% file coverage) under both
 `double_gyre` and `double_gyre_unsplit` — only per-line hit counts differ. No patch needed.
 
+**Shared-infrastructure status, updated this session: fully clear.** `OBC`/`tv`/`pbv` — this
+pair's ties to `shared_type_unions.md`'s combined PR — were all deferred (confirmed
+PASSED-BUT-INERT under both double_gyre configs; see that file's "Mechanism decision 2"). This
+pair now has **zero remaining `create_shadow_container_type` dependencies on the combined PR**;
+its own `vertvisc_type`/`forces` cluster-local shadow work (shared with the rest of the
+vertvisc-family) was never blocked either way. **This holds for double_gyre_unsplit and
+double_gyre only** — `tv` re-activates under the `benchmark` patch (`ENABLE_THERMODYNAMICS=True`
+there), both entry points dereference it directly, so `benchmark` reintroduces a real `tv` shadow
+dependency. See `plan/calltree_patch_summary_benchmark.md`.
+
 ## Hard precondition checks
 
 - **Callers — asymmetric, unlike every prior sibling-entry-point family this session.**
@@ -34,9 +44,11 @@ regardless of `SPLIT`. Confirmed exercised identically (identical 21.6% file cov
   — if that import is ever exercised in the future, it would create a real conflict with the
   already-recorded `vertvisc_family.md` plan.
 - `tv`, `vertvisc_type` (`visc`), `forces`, `OBC`, `pbv` are all shared with other actively-
-  converted trees — see `shared_type_unions.md`. Good news: `vertvisc_type`'s entire footprint
-  here is *already* covered by `vertvisc_family`'s existing shadow field list — this is a free
-  promotion to a union, no new fields needed.
+  converted trees — see `shared_type_unions.md`. `tv`, `OBC`, `pbv` are **deferred this session**
+  (confirmed PASSED-BUT-INERT under both double_gyre configs, `OBC` corrected in-session — an
+  earlier pass kept it active). Good news for `vertvisc_type`: its entire footprint here is
+  *already* covered by `vertvisc_family`'s existing cluster-local shadow field list — a free
+  promotion, no new fields needed, and not gated on anything.
 - `MOM_EOS.F90` — both entry points call it directly (`set_viscous_BBL`: `calculate_density`,
   `calculate_density_derivs`; `set_viscous_ML`: `calculate_density_derivs`,
   `calculate_specific_vol_derivs`/`calc_spec_vol_derivs`-family — confirm exact generic name
@@ -91,9 +103,11 @@ runs a `CS%debug`-gated side-by-side comparison against trigonometric), `crv<0` 
 ## `tv`, `vertvisc_type`, `forces`, `OBC`, `pbv` — see `shared_type_unions.md`
 
 This pair's contributions:
-- **`tv`**: both entry points genuinely dereference `T`/`S`/`SpV_avg`/`eqn_of_state`/`P_Ref`/
-  `p_surf` directly (already in the union from `PressureForce`/`vertvisc_coef` — no new fields).
-  Part of the 7-type combined shared-infrastructure PR.
+- **`tv`** (**deferred this session**): both entry points genuinely dereference
+  `T`/`S`/`SpV_avg`/`eqn_of_state`/`P_Ref`/`p_surf` directly (already in the union from
+  `PressureForce`/`vertvisc_coef` — no new fields). Confirmed PASSED-BUT-INERT under both
+  double_gyre configs (`ENABLE_THERMODYNAMICS=False`) — reclassified to leave-alone/view-marshal,
+  no shadow built now. See `shared_type_unions.md`'s "Mechanism decision 2" section.
 - **`vertvisc_type`** (`visc`): **as of this session, a local shadow scoped to the whole
   vertvisc-family cluster** (`vertvisc`/`vertvisc_coef`/`vertvisc_remnant`/`set_viscous_BBL`/
   `set_viscous_ML`), not the combined PR — `set_viscous_BBL` needs `Ray_u/v`, `bbl_thick_u/v`,
@@ -107,19 +121,24 @@ This pair's contributions:
   session: confirmed a real, direct dereference at `MOM_set_viscosity.F90:2286-2288,2563-2565`**,
   not previously recorded in this pair's own field list — shared cross-cluster with `btstep`. See
   `shared_type_unions.md`'s "Mechanism decision" section for the full breakdown.
-- **`OBC`**: `set_viscous_BBL` adds **16 new top-level scalar-integer index-bound fields** —
+- **`OBC`** (**deferred this session** — corrected in-session, an earlier pass kept it active):
+  `set_viscous_BBL` adds **16 new top-level scalar-integer index-bound fields** —
   `Js_v_N_obc`/`Je_v_N_obc`/`is_v_N_obc`/`ie_v_N_obc`, `Js_v_S_obc`/`Je_v_S_obc`/`is_v_S_obc`/
   `ie_v_S_obc`, `js_u_E_obc`/`je_u_E_obc`/`Is_u_E_obc`/`Ie_u_E_obc`, `js_u_W_obc`/`je_u_W_obc`/
   `Is_u_W_obc`/`Ie_u_W_obc` — one set of 4 per direction, giving the index range wherever the
   corresponding `*_OBCs_on_PE` flag (already unioned) is true. `set_viscous_ML` needs nothing
   beyond what's already in the union. **Both entry points receive `OBC` via `CS%OBC` (a nested
   pointer field of `set_visc_CS`), not as their own top-level dummy** — the first time in this
-  campaign `OBC` arrives this way. The shadow-building logic still belongs in each wrapper, just
-  sourced from `CS%OBC` (aliased to a local pointer at the top of each subroutine today) rather
-  than a dummy argument — a mechanical variation on the established pattern, not a new one.
-- **`pbv`**: `set_viscous_BBL` touches **all 4 fields** (`por_face_areaU/V` already unioned from
-  `continuity()`/`CorAdCalc`; `por_layer_widthU/V` new). `set_viscous_ML` doesn't take `pbv` at
-  all.
+  campaign `OBC` arrives this way; note this for whenever `OBC` gets un-deferred, since the
+  shadow-building logic would need to source from `CS%OBC` (aliased to a local pointer at the top
+  of each subroutine today) rather than a dummy argument. Field list preserved as reference; no
+  shadow built now — confirmed PASSED-BUT-INERT.
+- **`pbv`** (**deferred this session**): `set_viscous_BBL` touches **all 4 fields**
+  (`por_face_areaU/V` already unioned from `continuity()`/`CorAdCalc`; `por_layer_widthU/V` new).
+  `set_viscous_ML` doesn't take `pbv` at all. Confirmed PASSED-BUT-INERT
+  (`USE_POROUS_BARRIER=False`) — reclassified to leave-alone/view-marshal, same treatment
+  `continuity()` already gave this type historically. See `shared_type_unions.md`'s "Mechanism
+  decision 2" section.
 
 ## `set_visc_CS` — bundle by precedent (no fresh Step 3 needed)
 
@@ -143,9 +162,8 @@ already confirmed: `cdrag`, `linear_drag`, `drag_bg_vel`, `debug`, `BBL_use_tida
 | `set_v_at_u`/`set_u_at_v`'s own dummies (`v`/`u`, `h`, `mask2dCv`/`mask2dCu`) | raw array dummies, `pure function` | `convert_array_containers` | **Open item**: every bridged kernel so far in this campaign has been a `subroutine` (`cpp_bridge_lessons`' own worked examples too) — confirm `generate_cpp_bridge`'s shim pattern extends cleanly to a `pure function` with a scalar return value before assuming it does; flag for Phase 3, don't force it through unreviewed. |
 | `G`, `GV` | shared grid/vertical-grid types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `US` | shared scaling type | same drop mechanism | Lightly used in both (`set_viscous_ML`: only 2 fields, `L_to_m`/`L_to_Z`) — flag for upward-pass drop consideration. |
-| `tv`, `OBC` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. |
+| `OBC`, `tv`, `pbv` | shared, DEFERRED | **leave alone — view-marshal at call site** (not `create_shadow_container_type` — moved out this session) | See `shared_type_unions.md`'s "Mechanism decision 2." All three confirmed PASSED-BUT-INERT under both double_gyre configs. |
 | `vertvisc_type`, `forces` | shared, local shadow | `create_shadow_container_type`, **vertvisc-family cluster shadow (`vertvisc_type`, `frac_shelf_u/v`, `p_surf`) + cross-cluster shadow with `btstep` (`taux`/`tauy`)** — not the combined PR | See `shared_type_unions.md`'s "Mechanism decision" section. |
-| `pbv` | shared, union | `create_shadow_container_type`, union scope (already exists from `continuity()`/`CorAdCalc`) | `set_viscous_BBL` needs all 4 fields — union grows to cover `por_layer_widthU/V`. |
 | `CS` (`set_visc_CS`) | private, 50 fields | `create_config_bundle_type`, physics-fields-only | See dedicated section above. |
 | EOS-family calls (`calculate_density`, `calculate_density_derivs`, `calculate_specific_vol_derivs`/`calc_spec_vol_derivs`) | pervasive per `EOS_bridge_design.md` | leave alone — view-marshal via the shared marshalling helper | See `EOS_bridge_design.md`; confirm exact generic-interface name for the specific-volume-derivatives call during implementation. Helper built once in the combined infrastructure PR, not authored here. |
 | `thickness_to_dz`, `find_ustar` | widely-shared leaves | leave alone — view-marshal at call site | Same treatment as `horizontal_viscosity`/`vertvisc_coef`. |
@@ -153,11 +171,10 @@ already confirmed: `cdrag`, `linear_drag`, `drag_bg_vel`, `debug`, `BBL_use_tida
 ## Phase 2 execution order
 
 1. **TreeRoot split** — two separate rename+wrapper pairs (see Step 1d above).
-2. **`create_shadow_container_type`** — `tv`/`vertvisc_type`/`forces`/`OBC`/`pbv`'s type
-   definitions are built once by the combined shared-infrastructure PR (`shared_type_unions.md`),
-   not here. This stage's own work is just the wrapper-side glue — instantiate each shadow and
-   copy back, in each of the two entry points' wrappers that need them. `OBC`'s glue sources from
-   `CS%OBC`, not a dummy — see note above.
+2. **`create_shadow_container_type`** — only `vertvisc_type`/`forces`'s cluster shadow needs this
+   now. `OBC`/`tv`/`pbv` are all deferred (see `shared_type_unions.md`'s "Mechanism decision 2") —
+   no shadow, no wrapper-side glue for any of them; both entry points forward them raw (`OBC` via
+   `CS%OBC`, see note above), exactly as the original code did.
 3. **`create_config_bundle_type`** — `set_visc_CS`, once, informed by the union of both entry
    points' usage.
 4. **Optional-array containerization** — none needed; neither entry point has any optional

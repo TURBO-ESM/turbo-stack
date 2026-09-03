@@ -3,7 +3,8 @@
 Entry point: `CorAdCalc`, `submodules/MOM6/src/core/MOM_CoriolisAdv.F90:142-1350`.
 Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 Cross-reference: `.claude/calltree-plans/shared_type_unions.md`, the authoritative source for
-`OBC`, `ADp`, `Waves`, and `pbv` (all grown or newly added by this tree).
+`OBC`, `ADp`, `Waves`, and `pbv` (all grown or newly added by this tree; all four deferred as of
+this session, `OBC` included — see "Mechanism decision 2" there).
 
 No pre-existing audit doc existed for this entry point (unlike `btstep`/`horizontal_viscosity`/
 `vertvisc`) — this plan's inventory was surveyed fresh.
@@ -13,6 +14,12 @@ cores the same way (twice per step either way, just at different line numbers/ar
 provenance) — confirmed exercised in both `double_gyre` (2,882 hits) and `double_gyre_unsplit`
 (11,520 hits; higher only because unsplit's smaller stable timestep runs more steps). No patch
 needed.
+
+**Shared-infrastructure status, updated this session: fully clear.** `OBC`/`AD`/`Waves`/`pbv` —
+this tree's only ties to `shared_type_unions.md`'s combined PR — were all deferred (confirmed
+PASSED-BUT-INERT under both double_gyre configs; see that file's "Mechanism decision 2"). This
+tree now has **zero remaining `create_shadow_container_type` dependencies**. Only the non-blocking
+survey items below (setup→per-scheme interface, `gradKE` split-or-not) remain.
 
 ## Hard precondition checks
 
@@ -26,7 +33,8 @@ needed.
   other entry point's `_init`/`_end` siblings.
 - `OBC`, `AD` (`accel_diag_ptrs`), `Waves`, `pbv` are all shared with other actively-converted or
   already-converted trees — see `shared_type_unions.md`, not a wholesale-conversion situation for
-  any of them (same reasoning as `OBC`/`BT_cont_type` in `btstep.md`).
+  any of them. All four **deferred as of this session** (confirmed PASSED-BUT-INERT under both
+  double_gyre configs), `OBC` included — corrected in-session, an earlier pass kept `OBC` active.
 
 ## Step 1d — wrapper case
 
@@ -225,44 +233,47 @@ the definer) — confirmed private, not a union candidate.
 
 ## `OBC`, `AD`, `Waves`, `pbv` — see `shared_type_unions.md`
 
-This tree's contributions to the shared unions:
-- **`OBC`**: `number_of_segments` (already unioned), plus new top-level `vorticity_config` and
-  new per-segment fields `on_pe`, and `HI%IedB`/`%JedB` (beyond the `IsdB`/`JsdB`/`isd`/`ied`
-  already unioned from other trees) — `is_N_or_S`/`is_E_or_W`/`direction`/`tangential_vel`/
-  `tangential_grad` were already unioned from `horizontal_viscosity`/`continuity`/`vertvisc`, no
-  new fields there.
-- **`AD`** (`accel_diag_ptrs`): new fields `rv_x_u`/`rv_x_v`, `gradKEu`/`gradKEv` — genuine
-  computational output storage (written directly, not just forwarded), same treatment as every
-  other tree's `ADp`/`AD` usage.
-- **`Waves`**: promoted from tree-scoped (`vertvisc` only) to a union — see
-  `shared_type_unions.md` for the corrected 10-file count (not 14) and full field list
-  (`us_x`/`us_y` shared with `vertvisc`; `Stokes_VF`/`Passive_Stokes_VF` new from this tree).
-- **`pbv`** (`porous_barrier_type`): new union entry — shared with `continuity_PPM.F90`'s
+This tree's contributions:
+- **`OBC`** (**deferred this session** — corrected in-session, an earlier pass kept it active):
+  `number_of_segments` (already unioned), plus new top-level `vorticity_config` and new
+  per-segment fields `on_pe`, and `HI%IedB`/`%JedB` (beyond the `IsdB`/`JsdB`/`isd`/`ied` already
+  unioned from other trees) — `is_N_or_S`/`is_E_or_W`/`direction`/`tangential_vel`/`tangential_grad`
+  were already unioned from `horizontal_viscosity`/`continuity`/`vertvisc`, no new fields there.
+  Field list preserved as reference; confirmed PASSED-BUT-INERT, no shadow built now.
+- **`AD`** (`accel_diag_ptrs`, **deferred this session**): new fields `rv_x_u`/`rv_x_v`,
+  `gradKEu`/`gradKEv` — genuine computational output storage (written directly, not just
+  forwarded), but confirmed PASSED-BUT-INERT under both double_gyre configs (the diagnostics that
+  would read these back aren't requested) — see `shared_type_unions.md`'s "Mechanism decision 2".
+- **`Waves`** (**deferred this session**): was promoted from tree-scoped (`vertvisc` only) to a
+  union — field list preserved in `shared_type_unions.md` (corrected 10-file count, not 14;
+  `us_x`/`us_y` shared with `vertvisc`; `Stokes_VF`/`Passive_Stokes_VF` new from this tree) — but
+  no shadow being built now, confirmed PASSED-BUT-INERT (`USE_WAVES=False`).
+- **`pbv`** (`porous_barrier_type`, **deferred this session**): shared with `continuity_PPM.F90`'s
   `zonal_mass_flux`/`meridional_mass_flux`/`zonal_BT_mass_flux`/`continuity_adjust_vel` family,
   which already dereferences `pbv%por_face_areaU`/`por_face_areaV` directly but never converted
-  the type (same leftover-shared-type situation as `BT_cont_type`/`OBC` before them). `CorAdCalc`
-  touches the same two fields, not `por_layer_widthU`/`V`. Narrow (2 of 4 fields) — resolves as a
-  union shadow directly, no Step 3 needed.
+  the type (same leftover-shared-type situation as `BT_cont_type`/`OBC` before them, and now given
+  the same deferred treatment deliberately, not just left that way by omission). `CorAdCalc`
+  touches the same two fields, not `por_layer_widthU`/`V`. Confirmed PASSED-BUT-INERT
+  (`USE_POROUS_BARRIER=False`).
 
 ## Blockers, current as of this check (verified against source and `shared_type_unions.md`, this session)
 
-Two real external-dependency blockers, plus unfinished survey work the doc itself already flags:
+No external-dependency blockers remain from shared infrastructure, plus unfinished survey work the
+doc itself already flags:
 
-**Blocking (external dependencies):**
+**No longer blocking (resolved by deferral):**
 
-1. **The combined shared-infrastructure PR hasn't landed — same blocker as `btstep`.** `CorAdCalc`
-   needs `OBC`/`AD`/`Waves`/`pbv` as union shadows. Verified directly: `pbv`
-   (`porous_barrier_type`, `MOM_variables.F90:357-364`) is still 100% raw allocatable arrays
-   (`por_face_areaU`/`por_face_areaV`/`por_layer_widthU`/`por_layer_widthV`); no shadow container
-   type exists anywhere in the source tree for any of the four (grepped repo-wide for the obvious
-   naming pattern, zero matches); `MOM_CoriolisAdv.F90` itself still has 141 raw `OBC%`/`AD%`/
-   `Waves%`/`pbv%` dereferences. This is the same combined PR `btstep.md` is also waiting on, not
-   an independent piece of work — landing it unblocks both plans' Stage 2 at once.
-2. **`Waves`'s optional-struct status is separately unresolved, even once the shadow lands.**
-   `shared_type_unions.md`'s own tracking note explicitly names "`vertvisc`'s and `CorAdCalc`'s
-   `Waves` (`optional, pointer` in both)" as one of the still-open "optional struct dummy →
-   `bind(C)`-ready" instances — no sibling skill covers this. A second, independent gap on top of
-   item 1, specific to `Waves`.
+1. ✅ **The combined shared-infrastructure PR is now empty — `CorAdCalc` has zero remaining
+   `create_shadow_container_type` dependencies.** `OBC`/`AD`/`Waves`/`pbv` were all **deferred this
+   session** — confirmed PASSED-BUT-INERT under both double_gyre configs (see
+   `shared_type_unions.md`'s "Mechanism decision 2" section) and reclassified to "leave alone —
+   view-marshal at call site." (`OBC` corrected in-session: an earlier pass kept it active as the
+   deferral's "anchor," which was wrong.) Verified directly: `ocean_OBC_type` is still 100% raw
+   Fortran; `MOM_CoriolisAdv.F90` itself still has 141 raw `OBC%`/`AD%`/`Waves%`/`pbv%`
+   dereferences combined — none of them need a shadow to proceed now.
+2. ✅ **`Waves`'s optional-struct status is now moot, not blocking.** With `Waves` deferred, there's
+   no shadow being built for it, so there's no "optional struct dummy → `bind(C)`-ready" question
+   to resolve right now — revisit only if `Waves` gets un-deferred.
 
 **Not external blockers, but real unfinished work — Stage 1 can't just mechanically execute
 without these being settled first (both already flagged in this doc, restated here so they're
@@ -288,7 +299,7 @@ handles the WENO/UP3 family's fixed-size (non-container) array dummies is still 
 | WENO/UP3 kernel family's fixed-size array dummies (`q4`, `q6`, `q8`, `h4`/`h6`/`h8`, `u4`/`u6`/`u8`, `w0`-`w3`, `p0`-`p3`, etc.) | fixed-size stencil arrays | **not a container target** — leave as plain Fortran arrays | See dedicated section above. |
 | `G`, `GV` | shared grid/vertical-grid types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `US` | shared scaling type | same drop mechanism | Used directly in `CorAdCalc` itself (`US%m_to_L`, `US%m_s_to_L_T`); the WENO/UP3 kernel family takes no derived-type dummies at all (confirmed — plain reals/logicals/fixed arrays only). Check `gradKE`'s own `US` usage during execution. |
-| `OBC`, `AD`, `Waves`, `pbv` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. `Waves` blocked on the optional-struct open item. |
+| `OBC`, `AD`, `Waves`, `pbv` | shared, DEFERRED | **leave alone — view-marshal at call site** (not `create_shadow_container_type` — moved out this session) | See `shared_type_unions.md`'s "Mechanism decision 2" section. All four confirmed PASSED-BUT-INERT under both double_gyre configs. |
 | `CS` (`CoriolisAdv_CS`) | private, 33 fields | `create_config_bundle_type`, physics-fields-only | See dedicated section above. |
 
 ## Phase 2 execution order
@@ -300,10 +311,10 @@ handles the WENO/UP3 family's fixed-size (non-container) array dummies is still 
    WENO/UP3 kernel family `pure`, convert its three `Coriolis_Scheme` branches' serial
    `do j; do I` loops to `do concurrent`, and drop the now-unnecessary
    `!$omp target update from(...)` directives — see the dedicated section above.
-2. **`create_shadow_container_type`** — `OBC`/`AD`/`Waves`/`pbv`'s type definitions are built once
-   by the combined shared-infrastructure PR (`shared_type_unions.md`), not here. This stage's own
-   work is just the wrapper-side glue — instantiate each shadow from `CorAdCalc_TR`'s own
-   dummies, use it, copy back.
+2. **No `create_shadow_container_type` stage needed** — `OBC`/`AD`/`Waves`/`pbv` are all deferred
+   (see `shared_type_unions.md`'s "Mechanism decision 2"), so there's no shadow to build or
+   wrapper-side glue to write for any of them; `CorAdCalc_TR` forwards all four raw, exactly as
+   the original code did.
 3. **`create_config_bundle_type`** — `CoriolisAdv_CS`, once (informed by the union of fields
    touched across `CorAdCalc`'s new per-scheme subroutines and `gradKE`).
 4. **Optional-array containerization** — none needed; `CorAdCalc`'s only optional dummy

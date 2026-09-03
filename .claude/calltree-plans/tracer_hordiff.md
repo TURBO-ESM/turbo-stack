@@ -19,6 +19,20 @@ in both** double_gyre variants. Neither config can validate this tree via captur
 `benchmark` (71.1% coverage of the same file) is the config that would actually exercise it. This
 is a separate, pre-existing problem — not something the base/patch resequencing fixes or causes.
 
+**Shared-infrastructure status, updated this session: down to one real blocker.** `MEKE`/
+`VarMix`/`tv` — three of this tree's five ties to `shared_type_unions.md`'s combined PR — were
+deferred (confirmed PASSED-BUT-INERT under both double_gyre configs; see that file's "Mechanism
+decision 2"). `visc`'s `h_ML` need is a small tree-local shadow, not gated on anything external.
+What's left is `Reg`/`Tr` (`tracer_registry_type`/`tracer_type`'s array-of-struct decomposition,
+shared with `advect_tracer`) — a genuine skill-catalog gap, unrelated to `create_shadow_container_type`
+or the coverage audit, and the real reason this tree can't yet proceed to Phase 2 Stage 2. **The
+`MEKE`/`VarMix`/`tv` deferral holds for double_gyre_unsplit and double_gyre only** — `VarMix` and
+`tv` both re-activate under the `benchmark` patch, and this is also the first config where this
+tree's own three dispatch branches (`Diffuse_ML_interior`/`use_hor_bnd_diffusion`/
+`use_neutral_diffusion`) get real coverage (7.0%→71.1%) — the pre-existing validation gap noted
+above is specifically resolved by `benchmark`, not by anything in the double_gyre patch. `MEKE`
+stays deferred even there. See `plan/calltree_patch_summary_benchmark.md`.
+
 ## Hard precondition checks
 
 - **Callers (repo-wide, confirmed by grep):** `MOM.F90:1648` (`step_MOM_tracer_dyn`),
@@ -94,15 +108,25 @@ split needed" shape.
 ## `MEKE`, `VarMix`, `visc`, `tv`, `Reg`/`Tr` — see `shared_type_unions.md`
 
 This tree's contributions (all recorded there already):
-- **`MEKE`**: promotes tree-scoped→union. Needs `Kh` (allocated-guarded array), `KhTr_fac`
-  (scalar) — overlap with `horizontal_viscosity`'s "most/all 15 fields" not yet itemized/confirmed.
-- **`VarMix`**: 8 new fields (`Resoln_scaled_KhTr`, `khtr_struct`, `SN_u`, `SN_v`, `L2u`, `L2v`,
-  `Rd_dx_h`, `ebt_struct`) against 2 already-unioned (`use_variable_mixing`, `Res_fn_h`).
-- **`visc`** (`vertvisc_type`): free promotion, but **not** dereferenced by `tracer_hordiff`'s own
-  body — only by its in-tree callees `hor_bnd_diffusion`/`neutral_diffusion_calc_coeffs`, both of
-  which need the new field `h_ML`. `tracer_hordiff` forwards the dummy opaquely.
-- **`tv`**: adds `p_surf` (new, `associated()`-guarded) to the existing `T`/`S`/`P_Ref`/
-  `eqn_of_state` set.
+- **`MEKE`** (**deferred this session**): promotes tree-scoped→union. Needs `Kh`
+  (allocated-guarded array), `KhTr_fac` (scalar) — overlap with `horizontal_viscosity`'s "most/all
+  15 fields" was left unconfirmed, and is now moot: confirmed PASSED-BUT-INERT under both
+  double_gyre configs (`USE_MEKE=False`), reclassified to leave-alone/view-marshal, no shadow
+  built now. See `shared_type_unions.md`'s "Mechanism decision 2" section.
+- **`VarMix`** (**deferred this session**): 8 new fields (`Resoln_scaled_KhTr`, `khtr_struct`,
+  `SN_u`, `SN_v`, `L2u`, `L2v`, `Rd_dx_h`, `ebt_struct`) against 2 already-unioned
+  (`use_variable_mixing`, `Res_fn_h`). Confirmed PASSED-BUT-INERT — field list preserved as
+  reference, no shadow built now.
+- **`visc`** (`vertvisc_type`) — **not deferred, but not the vertvisc-family cluster's shadow
+  either.** Not dereferenced by `tracer_hordiff`'s own body — only by its in-tree callees
+  `hor_bnd_diffusion`/`neutral_diffusion_calc_coeffs`, both of which need the new field `h_ML`.
+  `tracer_hordiff` forwards the dummy opaquely. Per `shared_type_unions.md`'s "Mechanism decision"
+  section, `h_ML` is tracked as `tracer_hordiff`'s own single-tree local shadow field (Tier 1/live,
+  though init-only) — unrelated to the vertvisc-family cluster's separate shadow for this same
+  Fortran type.
+- **`tv`** (**deferred this session**): adds `p_surf` (new, `associated()`-guarded) to the existing
+  `T`/`S`/`P_Ref`/`eqn_of_state` set. Confirmed PASSED-BUT-INERT (`ENABLE_THERMODYNAMICS=False`) —
+  reclassified to leave-alone/view-marshal, no shadow built now.
 - **`Reg`/`Tr`** (`tracer_registry_type`/`tracer_type`, new union, first needed jointly with
   `advect_tracer`): needs `t`, `df_x`, `df_y`, `df2d_x`, `df2d_y`, `name`, `conc_underflow` (own
   body + `tracer_epipycnal_ML_diff`), plus `conc_scale` and 7 `id_hbd_*`/`id_hbdxy_*` diagnostic
@@ -145,8 +169,8 @@ not shadow candidates** — one level down from the root CS, same treatment.
 | `stable_l`, `stable_r` (`find_neutral_surface_positions_discontinuous`), `stable_cell` (`mark_unstable_cells`) | mandatory raw **logical** array dummies | `convert_array_containers` | `LogicalArray_t` confirmed available (see `advect_tracer.md`'s corrected note) — ordinary classification. |
 | `p_surf` (`neutral_diffusion_calc_coeffs`'s own optional, distinct from `tv%p_surf`) | optional raw array dummy | `convert_present_to_associated`, after containerizing | 2-D real. |
 | `coeff_l`, `coeff_r` (deep leaves) | optional raw array dummies, small (`nk+1`) | `convert_present_to_associated`, after containerizing | |
-| `MEKE`, `VarMix`, `tv` | shared, union (grow per above) | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. |
-| `visc` | shared, union, free promotion | `create_shadow_container_type`, union scope | Shadow only actually needed inside `hor_bnd_diffusion`/`neutral_diffusion_calc_coeffs`, not `tracer_hordiff`'s own body. |
+| `MEKE`, `VarMix`, `tv` | shared, DEFERRED | **leave alone — view-marshal at call site** (not `create_shadow_container_type` — moved out this session) | See `shared_type_unions.md`'s "Mechanism decision 2." All three confirmed PASSED-BUT-INERT under both double_gyre configs. |
+| `visc` (`h_ML` only) | shared, tree-local shadow (not the vertvisc-family cluster's) | `create_shadow_container_type`, tree-scoped | Shadow only actually needed inside `hor_bnd_diffusion`/`neutral_diffusion_calc_coeffs`, not `tracer_hordiff`'s own body. Confirmed live (Tier 1), though init-only. |
 | `Reg`/`Tr` | shared, new union, array-of-struct | hand-authored decomposition (no sibling skill) | See dedicated section above; combine with `advect_tracer`'s decomposition work — same type, same gap. |
 | `G`, `GV`, `US` | shared grid/scaling types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `CS` (`tracer_hor_diff_CS`) | private, 30 fields | `create_config_bundle_type`, physics-fields-only | See dedicated section above. |
@@ -158,11 +182,11 @@ not shadow candidates** — one level down from the root CS, same treatment.
 ## Phase 2 execution order
 
 1. **TreeRoot split** — `tracer_hordiff` → `tracer_hordiff_TR` + wrapper (Step 1d).
-2. **`create_shadow_container_type`** — `MEKE`/`VarMix`/`visc`/`tv`'s type definitions and `Reg`/
-   `Tr`'s hand-authored decomposition (shared with `advect_tracer`) are all built once by the
-   combined shared-infrastructure PR (`shared_type_unions.md`), not here. This stage's own work
-   is just the wrapper-side glue — instantiate each shadow from `tracer_hordiff_TR`'s own dummies,
-   use it, copy back.
+2. **`create_shadow_container_type`** — only `visc` (`h_ML`, this tree's own tree-local shadow)
+   needs this now. `MEKE`/`VarMix`/`tv` are deferred (see `shared_type_unions.md`'s "Mechanism
+   decision 2") — no shadow, no wrapper-side glue for them, just raw forwarding as before. `Reg`/
+   `Tr`'s hand-authored decomposition (shared with `advect_tracer`) remains a separate, unrelated
+   blocker — see the blockers section below.
 3. **`create_config_bundle_type`** — three separate bundles: `tracer_hor_diff_CS` (root),
    `neutral_diffusion_CS` (nested, one level down), `hbd_CS` (nested, one level down).
 4. **Optional-array containerization** — `read_khdt_x`/`read_khdt_y`, `p_surf`
