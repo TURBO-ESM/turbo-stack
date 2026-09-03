@@ -8,6 +8,11 @@ changes how little of this tree actually needs converting.
 
 No pre-existing audit doc existed for this entry point.
 
+**Base plan — double_gyre_unsplit.** `adiabatic` is called from `step_MOM_thermo`, gated by
+`CS%adiabatic`/`ENABLE_THERMODYNAMICS`, not by `SPLIT` — confirmed exercised identically (same
+1.2% file coverage, 720 hits) under both `double_gyre` and `double_gyre_unsplit`. No patch needed;
+this plan applies unchanged to both configs.
+
 ## Hard precondition checks
 
 - **Caller**: `MOM.F90:1848`, inside `step_MOM_thermo` (`MOM.F90:1717`) — genuinely cross-module,

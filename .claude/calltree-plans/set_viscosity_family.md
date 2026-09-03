@@ -9,6 +9,11 @@ control structure (`set_visc_CS`) and several derived types. Cross-reference:
 
 No pre-existing audit doc existed for either entry point.
 
+**Base plan — double_gyre_unsplit.** `set_viscous_BBL` is called from `MOM.F90`, before the
+`CS%split` dispatch; `set_viscous_ML` is called identically from all 4 dynamics-core files
+regardless of `SPLIT`. Confirmed exercised identically (identical 21.6% file coverage) under both
+`double_gyre` and `double_gyre_unsplit` — only per-line hit counts differ. No patch needed.
+
 ## Hard precondition checks
 
 - **Callers — asymmetric, unlike every prior sibling-entry-point family this session.**
@@ -85,16 +90,23 @@ runs a `CS%debug`-gated side-by-side comparison against trigonometric), `crv<0` 
 
 ## `tv`, `vertvisc_type`, `forces`, `OBC`, `pbv` — see `shared_type_unions.md`
 
-This pair's contributions to the shared unions:
+This pair's contributions:
 - **`tv`**: both entry points genuinely dereference `T`/`S`/`SpV_avg`/`eqn_of_state`/`P_Ref`/
   `p_surf` directly (already in the union from `PressureForce`/`vertvisc_coef` — no new fields).
-- **`vertvisc_type`** (`visc`): **free promotion** — `set_viscous_BBL` needs `Ray_u/v`,
-  `bbl_thick_u/v`, `Kv_bbl_u/v`; `set_viscous_ML` needs `Kv_tbl_shelf_u/v`, `nkml_visc_u/v`,
-  `taux_shelf`/`tauy_shelf`, `tbl_thick_shelf_u/v`. Every one of these is already in
-  `vertvisc_family.md`'s tree-scoped shadow list — promote it to `shared_type_unions.md` with
-  zero new fields.
-- **`forces`**: `set_viscous_ML` adds `p_surf` (new) alongside `frac_shelf_u/v` and `taux`/`tauy`
-  (already unioned).
+  Part of the 7-type combined shared-infrastructure PR.
+- **`vertvisc_type`** (`visc`): **as of this session, a local shadow scoped to the whole
+  vertvisc-family cluster** (`vertvisc`/`vertvisc_coef`/`vertvisc_remnant`/`set_viscous_BBL`/
+  `set_viscous_ML`), not the combined PR — `set_viscous_BBL` needs `Ray_u/v`, `bbl_thick_u/v`,
+  `Kv_bbl_u/v`; `set_viscous_ML` needs `Kv_tbl_shelf_u/v`, `nkml_visc_u/v`, `taux_shelf`/`tauy_shelf`,
+  `tbl_thick_shelf_u/v`. Every one of these is already in `vertvisc_family.md`'s field list — zero
+  new fields, and this pair can consume that cluster's local shadow directly, no combined-PR wait.
+  See `shared_type_unions.md`'s "Mechanism decision" section.
+- **`forces`**: also moved out of the combined PR this session. `set_viscous_ML` needs `p_surf`
+  (its own tree-local field, not shared with anything else), `frac_shelf_u/v` (shared with
+  `vertvisc_coef`, within this same vertvisc-family cluster), and `taux`/`tauy` — **corrected this
+  session: confirmed a real, direct dereference at `MOM_set_viscosity.F90:2286-2288,2563-2565`**,
+  not previously recorded in this pair's own field list — shared cross-cluster with `btstep`. See
+  `shared_type_unions.md`'s "Mechanism decision" section for the full breakdown.
 - **`OBC`**: `set_viscous_BBL` adds **16 new top-level scalar-integer index-bound fields** —
   `Js_v_N_obc`/`Je_v_N_obc`/`is_v_N_obc`/`ie_v_N_obc`, `Js_v_S_obc`/`Je_v_S_obc`/`is_v_S_obc`/
   `ie_v_S_obc`, `js_u_E_obc`/`je_u_E_obc`/`Is_u_E_obc`/`Ie_u_E_obc`, `js_u_W_obc`/`je_u_W_obc`/
@@ -131,7 +143,8 @@ already confirmed: `cdrag`, `linear_drag`, `drag_bg_vel`, `debug`, `BBL_use_tida
 | `set_v_at_u`/`set_u_at_v`'s own dummies (`v`/`u`, `h`, `mask2dCv`/`mask2dCu`) | raw array dummies, `pure function` | `convert_array_containers` | **Open item**: every bridged kernel so far in this campaign has been a `subroutine` (`cpp_bridge_lessons`' own worked examples too) — confirm `generate_cpp_bridge`'s shim pattern extends cleanly to a `pure function` with a scalar return value before assuming it does; flag for Phase 3, don't force it through unreviewed. |
 | `G`, `GV` | shared grid/vertical-grid types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `US` | shared scaling type | same drop mechanism | Lightly used in both (`set_viscous_ML`: only 2 fields, `L_to_m`/`L_to_Z`) — flag for upward-pass drop consideration. |
-| `tv`, `vertvisc_type`, `forces`, `OBC` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. |
+| `tv`, `OBC` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. |
+| `vertvisc_type`, `forces` | shared, local shadow | `create_shadow_container_type`, **vertvisc-family cluster shadow (`vertvisc_type`, `frac_shelf_u/v`, `p_surf`) + cross-cluster shadow with `btstep` (`taux`/`tauy`)** — not the combined PR | See `shared_type_unions.md`'s "Mechanism decision" section. |
 | `pbv` | shared, union | `create_shadow_container_type`, union scope (already exists from `continuity()`/`CorAdCalc`) | `set_viscous_BBL` needs all 4 fields — union grows to cover `por_layer_widthU/V`. |
 | `CS` (`set_visc_CS`) | private, 50 fields | `create_config_bundle_type`, physics-fields-only | See dedicated section above. |
 | EOS-family calls (`calculate_density`, `calculate_density_derivs`, `calculate_specific_vol_derivs`/`calc_spec_vol_derivs`) | pervasive per `EOS_bridge_design.md` | leave alone — view-marshal via the shared marshalling helper | See `EOS_bridge_design.md`; confirm exact generic-interface name for the specific-volume-derivatives call during implementation. Helper built once in the combined infrastructure PR, not authored here. |

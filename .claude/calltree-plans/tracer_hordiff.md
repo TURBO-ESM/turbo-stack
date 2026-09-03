@@ -9,6 +9,16 @@ opaque call needing only call-site marshalling.
 
 No pre-existing audit doc existed for this entry point.
 
+**Base plan — double_gyre_unsplit**, but with a pre-existing gap independent of that choice.
+`tracer_hordiff` is called unconditionally from `step_MOM_tracer_dyn`, outside the `CS%split`
+branch — identical 7.0% file coverage under both `double_gyre` and `double_gyre_unsplit`, so no
+patch is needed for the split/unsplit distinction. However, that identical 7.0% is coverage of
+*other* code in `MOM_tracer_hor_diff.F90` — the subroutine's own three dispatch branches
+(`CS%Diffuse_ML_interior`, `CS%use_hor_bnd_diffusion`, `CS%use_neutral_diffusion`) show **0 hits
+in both** double_gyre variants. Neither config can validate this tree via capture fixtures today;
+`benchmark` (71.1% coverage of the same file) is the config that would actually exercise it. This
+is a separate, pre-existing problem — not something the base/patch resequencing fixes or causes.
+
 ## Hard precondition checks
 
 - **Callers (repo-wide, confirmed by grep):** `MOM.F90:1648` (`step_MOM_tracer_dyn`),

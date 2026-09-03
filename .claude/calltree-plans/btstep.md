@@ -9,6 +9,18 @@ than in isolation. Kept the original filename rather than renaming to something 
 across `shared_type_unions.md` and elsewhere for no functional benefit.
 Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
 
+## PATCH — double_gyre only, not part of the double_gyre_unsplit base
+
+The campaign's base target is now `double_gyre_unsplit` (`SPLIT=False, USE_RK2=True`); full
+`double_gyre` support (`SPLIT=True`) comes later as a patch on top of that base. This entire tree
+belongs to the patch, not the base: `MOM_barotropic.F90` is never entered when `SPLIT=False` —
+confirmed both by the `CS%split` branch in `MOM.F90:1367-1425` (non-split calls
+`step_MOM_dyn_unsplit_RK2`/`step_MOM_dyn_unsplit`, neither of which calls `btstep`) and by the
+gcovlens coverage diff, where `MOM_barotropic.F90` goes from 44.6% line coverage under
+`double_gyre` to **0.0%** under `double_gyre_unsplit`. Do not schedule this tree as "next target"
+work until the double_gyre_unsplit base is done and the double_gyre patch phase begins — the
+blockers below are unaffected by this resequencing, they just apply later than previously assumed.
+
 ## BLOCKING PREREQUISITE — RESOLVED (verified against source, this session)
 
 **`BT_cont_type`'s wholesale conversion has landed.** Checked all 5 named files directly: `MOM_variables.F90`
@@ -62,14 +74,17 @@ none of Stage 2 (shadow container types) is needed for it.
 Three real items still stand between here and a Phase 2 start, none of them resolved by the
 `BT_cont_type` work landing:
 
-1. **The combined shared-infrastructure PR (`ADp`/`OBC`/`forces`/`VarMix`/`Waves`/`pbv`/`tv`/
-   `vertvisc_type`/`MEKE` shadow types) has not landed.** Checked directly: `accel_diag_ptrs`
-   (`ADp`) in `MOM_variables.F90` is still 100% raw Fortran pointers (`real, pointer, dimension(:,:,:)`),
-   and no shadow container type for any of these 9 types exists anywhere in the source tree — grepped
-   repo-wide for the obvious naming pattern, zero matches. Per `shared_type_unions.md`'s own
-   sequencing note, `btstep`'s Stage 1 (TreeRoot split) doesn't need to wait for this — but Stage 2
-   does, and `btstep` needs both `ADp` and `OBC` as union shadows per its own Step 2/3 table above.
-   This blocks Phase 2 from getting past Stage 1.
+1. **The combined shared-infrastructure PR (`ADp`/`OBC`/`VarMix`/`Waves`/`pbv`/`tv`/`MEKE` shadow
+   types — 7, not 9; `forces` and `vertvisc_type` were moved out to their own local-shadow
+   mechanism, see `shared_type_unions.md`'s "Mechanism decision" section) has not landed.** Checked
+   directly: `accel_diag_ptrs` (`ADp`) in `MOM_variables.F90` is still 100% raw Fortran pointers
+   (`real, pointer, dimension(:,:,:)`), and no shadow container type for any of these 7 types
+   exists anywhere in the source tree — grepped repo-wide for the obvious naming pattern, zero
+   matches. Per `shared_type_unions.md`'s own sequencing note, `btstep`'s Stage 1 (TreeRoot split)
+   doesn't need to wait for this — but Stage 2 does, and `btstep` needs both `ADp` and `OBC` as
+   union shadows per its own Step 2/3 table above. This blocks Phase 2 from getting past Stage 1.
+   `btstep`'s `forces` need (`taux`/`tauy`, shared with the vertvisc-family cluster; `rigidity_ice_u/v`,
+   tree-local) is unblocked by this — it's a separate, small shadow effort, not gated on this PR.
 2. **`BTCL_u`/`BTCL_v` array-of-struct decomposition is still a genuine skill-catalog gap.** No
    sibling skill decomposes a derived-type array into N field containers — the 11 subroutines
    listed in the Step 2/3 table (`find_uhbt`, `find_duhbt_du`, `uhbt_to_ubt`, `find_vhbt`,
@@ -238,7 +253,7 @@ explicitly rather than assume).
 | `BT_cont_type` (`BT_cont`) | shared with `continuity()` tree + `MOM_dynamics_split_RK2[b].F90` | **wholesale conversion — see Blocking Prerequisite above**, not `create_shadow_container_type` | By the time Phase 2 Stage 1 of this plan runs, `BT_cont` should already arrive container-based; Stage 2 has nothing to do for it. |
 | `ADp` (`accel_diag_ptrs`) | shared, confirmed dereferenced, not opaque | `create_shadow_container_type` — **union shadow** | See `shared_type_unions.md`. |
 | `OBC` (`ocean_OBC_type`) | shared, confirmed dereferenced | `create_shadow_container_type` — **union shadow** | See `shared_type_unions.md`. |
-| `forces` (`mech_forcing`) | shared, confirmed dereferenced (`forces%taux`, `forces%tauy`, `forces%rigidity_ice_u/v` in `btstep`) | `create_shadow_container_type` — **union shadow** | See `shared_type_unions.md` for the full field list and the per-field `associated()`-vs-unchecked treatment this file originally established. |
+| `forces` (`mech_forcing`) | shared, confirmed dereferenced (`forces%taux`, `forces%tauy`, `forces%rigidity_ice_u/v` in `btstep`) | `create_shadow_container_type` — **shared cross-cluster shadow** (`taux`/`tauy`, shared with the vertvisc-family cluster) **+ btstep's own tree-local shadow** (`rigidity_ice_u/v`) — **not** the 9-type combined PR, moved out this session | See `shared_type_unions.md`'s "Mechanism decision" section for the full field list, the per-field `associated()`-vs-unchecked treatment this file originally established, and why `forces` no longer waits on the combined PR. |
 | `CS` (`barotropic_CS`, private, 173 fields, confirmed opaque outside `MOM_barotropic.F90`) | private control structure, fields recur together | `create_config_bundle_type` — **physics fields only** (user decision) | Cluster the fields that feed actual computation (grid-derived arrays `IdxCu`/`IdyCv`/`IDatu`/`IDatv`/`dy_Cu`/`dx_Cv`/`bathyT`/`OBCmask_u`/`OBCmask_v`/`IareaT_OBCmask`, physics/config scalars `vel_underflow`/`clip_velocity`/`linear_wave_drag`/`CFL_trunc`/`maxCFL_BT_cont`/`Sadourny`/`use_filter`/`calculate_SAL`/`linear_freq_drag`, accumulator arrays `frhatu`/`frhatv`/`frhatu1`/`frhatv1`/`ubtav`/`vbtav`/`eta_cor`/`q_D`, wide-halo bounds `isdw`/`iedw`/`jsdw`/`jedw`) into a few purpose-built bundle types nested back into `barotropic_CS`, mirroring `continuity_PPM_CS`'s `reconstruction_opts_type`/`transport_adjust_opts_type` precedent. **Additional fields found when `btcalc`/`bt_mass_source`/`set_dtbt` were added to this plan** (all scalars, bundle alongside the above): `debug`, `hvel_scheme`, `module_is_initialized`, `Rho_BT_lin`, `split` (from `btcalc`/`bt_mass_source`); `bebt`, `BT_Coriolis_scale`, `dtbt`, `dtbt_fraction`, `dtbt_max`, `G_extra`, `Nonlinear_continuity`, `tidal_sal_bug` (from `set_dtbt` — note `dtbt`/`dtbt_max` are **outputs**: `set_dtbt` computes and writes them, `btstep`/`btstep_TR` presumably reads them back later purely through the shared, now-bundled `CS`). **Exclude from bundling**: the 64 `id_*` diagnostic-ID scalars (drive `post_data` only, never cross to C++), the 12 `pass_*` halo-pass handles, and the nested CS pointers (`SAL_CSp`, `HA_CSp`, `Drag_CS`, `Filt_CS_u`/`Filt_CS_v`, `BT_OBC`, `Time`, `diag`, `BT_Domain`, `debug_BT_HI`) — these stay direct fields of `barotropic_CS`, untouched. Exact clustering into named bundle types is `create_config_bundle_type`'s own call at execution time, done **once**, informed by the union of all four entry points' usage — no reconciliation risk since all four are decided together in this same plan. |
 | `btcalc`'s own dummies (`h`, `h_u`, `h_v` optional, `may_use_default` optional scalar) | raw/optional array dummies | `convert_array_containers` (+ `convert_present_to_associated` for `h_u`/`h_v`/`may_use_default`) | `h_u`/`h_v` are plain raw arrays with **zero dependency on `BT_cont_type`'s identity** — even though some callers pass `CS%BT_cont%h_u`/`h_v` as the actual arguments, `btcalc` itself only ever sees a generic `intent(in)` 3-D array. `btcalc`'s own conversion does not need to wait on the `BT_cont_type` blocking prerequisite above. |
 | `bt_mass_source`'s own dummies (`h`, `eta`, `set_cor`) | raw array dummies + plain scalar logical | `convert_array_containers` | No optionals, no pointers — the simplest signature of the four entry points. |
@@ -248,11 +263,16 @@ explicitly rather than assume).
 
 ## `ADp`, `OBC`, `forces` shadows — see `shared_type_unions.md`
 
-All three are needed, container-based, by more than one entry point now (as of surveying
-`horizontal_viscosity` and `vertvisc`/`vertvisc_coef`). Their authoritative union field lists
-and reasoning (including why `OBC` gets a union shadow rather than a `BT_cont_type`-style
-wholesale conversion — the same 13-file blast-radius argument, not re-duplicated here) now live
-in `.claude/calltree-plans/shared_type_unions.md`. This file's own contribution to those unions
+`ADp` and `OBC` are needed, container-based, by more than one entry point now (as of surveying
+`horizontal_viscosity` and `vertvisc`/`vertvisc_coef`), and are part of the 7-type combined
+shared-infrastructure PR. `forces` is different as of this session: `taux`/`tauy` are a shared
+cross-cluster shadow with the vertvisc-family cluster (not the combined PR), and
+`rigidity_ice_u/v` is btstep's own tree-local field — see `shared_type_unions.md`'s "Mechanism
+decision" section for why. Their authoritative field lists and reasoning (including why `OBC`
+gets a union shadow rather than a `BT_cont_type`-style wholesale conversion — the same 13-file
+blast-radius argument, not re-duplicated here, and why `forces`'s wider 12-file `taux`/`tauy`
+footprint — including production coupling code — rules out the same wholesale-conversion route)
+now live in `.claude/calltree-plans/shared_type_unions.md`. This file's own contribution to those
 was: `ADp`'s original field list (`bt_pgf_u/v`, `bt_cor_u/v`, `bt_lwd_u/v`, `diag_hfrac_u/v`,
 `diag_hu/hv`, `visc_rem_u/v`), `OBC`'s original 2-tree field list (with `continuity()`), and
 `forces`'s `taux`/`tauy`/`rigidity_ice_u/v` treatment (including the "preserve the source's

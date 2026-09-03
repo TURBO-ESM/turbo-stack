@@ -8,6 +8,12 @@ Cross-reference: `.claude/calltree-plans/shared_type_unions.md`, the authoritati
 No pre-existing audit doc existed for this entry point (unlike `btstep`/`horizontal_viscosity`/
 `vertvisc`) — this plan's inventory was surveyed fresh.
 
+**Base plan — double_gyre_unsplit.** `CorAdCalc` is called from both split and unsplit dynamics
+cores the same way (twice per step either way, just at different line numbers/argument
+provenance) — confirmed exercised in both `double_gyre` (2,882 hits) and `double_gyre_unsplit`
+(11,520 hits; higher only because unsplit's smaller stable timestep runs more steps). No patch
+needed.
+
 ## Hard precondition checks
 
 - Callers confirmed: same 4 dynamics-core files as every other entry point in this campaign

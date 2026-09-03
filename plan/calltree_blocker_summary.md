@@ -13,6 +13,40 @@ plan file's own "Blockers, current as of this check" section for the exact grep/
 
 ---
 
+## Base vs. patch: double_gyre_unsplit first, double_gyre as a later patch
+
+The campaign's first validation target is now `double_gyre_unsplit` (`SPLIT=False, USE_RK2=True`),
+not `double_gyre` (`SPLIT=True`) — `double_gyre_unsplit`'s exercised code is a strict subset of
+`double_gyre`'s (confirmed via the gcovlens coverage report and a source trace of `MOM.F90`'s
+`CS%split` branch, `MOM.F90:1367-1425`), so everything needed for the base also gets reused,
+unchanged, once the patch lands. Full `double_gyre` support remains a campaign goal, just not the
+first step.
+
+**Base (build/validate against double_gyre_unsplit first) — every tree except the two below:**
+`adiabatic`, `advect_tracer`, `CorAdCalc`, `EOS_bridge_design`, `horizontal_viscosity`,
+`PressureForce`, `set_viscosity_family`, `shared_type_unions`, `tracer_hordiff`, plus
+`vertvisc_family` **minus** `vertvisc_remnant` (i.e. `vertvisc`/`vertvisc_coef` only) — all
+confirmed exercised identically (same covered/uncovered status) under both configs, see each
+plan's own "Base plan" note for per-tree coverage numbers.
+
+**Patch (additional work, deferred until double_gyre becomes the active goal):**
+- `btstep` in full (`btstep`/`btcalc`/`bt_mass_source`/`set_dtbt`) — `MOM_barotropic.F90` is never
+  entered under `SPLIT=False` (44.6% → 0.0% coverage). See `btstep.md`'s new banner.
+- `vertvisc_remnant`, carved out of `vertvisc_family` — called only from the split dynamics core,
+  absent from `MOM_dynamics_unsplit_RK2.F90`. See `vertvisc_family.md`'s new base/patch section.
+
+Neither tree's blockers below change because of this — they're still gated by the same combined
+shared-infrastructure PR (`btstep` additionally by its own `BTCL_u`/`BTCL_v` decomposition gap) —
+this only changes when they get scheduled, not what unblocks them.
+
+**Action item, ahead of any of the above mattering in practice:** no `MOM_input`/`MOM_override`
+for `double_gyre_unsplit` exists locally (only pre-generated coverage HTML does, at
+`/Users/dennis/Desktop/Work/TURBO/code-coverage/double_gyre_unsplit/`) — source it from upstream
+MOM6-examples (`ocean_only/double_gyre_unsplit`) or recover whatever inputs produced that coverage
+run, before treating double_gyre_unsplit as an actual buildable/runnable base target.
+
+---
+
 ## `btstep` (barotropic solver — `btstep`/`btcalc`/`bt_mass_source`/`set_dtbt`)
 Detail: [`btstep.md`](../.claude/calltree-plans/btstep.md)
 
@@ -38,13 +72,29 @@ Detail: [`CorAdCalc.md`](../.claude/calltree-plans/CorAdCalc.md)
 ## `vertvisc_family` (`vertvisc`/`vertvisc_coef`/`vertvisc_remnant`)
 Detail: [`vertvisc_family.md`](../.claude/calltree-plans/vertvisc_family.md)
 
-- 🔴 Blocking: combined shared-infrastructure PR not landed — needs the *largest* set of any tree:
-  `visc`, `tv`, `OBC`, `ADp`, `forces`, `VarMix`, `Waves` (7 types).
+- 🔴 Blocking: combined shared-infrastructure PR not landed — needs the *largest* remaining set of
+  any tree: `tv`, `OBC`, `ADp`, `VarMix`, `Waves` (5 types, down from 7 — see next bullet).
+- ✅ **Mechanism change this session: `visc` (`vertvisc_type`) and `forces` moved out of the
+  combined PR entirely.** Field-by-field audit showed all 15 non-`h_ML` `vertvisc_type` fields,
+  and all of `forces`'s fields relevant to this tree, are shared only within this exact
+  vertvisc-family cluster (`vertvisc`/`vertvisc_coef`/`vertvisc_remnant`/`set_viscous_BBL`/
+  `set_viscous_ML`) or, for `forces%taux`/`tauy` specifically, with `btstep` alone — never the
+  wide, campaign-spanning sharing the other 5 types have. Neither wholesale-converted
+  (`forces%taux`/`tauy` touch 12 files including CESM's production `nuopc_cap` coupling
+  interface — too wide for a `BT_cont_type`-style conversion) nor left in the combined PR;
+  instead, one local shadow scoped to this cluster (plus a small shared shadow for `taux`/`tauy`
+  with `btstep`), buildable now, independent of the combined PR. See `shared_type_unions.md`'s
+  "Mechanism decision" section.
+- **Correction, this session**: `forces%taux`/`forces%tauy` are also dereferenced directly by
+  `set_viscous_ML` (`MOM_set_viscosity.F90:2286-2288,2563-2565`) — not previously recorded; this
+  tree's `forces` need is really three-way (`btstep`/`vertvisc`/`set_viscous_ML`), not two.
 - 🔴 Blocking, separate: `Waves`'s optional-struct status — affects `vertvisc` only, not the other
   two entry points.
 - 🟡 Not blocking, unfinished: `vertvisc_CS` bundle field list explicitly partial.
-- ✅ Resolved this session: `forces%frac_shelf_u`/`v` confirmed `pointer`+`associated()`-guarded
-  (was an open question).
+- ✅ Resolved earlier: `forces%frac_shelf_u`/`v` confirmed `pointer`+`associated()`-guarded (was an
+  open question) — now flagged again, differently: coverage under `double_gyre_unsplit` shows
+  these fields "live" with suspicious `taux`-sized hit counts despite `ICE_SHELF=False`, likely a
+  coverage-tool artifact, not confirmed real (see `shared_type_unions.md`'s runtime exercise audit).
 - Size: 2824 lines total / 1988 code (`vertvisc`/`vertvisc_coef`/`vertvisc_remnant`/
   `vertvisc_limit_vel`/`find_coupling_coef`/`find_coupling_coef_k`/`find_coupling_coef_gl90`;
   excludes `write_u_accel`/`write_v_accel`/`find_ustar_mech_forcing`, which are external and
@@ -155,38 +205,55 @@ Detail: [`EOS_bridge_design.md`](../.claude/calltree-plans/EOS_bridge_design.md)
 Detail: [`shared_type_unions.md`](../.claude/calltree-plans/shared_type_unions.md)
 
 - ✅ Resolved: Stage 1, `BT_cont_type` wholesale conversion.
-- 🔴 Not yet done: Stages 2-12 — verified repo-wide, no shadow container type exists anywhere for
-  `OBC`/`ADp`/`tv`/`forces`/`vertvisc_type`/`pbv`/`VarMix`/`Waves`/`MEKE`, and `tracer_type`'s
-  decomposition hasn't been built.
+- ✅ **Mechanism change this session: `forces` and `vertvisc_type` moved out of this PR entirely**
+  (was 9 types across Stages 1-11, now 7 across Stages 1-9 below). Both types' cross-tree overlap
+  turned out to be narrow and localized — `vertvisc_type` shared only within the vertvisc-family
+  cluster, `forces` shared only between that cluster and `btstep` for `taux`/`tauy` specifically —
+  not the campaign-wide sharing the remaining 7 types have, and both had blast radii too wide for
+  a `BT_cont_type`-style wholesale conversion instead (`forces%taux`/`tauy` alone touch 12 files,
+  including CESM's production `nuopc_cap` coupling interface). Each now gets its own small local
+  shadow, buildable immediately and independently of this PR. See `shared_type_unions.md`'s
+  "Mechanism decision" section for the full reasoning and field-by-field breakdown.
+- 🔴 Not yet done: remaining Stages 2-9 — verified repo-wide, no shadow container type exists
+  anywhere for `OBC`/`ADp`/`tv`/`VarMix`/`Waves`/`pbv`/`MEKE`, and `tracer_type`'s decomposition
+  hasn't been built.
 - 🟡 One genuine internal ordering dependency (the only one in the file): Stage 2
   (`tracer_registry_type`/`tracer_type`) must land before Stage 3 (`OBC`), since
   `OBC%segment(:)%tr_Reg` nests it.
-- 🟡 Two stages deliberately isolated with their own unresolved sub-problems: `Waves` (Stage 10,
-  optional-struct-dummy design question) and `MEKE` (Stage 11, field-list reconciliation between
+- 🟡 Two stages deliberately isolated with their own unresolved sub-problems: `Waves` (Stage 8,
+  optional-struct-dummy design question) and `MEKE` (Stage 9, field-list reconciliation between
   `tracer_hordiff` and `horizontal_viscosity`).
 - **Prioritization signal:** `ADp`/`tv` (Stages 4-5) are ordered early specifically because
   `PressureForce` — the doc's own "recommended next entry-point plan to execute" — needs only
   those two.
-- **Practical catch:** the PR lands as one combined merge (Stage 12 is whole-package verification
+- **Practical catch:** the PR lands as one combined merge (Stage 10 is whole-package verification
   before the final commit) — no tree can consume a partially-finished PR, so every tree above
-  stays blocked until all 12 stages land together.
-- Scope is broader than the trees above: also covers `set_viscous_BBL`/`set_viscous_ML`, not yet
-  given a dedicated blocker-check pass.
-- Size: 1073 lines total / 572 code across the 13 derived-type definitions being shadowed —
+  stays blocked until all 10 stages land together. `forces`/`vertvisc_type`'s local shadows are
+  exempt from this — see the mechanism-change bullet above.
+- Scope is broader than the trees above: also covers `set_viscous_BBL`/`set_viscous_ML`'s `tv`/
+  `OBC` needs specifically, not yet given a dedicated blocker-check pass (its `vertvisc_type`/
+  `forces` needs go through the local-shadow mechanism instead, alongside the rest of the
+  vertvisc-family cluster).
+- Size: 1073 lines total / 572 code across the 13 derived-type definitions originally surveyed —
   `accel_diag_ptrs` (`ADp`), `OBC_segment_type`+`ocean_OBC_type` (`OBC`), `mech_forcing`
   (`forces`), `VarMix_CS`, `wave_parameters_CS` (`Waves`), `porous_barrier_type` (`pbv`),
   `thermo_var_ptrs` (`tv`), `vertvisc_type`, `MEKE_type`, `tracer_type`+`tracer_registry_type`
-  (`Reg`/`Tr`), and `BT_cont_type` (already ✅ done — 36/18 of the total). This is the size of the
-  *type definitions* driving each shadow's field list, not the (much larger) set of call sites
-  across the codebase that dereference them.
+  (`Reg`/`Tr`), and `BT_cont_type` (already ✅ done — 36/18 of the total) — not re-totaled for the
+  7-type PR, since `mech_forcing`/`vertvisc_type`'s field-level subset sizes are much smaller than
+  their full type definitions (see `shared_type_unions.md`'s `forces`/`vertvisc_type` sections).
+  This is the size of the *type definitions* driving each shadow's field list, not the (much
+  larger) set of call sites across the codebase that dereference them.
 
 ---
 
 ## The one-sentence version
 
 Every tree checked except `EOS_bridge_design.md` is blocked on the same combined
-shared-infrastructure PR landing as a whole; `btstep` and `advect_tracer` additionally need a
+shared-infrastructure PR landing as a whole (now 7 types, not 9 — `forces`/`vertvisc_type` moved
+out to their own local shadows this session); `btstep` and `advect_tracer` additionally need a
 second, structurally distinct fix (array-of-struct decomposition) that landing the PR won't
 provide; `horizontal_viscosity`'s Phase 1 has now been redone and verified, narrowing its own
 combined-PR footprint by one type (`OBC` no longer needed) as a side effect of QG-Leith/ZB2020
-being newly scoped out.
+being newly scoped out; `vertvisc_family`'s `visc`/`forces`-subset work (shared within that
+cluster, plus a small `taux`/`tauy` shadow shared with `btstep`) can start immediately, in
+parallel with the combined PR, unlike its remaining `tv`/`OBC`/`ADp`/`VarMix`/`Waves` needs.

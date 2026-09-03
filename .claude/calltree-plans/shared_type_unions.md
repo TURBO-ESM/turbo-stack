@@ -9,13 +9,14 @@ new tree needs one of these types.
 
 ## Execution: one combined infrastructure PR, ahead of every entry point (user decision)
 
-Every shadow type in this file — `ADp`, `OBC`, `forces`, `VarMix`, `Waves`, `pbv`, `tv`,
-`vertvisc_type`, `MEKE` via `create_shadow_container_type`; `tracer_registry_type`/`tracer_type`
-via its own hand-authored decomposition (no sibling skill covers it, see its section above);
-`BT_cont_type` via its own wholesale-conversion route (see below) — gets built **once**, on **one
-dedicated branch, landing as one combined PR**, before any entry point's own Phase 2 runs, not as
-a side effect of whichever entry point happens to reach Phase 2 Stage 2 first. Same principle
-across all three mechanisms, just different tooling per type.
+Every shadow type in this file **except `forces` and `vertvisc_type`** (see their own dedicated
+"Mechanism decision" section below — revised this session, no longer part of this combined PR) —
+`ADp`, `OBC`, `VarMix`, `Waves`, `pbv`, `tv`, `MEKE` via `create_shadow_container_type`;
+`tracer_registry_type`/`tracer_type` via its own hand-authored decomposition (no sibling skill
+covers it, see its section above); `BT_cont_type` via its own wholesale-conversion route (see
+below) — gets built **once**, on **one dedicated branch, landing as one combined PR**, before any
+entry point's own Phase 2 runs, not as a side effect of whichever entry point happens to reach
+Phase 2 Stage 2 first. Same principle across all three mechanisms, just different tooling per type.
 
 **Why**: without this, whichever entry-point PR runs Stage 2 first for a given type (say `OBC`)
 is the one that actually authors that type's definition and generic build/copy-back logic —
@@ -35,12 +36,188 @@ type definition and its generic build/copy-back mechanism move to the combined i
 land — the TreeRoot split is independent. Stage 2 (and any stage touching a listed type) does
 wait, the same way `btstep.md` already documents for `BT_cont_type` specifically.
 
+## Base/patch caveat (double_gyre_unsplit base, double_gyre patch)
+
+This combined PR's scope is config-independent — gated by which derived types a tree touches, not
+by which MOM6 config runs it — so the double_gyre_unsplit-base/double_gyre-patch resequencing
+(see `btstep.md`, `vertvisc_family.md`) doesn't unblock or reblock any stage here. One caveat,
+though: coverage shows `MOM_variables.F90` (the closest match to "shared types" in this file) has
+a real reachability difference between configs — 27.5% (28/102 lines) under `double_gyre` vs.
+15.9% (20/126 lines) under `double_gyre_unsplit`, and the *total* line count itself differs (102
+vs. 126), meaning different derived-type members are reachable depending on which dynamics core is
+compiled in. Any BT-related shadow fields built during this PR (`ADp`, anything
+`BT_cont_type`-adjacent) should be re-verified against actual `double_gyre` capture output
+specifically during the *patch* phase — the base phase (double_gyre_unsplit) won't exercise those
+fields, so it can't sanity-check them.
+
+## Runtime exercise audit — which of these 9 types are actually live under double_gyre (either config)
+
+Coverage evidence (both `double_gyre` and `double_gyre_unsplit` — this axis is orthogonal to
+`SPLIT`, no type below showed a split/unsplit-dependent difference) shows most of these shadow
+types are threaded through every call site correctly but carry no real payload in this idealized,
+adiabatic, shelf-free, wave-free, MEKE-off configuration:
+
+| Type | Verdict | Why |
+|---|---|---|
+| `forces` | **EXERCISED (partially)** | Wind-stress/BBL fields real; see tiered table below |
+| `vertvisc_type` | **EXERCISED (partially)** | BBL friction fields real; see tiered table below |
+| `tv` | PASSED-BUT-INERT | `ENABLE_THERMODYNAMICS=False` → `eqn_of_state` never associated, `T`/`S` never populated |
+| `ADp` | PASSED-BUT-INERT | `present(ADp)` true, but every `diag_*` field's ID gate is false (diagnostics not requested in `double_gyre`'s `diag_table`) |
+| `pbv` | PASSED-BUT-INERT | Fields read unconditionally, but `USE_POROUS_BARRIER=False` means they're always the trivial fully-open default |
+| `VarMix` | PASSED-BUT-INERT | `use_variable_mixing` guard is true (force-enabled by an unrelated default), but the real fields (`Res_fn_*`, `SN_*`, etc.) are never computed |
+| `Waves` | PASSED-BUT-INERT | `USE_WAVES=False`; guard covered-false, body never runs; unsplit doesn't even pass `Waves` into `CorAdCalc` |
+| `OBC` | PASSED-BUT-INERT | `OBC_NUMBER_OF_SEGMENTS=0` (closed basin) → `associated(OBC)` false everywhere downstream |
+| `MEKE` | PASSED-BUT-INERT | `USE_MEKE=False`; `allocated(MEKE%...)` guards covered-false, `step_forward_MEKE` never invoked |
+
+**Consequence for this PR's verification (Stage 12):** once every shadow above is built, only
+`forces` and `vertvisc_type` can be capture-fixture-validated with non-trivial data under either
+double_gyre config. The other 7 shadows' build/copy-back logic will be exercised (the guard paths
+are real) but never checked against real non-null/non-default values by any config currently in
+this campaign's scope — that needs a fuller-physics config (`benchmark` showed materially higher
+coverage of the relevant files in the earlier campaign-wide coverage pass) before those 7 shadows
+can be considered runtime-verified, not just structurally correct.
+
+**Field-level detail for the two exercised types**, filtering out `associated()`/`present()`
+guard checks and allocation/registration bookkeeping (which show large hit counts regardless of
+whether the underlying data is ever touched — a real trap in this coverage report, see the
+artifact notes below):
+
+- **`forces` (`mech_forcing`, 23 fields total): 7 show genuine physics-path dereferences** —
+  `taux`, `tauy`, `tau_mag`, `ustar`, `p_surf`, `frac_shelf_u`, `frac_shelf_v`. The other 16 are
+  ice-shelf-only, iceberg-only, wave-coupling-only, or tripolar-grid-rotation-only fields, all
+  correctly dead given `ICE_SHELF=False`/no wave coupling/a rectangular (non-tripolar) grid.
+- **`vertvisc_type` (`visc`, 25 fields total): 6 show genuine physics-path dereferences** —
+  `bbl_thick_u`, `bbl_thick_v`, `kv_bbl_u`, `Ray_u`, `Ray_v`, `h_ML` (the last is init-only, not
+  live-loop). The other 19 are KPP/ePBL, CVMix-shear, bulk-mixed-layer, or ice-shelf fields, all
+  correctly dead given `ENABLE_THERMODYNAMICS=False`/`BULKMIXEDLAYER=False`/no ice shelf.
+
+**Coverage-tool artifacts found, not to be read as physics findings:** (1) `forces%frac_shelf_u`/
+`frac_shelf_v` show hit counts identical to the unconditional `taux` line right next to them, despite
+`ICE_SHELF=False` implying the array should never even be allocated — most likely a gcov line/
+basic-block misattribution, not evidence the ice-shelf path is secretly live; flag before trusting
+either field's "exercised" status for anything load-bearing. (2) The reverse problem also occurs:
+`visc%bbl_thick_u`/`bbl_thick_v`'s own assignment lines and `visc%kv_bbl_v`'s assignment line
+(`MOM_set_viscosity.F90:1189,1192,1193`) are marked `nonexec`/0-hits despite their downstream
+consumers showing tens of millions of hits — the data had to come from somewhere, so these lines
+are certainly executing; the tool just isn't crediting them. One outright impossible case: a bare
+Fortran comment (`MOM_set_viscosity.F90:2968`) is reported "covered, hits=2." Net: treat this
+report's per-line attribution as directionally useful but not literally trustworthy at the single-
+line level — the file/subroutine-level covered-vs-uncovered verdicts (which is what every other
+finding in this document relies on) are much more robust than any single line's hit count.
+
+## Should `forces`/`vertvisc_type` be restructured into subtypes by usage pattern?
+
+Raised after the audit above showed both types' Tier 1/Tier 2 split lines up cleanly with real
+physics-package boundaries (wind/BBL-friction vs. ice-shelf/bulk-mixed-layer/CVMix-shear/wave-
+coupling). **Recommendation: no, not on the real Fortran types — but the question is already
+half-answered by the union-shadow mechanism this file uses, and it's worth being explicit about
+why.**
+
+- **Don't touch `mech_forcing`/`vertvisc_type` themselves.** These are upstream MOM6 types used
+  far beyond this campaign (15 and 20 files respectively, outside any conversion tree) — splitting
+  them into subtypes would be an invasive change to MOM6 itself, not a bridge-layer decision this
+  campaign owns, and every field's tier assignment above is derived from one idealized
+  configuration's coverage (with confirmed tool-attribution artifacts on both types, see above) —
+  not a solid enough basis to redesign a shared upstream type around.
+- **The union-shadow mechanism already does the equivalent thing, correctly.** Each type's shadow
+  in this file is a needs-based projection — only fields an in-scope entry point actually
+  dereferences make the list (7 of `forces`'s 23 fields, 16 of `vertvisc_type`'s 25) — not the
+  full original type. That's already "usage-pattern-based," just driven by *which trees are being
+  converted*, not by *which physics packages happen to be on in one test config*. No further
+  splitting is needed for the shadow's field list itself to stay minimal.
+- **What the Tier 1/Tier 2 columns add on top, usefully:** a validation-priority signal *within*
+  each already-minimal shadow — which fields Stage 12 (whole-package verification) can actually
+  check against real double_gyre/double_gyre_unsplit capture data now, vs. which need a
+  shelf/wave/MEKE-enabled config later. Treat this as a documentation/prioritization aid, not a
+  reason to further partition the shadow's C++ representation.
+- **One place actual C++-side sub-structuring could pay off later, not now:** if/when the shared-
+  infrastructure PR's `create_shadow_container_type` mechanism is implemented, grouping each
+  shadow's Tier 2 fields into a clearly-named sub-block (e.g. an `ice_shelf`-tagged group within
+  the `forces` shadow) could make it obvious at a glance which fields are validated vs.
+  structurally-present-but-unverified. That's an implementation-time call for whoever builds
+  Stage 6/7, not something to lock in at the planning stage — the mechanism's actual shape isn't
+  designed yet, and premature structure here would be exactly the kind of speculative abstraction
+  this campaign has avoided everywhere else.
+
+## Mechanism decision: `forces` and `vertvisc_type` move out of the combined PR (user decision, this session)
+
+Follow-up to the audit above: once the actual cross-tree overlap was checked field-by-field
+(not just "how many trees need this type" but "which specific fields do more than one tree
+touch"), both types turned out to need a different mechanism than the other 7 — not a
+BT_cont_type-style wholesale conversion of the real Fortran type, and not the 9-type combined PR
+either, but a **local shadow scoped to exactly the trees that share each field**, matching the
+localized usage the audit revealed.
+
+**Why not wholesale conversion (the BT_cont_type precedent), for either type:**
+`BT_cont_type`'s wholesale conversion worked because its total footprint was narrow — 5 files,
+all internal MOM6 dynamics-core code, no consumers outside the campaign. Checked directly this
+session: `forces%taux`/`forces%tauy` (the only genuinely cross-tree-shared `forces` fields) are
+dereferenced in **12 files**, and 5 of those are coupler/driver "cap" layers —
+`mom_surface_forcing_nuopc.F90` (the **CESM production coupling interface**, 15+ separate
+read/write sites), `MOM_surface_forcing_gfdl.F90` (FMS_cap), `MOM_surface_forcing.F90`/
+`user_surface_forcing.F90` (solo_driver), `mom_surface_forcing_mct.F90` (STALE_mct_cap).
+Wholesale-converting these fields' declared type would mean touching production coupling code
+that feeds real climate-model runs, not just this campaign's idealized test configs — a
+materially higher-stakes change than `BT_cont_type` ever was. `vertvisc_type` is shared 20 files
+outside the campaign — also too wide for wholesale conversion to make sense.
+
+**Why not the 9-type combined PR either, for either type:** the combined PR exists to solve one
+specific problem — avoiding a shared type having its shape unilaterally decided by whichever
+entry-point PR reaches Stage 2 first. That problem only exists where genuinely-independent
+conversion efforts share the same field. Checked field-by-field:
+
+- **`forces`**: only `taux`/`tauy` are shared across independent efforts — needed by `btstep`
+  (unrelated to the vertvisc family), and separately by `vertvisc`/`set_viscous_ML` (both inside
+  the vertvisc-family cluster below). **Corrected finding, this session: `set_viscous_ML` also
+  dereferences `forces%taux`/`forces%tauy` directly** (`MOM_set_viscosity.F90:2286-2288,2563-2565`,
+  in its BBL-stress calculation) — the existing field table only listed `btstep`/`vertvisc`,
+  missing this third consumer. Every other `forces` field is single-tree
+  (`rigidity_ice_u`/`rigidity_ice_v` — btstep only; `omega_w2x` — vertvisc only; `p_surf` —
+  set_viscous_ML only) or shared only *within* the already-coupled vertvisc-family cluster
+  (`frac_shelf_u`/`frac_shelf_v` — vertvisc_coef + set_viscous_ML, both in that cluster) — none of
+  those need cross-campaign coordination at all.
+- **`vertvisc_type`**: all 15 fields beyond `h_ML` are shared only among
+  `vertvisc`/`vertvisc_coef`/`vertvisc_remnant`/`set_viscous_BBL`/`set_viscous_ML` — a family
+  already being surveyed and converted together in one plan (`vertvisc_family.md`), not five
+  independent efforts. `h_ML` is different in kind: it's dereferenced by `tracer_hordiff`'s own
+  in-tree descendants (`hor_bnd_diffusion`, `neutral_diffusion_calc_coeffs`), not by
+  `tracer_hordiff`'s top-level body, and has nothing to do with the vertvisc-family cluster beyond
+  sharing the same underlying Fortran type — it's `tracer_hordiff`'s own single-tree local need,
+  tracked separately.
+
+**Decision:**
+
+1. **`forces%taux`/`forces%tauy` — one shared shadow, scoped to exactly the trees that need it**
+   (`btstep` + the vertvisc-family cluster), built independently of the 9-type combined PR, never
+   touching `MOM_forcing_type.F90`'s real type definition or any of the 9 files outside this
+   campaign. Whichever of `btstep`/`vertvisc`/`set_viscous_ML` reaches Phase 2 Stage 2 first builds
+   it; the others consume it — same "build once, don't let one PR silently gate another" principle
+   as the combined PR, just scoped to 2-3 trees instead of the whole campaign.
+2. **`forces%rigidity_ice_u/v`** — folded into `btstep`'s own tree-local shadow work (already
+   documented in `btstep.md`), no sharing needed.
+3. **`forces%omega_w2x`, `frac_shelf_u/v`, `p_surf`, and all 15 non-`h_ML` `vertvisc_type` fields**
+   — one shared local shadow scoped to the vertvisc-family cluster
+   (`vertvisc`/`vertvisc_coef`/`vertvisc_remnant`/`set_viscous_BBL`/`set_viscous_ML`), built by
+   whichever of those five reaches Phase 2 Stage 2 first, consumed by the rest. Not gated on the
+   9-type combined PR at all — this cluster's `visc`/`forces`-subset work can start immediately, in
+   parallel with that PR. (The cluster's Stage 2 still separately needs `OBC`/`ADp`/`tv`/`VarMix`/
+   `Waves` from the combined PR for its *other* shared types — this change only removes `forces`
+   and `vertvisc_type` from that dependency, it doesn't fully unblock the cluster.)
+4. **`vertvisc_type%h_ML`** — folded into `tracer_hordiff`'s own tree-local shadow work, unrelated
+   to the vertvisc-family cluster's shadow.
+
+**Net effect on the combined PR:** shrinks from 9 types to 7 (`OBC`, `ADp`, `tv`, `VarMix`,
+`Waves`, `pbv`, `MEKE`). The per-type sections for `forces` and `vertvisc_type` below, and the
+stage list immediately after this one, are updated to match.
+
 ### Stages within the combined PR
 
 One branch, one PR, but **not** one unstaged commit — same commit/verify/push/CI-check/stop
-discipline as every entry-point plan's own Phase 2, applied here because ~10 types across 3
+discipline as every entry-point plan's own Phase 2, applied here because ~8 types across 3
 different mechanisms is too much surface to verify in one shot, and because a real dependency
-exists between two of them (below).
+exists between two of them (below). (`forces` and `vertvisc_type` are no longer part of this list
+— see "Mechanism decision" above; they're built as their own small, independently-scheduled local
+shadows, not staged into this PR.)
 
 1. **`BT_cont_type` — wholesale conversion.** Independent of everything else in this file (its
    own mechanism, its own five files — `MOM_variables.F90`, `MOM_continuity_PPM.F90`,
@@ -64,24 +241,21 @@ exists between two of them (below).
    `eqn_of_state` stays an opaque handle, no EOS-specific work needed here.
    *(`ADp` and `tv` ordered first among the remaining types since `PressureForce` — the
    recommended next entry-point plan to execute — needs both and nothing else in this group.)*
-6. **`forces` — union shadow.** Independent, 5 fields, no open items.
-7. **`vertvisc_type` — union shadow.** Independent, free promotion (no new fields beyond what
-   `vertvisc_family` already fully specified) — the most mechanical stage in this group.
-8. **`pbv` — union shadow.** Independent, 4 fields, no open items.
-9. **`VarMix` — union shadow.** Independent. Moderate care needed: only ~14 of the underlying
+6. **`pbv` — union shadow.** Independent, 4 fields, no open items.
+7. **`VarMix` — union shadow.** Independent. Moderate care needed: only ~14 of the underlying
    type's ~89 fields are touched — confirm the current list (grown substantially from
    `tracer_hordiff`) before carving out the shadow's field subset.
-10. **`Waves` — union shadow.** Independent, but **not mechanical like 4-9** — still carries the
+8. **`Waves` — union shadow.** Independent, but **not mechanical like 4-7** — still carries the
     unresolved "optional struct dummy" open item (`Waves` is `optional, pointer` in every
     consuming tree). Building this shadow means resolving, at least for this one type, how the
     shared build/copy-back API signals "not present" — genuine design work, not just authorship.
-    Isolated in its own stage precisely so it doesn't hold up 4-9 while that gets worked out.
-11. **`MEKE` — union shadow.** Independent, but has its own pre-check: `tracer_hordiff`'s 2 needed
+    Isolated in its own stage precisely so it doesn't hold up 4-7 while that gets worked out.
+9. **`MEKE` — union shadow.** Independent, but has its own pre-check: `tracer_hordiff`'s 2 needed
     fields (`Kh`, `KhTr_fac`) haven't been confirmed against `horizontal_viscosity`'s "most/all 15
     fields" — itemize `horizontal_viscosity`'s exact field list first, so this shadow is built
     complete on this pass rather than needing a later widening. Isolated in its own stage for the
     same reason as `Waves`.
-12. **Whole-package verification, before the final commit.** Cross-check every shadow's field list
+10. **Whole-package verification, before the final commit.** Cross-check every shadow's field list
    against what every entry-point plan (`btstep.md`, `horizontal_viscosity.md`,
    `vertvisc_family.md`, `CorAdCalc.md`, `PressureForce.md`, `set_viscosity_family.md`,
    `advect_tracer.md`, `tracer_hordiff.md`) actually records needing — confirm nothing is missing,
@@ -188,17 +362,27 @@ plus two new top-level scalar logicals (`open_u_BCs_exist_globally`, `open_v_BCs
 siblings of the already-listed `specified_*_BCs_exist_globally` below) and one new top-level
 scalar logical, `exterior_OBC_bug`.
 
-## `forces` (`mech_forcing`) — union shadow
+## `forces` (`mech_forcing`) — split into a shared cross-cluster shadow plus tree-local fields (not a combined-PR union — see "Mechanism decision" above)
 
-Shared (15 files outside any conversion campaign).
+Shared (15 files outside any conversion campaign; `taux`/`tauy` specifically span 12 files — see
+"Mechanism decision" above for the full file list and why that rules out wholesale conversion).
 
-| Field | Needed by | Notes |
-|---|---|---|
-| `taux`, `tauy` | btstep, vertvisc | `pointer`, no `associated()` guard in either tree — plain container view, no check added (see `btstep.md`'s reasoning) |
-| `rigidity_ice_u`, `rigidity_ice_v` | btstep | `pointer`, `associated()`-guarded — `%associated()`-checked container |
-| `frac_shelf_u`, `frac_shelf_v` | vertvisc_coef, set_viscous_ML | not yet confirmed pointer-vs-allocatable-vs-guarded; check before finalizing this field's shadow treatment |
-| `omega_w2x` | vertvisc | not yet confirmed pointer-vs-allocatable-vs-guarded; same caveat |
-| `p_surf` | set_viscous_ML | not yet confirmed pointer-vs-allocatable-vs-guarded; same caveat |
+| Field | Needed by | Shadow scope | Notes | Runtime tier (double_gyre / double_gyre_unsplit) |
+|---|---|---|---|---|
+| `taux`, `tauy` | btstep, vertvisc, **set_viscous_ML (corrected, this session — `MOM_set_viscosity.F90:2286-2288,2563-2565`)** | **Shared cross-cluster shadow** (btstep + vertvisc-family cluster) — the only `forces` fields needing this treatment | `pointer`, no `associated()` guard in any of the three — plain container view, no check added (see `btstep.md`'s reasoning) | **Tier 1 — live** (millions of hits, `MOM_vert_friction.F90`) |
+| `rigidity_ice_u`, `rigidity_ice_v` | btstep only | btstep's own tree-local shadow | `pointer`, `associated()`-guarded — `%associated()`-checked container | Tier 2 — inert (`ICE_SHELF=False`, guard false, never allocated) |
+| `frac_shelf_u`, `frac_shelf_v` | vertvisc_coef, set_viscous_ML (both in the vertvisc-family cluster) | vertvisc-family cluster's local shadow | not yet confirmed pointer-vs-allocatable-vs-guarded; check before finalizing this field's shadow treatment | Tier 2, **but flagged** — coverage shows these as covered with `taux`-sized hit counts despite `ICE_SHELF=False`; likely a coverage-tool line-attribution artifact (see audit above), not confirmed live. Verify directly (not via this coverage report) before relying on either reading |
+| `omega_w2x` | vertvisc only | vertvisc-family cluster's local shadow | not yet confirmed pointer-vs-allocatable-vs-guarded; same caveat | Tier 2 — inert (wave-coupling only, `USE_WAVES=False`) |
+| `p_surf` | set_viscous_ML only | vertvisc-family cluster's local shadow | not yet confirmed pointer-vs-allocatable-vs-guarded; same caveat | Tier 2 — inert here (this field *is* live elsewhere, e.g. `MOM_dynamics_unsplit_RK2.F90`'s pressure-gradient path, but not in `set_viscous_ML`'s own use of it under this config) |
+
+**Tier 1 = capture-fixture-validatable with real double_gyre/double_gyre_unsplit data today. Tier
+2 = the shadow's build/copy-back logic for that field is still needed (the Fortran code genuinely
+dereferences it) but can't be checked against non-trivial data without a shelf/wave-coupling
+config.** See the runtime exercise audit above for the full 23-field breakdown this table's subset
+is drawn from. Only the `taux`/`tauy` row needs cross-tree coordination outside the vertvisc-family
+cluster (with `btstep`); every other row is either single-tree or already inside the cluster that
+owns `vertvisc_type`'s own local shadow (next section) — no combined PR involvement for any `forces`
+field anymore.
 
 ## `VarMix` (`VarMix_CS`) — union shadow (upgraded from tree-scoped to union)
 
@@ -300,20 +484,39 @@ implementation yet.** Every "leave EOS alone, view-marshal" classification alrea
 unchanged once this lands — the bridge's default mode is Fortran-truth, bit-identical, so those
 plans need no revision.
 
-## `vertvisc_type` (the `visc` dummy) — promoted to union (free — no new fields)
+## `vertvisc_type` (the `visc` dummy) — vertvisc-family local shadow, not part of the combined PR (see "Mechanism decision" above)
 
-25 fields (`MOM_variables.F90:258-313`), shared 20 files. First needed by `vertvisc`/
-`vertvisc_coef`/`vertvisc_remnant` (tree-scoped at the time: `Ray_u/v`, `taux_shelf`/`tauy_shelf`,
-`Kv_bbl_u/v`, `bbl_thick_u/v`, `tbl_thick_shelf_u/v`, `Kv_tbl_shelf_u/v`, `Kv_slow`,
-`nkml_visc_u/v`). `set_viscous_BBL` (`Ray_u/v`, `bbl_thick_u/v`, `Kv_bbl_u/v`) and
-`set_viscous_ML` (`Kv_tbl_shelf_u/v`, `nkml_visc_u/v`, `taux_shelf`/`tauy_shelf`,
-`tbl_thick_shelf_u/v`) need nothing beyond what's already there — a completely free promotion,
-no field-list changes required, purely a bookkeeping move from tree-scoped to union.
+25 fields (`MOM_variables.F90:258-313`), shared 20 files outside the campaign — too wide for a
+BT_cont_type-style wholesale conversion, but all 15 non-`h_ML` fields are shared *only* among
+`vertvisc`/`vertvisc_coef`/`vertvisc_remnant`/`set_viscous_BBL`/`set_viscous_ML`, one family
+already surveyed and converted together in `vertvisc_family.md` — not five independent efforts, so
+this needs a local shadow scoped to that cluster, not the 9-type combined PR. First needed by
+`vertvisc`/`vertvisc_coef`/`vertvisc_remnant` (tree-scoped at the time: `Ray_u/v`,
+`taux_shelf`/`tauy_shelf`, `Kv_bbl_u/v`, `bbl_thick_u/v`, `tbl_thick_shelf_u/v`,
+`Kv_tbl_shelf_u/v`, `Kv_slow`, `nkml_visc_u/v`). `set_viscous_BBL` (`Ray_u/v`, `bbl_thick_u/v`,
+`Kv_bbl_u/v`) and `set_viscous_ML` (`Kv_tbl_shelf_u/v`, `nkml_visc_u/v`, `taux_shelf`/`tauy_shelf`,
+`tbl_thick_shelf_u/v`) need nothing beyond what's already there — the cluster's local shadow can be
+built with zero field-list changes from what `vertvisc_family.md` already specifies, by whichever
+of the five entry points reaches Phase 2 Stage 2 first, and consumed by the rest.
 
-**New field from `tracer_hordiff`**: `h_ML`, needed by that tree's own in-tree callees
+**`h_ML` is not part of this cluster shadow.** Needed by `tracer_hordiff`'s own in-tree callees
 `hor_bnd_diffusion` and `neutral_diffusion_calc_coeffs` — not by `tracer_hordiff`'s own body,
 which forwards the `visc` dummy opaquely (same "only the true consumer needs the shadow" pattern
-already noted above for `ADp`/`write_u_accel`).
+already noted above for `ADp`/`write_u_accel`) — and unrelated to the vertvisc-family cluster
+beyond sharing the same underlying Fortran type. Track it as `tracer_hordiff`'s own single-tree
+local shadow field, built independently whenever that tree's Phase 2 runs.
+
+**Runtime tier, double_gyre / double_gyre_unsplit (see the runtime exercise audit above for the
+full 25-field breakdown):** of the vertvisc-family cluster's 15 fields, **Tier 1 — live**:
+`Ray_u`, `Ray_v`, `Kv_bbl_u`, `Kv_bbl_v` (its own assignment line is a coverage-attribution
+artifact — treat as live, symmetric with `Kv_bbl_u`), `bbl_thick_u`, `bbl_thick_v` (same artifact
+caveat). **Tier 2 — inert**: `taux_shelf`, `tauy_shelf`, `tbl_thick_shelf_u`, `tbl_thick_shelf_v`,
+`Kv_tbl_shelf_u`, `Kv_tbl_shelf_v` (all ice-shelf-only, `ICE_SHELF=False`), `Kv_slow`
+(CVMix-shear off), `nkml_visc_u`, `nkml_visc_v` (`BULKMIXEDLAYER=False`). So this shadow's Tier
+1/Tier 2 split lines up almost exactly with the physical BBL-friction vs. ice-shelf/bulk-mixed-layer
+boundary already visible in how the fields were grouped by consuming subroutine above.
+`tracer_hordiff`'s separately-tracked `h_ML` is Tier 1 but init-only (not live-loop) — see the
+runtime exercise audit above.
 
 ## `MEKE` (`MEKE_type`) — promoted to union (was tree-scoped to `horizontal_viscosity` alone)
 

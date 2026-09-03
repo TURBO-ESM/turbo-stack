@@ -11,6 +11,13 @@ plan (deferred, not yet written) will list this call the same way.
 
 No pre-existing audit doc existed for this entry point.
 
+**Base plan — double_gyre_unsplit.** `advect_tracer` is called unconditionally from
+`step_MOM_tracer_dyn`, outside the `CS%split` branch entirely — confirmed exercised identically
+(identical 6.5% file coverage, identical 1,440 hit count) under both `double_gyre` and
+`double_gyre_unsplit`. No patch needed. (The existing note below about `create_group_pass`/
+`do_group_pass` being exercised in `benchmark`, not either double_gyre variant, is a separate,
+unrelated testing-coverage gap — orthogonal to the base/patch split.)
+
 ## Hard precondition checks
 
 - **Callers (repo-wide, confirmed by grep):** `MOM.F90:1645` (`step_MOM_tracer_dyn`),

@@ -9,6 +9,13 @@ No pre-existing audit doc existed for this entry point — surveyed fresh, thoug
 comparison tables in `hor_visc_call_tree_audit.md`/`vert_friction_call_tree_audit.md` had
 already flagged `Set_pbce_Bouss`/the pressure solver as reaching the EOS layer.
 
+**Base plan — double_gyre_unsplit.** The FV/Montgomery × Boussinesq dispatch inside
+`PressureForce` isn't gated by `SPLIT` at all — same code path either way. Only the call
+frequency differs: twice per step under the split dynamics core (predictor + corrector) vs. once
+per step under unsplit RK2. Coverage confirms this is a wash, not a simplification
+(`MOM_PressureForce_FV.F90`: 21.2% vs. 20.6%; the Montgomery-form physics subroutines are already
+0%-covered under **both** configs, since `double_gyre` uses the FV form). No patch needed.
+
 ## Hard precondition checks
 
 - Callers confirmed: same 4 dynamics-core files as every other entry point (`MOM_dynamics_unsplit.F90`

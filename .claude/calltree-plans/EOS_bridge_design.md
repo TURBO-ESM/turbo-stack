@@ -277,6 +277,17 @@ work, its capture run naturally produces fixtures for whichever form *that* conf
 and that form graduates from tier 2 to tier 1 as a side effect — the same organic, per-configuration
 sourcing every capture fixture in this campaign has already used, not a new process.
 
+**Caveat, confirmed via coverage (applies to both double_gyre and double_gyre_unsplit — base plan,
+unaffected by the base/patch split):** "double_gyre happens to use Wright" is true only of the
+*configured* `EQN_OF_STATE`, not of runtime coverage. `double_gyre`'s `MOM_input` also sets
+`ENABLE_THERMODYNAMICS=False`, so `tv%eqn_of_state` is never `associated` and the EOS
+density-calculation kernels are essentially never called — `MOM_EOS.F90` sits at 0.3% line
+coverage (3/930 lines) under **both** `double_gyre` and `double_gyre_unsplit` (`SPLIT` doesn't
+gate this at all). Don't read "double_gyre selects Wright" as "double_gyre's capture runs actually
+exercise/verify the Wright kernels" — they don't, under either config, today. Tier-1 status for
+`buggy_Wright_EOS` should be understood as "the configured form," not "runtime-verified by
+double_gyre's own capture fixtures."
+
 Sketch (illustrative, not final signatures):
 ```cpp
 switch (form_of_EOS) {

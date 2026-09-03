@@ -14,6 +14,22 @@ fifth, `vertFPmix`, is a genuine fourth public-ish entry point (uses the vendore
 but was not requested and is confirmed **not called from any of the three trees below** — out of
 scope, untouched.
 
+## Base vs. patch scope (double_gyre_unsplit base, double_gyre patch)
+
+The campaign's base target is `double_gyre_unsplit` (`SPLIT=False, USE_RK2=True`); `double_gyre`
+(`SPLIT=True`) is a later patch on top of that base. This tree splits cleanly along that line:
+
+- **Base scope: `vertvisc`, `vertvisc_coef`.** Both called from all 4 dynamics-core files
+  regardless of `SPLIT` (confirmed below) — fully exercised under `double_gyre_unsplit`, no patch
+  needed for either.
+- **Patch scope (double_gyre only): `vertvisc_remnant`.** Called from only the 2 split-dynamics
+  files (`MOM_dynamics_split_RK2.F90`, `MOM_dynamics_split_RK2b.F90` — see below); confirmed absent
+  (grep, no match) from `MOM_dynamics_unsplit_RK2.F90`. Coverage corroborates this: the split-only
+  call sites (`MOM_dynamics_split_RK2.F90:658,841,843,1128`) sit in a file that goes from 65.9% to
+  0.0% line coverage under `double_gyre_unsplit`. Phase 2 work on this tree can proceed on
+  `vertvisc`/`vertvisc_coef` alone first; `vertvisc_remnant` waits for the patch phase, same
+  combined-shared-infrastructure blocker as the rest of the tree, just relevant later.
+
 ## Hard precondition checks
 
 - **Callers, corrected from the pre-existing audit.** `vertvisc` and `vertvisc_coef` are each
@@ -136,9 +152,14 @@ an earlier 14-file estimate). Dereferenced directly in `vertvisc`: `Waves%us_x`,
 (Stokes-drift velocity components). `optional, pointer` together — the same combination flagged
 as the open item in `horizontal_viscosity.md` (`BT`/`TD`/`ADp`/`STOCH`/`OBC`).
 
-## `OBC`, `ADp`, `forces`, `VarMix` — union shadows grown by this tree
+## `OBC`, `ADp`, `forces`, `VarMix` — shadows grown by this tree
 
-See `shared_type_unions.md` for the full, current field lists. This tree's contributions:
+`OBC`, `ADp`, `VarMix` are union shadows, part of the 7-type combined shared-infrastructure PR.
+`forces` is different as of this session — its `taux`/`tauy` are a shared shadow between `btstep`
+and this vertvisc-family cluster (not the combined PR), and `omega_w2x`/`frac_shelf_u/v` are local
+to this cluster's own shadow, alongside `vertvisc_type` itself (see below and
+`shared_type_unions.md`'s "Mechanism decision" section). See `shared_type_unions.md` for the full,
+current field lists. This tree's contributions:
 - **`OBC`**: `vertvisc` touches `number_of_segments`, `segment(:)%specified`,
   `segment(:)%HI%JsdB`, `segment(:)%normal_vel` — all already in the union from other trees, no
   new fields from `vertvisc` itself. `vertvisc_coef`/`find_coupling_coef`/`find_coupling_coef_k`
@@ -164,15 +185,18 @@ See `shared_type_unions.md` for the full, current field lists. This tree's contr
 
 **Blocking (external dependencies):**
 
-1. **The combined shared-infrastructure PR hasn't landed — same blocker as `btstep`/`CorAdCalc`,
-   and this family needs the largest set of types from it of any tree checked so far:** `visc`
-   (`vertvisc_type`), `tv`, `OBC`, `ADp`, `forces`, `VarMix`, `Waves` — seven types, all built once
-   by that PR per the Phase 2 execution order above. Verified directly: both `vertvisc_type`
-   (`MOM_variables.F90:260-`) and `thermo_var_ptrs`/`tv` (`MOM_variables.F90:81-`) are still 100%
-   raw allocatable/pointer arrays; combined with the repo-wide check (done while verifying
-   `btstep.md`) that found no shadow container type exists anywhere for any of the 9 types this PR
-   covers. Landing it unblocks Stage 2 for all three trees checked so far at once, not just this
-   one.
+1. **The combined shared-infrastructure PR hasn't landed — same blocker as `btstep`/`CorAdCalc`.**
+   As of this session, `forces` and `vertvisc_type` are **no longer part of that PR** — they moved
+   to a local shadow scoped to this vertvisc-family cluster (`vertvisc`/`vertvisc_coef`/
+   `vertvisc_remnant`/`set_viscous_BBL`/`set_viscous_ML`), buildable independently and immediately,
+   in parallel with the combined PR (see `shared_type_unions.md`'s "Mechanism decision" section).
+   This family still needs **five** types from the combined PR — `tv`, `OBC`, `ADp`, `VarMix`,
+   `Waves` — the largest remaining set of any tree checked so far, just two smaller than before.
+   Verified directly: `thermo_var_ptrs`/`tv` (`MOM_variables.F90:81-`) is still 100% raw
+   allocatable/pointer arrays; combined with the repo-wide check (done while verifying `btstep.md`)
+   that found no shadow container type exists anywhere for any of the 7 types this PR now covers.
+   Landing it unblocks the rest of Stage 2 for this and every other tree waiting on it — but this
+   family's `visc`/`forces`-subset shadow doesn't need to wait, and can start now.
 2. **`Waves`'s optional-struct status is separately unresolved**, same still-open mechanism
    tracked in `shared_type_unions.md`. Affects `vertvisc` only — its `Waves` dummy is
    `optional, pointer`; `vertvisc_coef` and `vertvisc_remnant` have zero optional dummies, so
@@ -226,9 +250,10 @@ signatures — this open item only affects `vertvisc` within this family.
 | `shelf` (`find_coupling_coef`/`_k`, scalar logical, optional) | optional scalar | `convert_present_to_associated` | — |
 | `G`, `GV` | shared grid/vertical-grid types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
 | `US` | shared scaling type | same drop mechanism | **Inconsistently used across this family** — unused in `vertvisc_remnant`, `find_coupling_coef`, `find_coupling_coef_k`, `find_ustar_mech_forcing`; used in `vertvisc_limit_vel` (`US%m_s_to_L_T`) and presumably `vertvisc_coef`/`vertvisc` themselves. Flag every unused instance for the upward-pass drop decision, same as `btstep`/`horizontal_viscosity`. |
-| `visc` | shared, dereferenced | `create_shadow_container_type`, tree-scoped | See dedicated section above. |
+| `visc` | shared, dereferenced by the whole vertvisc-family cluster | `create_shadow_container_type`, **local shadow scoped to this cluster** — not the combined PR | See dedicated section above and `shared_type_unions.md`'s "Mechanism decision" section. |
 | `tv` | shared, union (promoted) | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. |
-| `OBC`, `ADp`, `forces`, `VarMix`, `Waves` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. `Waves` blocked on the optional-struct open item for the wrapper-side "is it present" handling. |
+| `OBC`, `ADp`, `VarMix`, `Waves` | shared, union | `create_shadow_container_type`, union scope | See `shared_type_unions.md`. `Waves` blocked on the optional-struct open item for the wrapper-side "is it present" handling. |
+| `forces` | shared: `taux`/`tauy` with `btstep` (cross-cluster); `omega_w2x`/`frac_shelf_u/v` local to this cluster | `create_shadow_container_type`, **shared cross-cluster + cluster-local shadow** — not the combined PR | See `shared_type_unions.md`'s "Mechanism decision" section. |
 | `CDp` | confirmed opaque throughout | leave alone | No shadow needed. |
 | `PointAccel_CS` (`CS%PointAccel_CSp`) | confirmed opaque (only reaches excluded infra) | leave alone | No shadow needed. |
 | `CS` (`vertvisc_CS`) | private, 90 fields | `create_config_bundle_type`, physics-fields-only | See dedicated section above. |

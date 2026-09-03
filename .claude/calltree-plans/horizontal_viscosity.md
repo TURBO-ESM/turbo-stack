@@ -1,294 +1,258 @@
-# Call-tree conversion plan: `horizontal_viscosity`
+# convert_calltree plan — `horizontal_viscosity`
 
-**STALE — Phase 1 needs to be redone before Phase 2/3 execution starts on this tree (found this
-session, verified against current source, not just a line-number drift).** Everything below this
-notice reflects the state of `MOM_hor_visc.F90` at Phase 1 survey time, which no longer matches
-the current source in ways that go beyond citation drift:
+Skill: `convert_calltree`. Phase 1 output only — no code changed yet.
+Repo: `submodules/MOM6` checkout at
+`/Users/dennis/Desktop/Work/Claude_auto_convert/turbo-stack/submodules/MOM6`.
+Unrelated to the `continuity()` campaign (separate plan file, separate tree,
+separate branch when Phase 2 starts) — do not conflate the two.
 
-1. **5 direct callees of `horizontal_viscosity` are missing from the descendant list entirely** —
-   `hor_visc_GME_setup` (called at line 298), `hor_visc_Leith_grad` (705), `hor_visc_Leithy_Ah`
-   (932), `hor_visc_backscatter_h` (1025), `hor_visc_backscatter_q` (1399). These aren't the
-   "Monolith split" section's proposed future subroutines (`hor_visc_core`/`hor_visc_GME`/
-   `hor_visc_QG_Leith`/`hor_visc_ZB2020`/`hor_visc_Leithy` — different names, different
-   boundaries) — they're pre-existing code the Phase 1 survey never enumerated as callees at all.
-   Two of them (`hor_visc_Leithy_Ah`, `hor_visc_GME_setup`) contain real, undocumented
-   `pass_var`/`pass_vector` halo-exchange calls (7 of 12 total in this file) that never surface
-   anywhere in this plan as a result.
-2. **The external signature this doc calls "frozen, do not change" is missing a parameter.** The
-   real current signature (`MOM_hor_visc.F90:273-274`) has `nkblock` right after `CS`, absent
-   from this doc's citation entirely.
-3. **The entry-point line-range citation (`270-2451`) points at the wrong code today** — the real
-   `horizontal_viscosity` subroutine is `273-2186`; line 2451 falls inside `hor_visc_backscatter_h`,
-   a separate subroutine. The doc's own "2182-line body" figure matches the stale `270-2451` range
-   almost exactly, suggesting the survey was done before the Leith/backscatter/Leithy/GME logic
-   was extracted into the five separate subroutines that exist in the source today.
+**Base plan — double_gyre_unsplit.** `horizontal_viscosity` is called once per step from both
+split and unsplit dynamics cores (split passes barotropically-corrected `u_av`/`v_av`, unsplit
+passes raw `u_in`/`v_in` — same subroutine, same code path either way) — confirmed nearly
+identical file coverage under `double_gyre` (33.3%) and `double_gyre_unsplit` (31.9%). No patch
+needed.
 
-**Do not execute Phase 2 against this document as-is.** Re-run Phase 1's survey against the
-current `MOM_hor_visc.F90` first — the descendant list, the external signature, and the
-"Monolith split" section's premise (that this splitting is still *future* work) all need
-re-verifying, not just patching the specific gaps listed above.
+## Step 1a — external signature (frozen)
 
----
-
-Entry point: `horizontal_viscosity`, `src/parameterizations/lateral/MOM_hor_visc.F90:270-2451`.
-Produced by Phase 1 of `convert_calltree`. Read by Phase 2 and Phase 3.
-
-Cross-reference: `.claude/calltree-plans/shared_type_unions.md`, the authoritative source for
-every derived-type union this plan touches (`ADp`, `OBC`, `VarMix`) — this file no longer
-carries its own copies of those field lists.
-
-## Hard precondition checks
-
-- `horizontal_viscosity`'s external signature (21 dummies, listed below) is fixed by the
-  dynamics-core callers: `MOM_dynamics_unsplit_RK2.F90:284`, `MOM_dynamics_split_RK2b.F90:577,887`,
-  `MOM_dynamics_unsplit.F90:272`, `MOM_dynamics_split_RK2.F90:962,1752` — same 4 files as
-  `continuity()`/vert-friction, 6 call sites total. No other file calls it (confirmed).
-- Shared-descendant check: the 3 same-file helpers (`smooth_x9_h`, `smooth_x9_uv`, `smooth_GME`)
-  and the GME leaves (`barotropic_get_tav`, `thickness_diffuse_get_KH`) have zero external
-  callers of their own. `calc_QG_slopes` has zero external callers itself, but **what it calls
-  does not** — `calc_isoneutral_slopes` is independently reached from `MOM.F90`'s main step
-  (`calc_resoln_function`/`calc_slope_functions`) and from `MOM_MEKE.F90` — see "QG-Leith scope
-  boundary" below for how this is handled. `ZB2020_lateral_stress`'s entire subtree (13 nodes,
-  fully traced) has zero external callers anywhere — confirmed self-contained. `ADp`/`OBC` are
-  shared derived types, not shared subroutines — handled separately below.
-
-## Step 1d — wrapper case
-
-**Case 3.** `horizontal_viscosity` is one subroutine, called directly under its own name —
-`public horizontal_viscosity, hor_visc_init, hor_visc_end, hor_visc_vel_stencil` — no existing
-wrapper, no alias. Phase 2 Stage 1 must:
-1. Rename the current implementation `horizontal_viscosity` → `horizontal_viscosity_TR`.
-2. Author a new `horizontal_viscosity` wrapper (pure pass-through call to
-   `horizontal_viscosity_TR`), matching the current external signature exactly, no `bind(C)`.
-`horizontal_viscosity_TR` is bridged in Phase 3's last wave; the wrapper is never bridged.
-
-**Also part of Stage 1 (see "Monolith split" below):** unlike `continuity()`/`btstep`, this
-entry point's body needs restructuring beyond the rename+wrapper — Stage 1 additionally splits
-`horizontal_viscosity_TR`'s 2182-line body into named per-scheme subroutines it calls.
-
-## `horizontal_viscosity`'s own external signature (frozen, from Step 1a — do not change)
-
-```
-horizontal_viscosity(u, v, h, uh, vh, diffu, diffv, MEKE, VarMix, G, GV, US, CS, tv, dt, OBC, BT,
-TD, ADp, hu_cont, hv_cont, STOCH)
-```
-— `MOM_hor_visc.F90:270-306`. Optional dummies: `OBC` (`optional, pointer`), `BT`, `TD`, `ADp`,
-`hu_cont`, `hv_cont`, `STOCH` (all plain `optional`) — **7 optional dummies, 4 of them full
-derived-type structs** (`BT`, `TD`, `ADp`, `STOCH`), not just arrays/scalars. See "Open item —
-optional struct dummies" below; this is new relative to `btstep`, which had only one true
-`optional` (`etaav`, an array) plus several `pointer`-not-`optional` structs.
-
-## Monolith split (Stage 1, user decision)
-
-The pre-existing audit (`hor_visc_call_tree_audit.md`) recommended splitting the 2182-line body's
-9+ internal `if (CS%use_*)` branches into named subroutines before container conversion.
-**Decision (user, this session): do this**, as part of Stage 1, before any container work.
-
-Confirmed major branches, each with its own external call dependencies (clear split
-boundaries):
-- **GME** (`CS%use_GME`) — calls `barotropic_get_tav`, `thickness_diffuse_get_KH`, `smooth_GME`.
-  Two separate `if (CS%use_GME)` blocks exist in the current body (lines ~578-665 and
-  ~1972-2032) — confirm both get folded into one new subroutine, not two.
-- **QG-Leith** (`CS%use_QG_Leith_visc`) — calls `thickness_to_dz`, `calc_QG_slopes`,
-  `calc_QG_Leith_viscosity`.
-- **ZB2020** (`CS%use_ZB2020`) — calls `ZB2020_copy_gradient_and_thickness` (line ~1647),
-  `ZB2020_lateral_stress` (line ~2447).
-- **Leithy** (`CS%use_Leithy`) — calls `smooth_x9_h`, `smooth_x9_uv` (both additionally gated by
-  `CS%smooth_Ah` for the former).
-
-**Not yet mapped to precise line ranges — Stage 1's own job, not resolved in Phase 1:** the
-remaining flags (`use_circulation`, `use_beta_in_Leith`, `use_cont_thick`,
-`use_cont_thick_bug`, `use_land_mask`) and the anisotropic-tensor variant appear to be
-finer-grained switches inside the core Smagorinsky/Leith/biharmonic computation rather than
-separately-callable schemes with their own external dependencies — Phase 1's survey traced
-external call dependencies, not every internal branch of the 2182-line body. Stage 1 execution
-needs to read the full body to decide whether these stay inside one `hor_visc_core` subroutine
-or warrant further splitting. Suggested resulting structure (names illustrative, Stage 1 may
-refine): `hor_visc_core` (default Smagorinsky/Leith/biharmonic path plus the not-yet-mapped
-flags), `hor_visc_GME`, `hor_visc_QG_Leith`, `hor_visc_ZB2020`, `hor_visc_Leithy` — all new
-same-file private subroutines called from `horizontal_viscosity_TR`'s body under the same
-`if (CS%use_*)` gates that exist today.
-
-## QG-Leith scope boundary (user decision)
-
-`calc_QG_slopes` (`MOM_lateral_mixing_coeffs.F90:1360`) has zero external callers itself — a
-true descendant. But it calls `calc_isoneutral_slopes`, which is independently reached from
-`MOM.F90`'s main step (via `calc_resoln_function`/`calc_slope_functions`, called at
-`MOM.F90:807,2209,2236` and `MOM.F90:1296,1473,2211,2238`) and from `MOM_MEKE.F90:1883`'s
-`ML_MEKE_calculate_features` — not just a big subtree, genuinely borrowed infrastructure.
-Below that, `calculate_density_derivs`/`calculate_density_second_derivs`/`calculate_spec_vol`
-dispatch through `EOS%type%...` on a `class(EOS_base), allocatable` polymorphic component (9
-concrete implementations: `linear_EOS`, `UNESCO_EOS`, `buggy_Wright_EOS`, `Wright_full_EOS`,
-`Wright_red_EOS`, `Jackett06_EOS`, `TEOS10_EOS`, `Roquet_rho_EOS`, `Roquet_SpV_EOS`), used by 59
-files repo-wide.
-
-**Decision (user, this session): the container/bridge boundary sits at `calc_QG_slopes` itself.**
-As part of the monolith split, `calc_QG_slopes` becomes (or stays, if already separately
-callable) a normal in-tree target — its own dummies (`h`, `tv`, `dt`, `G`, `GV`, `US`,
-`slope_x`, `slope_y`, `CS`, `OBC`) get containerized and it gets bridged like any other leaf in
-Phase 3. But its own call into `calc_isoneutral_slopes` (and everything below — `find_eta`,
-`find_dz_for_eta`, `int_specific_vol_dp`, the EOS dispatch layer) **stays completely untouched,
-raw Fortran** — marshalled at the call site via container `%view`, the same still-raw-external-
-callee pattern already used for `pass_vector` in `btstep`'s plan. Never push containers or
-bridging into `calc_isoneutral_slopes` or anything below it — out of bounds for this campaign,
-shared with `MOM.F90` and `MOM_MEKE.F90`.
-
-`calc_QG_Leith_viscosity` (leaf apart from one `post_data` call) and `thickness_to_dz` (leaf,
-only calls `MOM_error`, `tv` forwarded opaquely) are both ordinary in-tree leaves — no boundary
-concern, they don't reach the shared EOS layer.
-
-## ZB2020 (user decision: include now)
-
-Confirmed fully self-contained and tractable — zero shared descendants anywhere in its 13-node
-subtree (verified node-by-node against the current repo state, not just trusted from the prior
-audit). `ANN_CS` (the neural-net weights/config type `compute_stress_ANN_collocated` reaches via
-`ANN_apply_array_sio` in `MOM_ANN.F90`) is effectively private to this path in production — its
-only other consumers repo-wide are standalone unit/timing-test drivers
-(`test_MOM_ANN.F90`/`time_MOM_ANN.F90`), not part of any model call tree.
-
-**Decision (user, this session): include ZB2020 in this campaign now**, despite the original
-audit ranking this whole file lowest priority — it's confirmed tractable, unlike QG-Leith.
-Convert/bridge it as its own named subroutine (`hor_visc_ZB2020`, per the monolith split) with
-its full descendant tree following the normal Phase 2/3 machinery. Full traced tree (all nodes
-confirmed leaf-or-not by reading their bodies):
-
-```
-ZB2020_lateral_stress (424-485, MOM_Zanna_Bolton.F90)
-  -> compute_c_diss (492-539)                        leaf
-  -> filter_velocity_gradients (924-1017)
-       -> filter_hq (1072-1106) [x3 call sites]
-            -> filter_3D (1121-1182)                  leaf
-  -> compute_stress_ANN_collocated (658-781) [if CS%use_ann]
-       -> ANN_apply_array_sio (MOM_ANN.F90:383-445)
-            -> layer_apply_sio (internal, 425-444)
-                 -> activation_fn (MOM_ANN.F90:241-247, pure elemental)   leaf
-     / compute_stress (556-643) [else]                leaf
-  -> filter_stress (1023-1068)
-       -> filter_hq (as above)
-  -> compute_stress_divergence (792-915)
-       -> compute_energy_source (1186-1258)            leaf (infra only)
-ZB2020_copy_gradient_and_thickness (361-415)            leaf
+```fortran
+subroutine horizontal_viscosity(u, v, h, uh, vh, diffu, diffv, MEKE, VarMix, G, GV, US, &
+                                CS, nkblock, tv, dt, OBC, BT, TD, ADp, hu_cont, hv_cont, STOCH)
 ```
 
-## `hor_visc_CS` (user decision: bundle by scheme)
+Declared `src/parameterizations/lateral/MOM_hor_visc.F90:273`, 1,913 lines
+(the whole file is 4,416 lines). Mandatory: `u,v,h,uh,vh,diffu,diffv`
+(raw arrays), `MEKE` (`type(MEKE_type), intent(inout)`), `VarMix`
+(`type(VarMix_CS), intent(inout)`), `G`/`GV`/`US`, `CS`
+(`type(hor_visc_CS), intent(inout)`), `nkblock` (integer), `tv`
+(`type(thermo_var_ptrs), intent(in)`), `dt`. Optional: `OBC`
+(`type(ocean_OBC_type), pointer`, bare — not a Fortran `optional`
+attribute but tested via `present()`/`associated()` both), `BT`
+(`type(barotropic_CS), optional, intent(in)`), `TD`
+(`type(thickness_diffuse_CS), optional, intent(in)`), `ADp`
+(`type(accel_diag_ptrs), optional, intent(in)`), `hu_cont`/`hv_cont`
+(raw arrays, `optional, intent(inout)`), `STOCH`
+(`type(stochastic_CS), intent(inout), optional`).
 
-Private (`type, public :: hor_visc_CS ; private`, fields genuinely private to
-`MOM_hor_visc.F90`), 132 fields, confirmed opaque outside this module (5 files hold/pass it, all
-just `MOM_dynamics_*` drivers forwarding it whole). **130 of 132 fields are genuinely
-dereferenced inside `horizontal_viscosity`** — unlike `barotropic_CS`, there's no large
-diagnostic-ID block to carve out (39 `id_*` fields exist and should still be excluded from
-bundling, same reasoning as `barotropic_CS`, but that only brings it down to ~91 fields, not a
-small remainder).
+## Step 1d — Scope case
 
-**Decision (user, this session): bundle by scheme, deferring to the monolith split.** Once
-Stage 1 splits the body into `hor_visc_core`/`hor_visc_GME`/`hor_visc_QG_Leith`/
-`hor_visc_ZB2020`/`hor_visc_Leithy`, run `create_config_bundle_type` once per scheme, each
-bundle covering just the `CS` fields that scheme's new subroutine touches, nested back into
-`hor_visc_CS`. Exclude the 39 `id_*` diagnostic handles from every bundle. Fields genuinely used
-by more than one scheme (e.g. shared grid-metric arrays like `dx2h`/`dy2h`/`dx2q`/`dy2q` — used
-17x each per the survey, likely across several branches) may need to stay as direct
-`hor_visc_CS` fields rather than being claimed by one scheme's bundle — `create_config_bundle_type`'s
-own execution should decide this once the split's exact field-usage-per-subroutine is visible;
-Phase 1 could not fully resolve which fields are single-scheme vs. cross-scheme without the split
-already having happened.
+**Case 3** — no separate name exists; `horizontal_viscosity` is called
+directly, everywhere. No `_TR` split exists yet. Phase 2 Stage 1 must
+rename the implementation to `horizontal_viscosity_TR` and author a
+pass-through wrapper under `horizontal_viscosity`'s own name.
 
-## `ADp`, `OBC`, `VarMix` shadows — see `shared_type_unions.md`
+External callers (repo-wide grep, all in `src/core/`) — 6 call sites,
+all of which must keep compiling unchanged once the wrapper exists:
+- `MOM_dynamics_unsplit_RK2.F90:284`
+- `MOM_dynamics_split_RK2b.F90:584`, `:895`
+- `MOM_dynamics_split_RK2.F90:969`, `:1765`
+- `MOM_dynamics_unsplit.F90:272`
 
-`ADp` and `OBC` are needed, container-based, by `continuity()` and `btstep` too — see
-`btstep.md`'s "BLOCKING PREREQUISITE" section for why `OBC` gets a union shadow rather than a
-`BT_cont_type`-style wholesale conversion. `VarMix` was tree-scoped to just this tree until
-`vertvisc_coef` also needed it (see the `vertvisc` plan). All three types' authoritative union
-field lists now live in `.claude/calltree-plans/shared_type_unions.md` — this file's own
-contribution was `ADp`'s subset-of-`btstep`'s-fields, `OBC`'s additions (`OBC_pe`,
-`strain_config`, `zero_biharmonic`, `segment(:)%direction/is_N_or_S/is_E_or_W/tangential_vel/
-tangential_grad`, more `HI` bounds fields), and `VarMix`'s original 5-field tree-scoped list.
+## Step 1b/1c — Call graph and target inventory
 
-## Open item — optional struct dummies (not resolved, flagging rather than guessing)
+```
+horizontal_viscosity (no wrapper yet, Case 3)         — MOM_hor_visc.F90:273
+├─ hor_visc_Leith_grad          [Wave 1 — leaf]
+├─ hor_visc_backscatter_h       [Wave 1 — leaf]
+├─ hor_visc_backscatter_q       [Wave 1 — leaf]
+├─ hor_visc_GME_setup           [Wave 1 — leaf, guarded by CS%use_GME]
+├─ smooth_GME                   [Wave 1 — leaf]
+├─ smooth_x9_uv                 [Wave 1 — leaf]
+└─ hor_visc_Leithy_Ah           [Wave 2]
+    └─ smooth_x9_h              [Wave 1 — leaf]
+```
 
-`horizontal_viscosity` has **4 dummies that are entire optional derived-type structs** — `BT`
-(`barotropic_CS`), `TD` (`thickness_diffuse_CS`), `ADp` (`accel_diag_ptrs`), `STOCH`
-(`stochastic_CS`) — plus `OBC` which is `optional, pointer` together (a combination not seen in
-`btstep`'s signature, where every struct dummy was either plain `pointer` or plain mandatory).
-`convert_present_to_associated`'s own scope is explicitly array/scalar dummies that are "already
-a container" — it has no stated mechanism for an *entire optional struct* becoming
-bind(C)-ready. Since `BT`/`TD` are used only as opaque whole-struct forwards (into
-`barotropic_get_tav`/`thickness_diffuse_get_KH`) and are already excluded from the `ADp`/`OBC`
-shadow-building concern, the likely resolution is: the GME per-scheme subroutine
-(`hor_visc_GME`) simply keeps `BT`/`TD` as optional Fortran dummies, checked via `present()`,
-and doesn't bridge past them the same way `calc_isoneutral_slopes` isn't bridged past — but this
-hasn't been decided, only noticed. `ADp`'s optionality interacts with its shadow (does the
-shadow itself need a "not built" state when `ADp` isn't present?) and `STOCH`'s optionality is
-similarly unresolved. **Return to Phase 1 for this rather than letting Phase 2 guess**, once
-Stage 1's split clarifies which new subroutines actually receive which of these four dummies.
+`hor_visc_init`/`hor_visc_end`/`hor_visc_vel_stencil`/`hor_visc_nkblock`/
+`align_aniso_tensor_to_grid` live in the same file but are **not**
+descendants (never called from inside this tree) — same non-descendant
+status `continuity_init`/`continuity_stencil` had in the `continuity()`
+campaign. Out of scope.
 
-## Step 2 — target classification (fixed-rule items)
+Out-of-tree calls (not part of this campaign, all into other established
+modules): `hchksum`/`Bchksum`/`uvchksum` (MOM_checksums), `post_data`/
+`post_product_*` (MOM_diag_mediator), `pass_var`/`pass_vector`
+(MOM_domains), `MOM_error`, `thickness_to_dz` (MOM_interface_heights),
+`calc_QG_slopes`/`calc_QG_Leith_viscosity` (MOM_lateral_mixing_coeffs —
+`VarMix`'s own defining module), `barotropic_get_tav` (MOM_barotropic),
+`thickness_diffuse_get_KH` (MOM_thickness_diffuse),
+`ZB2020_lateral_stress`/`ZB2020_copy_gradient_and_thickness`
+(MOM_Zanna_Bolton).
 
-| Target | Classification | Skill | Notes |
-|---|---|---|---|
-| `u`, `v`, `h`, `uh`, `vh`, `diffu`, `diffv`, `hu_cont`, `hv_cont` | raw/optional array dummies | `convert_array_containers` (`hu_cont`/`hv_cont` also need `convert_present_to_associated` after) | Standard treatment once the split settles which new subroutine owns each. |
-| `G`, `GV`, `US` | shared grid/scaling types | `convert_array_containers`'s own drop mechanism | Not a separate decision. |
-| `tv` (`thermo_var_ptrs`, 101 files) | confirmed 0 dereferences in `horizontal_viscosity` — purely opaque (forwarded whole into `thickness_to_dz`/`calc_QG_slopes`) | leave alone | Grep-confirmed, matches Step 2's opaque rule directly. |
-| `BT` (`barotropic_CS`) | confirmed 0 dereferences — opaque (forwarded whole into `barotropic_get_tav`) | leave alone | Also the type `btstep`'s campaign bundles internally — irrelevant here since `horizontal_viscosity` never looks at its fields, only calls the accessor. |
-| `TD` (`thickness_diffuse_CS`) | confirmed 0 dereferences — opaque (forwarded whole into `thickness_diffuse_get_KH`) | leave alone | — |
-| `VarMix` (`VarMix_CS`, ~89 fields) | only 5 fields touched (`use_variable_mixing`, `Resoln_scaled_Kh`, `Res_fn_h`, `Res_fn_q`, `BS_struct`) | `create_shadow_container_type` — **union shadow**, see `shared_type_unions.md` | Disproportion (5/89) resolves this without a Step 3 measure-and-decide even as a union. |
-| `MEKE` (`MEKE_type`, 15 fields, shared 11 files) | heavily dereferenced, both scalar and array (`MEKE%Ku`/`MEKE%Au` feed `Kh`/`Ah` directly; `MEKE%mom_src` written) | `create_shadow_container_type`, most/all fields | Small type, high touch fraction — straightforward. |
-| `ADp`, `OBC` | shared | `create_shadow_container_type` — **union shadow** | See `shared_type_unions.md`. |
-| `CS` (`hor_visc_CS`, 132 fields, private) | private, fields recur together, 130/132 touched | `create_config_bundle_type`, bundle-by-scheme | See dedicated section above. |
-| `STOCH` (`stochastic_CS`, shared 9 files) | small, dereferenced (`skeb_use_frict`, `skeb_diss`, `skeb_frict_coef` — 1 scalar flag, 1 array, 1 scalar coefficient) | `create_shadow_container_type`, narrow scope | Clean fixed-rule resolution, no Step 3 needed. Optionality itself is the open item above, not the shadow scope. |
-| `smooth_x9_h`/`smooth_x9_uv`/`smooth_GME`'s own dummies (`field_h`, `field_u`/`field_v`, `GME_flux_h`/`GME_flux_q`, `zero_land`) | raw/optional array and scalar dummies | `convert_array_containers` then `convert_present_to_associated` for the optionals | Standard, all three already confirmed leaves. |
-| `calc_QG_slopes`'s own dummies (`h`, `tv`, `dt`, `G`, `GV`, `US`, `slope_x`, `slope_y`, `CS`, `OBC`) | mixed raw arrays + shared structs | `convert_array_containers` for `slope_x`/`slope_y`; `tv`/`OBC` follow the same classification as elsewhere in this plan | Boundary node — see QG-Leith section; everything it calls stays untouched. |
+No `elemental`/`pure` scalar-only leaf exists in this tree (unlike
+`continuity()`'s `flux_elem`) — every descendant is a real candidate for
+bridging, none exempt on those grounds.
 
-## Phase 2 execution order (for this tree)
+**Zero pre-existing containers anywhere in this tree** — 100% raw, unlike
+`continuity()` where 6 leaves were already bridged before this campaign
+started. Every one of the 8 subroutines above needs `convert_array_containers`.
 
-1. **TreeRoot split** — rename `horizontal_viscosity`→`horizontal_viscosity_TR`, author
-   `horizontal_viscosity` wrapper, **and** split the body into per-scheme subroutines (Stage 1
-   does more work here than in `continuity()`/`btstep` — see "Monolith split" above).
-2. **`create_shadow_container_type`** — the type definitions themselves for `VarMix`, `MEKE`
-   (now a union, see `shared_type_unions.md`), `ADp`/`OBC` are built once by the combined
-   shared-infrastructure PR (`shared_type_unions.md`), not here. This stage's own work for this
-   tree is just the wrapper-side glue: instantiate each shadow from `horizontal_viscosity_TR`'s
-   own dummies, use it, copy back. `STOCH` remains genuinely tree-scoped (not yet a union) — its
-   type still gets authored here, not in the shared PR.
-3. **`create_config_bundle_type`** — `hor_visc_CS`, once per new per-scheme subroutine from
-   Stage 1's split.
-4. **Optional-array containerization** — `hu_cont`, `hv_cont`, plus the three helpers' own
-   optional scalars (`zero_land` x2, and `smooth_GME`'s two optional arrays); default direction
-   throughout, none confirmed to cascade.
-5. **`convert_array_containers` — downward pass**, root (`horizontal_viscosity_TR`) to leaves.
-6. **`convert_array_containers` — upward pass**, leaves to root, G/GV/US-drop decisions.
-7. **`convert_locals_to_containers`**, per subroutine once dummies are stable.
-8. **`convert_present_to_associated`** — every confirmed optional array/scalar dummy. **Blocked
-   on the "Open item — optional struct dummies" above for `BT`/`TD`/`ADp`/`STOCH`/`OBC`'s
-   optional-struct status** — resolve that before this stage runs on those four/five dummies.
-9. **`hoist_container_marshalling`**, once, at `horizontal_viscosity_TR`.
+## Derived types referenced in the tree
 
-## Phase 3 wave order (provisional — depends on Stage 1's split; the ZB2020 and existing-leaf
-portions are final now, the per-scheme subroutines' waves are not)
+| Type | Dummy | Fields touched / total | Shared outside tree? | Classification |
+|---|---|---|---|---|
+| `hor_visc_CS` | `CS` | 131 / 131 | No — only the 4 dynamics files hold it, always opaquely as `CS%hor_visc` | `create_config_bundle_type` — see clustering below |
+| `MEKE_type` | `MEKE`, mandatory `intent(inout)` | 8 / — (`Au`,`Ku`,`GME_snk`,`mom_src`,`mom_src_bh` arrays; `backscatter_Ro_pow`,`backscatter_Ro_c` scalars) | **Yes** — 9 other files | `create_shadow_container_type` (Step 2's fixed default for a shared type with real array fields; no other active campaign needs it converted, so wholesale is not justified) |
+| `VarMix_CS` | `VarMix`, mandatory `intent(inout)` | 5 / — (`Res_fn_h`,`Res_fn_q`,`BS_struct` arrays; `Resoln_scaled_Kh`,`use_variable_mixing` scalars) | **Yes** — 9 other files | `create_shadow_container_type`, same reasoning |
+| `accel_diag_ptrs` | `ADp`, **optional**, `intent(in)` | 6 / — (`diag_hfrac_u`,`diag_hfrac_v`,`diag_hu`,`diag_hv`,`visc_rem_u`,`visc_rem_v`, all raw arrays) | **Yes** — 13 other files | `create_shadow_container_type` **+** `convert_present_to_associated`, grouped-optional (whole-struct) form, sequenced (Decision Q1) |
+| `stochastic_CS` | `STOCH`, **optional**, `intent(inout)` | 3 / — (`skeb_diss` array; `skeb_frict_coef`,`skeb_use_frict` scalars) | **Yes** — 7 other files | same combination as `ADp` (Decision Q1) |
+| `ocean_OBC_type` | `OBC`, bare **optional `pointer`** | not fully enumerated (nested `%segment` etc. not expanded) | Yes — 45 other files | `convert_present_to_associated`, bare-pointer form — `present()`/`associated()` both tested at the entry point (line 233/239), never forwarded to a descendant. Exactly the `BT_cont` class of target this skill family was corrected to catch. |
+| `barotropic_CS` | `BT`, optional, `intent(in)` | 0 direct — forwarded to `hor_visc_GME_setup`, itself only used via the external accessor `barotropic_get_tav(BT,...)` | Yes — 4 other files | **Leave alone, confirmed** — zero `present(BT)` anywhere; forwarding is guarded by `CS%use_GME`, a config flag, not `present()` |
+| `thickness_diffuse_CS` | `TD`, optional, `intent(in)` | 0 direct — same pattern, forwarded to `thickness_diffuse_get_KH(TD,...)` | Yes — 3 other files | **Leave alone, confirmed** — zero `present(TD)` anywhere |
+| `thermo_var_ptrs` | `tv`, mandatory `intent(in)` | 0 direct — forwarded opaquely to `thickness_to_dz`/`calc_QG_slopes` (both external) | Yes — 101 other files | **Leave alone, confirmed** — mandatory, never `%field`-accessed, same treatment as `G`/`GV`/`US` |
+| `ocean_grid_type`/`verticalGrid_type`/`unit_scale_type` | `G`/`GV`/`US` | opaque field access only | Yes, universally | Leave alone, same as `continuity()` |
+| `ZB2020_CS` (nested in `hor_visc_CS`) | `CS%ZB2020` | 0 direct — forwarded opaquely to `ZB2020_lateral_stress`/`ZB2020_copy_gradient_and_thickness` (external, MOM_Zanna_Bolton) | N/A (nested, not a top-level dummy) | **Leave alone** |
+| `diag_ctrl` (nested in `hor_visc_CS`) | `CS%diag`, `pointer` | never-bindable | N/A | **Leave alone**, same as `continuity_PPM_CS`'s own `diag` precedent |
 
-**Final (subroutines that already exist, unaffected by the split):**
-- **Wave 1** (leaves): `smooth_x9_h`, `smooth_x9_uv`, `smooth_GME`, `barotropic_get_tav`,
-  `thickness_diffuse_get_KH`, `thickness_to_dz`, `calc_QG_Leith_viscosity`, `calc_QG_slopes`
-  (boundary node — no in-tree callees per the QG-Leith decision), `compute_c_diss`, `filter_3D`,
-  `compute_stress`, `compute_energy_source`, `ZB2020_copy_gradient_and_thickness`,
-  `activation_fn`.
-- **Wave 2:** `filter_hq` (calls `filter_3D`), `layer_apply_sio`/`ANN_apply_array_sio` (calls
-  `layer_apply_sio`→`activation_fn`).
-- **Wave 3:** `filter_velocity_gradients`, `filter_stress` (both call `filter_hq`),
-  `compute_stress_ANN_collocated` (calls `ANN_apply_array_sio`/`compute_stress`),
-  `compute_stress_divergence` (calls `compute_energy_source`).
-- **Wave 4:** `ZB2020_lateral_stress` (calls `compute_c_diss`, `filter_velocity_gradients`,
-  `compute_stress_ANN_collocated`, `filter_stress`, `compute_stress_divergence` — all resolved by
-  wave 3).
+## `hor_visc_CS` bundling (Decision Q2 — field-trace confirmed)
 
-**Provisional (depends on Stage 1's actual split — recompute once it's done):**
-- **Wave 5 (est.):** `hor_visc_GME` (needs `smooth_GME`/`barotropic_get_tav`/
-  `thickness_diffuse_get_KH`, wave 1), `hor_visc_QG_Leith` (needs `thickness_to_dz`/
-  `calc_QG_slopes`/`calc_QG_Leith_viscosity`, wave 1), `hor_visc_Leithy` (needs `smooth_x9_h`/
-  `smooth_x9_uv`, wave 1), `hor_visc_core` (likely no in-tree dependencies).
-- **Wave 6 (est.):** `hor_visc_ZB2020` (needs `ZB2020_lateral_stress`, wave 4).
-- **Wave 7 (est., root, last):** `horizontal_viscosity_TR` (calls all per-scheme subroutines).
-  The wrapper is never bridged.
+131 fields: 1 init guard (`initialized`), ~46 scalar config fields, ~34
+`id_*` diagnostic-handle integers, 42 array fields (all `real,
+allocatable`, rank-2), plus the 2 never-bundled entries above
+(`ZB2020`, `diag`).
 
-## Branch
+**Co-occurrence matrix** (fundamentally different shape than
+`continuity_PPM_CS`'s: there, fields recurred across *many*
+subroutines; here `horizontal_viscosity` itself touches essentially all
+131, while each descendant touches only a small, disjoint subset):
 
-`claude_horizontal_viscosity_calltree`, created once before Phase 2 Stage 1.
+| Subroutine | CS fields touched |
+|---|---|
+| `horizontal_viscosity` | ~all 131 |
+| `hor_visc_Leith_grad` | `Leith_Ah`, `Modified_Leith`, `use_beta_in_Leith`, `use_Leithy`, `use_QG_Leith_visc` (5, scalar) |
+| `hor_visc_backscatter_h` | `id_BS_coeff_h` (1) |
+| `hor_visc_backscatter_q` | `id_BS_coeff_q` (1) |
+| `hor_visc_Leithy_Ah` | `Ah_bg_xx`, `Biharm6_const_xx`, `c_K`, `m_const_leithy`, `m_leithy_max`, `smooth_Ah` (6; 4 arrays + 2 scalars) |
+| `hor_visc_GME_setup` | `debug`, `DX_dyBu`, `DX_dyT`, `DY_dxBu`, `DY_dxT`, `GME_efficiency`, `GME_h0`, `no_slip` (8; 4 arrays + 4 scalars) |
+| `smooth_GME` | `num_smooth_gme` (1) |
+| `smooth_x9_h`, `smooth_x9_uv` | 0 — don't take `CS` at all |
+
+**Clusters** (fields recurring with the same descendant — the skill's
+actual bundling criterion):
+- **`leith_CS`** — `Leith_Ah`, `Modified_Leith`, `use_beta_in_Leith`,
+  `use_Leithy`, `use_QG_Leith_visc` (shared with `hor_visc_Leith_grad`).
+- **`leithy_CS`** — `Ah_bg_xx`, `Biharm6_const_xx`, `c_K`,
+  `m_const_leithy`, `m_leithy_max`, `smooth_Ah` (shared with
+  `hor_visc_Leithy_Ah`).
+- **`gme_setup_CS`** — `debug`, `DX_dyBu`, `DX_dyT`, `DY_dxBu`, `DY_dxT`,
+  `GME_efficiency`, `GME_h0`, `no_slip` (shared with `hor_visc_GME_setup`).
+- **Standalone, no companion, not bundled** (per the skill's own rule):
+  `id_BS_coeff_h`, `id_BS_coeff_q`, `num_smooth_gme` — each shared with
+  exactly one descendant, alone.
+
+**The remaining ~109 fields** (83% of the struct, including 32 of the 34
+`id_*` diagnostic handles) are touched only by `horizontal_viscosity`
+itself — no descendant co-occurrence exists to cluster them by evidence.
+**User decision (Q2): one catch-all bundle** —
+`hor_visc_general_CS` — covering all ~109, accepting a large,
+semantically-mixed bundle in exchange for not exploding
+`horizontal_viscosity`'s eventual bridge interface into 100+ individual
+parameters. (Two exceptions already noted above: `id_BS_coeff_h`/
+`id_BS_coeff_q` are NOT part of this catch-all — they're standalone,
+2-subroutine fields, listed above.)
+
+`create_config_bundle_type`'s own Step 6 (per-leaf "keeps whole struct"
+vs. "stops taking it") still needs to run when that skill is actually
+invoked in Phase 2 — every one of the 8 subroutines in this tree will
+eventually be bridged (this campaign's whole point), so none of them
+gets to "keep the whole struct" indefinitely; this plan records the
+cluster membership, not the per-leaf narrowing (that's Stage work, not
+a Phase 1 decision, per `continuity_PPM_CS`'s own precedent).
+
+## Step 2/3 — Target classification and recorded decisions
+
+| Target | Skill | Setting |
+|---|---|---|
+| `hor_visc_CS` | `create_config_bundle_type` | 3 clusters (`leith_CS`, `leithy_CS`, `gme_setup_CS`) + 1 catch-all (`hor_visc_general_CS`, ~109 fields) + 3 standalone (`id_BS_coeff_h`, `id_BS_coeff_q`, `num_smooth_gme`) + 2 leave-alone (`ZB2020`, `diag`) — Q2 |
+| `MEKE_type` | `create_shadow_container_type` | Shared, 9 files, 5 array + 2 scalar fields touched |
+| `VarMix_CS` | `create_shadow_container_type` | Shared, 9 files, 3 array + 2 scalar fields touched |
+| `accel_diag_ptrs` (`ADp`) | `create_shadow_container_type` + `convert_present_to_associated` (grouped-optional) | Shared, 13 files, all 6 touched fields raw arrays, optional-as-whole-struct — Q1 |
+| `stochastic_CS` (`STOCH`) | `create_shadow_container_type` + `convert_present_to_associated` (grouped-optional) | Shared, 7 files, 1 array + 2 scalar fields, optional-as-whole-struct — Q1 |
+| `ocean_OBC_type` (`OBC`) | `convert_present_to_associated`, bare-pointer form | `present()`/`associated()` both tested at the entry point only |
+| `barotropic_CS` (`BT`), `thickness_diffuse_CS` (`TD`) | leave alone | Confirmed by grep — never `present()`-tested, only config-flag-guarded |
+| `thermo_var_ptrs` (`tv`), `G`/`GV`/`US` | leave alone | Mandatory, opaque field access only |
+| `ZB2020` (nested), `diag` (nested) | leave alone | Never-bindable / forwarded opaquely to an external module |
+| `u,v,h,uh,vh,diffu,diffv` + every local in all 8 subroutines | `convert_array_containers` | Top-down, root to leaves |
+| `hu_cont`/`hv_cont` (optional raw arrays) | `convert_array_containers` (plain, not the optional-args variant) | `present()`-tested jointly but never forwarded past `horizontal_viscosity` itself — no combinatorial branching risk |
+| `zero_land` (plain `logical` optional scalar, in `smooth_x9_h`/`smooth_x9_uv`) | leave alone | Scalar optionals are never containerized |
+
+## Phase 2 execution order (Step 4's fixed 9 stages)
+
+1. **TreeRoot split** — rename `horizontal_viscosity` → `horizontal_viscosity_TR`
+   in `MOM_hor_visc.F90`, author a pass-through wrapper under
+   `horizontal_viscosity`'s own name with the frozen signature (Step 1a),
+   calling `_TR`. Fix up the 6 external call sites' expectations (they
+   don't change — same name, same signature — but confirm via grep after).
+2. **`create_shadow_container_type`**, per `MEKE_type`, `VarMix_CS`,
+   `accel_diag_ptrs`, `stochastic_CS` — 4 shadows, built/copied-back
+   inside the wrapper. Order among the 4 doesn't matter (independent types).
+3. **`create_config_bundle_type`** for `hor_visc_CS` — 3 clusters +
+   1 catch-all, per the section above; update `hor_visc_init`'s body to
+   populate the new bundle types instead of 131 flat fields.
+4. **Optional-array containerization** — `hu_cont`/`hv_cont` via plain
+   `convert_array_containers` (no combinatorial risk, per the
+   classification table); `OBC`/`ADp`/`STOCH`'s own optionality is
+   `convert_present_to_associated`'s job (item 8), not this item's.
+5. **`convert_array_containers` — downward pass**, root to leaves:
+   `horizontal_viscosity` → `hor_visc_Leith_grad`/`hor_visc_backscatter_h`/
+   `hor_visc_backscatter_q`/`hor_visc_GME_setup`/`smooth_GME`/
+   `smooth_x9_uv` → `hor_visc_Leithy_Ah` → `smooth_x9_h`.
+6. **`convert_array_containers` — upward pass**, leaves to root:
+   `G`/`GV`/`US`-drop decisions and Step 2b promotions, per that skill's
+   required bottom-up ordering for this question.
+7. **`convert_locals_to_containers`**, once dummies are stable tree-wide.
+8. **`convert_present_to_associated`**: `OBC` (bare-pointer form, entry
+   point only); `ADp`/`STOCH` (grouped-optional form, on top of their
+   Stage-2 shadows).
+9. **`hoist_container_marshalling`**, once, at `horizontal_viscosity`, last.
+
+One branch for the whole run:
+`claude_horizontal_viscosity_calltree` (per the skill's own default
+naming — no user override recorded for this campaign yet).
+
+## Phase 3 wave order (computed from the call graph above)
+
+- **Wave 1:** `hor_visc_Leith_grad`, `hor_visc_backscatter_h`,
+  `hor_visc_backscatter_q`, `hor_visc_GME_setup`, `smooth_GME`,
+  `smooth_x9_uv`, `smooth_x9_h`.
+- **Wave 2:** `hor_visc_Leithy_Ah` (depends on `smooth_x9_h`).
+- **Wave 3 (root, last):** `horizontal_viscosity`.
+
+The wrapper (`horizontal_viscosity`'s Case-3 pass-through, once Stage 1
+authors it) is never bridged, in any wave — same rule as every other
+entry point in this campaign family.
+
+## Decisions recorded (Step 3, `AskUserQuestion`, one topic per call)
+
+- **Q1 — `accel_diag_ptrs`/`stochastic_CS`: shadow + optional
+  combination.** Both are shared-outside-tree types with real array
+  fields *and* optional-as-a-whole-struct at the entry point — a
+  combination `continuity()`'s campaign never hit (its own shared
+  optional, `BT_cont`, was a bare pointer, not a whole-struct
+  `optional`). Proposed: shadow the type first
+  (`create_shadow_container_type`), then apply
+  `convert_present_to_associated`'s grouped-argument rule on top of the
+  shadow, treating each type's touched fields as one grouped-optional
+  set. **User confirmed: yes, shadow then grouped-optional.**
+- **Q2 — `hor_visc_CS`'s ~109 fields with no descendant co-occurrence.**
+  The trace found 3 real clusters + 3 standalone fields from actual
+  cross-subroutine usage, but 83% of the struct is touched only by
+  `horizontal_viscosity` itself, giving the trace no evidence to
+  sub-cluster further. Presented three options: one catch-all bundle,
+  several thematic sub-bundles (name/comment-based, not evidence-based),
+  or individual field promotion (mechanically safest, ~109 new
+  parameters). **User confirmed: one catch-all bundle**
+  (`hor_visc_general_CS`).
+
+## Summary table for review
+
+| Target | Skill | Decision |
+|---|---|---|
+| `hor_visc_CS` | create_config_bundle_type | 3 clusters + 1 catch-all + 3 standalone + 2 leave-alone (Q2) |
+| `MEKE_type`, `VarMix_CS` | create_shadow_container_type | shared, array fields present, no wholesale justification |
+| `accel_diag_ptrs`, `stochastic_CS` | create_shadow_container_type + convert_present_to_associated | shadow then grouped-optional (Q1) |
+| `ocean_OBC_type` | convert_present_to_associated | bare-pointer form, entry point only |
+| `barotropic_CS`, `thickness_diffuse_CS`, `thermo_var_ptrs`, `G`/`GV`/`US`, `ZB2020`, `diag` | leave alone | confirmed by grep |
+| `u,v,h,uh,vh,diffu,diffv` + all locals, 8 subroutines | convert_array_containers | top-down then bottom-up (Stages 5–6) |
+| `hu_cont`/`hv_cont` | convert_array_containers (plain) | no forwarding past entry point |
+| `zero_land` | leave alone | scalar optional |
+
+Not yet started: Phase 2 Stage 1 (TreeRoot split) — awaiting go-ahead.
