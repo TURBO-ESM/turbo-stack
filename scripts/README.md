@@ -275,10 +275,30 @@ So the four CI cells resolve themselves:
 | `dev/turbo-debug` | FMS2 | no | no |
 | `dev/turbo-debug` | TIM | **yes** | **yes** |
 
-**Why the flag here is unconditional.** TIM always *provides* the bridge; MOM6
-decides whether to use it. Only MOM6 knows whether its sources carry the call
-sites, and `build_dep` folds its cmake args into the rebuild sentinel — varying
-them per lane would rebuild TIM on every backend switch.
+**Why the flag here is unconditional.** Because Stage 1 cannot know whether the
+bridge is needed. Only the MOM6 source knows whether it carries the `#ifdef _TIM`
+call sites, and Stage 1 never sees that source — `MOM6_ROOT` is Stage 2's input.
+The three ways to find out are all worse than not asking:
+
+| | |
+|---|---|
+| ask the caller | puts a per-lane conditional back into the CI workflow |
+| grep the MOM6 source for `_TIM` | couples a dep builder to MOM6's internals |
+| read the branch name | does not work — CI builds a detached ref, and detached HEAD is a submodule's normal state |
+
+It also keeps `turbo_build_tim` the same shape as its siblings: every
+`turbo_build_*` wrapper takes a build dir and an install prefix and nothing else.
+A condition here would make TIM's builder the only one that knows MOM6 exists,
+inverting the tier contract above.
+
+The cost is one 3-TU C++ compile — ~3 s, a 55 KB archive — in the cells that do not
+use it, and **nothing on their link lines**: `mom_bridge` is a separate archive that
+only MOM6 pulls in. Worth revisiting if the bridge grows substantially, since that
+cost scales with the number of kernels; the link-side cost does not.
+
+(A shared `--build_dir` is the one case where varying the flag would also cost
+rebuilds, since `build_dep` folds cmake args into its sentinel hash. That is a
+local-iteration concern only — each CI job is a fresh container.)
 
 **This buys compile + link coverage, not kernel correctness.** The guards wrap one
 arm of a runtime dispatch (`ZONAL_EDGE_THICKNESS_MODE` and five siblings, each

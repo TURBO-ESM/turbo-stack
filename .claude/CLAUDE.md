@@ -124,9 +124,11 @@ build scripts only ever know about `MOM6_ROOT`.
 always provides `TIM::mom_bridge`. Whether MOM6 compiles and links it is decided
 in MOM6, not here: the CMake block lives only on `dev/turbo-debug`, and inside it
 `if(MOM6_INFRA STREQUAL "TIM")` keeps FMS2 compiled out. **Do not add a flag or a
-CI conditional for this** — branch and backend already select it, and only MOM6
-knows whether its sources carry the `#ifdef _TIM` call sites. Varying the flag per
-lane would also defeat `build_dep`'s sentinel and rebuild TIM on every switch.
+CI conditional for this.** Stage 1 cannot know whether the bridge is needed — only
+the MOM6 source knows whether it carries the `#ifdef _TIM` call sites, and Stage 1
+never sees that source. Asking the caller reintroduces a per-lane CI conditional;
+reading the branch name does not work, since CI builds a detached ref. It costs one
+3-TU compile (~3 s) where it is unused, and nothing on those link lines.
 
 MOM6 hard-errors at configure if `MOM6_INFRA=TIM` and `TIM::mom_bridge` is
 missing, so TIM's side must be in place before MOM6's merges. See
