@@ -37,6 +37,14 @@ jobs:
           make coverage
           cd ../..
       
+      - name: Run double gyre unsplit (instrumented build)
+        run: |
+          cd examples/double_gyre_unsplit
+          mpiexec -n 2 --allow-run-as-root ../../bin/gcc/MOM6_using_TIM/MOM6/MOM6
+          make coverage
+          make coverage base=../double_gyre
+          cd ../..
+
       - name: Run benchmark (instrumented build)
         run: |
           cd examples/benchmark
