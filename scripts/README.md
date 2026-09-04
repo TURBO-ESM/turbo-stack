@@ -303,9 +303,23 @@ local-iteration concern only — each CI job is a fresh container.)
 **This buys compile + link coverage, not kernel correctness.** The guards wrap one
 arm of a runtime dispatch (`ZONAL_EDGE_THICKNESS_MODE` and five siblings, each
 defaulting to `TIMH_runFORTRAN`), so defining `_TIM` compiles that arm in without
-executing it. What it catches is Fortran-interface-vs-C++-signature drift and
-missing exports, on every build — the likeliest breakage while the two repos are
-co-developed.
+executing it.
+
+Exactly what it catches, on every build:
+
+- the C++ bridge sources **compile**. Before this they reached nothing a library
+  build produced — `mom/cpp` was wired only into `test_mom` — so they could rot
+  unnoticed.
+- a missing or renamed export becomes a **link error**.
+
+What it does **not** catch: signature or struct-layout drift. MOM6 declares the
+bridge as `bind(C)` interface blocks, so the Fortran compiler checks each call site
+against MOM6's *own* declaration, and the linker then matches `turbotmp_*_bridge`
+by symbol name alone — `extern "C"` encodes no signature. `RealArray_C` and `Box_C`
+are hand-maintained on both sides with no `static_assert` or generated header
+between them, so a divergence in arity, type or layout links cleanly and misbehaves
+at runtime. Closing that needs a real cross-check (offset assertions, or generating
+the Fortran interfaces from the C header) and is follow-on work.
 
 **Ordering.** MOM6 hard-errors at configure when `MOM6_INFRA=TIM` and
 `TIM::mom_bridge` is absent, naming the TIM rebuild flag. Since the
