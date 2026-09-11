@@ -227,3 +227,26 @@ Clang-format (Google style, C++20, 120-char limit) is enforced on PRs and auto-a
 ## Code Style
 
 C++ files must pass `clang-format` (config in `.clang-format`): Google style base, C++20, 120-char line limit, Allman braces.
+
+## Verification discipline for mechanical multi-site edits
+
+A Fortran identifier (a dummy argument, a derived-type field, a struct
+being restructured) is often encoded in more than one place that doesn't
+look alike textually — a subroutine's header argument list vs. its
+separate declaration line, several near-identical mirrored subroutines
+(zonal/meridional pairs), or several call sites with slightly different
+surrounding comments. A targeted edit or find/replace reporting success
+only means the specific text it matched changed, not that every
+occurrence of the identifier did. After any rename or multi-site
+mechanical edit, before considering it done: grep the full scope of the
+change (the whole subroutine, or the whole file) for the old identifier,
+zero tolerance for hits outside comments — don't rely on re-reading only
+the lines you intended to touch. Same discipline applies to inserting a
+new executable statement into an existing subroutine: re-scan the rest of
+that subroutine's declaration section first, since Fortran requires every
+declaration before every executable statement and a misplaced insertion
+produces a cascade of unrelated-looking parse errors below it rather than
+an error at the actual mistake. Applies to any Fortran editing in this
+repo or its submodules, not only MOM6's array-container conversion skill
+family (`submodules/MOM6/.claude/skills/array_container_lessons/SKILL.md`
+§11 has the fuller writeup and worked examples).
