@@ -17,7 +17,11 @@
 # and docker/README.md.
 #
 # Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules -- the container
-# fetches nothing, so initialize them first (the wrapper guards them).  Nothing is
+# fetches nothing, so initialize them first (the wrapper guards them).  To build a
+# MOM6 tree of your own instead, export MOM6_ROOT before running: it is inherited by
+# both per-backend runs, which mount that tree and forward it (run_ci_container.sh's
+# --mom6-root is the same thing, per invocation), and the matrix below then reports
+# MOM6 as (override).  Whatever branch that tree is on is what gets built.  Nothing is
 # written into $TURBO_STACK_ROOT: each backend builds under
 # $TURBO_BUILD_SYSTEM_TEST_DIR, which is mounted into the container, and the
 # artifacts are handed back to your uid before each container exits.  They outlive
@@ -39,6 +43,9 @@
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Artifact root (default:
 #                                $TMPDIR/turbo_ci_container_test/<checkout dir name>,
 #                                so sibling worktrees never share a build dir)
+#   MOM6_ROOT                    Build this MOM6 tree instead of the submodule; it
+#                                is mounted into each container.  FMS_ROOT /
+#                                TIM_ROOT are NOT forwarded (reported, not silent).
 #
 # SPACK_ROOT is NOT required: the image brings its own spack (/opt/spack) with the
 # repo's env baked in.  A host SPACK_ROOT / TURBO_STACK_ROOT is never passed in.

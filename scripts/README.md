@@ -120,21 +120,37 @@ step. Prefer Spack to manage the whole toolchain? Use
 Each runs the real single-backend builder once per backend (each in its own
 process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
 a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  The
-three host-toolchain drivers support the `*_ROOT` overrides described below; the
-container driver deliberately does not (it reproduces CI, which tests the pinned
-submodules).
+three host-toolchain drivers support every `*_ROOT` override described below; the
+container driver supports `MOM6_ROOT` only — the one source you iterate on. The
+others would each need their own mount and their own tier reworked, so they are
+reported as ignored rather than silently dropped.
 
-### In the CI container (reproduce a CI failure)
+### In the CI container (a ready-made environment)
 
-`turbo-cmake-container-tests.yaml` runs the spack flavor inside
-`ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, whose image bakes the env
-from `spack/spack.yaml`. These run the same thing on the same image locally:
+The `turbo-ci` image ships the compiler and the Tier 1 + Tier 1.5 dependencies
+(MPI, NetCDF, CMake, pFUnit, AMReX) already installed in a Spack env, so there is
+no toolchain to set up: the container builds the Tier-2 backend from its submodule
+and then turbo-stack, against the MOM6 tree you point at.
 
 ```bash
-./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
-scripts/run_ci_container.sh --infra TIM --tests    # one backend
-scripts/run_ci_container.sh --shell                # interactive shell in the image
+scripts/run_ci_container.sh --infra TIM --tests                     # pinned MOM6
+scripts/run_ci_container.sh --infra TIM --tests \
+    --mom6-root ~/projects/MOM6                                     # your MOM6, as checked out
+./test_turbo_stack_in_ci_container.sh                               # both backends, matrix + verdict
+scripts/run_ci_container.sh --shell                                 # interactive shell in the image
 ```
+
+`--mom6-root DIR` mounts that tree at its own path and forwards `MOM6_ROOT` into
+the container; **whatever branch it is checked out on is what gets built**, so to
+test several branches, switch branches there and run again. Its nested submodules
+(`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized — MOM6's CMakeLists
+hard-fails without them, and the script checks up front rather than 20 minutes in.
+It defaults to `$MOM6_ROOT` when that is exported, as in every other entry point.
+
+Because it is CI's image and CI's command, a failure in
+`.github/workflows/cmake-build.yaml` usually reproduces here — with the caveat
+that CI checks a MOM6 branch out fresh beside the workspace, where this builds the
+tree you hand it.
 
 `run_ci_container.sh` takes the usual builder flags and forwards them to
 `build_local_with_spack_env.sh` *inside* the container, adding only what the

@@ -139,18 +139,29 @@ find image".
 Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`) and `SPACK_REF`
 (default `v1.2.2`, pinned for reproducibility).
 
-## Running the CI build locally
+## Building locally in this image
 
-Two scripts do this for you — same image, same commands, same environment as the
-consumer workflow, against a checkout whose submodules are already initialized
-(the container fetches nothing):
+The image is a ready-made build environment, not just CI's: it ships the compiler
+and the Tier 1 + Tier 1.5 dependencies (MPI, NetCDF, CMake, pFUnit, AMReX)
+installed in the `turbo_stack` Spack env, so nothing but a container engine is
+needed on the host. Two scripts drive it — same image, same commands and
+environment as the consumer workflow, against a checkout whose submodules are
+already initialized (the container fetches nothing):
 
 ```bash
+scripts/run_ci_container.sh --infra TIM --tests    # one backend, pinned MOM6
+scripts/run_ci_container.sh --infra TIM --tests \
+    --mom6-root ~/projects/MOM6                    # build your MOM6, as checked out
 ./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
 ./test_turbo_stack_in_ci_container.sh --only TIM   # one backend
-scripts/run_ci_container.sh --infra TIM --tests    # one backend, directly
 scripts/run_ci_container.sh --shell                # interactive shell in the image
 ```
+
+`--mom6-root DIR` mounts that tree at its own path and forwards `MOM6_ROOT` into
+the container — whatever branch it is on is what gets built, so testing several
+branches means switching branches there and running again. Its nested submodules
+(`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized; the script checks up
+front. MOM6 is the only source you can swap this way.
 
 They handle both caveats below: artifacts default to
 `$TMPDIR/turbo_ci_container_test/<checkout>` — outside your clone, and keyed on the

@@ -1,19 +1,29 @@
 #!/bin/bash
 # Usage: ./scripts/run_ci_container.sh [options]
 #
-# Run the CMake build (+ the pFUnit unit tests, with --tests) for ONE infra
-# backend inside the SAME container CI uses -- ghcr.io/turbo-esm/turbo-stack/turbo-ci
-# -- so a CI failure can be reproduced and debugged locally, without pushing a
-# branch.  This is the local twin of .github/workflows/turbo-cmake-container-tests.yaml:
-# it mounts your checkout into the image and runs exactly what that workflow runs:
-#     assert the image's prebaked "turbo_stack" Spack env is present
-#     git config --global --add safe.directory '*'
-#     warn if the image's baked spack.yaml lags this checkout
-#     scripts/build_local_with_spack_env.sh --infra <backend> --tests
-# with the workflow's two environment settings (CMAKE_BUILD_PARALLEL_LEVEL and the
-# PRRTE oversubscribe policy the MPI tests need).  For BOTH backends plus a
-# matrix/verdict, use ./test_turbo_stack_in_ci_container.sh, which calls this
-# script once per backend.
+# Build turbo-stack (+ the pFUnit unit tests, with --tests) for ONE infra backend
+# against a READY-MADE environment: ghcr.io/turbo-esm/turbo-stack/turbo-ci, the
+# image CI uses, which ships the compiler and the Tier 1 + Tier 1.5 dependencies
+# (MPI, NetCDF, CMake, pFUnit, AMReX) already installed in a Spack env.  You supply
+# the rest: this mounts your checkout, builds the Tier-2 backend (FMS or TIM) from
+# its submodule, then builds and tests turbo-stack against the MOM6 tree you point
+# at -- on whatever branch it happens to be checked out.
+#
+#     scripts/run_ci_container.sh --infra TIM --tests
+#     scripts/run_ci_container.sh --infra TIM --tests --mom6-root ~/projects/MOM6
+#
+# No toolchain setup on the host, and no waiting on Actions to find out whether a
+# MOM6 branch still builds.  To sweep several MOM6 branches, switch branches in
+# that tree and run again; for both backends in one go plus a matrix/verdict, use
+# ./test_turbo_stack_in_ci_container.sh, which calls this script once per backend.
+#
+# Because it is CI's image and CI's command
+# (scripts/build_local_with_spack_env.sh --infra <backend> --tests), plus the two
+# environment settings that workflow sets (CMAKE_BUILD_PARALLEL_LEVEL and the PRRTE
+# oversubscribe policy the MPI tests need), its safe.directory step and its two
+# guardrails, a red box in .github/workflows/cmake-build.yaml usually reproduces
+# here.  Usually, not always: CI also runs a MOM6 branch checked out fresh beside
+# the workspace, where this builds the tree you hand it.
 #
 # The image bakes the repo's spack env (spack/spack.yaml, env name "turbo_stack")
 # but does not activate it -- the repo scripts own activation -- so nothing here
@@ -34,9 +44,15 @@
 # no rebuild.
 #
 # Options:
-#   --infra FMS2|TIM      Infrastructure backend (default: TIM).  CI runs both.
+#   --infra FMS2|TIM      Infrastructure backend (default: TIM).  One per run.
 #   --tests               Also build + run the pFUnit unit tests (default: off,
 #                         as in every other builder).  CI always passes this.
+#   --mom6-root DIR       Build this MOM6 tree instead of the pinned submodule, at
+#                         whatever branch it is checked out on.  The tree is
+#                         mounted at its own path and MOM6_ROOT is forwarded.  Its
+#                         nested submodules (pkg/CVMix-src, pkg/GSW-Fortran) must be
+#                         initialized.  Defaults to $MOM6_ROOT when that is
+#                         exported, as in every other entry point.
 #   --build_dir DIR       Build directory (default: $TURBO_STACK_ROOT/build/default,
 #                         i.e. what CI uses).  Deps land in $DIR/deps/.  A path
 #                         outside the checkout is mounted in as well -- prefer one,
@@ -72,7 +88,9 @@
 #   CMAKE_BUILD_PARALLEL_LEVEL  Parallel jobs, when --parallel is not given
 #
 # Examples:
-#   scripts/run_ci_container.sh --infra TIM --tests            # what CI runs, TIM
+#   scripts/run_ci_container.sh --infra TIM --tests            # pinned MOM6, TIM
+#   scripts/run_ci_container.sh --infra TIM --tests \
+#       --mom6-root ~/projects/MOM6                            # your MOM6, as checked out
 #   scripts/run_ci_container.sh --infra FMS2 --tests \
 #       --build_dir /tmp/turbo-ci/fms2                         # keep the clone clean
 #   scripts/run_ci_container.sh --shell                        # poke around inside
@@ -100,11 +118,13 @@ _pull=false
 _shell=false
 _as_me=false
 _fix_ownership=false
+_mom6_root="${MOM6_ROOT:-}"
 _args=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --image)         _turbo_opt_needs_value "$1" "$#" || exit 1; _image="$2"; shift 2 ;;
         --engine)        _turbo_opt_needs_value "$1" "$#" || exit 1; _engine="$2"; shift 2 ;;
+        --mom6-root)     _turbo_opt_needs_value "$1" "$#" || exit 1; _mom6_root="$2"; shift 2 ;;
         --pull)          _pull=true; shift ;;
         --shell)         _shell=true; shift ;;
         --as-me)         _as_me=true; shift ;;
@@ -187,6 +207,53 @@ else
     _git_common=""
 fi
 
+# --- MOM6 source: the pinned submodule, or a tree you point at -----------------
+# The whole point of this wrapper is to build YOUR MOM6 against a ready-made
+# toolchain, so --mom6-root (or an exported MOM6_ROOT, as everywhere else in the
+# repo) mounts that tree and forwards MOM6_ROOT into the container.  Whatever
+# branch the tree is checked out on is what gets built -- switch branches on the
+# host and re-run; nothing here knows or cares about branch names.
+#
+# Mounted read-write, not :ro, because MOM6's build writes nothing into the source
+# but git may refresh its index there; the build dir is elsewhere either way.
+_mom6_note=""
+if [[ -n "$_mom6_root" ]]; then
+    [[ -d "$_mom6_root" ]] || {
+        echo "Error: --mom6-root '$_mom6_root' is not a directory." >&2
+        exit 1
+    }
+    _mom6_root=$(cd -P -- "$_mom6_root" && pwd)
+    [[ -f "$_mom6_root/CMakeLists.txt" ]] || {
+        echo "Error: '$_mom6_root' has no CMakeLists.txt -- that is not a MOM6 checkout" >&2
+        echo "       with the CMake build system (it lives on dev/turbo* branches)." >&2
+        exit 1
+    }
+    # MOM6's top-level CMakeLists hard-fails without these; catch it here rather
+    # than 20 minutes into a container build.  CI gets them via submodules:recursive.
+    for _p in pkg/CVMix-src pkg/GSW-Fortran; do
+        [[ -e "$_mom6_root/$_p/.git" ]] || {
+            echo "Error: MOM6 submodule '$_p' is not initialized in $_mom6_root." >&2
+            echo "       git -C \"$_mom6_root\" submodule update --init --recursive" >&2
+            exit 1
+        }
+    done
+    # Same worktree reasoning as the checkout above: build_dep reads source SHAs
+    # with git, which needs the real git dir when .git is a file pointing out.
+    _mom6_git=$(git -C "$_mom6_root" rev-parse --git-common-dir 2>/dev/null || true)
+    [[ "$_mom6_git" == /* ]] && _mom6_git=$(cd -P -- "$_mom6_git" && pwd) || _mom6_git=""
+    if [[ "$_mom6_root" != "$TURBO_STACK_ROOT" && "$_mom6_root" != "$TURBO_STACK_ROOT"/* ]]; then
+        _mounts+=(-v "$_mom6_root:$_mom6_root")
+        [[ -n "$_mom6_git" && "$_mom6_git" != "$_mom6_root"/* ]] && \
+            _mounts+=(-v "$_mom6_git:$_mom6_git:ro")
+    fi
+    # Exported so turbo_guard_builder_submodules below skips the submodules/MOM6
+    # check (the wrappers all treat a set *_ROOT as "this one comes from elsewhere").
+    export MOM6_ROOT="$_mom6_root"
+    _mom6_note="$_mom6_root ($(git -C "$_mom6_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'not a git tree'))"
+else
+    _mom6_note="submodules/MOM6 (the pinned commit)"
+fi
+
 _build_dir=""
 if [[ -n "$TURBO_B_BUILD_DIR" ]]; then
     mkdir -p "$TURBO_B_BUILD_DIR"
@@ -220,13 +287,15 @@ fi
 turbo_guard_builder_submodules 2
 _ensure_image || exit 1
 
-# CI has no source overrides -- it tests the pinned submodules.  Honoring a host
-# override would mean mounting that tree too, which is a different (useful, but
-# not-CI) thing; say so instead of silently ignoring it.
-for _v in MOM6_ROOT FMS_ROOT TIM_ROOT PFUNIT_ROOT AMREX_ROOT; do
+# MOM6 is the one source you can swap (--mom6-root, handled above): it is what you
+# iterate on.  The rest would each need their own mount and their own tier of the
+# build reworked, so they are not forwarded -- say so rather than ignoring them
+# silently, since the host value would otherwise look like it took effect.
+for _v in FMS_ROOT TIM_ROOT PFUNIT_ROOT AMREX_ROOT; do
     if [[ -n "${!_v}" ]]; then
         echo "[ci-container] note: $_v is set on the host but is NOT forwarded into the"
-        echo "[ci-container]       container -- it builds the pinned submodule, as CI does."
+        echo "[ci-container]       container -- it builds the pinned submodule."
+        echo "[ci-container]       (MOM6 is swappable: --mom6-root DIR.)"
     fi
 done
 
@@ -241,6 +310,9 @@ _env=(-e "CMAKE_BUILD_PARALLEL_LEVEL=$_jobs")
 # The pFUnit suites run `mpirun -np 4` (@test(npes=[1,2,4])); OpenMPI 5's PRRTE
 # refuses to launch that on a host with fewer slots.  Harmless on a big machine.
 _env+=(-e "PRTE_MCA_rmaps_default_mapping_policy=${PRTE_MCA_rmaps_default_mapping_policy:-:oversubscribe}")
+# The mounted MOM6 tree, at the same path inside as out (see the mount above).
+# build_turbo_stack.sh's CMake reads MOM6_ROOT; unset, it falls back to the submodule.
+[[ -n "${MOM6_ROOT:-}" ]] && _env+=(-e "MOM6_ROOT=$MOM6_ROOT")
 
 _user=()
 if [[ "$_as_me" == true ]]; then
@@ -329,6 +401,7 @@ echo "[ci-container] image     = $_image"
 echo "[ci-container] mount     = $TURBO_STACK_ROOT (same path inside the container)"
 [[ -n "$_git_common" ]] && \
     echo "[ci-container] git dir   = $_git_common (read-only; this checkout is a worktree)"
+echo "[ci-container] MOM6      = $_mom6_note"
 echo "[ci-container] user      = $([[ "$_as_me" == true ]] && echo "$_uidgid (--as-me)" || echo "root (as CI)")"
 echo "[ci-container] jobs      = $_jobs"
 echo "[ci-container] artifacts = ${_chown_targets[*]}"
