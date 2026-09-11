@@ -198,7 +198,8 @@ Two caveats, if you do it by hand:
   runs as root against a bind mount. Pass `--build_dir` to keep them somewhere
   disposable, and hand them back with
   `scripts/run_ci_container.sh --fix-ownership --build_dir DIR` (the scripts above
-  do this for you on every exit path).
+  do this themselves when a run ends, and repair a run that was killed or
+  interrupted with the container left running).
 - **MPI oversubscription.** The pFUnit suites run `mpirun -np 4`
   (`@test(npes=[1,2,4])`). On a machine with fewer than 4 slots, OpenMPI 5's
   PRRTE refuses to launch with "not enough slots"; export

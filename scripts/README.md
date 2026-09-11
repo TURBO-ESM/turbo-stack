@@ -153,17 +153,22 @@ that CI checks a MOM6 branch out fresh beside the workspace, where this builds t
 tree you hand it.
 
 `run_ci_container.sh` takes the usual builder flags and forwards them to
-`build_local_with_spack_env.sh` *inside* the container, adding only what the
-workflow adds (`CMAKE_BUILD_PARALLEL_LEVEL`, the PRRTE oversubscribe policy,
+`build_local_with_spack_env.sh` *inside* the container, adding what the workflow
+adds (`CMAKE_BUILD_PARALLEL_LEVEL`, the PRRTE oversubscribe policy,
 `git config --global --add safe.directory '*'`, and the workflow's two guardrails —
 assert the prebaked `turbo_stack` env, warn when the image's baked `spack.yaml` lags
-the checkout). It mounts your checkout at its own path, so `TURBO_STACK_ROOT`
+the checkout) plus any `<NAME>_ROOT` you set. It mounts your checkout at its own
+path, so `TURBO_STACK_ROOT`
 resolves identically inside and out; no host `SPACK_ROOT` is needed or forwarded.
-Submodules are not fetched — initialize them first, as CI's checkout does. Artifacts
-default to `$TMPDIR/turbo_ci_container_test/<checkout>` (per checkout, so sibling
-worktrees don't collide), outside the clone, and are chowned back to you before the
-container exits (the container runs as root, like CI's job container).
-See `--help` and [`docker/README.md`](../docker/README.md).
+Submodules are not fetched — initialize them first, as CI's checkout does. The
+container runs as root, like CI's job container, so the artifacts it writes are
+chowned back to you once the run ends; a run that was killed, or interrupted with
+the container left running, is repaired by the next run or `--fix-ownership`.
+Without `--build_dir` the artifacts land in CI's layout, inside the checkout
+(`build/`, `deps/`); the both-backend driver always passes one, defaulting to
+`$TMPDIR/turbo_ci_container_test/<checkout>` — outside the clone, and per checkout
+so sibling worktrees don't collide. See `--help` and
+[`docker/README.md`](../docker/README.md).
 
 ### Explicit, iterative (any flavor)
 

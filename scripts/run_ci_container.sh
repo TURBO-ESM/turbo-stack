@@ -25,8 +25,9 @@
 # ./test_turbo_stack_in_ci_container.sh, which calls this once per backend.
 #
 # The container runs as root, like CI's job container, so what it writes to the
-# bind mounts lands root-owned; ownership is handed back to you on the way out --
-# after a failure or a Ctrl-C too, and after an earlier run that was killed.
+# bind mounts lands root-owned; ownership is handed back to you when the run ends,
+# a failed build included.  A run that is killed outright, or interrupted in a way
+# that leaves the container going, is repaired by the next run or --fix-ownership.
 # Artifacts live on the bind mount and outlive the container: a later --shell (or
 # another run) re-enters the same build tree, where `ctest --test-dir <dir>` re-runs
 # the suite with no rebuild.
@@ -54,8 +55,8 @@
 #                       activated, instead of building.  Same mounts and
 #                       environment; for iterating on a failure.
 #   --fix-ownership     Hand the build artifacts back to you and exit.  Only needed
-#                       after a run that was killed outright (SIGKILL); every other
-#                       exit path does it on its own.
+#                       after a run that was killed, or interrupted with the
+#                       container left running; a run that ends does this itself.
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
@@ -230,8 +231,14 @@ fi
 # The container writes as root, so bind-mounted artifacts come back root-owned.
 # Hand them back in a throwaway container on the way out.  The test is "is anything
 # here not mine?", not "did I just run?", so this also repairs a previous run that
-# was killed before it could fire -- and costs nothing (no container at all) when
-# there is nothing to fix, as on a rootless engine.
+# never got to fire -- and costs nothing (no container at all) when there is
+# nothing to fix, as on a rootless engine.
+#
+# It runs once `docker run` has returned, which is the only moment bash can run a
+# trap: a signal arriving while a foreground command is in flight is held until
+# that command finishes.  Interrupting a run therefore does not reliably stop the
+# build -- the container can survive the signal and keep going (`docker ps`, then
+# `docker rm -f`) -- and ownership is repaired on the next run or --fix-ownership.
 _uidgid="$(id -u):$(id -g)"
 _chown_back() {
     local rc=$?
