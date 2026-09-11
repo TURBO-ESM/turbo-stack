@@ -121,31 +121,31 @@ Each runs the real single-backend builder once per backend (each in its own
 process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
 a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  The
 three host-toolchain drivers support every `*_ROOT` override described below; the
-container driver supports `MOM6_ROOT` only — the one source you iterate on. The
-others would each need their own mount and their own tier reworked, so they are
-reported as ignored rather than silently dropped.
+container driver supports `MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` — the sources it
+builds. `PFUNIT_ROOT` / `AMREX_ROOT` are not forwarded: the image supplies pFUnit
+and AMReX from its Spack env, so an override there would have no effect.
 
 ### In the CI container (a ready-made environment)
 
 The `turbo-ci` image ships the compiler and the Tier 1 + Tier 1.5 dependencies
 (MPI, NetCDF, CMake, pFUnit, AMReX) already installed in a Spack env, so there is
-no toolchain to set up: the container builds the Tier-2 backend from its submodule
-and then turbo-stack, against the MOM6 tree you point at.
+no toolchain to set up: the container builds the Tier-2 backend and then
+turbo-stack, against the sources you point it at.
 
 ```bash
-scripts/run_ci_container.sh --infra TIM --tests                     # pinned MOM6
-scripts/run_ci_container.sh --infra TIM --tests \
-    --mom6-root ~/projects/MOM6                                     # your MOM6, as checked out
+scripts/run_ci_container.sh --infra TIM --tests                     # pinned sources
+MOM6_ROOT=~/projects/MOM6 \
+    scripts/run_ci_container.sh --infra TIM --tests                 # your MOM6, as checked out
 ./test_turbo_stack_in_ci_container.sh                               # both backends, matrix + verdict
-scripts/run_ci_container.sh --shell                                 # interactive shell in the image
+scripts/run_ci_container.sh --shell                                 # interactive shell, Spack env active
 ```
 
-`--mom6-root DIR` mounts that tree at its own path and forwards `MOM6_ROOT` into
-the container; **whatever branch it is checked out on is what gets built**, so to
-test several branches, switch branches there and run again. Its nested submodules
+Sources are swapped the usual way: export `MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT`
+and that tree is mounted at its own path, forwarded into the container, and built;
+**whatever branch it is checked out on is what gets built**, so to test several
+branches, switch branches there and run again. A MOM6 tree's nested submodules
 (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized — MOM6's CMakeLists
 hard-fails without them, and the script checks up front rather than 20 minutes in.
-It defaults to `$MOM6_ROOT` when that is exported, as in every other entry point.
 
 Because it is CI's image and CI's command, a failure in
 `.github/workflows/cmake-build.yaml` usually reproduces here — with the caveat
@@ -326,7 +326,7 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
 Optional, for testing against local dev trees:
 
 - `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` — hot-swap a co-developed repo's source
-  (default: the pinned submodule). Not forwarded into the CI container.
+  (default: the pinned submodule). Mounted into the CI container when set.
 - `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").
 - `TURBO_CI_IMAGE`, `TURBO_CONTAINER_ENGINE` — image / container CLI for
-  `run_ci_container.sh` (defaults: the tag CI consumes, and `docker` then `podman`).
+  `run_ci_container.sh` (defaults: the tag CI consumes, and `docker`).

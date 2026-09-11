@@ -31,15 +31,15 @@ Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the rea
 ### Local test in the CI container (a ready-made environment)
 
 ```bash
-scripts/run_ci_container.sh --infra TIM --tests                        # pinned MOM6, one backend
-scripts/run_ci_container.sh --infra TIM --tests --mom6-root ~/MOM6     # your MOM6, as checked out
+scripts/run_ci_container.sh --infra TIM --tests                        # pinned sources, one backend
+MOM6_ROOT=~/MOM6 scripts/run_ci_container.sh --infra TIM --tests       # your MOM6, as checked out
 ./test_turbo_stack_in_ci_container.sh                                  # both backends, matrix + verdict
-scripts/run_ci_container.sh --shell                                    # interactive shell in the image
+scripts/run_ci_container.sh --shell                                    # interactive shell, Spack env active
 ```
 
-No host toolchain needed: the image ships the compiler plus Tier 1 + 1.5 (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack env, so the container builds only Tier 2 (the selected backend, from its submodule) and Tier 3. `--mom6-root DIR` mounts that tree and forwards `MOM6_ROOT`; **the branch it is checked out on is what gets built** — switch branches there and re-run to test another. Its nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized. MOM6 is the only swappable source here; `FMS_ROOT`/`TIM_ROOT`/`PFUNIT_ROOT`/`AMREX_ROOT` are reported as ignored.
+No host toolchain needed: the image ships the compiler plus Tier 1 + 1.5 (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack env, so the container builds only Tier 2 (the selected backend, from its submodule) and Tier 3. Export `MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own path and forwarded; **the branch it is checked out on is what gets built** — switch branches there and re-run to test another. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized. `PFUNIT_ROOT`/`AMREX_ROOT` are not forwarded: the image supplies pFUnit and AMReX from its Spack env, so an override would have no effect.
 
-Runs exactly what `turbo-cmake-container-tests.yaml` runs (`build_local_with_spack_env.sh --infra X --tests`) inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the workflow's env (`CMAKE_BUILD_PARALLEL_LEVEL`, PRRTE oversubscribe), its `safe.directory` step, and its two guardrails (assert the prebaked `turbo_stack` env; warn when the image's baked `spack.yaml` lags the checkout). The checkout is mounted at its own path (so `TURBO_STACK_ROOT` matches inside and out); no host `SPACK_ROOT` is used — and an exported one pointing at a *different* checkout hard-errors, which is what you hit first when running from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched. Artifacts default to `$TMPDIR/turbo_ci_container_test/<checkout>` (per checkout, so worktrees don't collide) and are chowned back from root before the container exits. `run_ci_container.sh` options: the builder flags plus `--image`, `--pull`, `--shell`, `--as-me`, `--engine`, `--fix-ownership`.
+Runs exactly what `cmake-build.yaml` runs (`build_local_with_spack_env.sh --infra X --tests`) inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the workflow's env (`CMAKE_BUILD_PARALLEL_LEVEL`, PRRTE oversubscribe), its `safe.directory` step, and its two guardrails (assert the prebaked `turbo_stack` env; warn when the image's baked `spack.yaml` lags the checkout). The checkout is mounted at its own path (so `TURBO_STACK_ROOT` matches inside and out); no host `SPACK_ROOT` is used — and an exported one pointing at a *different* checkout hard-errors, which is what you hit first when running from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched. Artifacts default to `$TMPDIR/turbo_ci_container_test/<checkout>` (per checkout, so worktrees don't collide); the container runs as root (as CI does) and ownership is handed back on every exit path, including a Ctrl-C or an earlier killed run. `run_ci_container.sh` options: the builder flags plus `--image`, `--pull`, `--shell`, `--fix-ownership` (engine via `$TURBO_CONTAINER_ENGINE`, default docker).
 
 ### Local build (spack flavor, one command)
 
@@ -235,8 +235,8 @@ re-run manually (`gh workflow run build-turbo-ci-container.yaml`) — see
 That same image doubles as a ready-made local build environment, so most of this
 lane can be run without pushing a branch: `scripts/run_ci_container.sh --infra TIM
 --tests` (one backend), `./test_turbo_stack_in_ci_container.sh` (both), `--shell`
-to debug inside it, and `--mom6-root DIR` to build a MOM6 tree of your own instead
-of the pinned commit. Not a pixel-perfect replica — CI checks its MOM6 branch out
+to debug inside it, and `MOM6_ROOT`/`FMS_ROOT`/`TIM_ROOT` to build trees of your
+own instead of the pinned commits. Not a pixel-perfect replica — CI checks its MOM6 branch out
 fresh beside the workspace, where the local runner builds the tree you point it
 at. See "Local test in the CI container" above.
 

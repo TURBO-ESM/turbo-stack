@@ -149,19 +149,22 @@ environment as the consumer workflow, against a checkout whose submodules are
 already initialized (the container fetches nothing):
 
 ```bash
-scripts/run_ci_container.sh --infra TIM --tests    # one backend, pinned MOM6
-scripts/run_ci_container.sh --infra TIM --tests \
-    --mom6-root ~/projects/MOM6                    # build your MOM6, as checked out
+scripts/run_ci_container.sh --infra TIM --tests    # one backend, pinned sources
+MOM6_ROOT=~/projects/MOM6 \
+    scripts/run_ci_container.sh --infra TIM --tests  # build your MOM6, as checked out
 ./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
 ./test_turbo_stack_in_ci_container.sh --only TIM   # one backend
-scripts/run_ci_container.sh --shell                # interactive shell in the image
+scripts/run_ci_container.sh --shell                # interactive shell, Spack env active
 ```
 
-`--mom6-root DIR` mounts that tree at its own path and forwards `MOM6_ROOT` into
-the container — whatever branch it is on is what gets built, so testing several
-branches means switching branches there and running again. Its nested submodules
-(`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized; the script checks up
-front. MOM6 is the only source you can swap this way.
+Swapping a source works the same way it does everywhere else in the repo: export
+`MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own path,
+forwarded into the container, and built on whatever branch it is checked out on —
+so testing several branches means switching branches there and running again. A
+MOM6 tree needs its nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`)
+initialized; the script checks up front. `PFUNIT_ROOT` / `AMREX_ROOT` are not
+forwarded: this image supplies pFUnit and AMReX from its Spack env, so an override
+would have no effect.
 
 They handle both caveats below: artifacts default to
 `$TMPDIR/turbo_ci_container_test/<checkout>` — outside your clone, and keyed on the
@@ -171,15 +174,16 @@ They also mirror the workflow's two guardrails: refuse an image with no prebaked
 `turbo_stack` env (which would otherwise silently start a ~1 h source build), and
 warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
 covers the rest — `--image` / `--pull` to pin or refresh the image, `--build_dir`,
-`--as-me`, `--fix-ownership`.
+`--fix-ownership`.
 
 Artifacts live on the bind mount, so they outlive the container: after a failure,
 `scripts/run_ci_container.sh --shell` drops you into the same build tree, where
 `ctest --test-dir <dir>` re-runs the suite with no rebuild.
 
 The image sets `SPACK_ROOT` but deliberately does **not** activate the Spack
-environment — the repo scripts own activation. The raw recipe underneath, to run
-by hand:
+environment — the repo scripts own activation (`--shell` activates it for you, so
+an interactive session has `cmake` and the MPI wrappers on `PATH`). The raw recipe
+underneath, to run by hand:
 
 ```bash
 docker run --rm -it -v "$PWD:/work" -w /work \
@@ -192,14 +196,12 @@ Two caveats, if you do it by hand:
 
 - **Build artifacts land in your checkout owned by root**, since the container
   runs as root against a bind mount. Pass `--build_dir` to keep them somewhere
-  disposable, or clean up afterwards.
+  disposable, and hand them back with
+  `scripts/run_ci_container.sh --fix-ownership --build_dir DIR` (the scripts above
+  do this for you on every exit path).
 - **MPI oversubscription.** The pFUnit suites run `mpirun -np 4`
   (`@test(npes=[1,2,4])`). On a machine with fewer than 4 slots, OpenMPI 5's
   PRRTE refuses to launch with "not enough slots"; export
   `PRTE_MCA_rmaps_default_mapping_policy=":oversubscribe"` (what the consumer
   workflow does). Running as root is already handled — the image sets
   `OMPI_ALLOW_RUN_AS_ROOT{,_CONFIRM}`, which OpenMPI 5 otherwise blocks.
-
-A non-root run (`--as-me`) works too, but Spack 1.x fetches its ~180 MB package
-repo into `$HOME` on first use and the image's copy of that cache belongs to
-root — so give the run a persistent `HOME` on the host, as that flag does.

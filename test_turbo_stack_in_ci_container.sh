@@ -18,15 +18,15 @@
 #
 # Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules -- the container
 # fetches nothing, so initialize them first (the wrapper guards them).  To build a
-# MOM6 tree of your own instead, export MOM6_ROOT before running: it is inherited by
-# both per-backend runs, which mount that tree and forward it (run_ci_container.sh's
-# --mom6-root is the same thing, per invocation), and the matrix below then reports
-# MOM6 as (override).  Whatever branch that tree is on is what gets built.  Nothing is
-# written into $TURBO_STACK_ROOT: each backend builds under
-# $TURBO_BUILD_SYSTEM_TEST_DIR, which is mounted into the container, and the
-# artifacts are handed back to your uid before each container exits.  They outlive
-# the container, so `scripts/run_ci_container.sh --shell` re-enters the same build
-# tree and can re-run ctest with no rebuild.
+# tree of your own instead, export MOM6_ROOT / FMS_ROOT / TIM_ROOT before running:
+# they are inherited by both per-backend runs, which mount those trees and forward
+# them, and the matrix below then reports the component as (override).  Whatever
+# branch a tree is on is what gets built.  Nothing is written into
+# $TURBO_STACK_ROOT: each backend builds under $TURBO_BUILD_SYSTEM_TEST_DIR, which
+# is mounted into the container, and the artifacts are handed back to your uid
+# before each container exits.  They outlive the container, so
+# `scripts/run_ci_container.sh --shell` re-enters the same build tree and can
+# re-run ctest with no rebuild.
 #
 # Options:
 #   --only FMS2|TIM     Run only the named backend (default: both, as CI's matrix)
@@ -38,14 +38,13 @@
 # Configuration (env vars):
 #   TURBO_CI_IMAGE               Image to run (default: the tag CI consumes --
 #                                ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi)
-#   TURBO_CONTAINER_ENGINE       Container CLI (default: docker, else podman)
+#   TURBO_CONTAINER_ENGINE       Container CLI (default: docker)
 #   TURBO_STACK_ROOT             turbo-stack clone (optional; self-located)
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Artifact root (default:
 #                                $TMPDIR/turbo_ci_container_test/<checkout dir name>,
 #                                so sibling worktrees never share a build dir)
-#   MOM6_ROOT                    Build this MOM6 tree instead of the submodule; it
-#                                is mounted into each container.  FMS_ROOT /
-#                                TIM_ROOT are NOT forwarded (reported, not silent).
+#   MOM6_ROOT / FMS_ROOT /       Build these trees instead of the submodules; each
+#   TIM_ROOT                     is mounted into every container.
 #
 # SPACK_ROOT is NOT required: the image brings its own spack (/opt/spack) with the
 # repo's env baked in.  A host SPACK_ROOT / TURBO_STACK_ROOT is never passed in.
@@ -84,12 +83,9 @@ export TURBO_BUILD_SYSTEM_TEST_DIR
 echo "[ci-container] artifacts under $TURBO_BUILD_SYSTEM_TEST_DIR"
 
 # --clean's rm -rf runs here on the host, but the container writes as root.  A run
-# killed before its chown-back could fire leaves root-owned dirs that we cannot
-# unlink; repair them in a throwaway container first so --clean can't die on EPERM.
-if [[ "${TURBO_CLEAN:-false}" == true && -d "$TURBO_BUILD_SYSTEM_TEST_DIR" ]] \
-   && [[ -n "$(find "$TURBO_BUILD_SYSTEM_TEST_DIR" ! -user "$(id -u)" -print -quit 2>/dev/null)" ]]; then
-    echo "[ci-container] artifacts contain files not owned by you (an interrupted run?);"
-    echo "[ci-container] restoring ownership so --clean can remove them"
+# killed outright leaves root-owned dirs we cannot unlink, so repair them first --
+# --fix-ownership is a no-op when there is nothing to repair, which is the usual case.
+if [[ "${TURBO_CLEAN:-false}" == true && -d "$TURBO_BUILD_SYSTEM_TEST_DIR" ]]; then
     bash "$_runner" --fix-ownership --build_dir "$TURBO_BUILD_SYSTEM_TEST_DIR"
 fi
 
