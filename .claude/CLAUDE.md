@@ -118,6 +118,22 @@ CI does the latter — `actions/checkout` puts the branch in a sibling directory
 and sets `MOM6_ROOT`. There is no turbo-stack-specific machinery for this: the
 build scripts only ever know about `MOM6_ROOT`.
 
+### The MOM6 ↔ TIM AMReX bridge
+
+`turbo_build_tim` passes `-DTIM_ENABLE_MOM_BRIDGE=ON` unconditionally, so TIM
+always provides `TIM::mom_bridge`. Whether MOM6 compiles and links it is decided
+in MOM6, not here: the CMake block lives only on `dev/turbo-debug`, and inside it
+`if(MOM6_INFRA STREQUAL "TIM")` keeps FMS2 compiled out. **Do not add a flag or a
+CI conditional for this.** Stage 1 cannot know whether the bridge is needed — only
+the MOM6 source knows whether it carries the `#ifdef _TIM` call sites, and Stage 1
+never sees that source. Asking the caller reintroduces a per-lane CI conditional;
+reading the branch name does not work, since CI builds a detached ref. It costs one
+3-TU compile (~3 s) where it is unused, and nothing on those link lines.
+
+MOM6 hard-errors at configure if `MOM6_INFRA=TIM` and `TIM::mom_bridge` is
+missing, so TIM's side must be in place before MOM6's merges. See
+[`scripts/README.md`](../scripts/README.md).
+
 ### Spack environment
 
 Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS and TIM are intentionally not in spack: `build_local_with_spack_env.sh` builds the selected backend via `turbo_build_fms`/`turbo_build_tim` (in `scripts/lib/common.sh`) from the local source tree (`$FMS_ROOT`/`$TIM_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.

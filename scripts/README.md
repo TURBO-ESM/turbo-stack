@@ -252,6 +252,82 @@ In the explicit flow you pass the `build` and `install` roots straight to the
 
 ---
 
+## The MOM6 ↔ TIM AMReX bridge
+
+`turbo_build_tim` passes `-DTIM_ENABLE_MOM_BRIDGE=ON`, which builds
+`TIM::mom_bridge` — the C++ side of the AMReX kernels MOM6 calls from the
+`#ifdef _TIM` branches in `src/core/MOM_continuity_PPM.F90`.
+
+Whether those branches are *compiled and linked* is decided entirely in MOM6, by
+two gates that between them need no flag from turbo-stack and no CI plumbing:
+
+| Gate | Mechanism | Effect |
+|---|---|---|
+| **Branch** | the CMake block exists only on `dev/turbo-debug` | the pinned `dev/turbo` cells have no such block; nothing to switch off |
+| **Backend** | `if(MOM6_INFRA STREQUAL "TIM")` in `src/CMakeLists.txt` | FMS2 stays compiled out — it cannot provide `turbotmp_*_bridge` |
+
+So the four CI cells resolve themselves:
+
+| MOM6 source | backend | `_TIM` | links `TIM::mom_bridge` |
+|---|---|---|---|
+| pinned (`dev/turbo`) | FMS2 | no | no |
+| pinned (`dev/turbo`) | TIM | no | no |
+| `dev/turbo-debug` | FMS2 | no | no |
+| `dev/turbo-debug` | TIM | **yes** | **yes** |
+
+**Why the flag here is unconditional.** Because Stage 1 cannot know whether the
+bridge is needed. Only the MOM6 source knows whether it carries the `#ifdef _TIM`
+call sites, and Stage 1 never sees that source — `MOM6_ROOT` is Stage 2's input.
+The three ways to find out are all worse than not asking:
+
+| | |
+|---|---|
+| ask the caller | puts a per-lane conditional back into the CI workflow |
+| grep the MOM6 source for `_TIM` | couples a dep builder to MOM6's internals |
+| read the branch name | does not work — CI builds a detached ref, and detached HEAD is a submodule's normal state |
+
+It also keeps `turbo_build_tim` the same shape as its siblings: every
+`turbo_build_*` wrapper takes a build dir and an install prefix and nothing else.
+A condition here would make TIM's builder the only one that knows MOM6 exists,
+inverting the tier contract above.
+
+The cost is one 3-TU C++ compile — ~3 s, a 55 KB archive — in the cells that do not
+use it, and **nothing on their link lines**: `mom_bridge` is a separate archive that
+only MOM6 pulls in. Worth revisiting if the bridge grows substantially, since that
+cost scales with the number of kernels; the link-side cost does not.
+
+(A shared `--build_dir` is the one case where varying the flag would also cost
+rebuilds, since `build_dep` folds cmake args into its sentinel hash. That is a
+local-iteration concern only — each CI job is a fresh container.)
+
+**This buys compile + link coverage, not kernel correctness.** The guards wrap one
+arm of a runtime dispatch (`ZONAL_EDGE_THICKNESS_MODE` and five siblings, each
+defaulting to `TIMH_runFORTRAN`), so defining `_TIM` compiles that arm in without
+executing it.
+
+Exactly what it catches, on every build:
+
+- the C++ bridge sources **compile**. Before this they reached nothing a library
+  build produced — `mom/cpp` was wired only into `test_mom` — so they could rot
+  unnoticed.
+- a missing or renamed export becomes a **link error**.
+
+What it does **not** catch: signature or struct-layout drift. MOM6 declares the
+bridge as `bind(C)` interface blocks, so the Fortran compiler checks each call site
+against MOM6's *own* declaration, and the linker then matches `turbotmp_*_bridge`
+by symbol name alone — `extern "C"` encodes no signature. `RealArray_C` and `Box_C`
+are hand-maintained on both sides with no `static_assert` or generated header
+between them, so a divergence in arity, type or layout links cleanly and misbehaves
+at runtime. Closing that needs a real cross-check (offset assertions, or generating
+the Fortran interfaces from the C header) and is follow-on work.
+
+**Ordering.** MOM6 hard-errors at configure when `MOM6_INFRA=TIM` and
+`TIM::mom_bridge` is absent, naming the TIM rebuild flag. Since the
+`dev/turbo-debug` CI cells track that branch's tip, TIM and this flag must be in
+place *before* MOM6's side merges, or the cell goes red in between.
+
+---
+
 ## Parallel build jobs
 
 `--parallel N` / `-j N` on the orchestrators exports `CMAKE_BUILD_PARALLEL_LEVEL=N`. Every downstream `cmake --build` invocation (deps + turbo-stack) picks it up natively without any flag plumbing. You can also set `CMAKE_BUILD_PARALLEL_LEVEL` in your shell profile / qsub directive / CI config to skip the CLI flag entirely:
