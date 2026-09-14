@@ -139,11 +139,51 @@ find image".
 Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`) and `SPACK_REF`
 (default `v1.2.2`, pinned for reproducibility).
 
-## Running the CI build locally
+## Building locally in this image
+
+The image is a ready-made build environment, not just CI's: it ships the compiler
+and the Tier 1 + Tier 1.5 dependencies (MPI, NetCDF, CMake, pFUnit, AMReX)
+installed in the `turbo_stack` Spack env, so nothing but a container engine is
+needed on the host. Two scripts drive it — same image, same commands and
+environment as the consumer workflow, against a checkout whose submodules are
+already initialized (the container fetches nothing):
+
+```bash
+scripts/run_ci_container.sh --infra TIM --tests    # one backend, pinned sources
+MOM6_ROOT=~/projects/MOM6 \
+    scripts/run_ci_container.sh --infra TIM --tests  # build your MOM6, as checked out
+./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
+./test_turbo_stack_in_ci_container.sh --only TIM   # one backend
+scripts/run_ci_container.sh --shell                # interactive shell, Spack env active
+```
+
+Swapping a source works the same way it does everywhere else in the repo: export
+`MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own path,
+forwarded into the container, and built on whatever branch it is checked out on —
+so testing several branches means switching branches there and running again. A
+MOM6 tree needs its nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`)
+initialized; the script checks up front. `PFUNIT_ROOT` / `AMREX_ROOT` are not
+forwarded: this image supplies pFUnit and AMReX from its Spack env, so an override
+would have no effect.
+
+They handle both caveats below: artifacts default to
+`$TMPDIR/turbo_ci_container_test/<checkout>` — outside your clone, and keyed on the
+checkout so sibling worktrees never share a build dir — with their ownership handed
+back to you before the container exits, and the PRRTE oversubscribe policy is set.
+They also mirror the workflow's two guardrails: refuse an image with no prebaked
+`turbo_stack` env (which would otherwise silently start a ~1 h source build), and
+warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
+covers the rest — `--image` / `--pull` to pin or refresh the image, `--build_dir`,
+`--fix-ownership`.
+
+Artifacts live on the bind mount, so they outlive the container: after a failure,
+`scripts/run_ci_container.sh --shell` drops you into the same build tree, where
+`ctest --test-dir <dir>` re-runs the suite with no rebuild.
 
 The image sets `SPACK_ROOT` but deliberately does **not** activate the Spack
-environment — the repo scripts own activation. Reproducing what CI does, against
-a checkout whose submodules are already initialized:
+environment — the repo scripts own activation (`--shell` activates it for you, so
+an interactive session has `cmake` and the MPI wrappers on `PATH`). The raw recipe
+underneath, to run by hand:
 
 ```bash
 docker run --rm -it -v "$PWD:/work" -w /work \
@@ -152,11 +192,14 @@ docker run --rm -it -v "$PWD:/work" -w /work \
               && scripts/build_local_with_spack_env.sh --infra TIM --tests'
 ```
 
-Two caveats:
+Two caveats, if you do it by hand:
 
 - **Build artifacts land in your checkout owned by root**, since the container
   runs as root against a bind mount. Pass `--build_dir` to keep them somewhere
-  disposable, or clean up afterwards.
+  disposable, and hand them back with
+  `scripts/run_ci_container.sh --fix-ownership --build_dir DIR` (the scripts above
+  do this themselves when a run ends, and repair a run that was killed or
+  interrupted with the container left running).
 - **MPI oversubscription.** The pFUnit suites run `mpirun -np 4`
   (`@test(npes=[1,2,4])`). On a machine with fewer than 4 slots, OpenMPI 5's
   PRRTE refuses to launch with "not enough slots"; export
