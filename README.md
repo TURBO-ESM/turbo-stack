@@ -19,7 +19,7 @@ This repository brings together various components that make up the TURBO Stack,
 > still works and is still exercised in CI; it is documented in
 > [`docs/legacy_build_system.md`](docs/legacy_build_system.md).
 
-## Getting started
+## Getting the code
 
 Clone the repository along with all submodules:
 
@@ -27,15 +27,52 @@ Clone the repository along with all submodules:
 git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
 ```
 
-If you already cloned this repo but forgot the `--recursive` you can update the submodules at anytime with:
+If you already cloned this repo but forgot the `--recursive` you can get the submodules at anytime with:
 ```bash
 git submodule update --init --recursive
 ````
 ## Quickstart on Derecho
 
-Everything turbo-stack needs is already available on Derecho as Lmod modules,
-and `build_on_derecho.sh` loads them for you, so a fresh clone to a built MOM6
-is two commands:
+### One liner to build and test both backends (TIM and FMS) in a batch job. 
+```bash
+qsub test_turbo_stack_on_derecho.sh
+```
+That driver carries its own PBS directives (project code, one node, 128 cores,
+1 hour) and writes nothing into your clone. A `qsub` option on the command line
+overrides the matching directive in the script — the project code is the one you
+will usually want, since it is hardcoded to `NCGD0067`:
+
+```bash
+qsub -A <project_code> -l walltime=02:00:00 test_turbo_stack_on_derecho.sh
+```
+
+Each backend is built and tested in its own directory under
+`$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or
+`/tmp` if `TMPDIR` is unset), so the two executables end up at:
+
+```
+$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-TIM/mom6_build/config_src/drivers/solo_driver/MOM6
+$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-FMS2/mom6_build/config_src/drivers/solo_driver/MOM6
+```
+
+Want the artifacts somewhere durable instead — two backends built from scratch,
+dependencies included, is not small — point that variable at scratch. The job
+deliberately omits `#PBS -V`, so it inherits nothing from your submit shell;
+`-v` is how you pass one in:
+
+```bash
+qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
+     -A <project_code> test_turbo_stack_on_derecho.sh
+```
+
+Your job log opens with a testing matrix — the commit and branch of turbo-stack,
+MOM6, TIM and FMS actually built — and closes with a build summary giving
+PASS / FAIL per backend. PBS writes it to `turbo-stack-on-derecho-test.o<jobid>`
+in the directory you submitted from, and there is a separate per-backend log
+under `$TURBO_BUILD_SYSTEM_TEST_DIR/logs/`.
+
+### Build on Derecho yourself:
+All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so a fresh clone to a built MOM6 is two commands:
 
 ```bash
 git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
@@ -43,24 +80,14 @@ cd turbo-stack
 qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
 ```
 
-`qcmd` puts the compile on a compute node — drop it if you are already inside an
-interactive job. `--tests` also builds and runs the pFUnit suite; leave it off
-and you get just the executable, at:
+`qcmd` puts the compile on a compute node — drop it if you are already inside an interactive job. `--tests` is optional, it builds and runs the pFUnit test suite. The default location the MOM6 executable ends up at:
 
 ```
 build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 ```
 
-Add `--infra FMS2` for the FMS2 backend (the default is TIM), `--clean` to
-rebuild from scratch, or `--debug` for a Debug build. To build *and* `ctest`
-**both** backends as a batch job instead:
+The build_on_derecho.sh script contains a number of useful options, see all with -h or --help. Some commonly used ones are `--infra FMS2` for the FMS2 backend (the default is TIM), `--clean` to rebuild from scratch. 
 
-```bash
-qsub -A <project_code> test_turbo_stack_on_derecho.sh
-```
-
-That driver carries its own PBS directives (one node, 128 cores, 1 hour) and
-writes nothing into your clone.
 
 > [!NOTE]
 > The Derecho toolchain recipe runs `module purge` before loading its own set
