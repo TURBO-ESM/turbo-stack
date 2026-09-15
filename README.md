@@ -7,8 +7,8 @@ Welcome to the *TURBO Stack* repository, the central software hub for the TURBO 
 This repository brings together various components that make up the TURBO Stack, including:
 
  - [MOM6](https://github.com/TURBO-ESM/MOM6)
+ - [TIM](https://github.com/TURBO-ESM/TIM) 
  - [FMS](https://github.com/TURBO-ESM/FMS)
- - [TIM](https://github.com/TURBO-ESM/TIM) — Turbo Infrastructure for MOM, the new AMReX-backed infrastructure layer
  - [MARBL](https://github.com/marbl-ecosys/MARBL)
  - development and testing utilities
  - and future libraries and components that will be developed as part of the TURBO project.
@@ -25,27 +25,44 @@ Clone the repository along with all submodules:
 
 ```bash
 git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
-cd turbo-stack
 ```
 
-Already cloned without `--recursive`? `git submodule update --init --recursive`.
-The build scripts never touch your submodules — they stop with that exact command
-rather than moving your checkout underneath you.
-
+If you already cloned this repo but forgot the `--recursive` you can update the submodules at anytime with:
+```bash
+git submodule update --init --recursive
+````
 ## Prerequisites
 
-turbo-stack never builds these for you — supply them via modules, Spack,
-Homebrew or OS packages:
+turbo-stack never builds these for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. The build scripts take no `-D` pass-through, so each one is selected through the environment:
 
-| Requirement | Notes |
-|---|---|
-| Fortran, C and C++ compilers | all three languages are enabled by the top-level project, so a C++ compiler is required for either backend |
-| MPI | the compiler wrappers must be on `PATH`: `mpicc`, `mpifort` (or `mpif90`) and `mpicxx` (or `mpic++`) |
-| NetCDF (C **and** Fortran) | found via `nc-config`/`nf-config` or `CMAKE_PREFIX_PATH` |
-| CMake ≥ 3.24 | enforced by the top-level `CMakeLists.txt` |
-| `make` or `ninja` | Unix Makefiles is the default generator; `--ninja` selects Ninja |
+| Requirement | Sufficient to set | What satisfies it |
+|---|---|---|
+| Fortran compiler | `FC`, else CMake tries to find them by searching `PATH` | GNU, Intel / IntelLLVM, NVHPC / PGI, or Flang / LLVMFlang. Any other compiler ID is a hard configure error — `cmake/TurboCompilerFlags.cmake` carries no flag set for it |
+| C and C++ compilers | `CC` and `CXX`, else CMake tries to find them by searching `PATH` | the top-level project enables `C CXX`, so both are needed for either backend |
+| MPI | `mpicc`, `mpifort` (or `mpif90`) and `mpicxx` (or `mpic++`) on `PATH`, or `MPI_HOME` | the Fortran and C wrappers; the TIM/AMReX path uses the C++ one too |
+| NetCDF | `nc-config` / `nf-config` on `PATH`, or `NetCDF_ROOT`, or the install prefix on `CMAKE_PREFIX_PATH` | the C **and** Fortran libraries |
+| CMake | on `PATH` | ≥ 3.24 — turbo-stack, MOM6, TIM and pFUnit each require it |
+| `make` or `ninja` | on `PATH`; Unix Makefiles by default, `--ninja` picks Ninja | either |
+
+Compiler flags are the same story: CMake seeds them from `FFLAGS` / `CFLAGS` /
+`CXXFLAGS` natively and appends the project's own, so there is no script flag for
+them.
+
+> [!IMPORTANT]
+> `CC`, `CXX`, `FC` and the `*FLAGS` are read **only on the first configure** of
+> a build directory — CMake caches them. To change compiler or flags in a build
+> directory you have already configured, rebuild with `--clean`.
 
 Everything else — AMReX, pFUnit, FMS and TIM — turbo-stack can build from `submodules/` when your environment does not already supply it prebuilt.
+To supply one yourself instead, put its install prefix on `CMAKE_PREFIX_PATH`.
+pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/`
+subdirectory that `find_package` will not walk into, so point `PFUNIT_DIR` at
+`<prefix>/PFUNIT-X.Y/cmake`.
+
+> [!NOTE]
+> `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
+> prefixes — each names a *source tree* for turbo-stack to build. See
+> [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
 
 The Spack flavor below shortens the list: [`spack/spack.yaml`](spack/spack.yaml)
 supplies CMake, `make`/`ninja`, MPI, NetCDF, ParallelIO, pFUnit and AMReX, so all
@@ -122,22 +139,13 @@ so a CMake build and a legacy mkmf build can coexist.
 
 ## Unit tests
 
-The [pFUnit](https://github.com/Goddard-Fortran-Ecosystem/pFUnit) suite in
-[`tests/`](tests/) is **opt-in** — a plain build produces just the executable.
-Add `--tests` to build the suite and run it under `ctest`:
+The [pFUnit](https://github.com/Goddard-Fortran-Ecosystem/pFUnit) suite in [`tests/`](tests/) is **opt-in**. Add `--tests` to build the test suite and run it under `ctest`:
 
 ```bash
 scripts/build_local_with_spack_env.sh --tests
 ```
 
-```
-100% tests passed, 0 tests failed out of 40
-```
-
-The tests are MPI-aware — each declares the PE counts it runs on, e.g.
-`@test(npes=[4])`. They cover MOM6's infrastructure interface layer against
-whichever backend you built, not MOM6's ocean code itself. To re-run them
-without rebuilding:
+The tests are MPI-aware — each declares the PE counts it runs on, e.g. `@test(npes=[4])`. They cover MOM6's infrastructure interface layer against whichever backend you built, not MOM6's ocean code itself. To re-run them without rebuilding:
 
 ```bash
 ctest --test-dir build/default
@@ -207,15 +215,18 @@ submodule, export its `*_ROOT` before building. No flag, no cloning by the build
 scripts:
 
 ```bash
-export MOM6_ROOT=$HOME/projects/MOM6
-export FMS_ROOT=$HOME/projects/FMS
-./test_turbo_stack_locally.sh        # matrix now shows these as (override)
+export MOM6_ROOT=$PATH_TO_YOUR_OWN/MOM6
+export TIM_ROOT=$PATH_TO_YOUR_OWN/TIM
+export FMS_ROOT=$PATH_TO_YOUR_OWN/FMS
+
+# Now this overrides the submodules and uses your own copy MOM6, TIM, and FMS at the provided paths
+./test_turbo_stack_locally.sh
 ```
 
-`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are supported. To build a *branch* you do
-not have checked out, either move the submodule onto it or clone it yourself and
-point `*_ROOT` there — both recipes are in
-[`scripts/README.md`](scripts/README.md#building-a-mom6-branch-you-dont-have-checked-out).
+`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and the
+testing matrix reports each as `(override)` or `(submodule)` so a log says what
+was built. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way but go unreported.
+To build a *branch* you do not have checked out, either move the submodule onto it or clone it yourself and point `*_ROOT` there — both recipes are in [`scripts/README.md`](scripts/README.md#building-a-mom6-branch-you-dont-have-checked-out).
 
 ## Going further
 
@@ -226,7 +237,6 @@ point `*_ROOT` there — both recipes are in
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
 | [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
-| [`src/amrex_mini_app/README.md`](src/amrex_mini_app/README.md) | The AMReX tripolar-grid mini-app — a self-contained CMake build, separate from the one above |
 | `docs/*.dot` | The figure above and its siblings. Regenerate a PNG with `dot -Tpng -o docs/<name>.png docs/<name>.dot`; the matching `*_prompt.md` documents what each figure must show |
 
 ## Continuous integration

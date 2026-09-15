@@ -16,9 +16,11 @@ turbo-stack classifies every dependency by **its build policy** — see
 
 Tiers 1.5 and 2 share the same build policy (build-from-submodule or supply-prebuilt);
 they differ by *source*. "Our code" is not a tier: the repos we co-develop —
-**FMS, TIM** (Tier 2) and **MOM6** (Tier 3) — are the ones hot-swappable via
-`*_ROOT` (default: the pinned submodule). AMReX/pFUnit (Tier 1.5) are external
-submodules with no `*_ROOT` override; MARBL is pinned-submodule-only.
+**FMS, TIM** (Tier 2) and **MOM6** (Tier 3) — are the ones the drivers treat as
+first-class hot-swaps, reporting each as `(override)` or `(submodule)` in the
+testing matrix. Every `build_dep` dep in fact honors a `*_ROOT` source override
+— AMReX/pFUnit (Tier 1.5) via `AMREX_ROOT` / `PFUNIT_ROOT` — it just goes
+unreported in the matrix. MARBL is pinned-submodule-only.
 
 ## Pipeline (environment setup → build turbo-stack)
 
