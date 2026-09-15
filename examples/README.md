@@ -1,6 +1,7 @@
 This directory contains example standalone MOM6 experiments for development, testing, and benchmarking purposes. 
 To run these experiments:
-    1. Build the MOM6 executable using the provided `build.sh` script.
+    1. Build the MOM6 executable -- see the [top-level README](../README.md) for the CMake build,
+       or [`docs/legacy_build_system.md`](../docs/legacy_build_system.md) for the legacy `build.sh` build.
     2. Modify the `job-derecho.sh` script to set your project code and compiler as needed (the default project code is the one assigned to TURBO and the default compiler is intel).
     3. Submit the `job-derecho.sh` script to your job scheduler.
     4. If the job completes successfully, you will find the output files in the example directory.
