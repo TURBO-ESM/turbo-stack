@@ -31,18 +31,54 @@ If you already cloned this repo but forgot the `--recursive` you can update the 
 ```bash
 git submodule update --init --recursive
 ````
+## Quickstart on Derecho
+
+Everything turbo-stack needs is already available on Derecho as Lmod modules,
+and `build_on_derecho.sh` loads them for you, so a fresh clone to a built MOM6
+is two commands:
+
+```bash
+git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
+cd turbo-stack
+qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
+```
+
+`qcmd` puts the compile on a compute node — drop it if you are already inside an
+interactive job. `--tests` also builds and runs the pFUnit suite; leave it off
+and you get just the executable, at:
+
+```
+build/default/mom6_build/config_src/drivers/solo_driver/MOM6
+```
+
+Add `--infra FMS2` for the FMS2 backend (the default is TIM), `--clean` to
+rebuild from scratch, or `--debug` for a Debug build. To build *and* `ctest`
+**both** backends as a batch job instead:
+
+```bash
+qsub -A <project_code> test_turbo_stack_on_derecho.sh
+```
+
+That driver carries its own PBS directives (one node, 128 cores, 1 hour) and
+writes nothing into your clone.
+
+> [!NOTE]
+> The Derecho toolchain recipe runs `module purge` before loading its own set
+> (`gcc cmake openmpi netcdf parallelio`), so any modules you loaded yourself are
+> discarded. It is also why nothing in the next section needs setting here.
+
 ## Prerequisites
 
 turbo-stack never builds these for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. The build scripts take no `-D` pass-through, so each one is selected through the environment:
 
-| Requirement | Sufficient to set | What satisfies it |
+| Requirement | Sufficient to set | Notes |
 |---|---|---|
-| Fortran compiler | `FC`, else CMake tries to find them by searching `PATH` | GNU, Intel / IntelLLVM, NVHPC / PGI, or Flang / LLVMFlang. Any other compiler ID is a hard configure error — `cmake/TurboCompilerFlags.cmake` carries no flag set for it |
-| C and C++ compilers | `CC` and `CXX`, else CMake tries to find them by searching `PATH` | the top-level project enables `C CXX`, so both are needed for either backend |
+| Fortran compiler | `FC`, else CMake tries to find it by searching `PATH` | GNU, Intel / IntelLLVM, NVHPC / PGI, or Flang / LLVMFlang. Any other compiler ID is a hard configure error — `cmake/TurboCompilerFlags.cmake` carries no flag set for it |
+| C and C++ compilers | `CC` and `CXX`, else CMake tries to find them by searching `PATH` | the top-level project enables `C CXX`, so both C and C++ compilers are needed |
 | MPI | `mpicc`, `mpifort` (or `mpif90`) and `mpicxx` (or `mpic++`) on `PATH`, or `MPI_HOME` | the Fortran and C wrappers; the TIM/AMReX path uses the C++ one too |
-| NetCDF | `nc-config` / `nf-config` on `PATH`, or `NetCDF_ROOT`, or the install prefix on `CMAKE_PREFIX_PATH` | the C **and** Fortran libraries |
+| NetCDF | `nc-config` / `nf-config` on `PATH`, or `NetCDF_ROOT`, or the install prefix on `CMAKE_PREFIX_PATH` | need the C and Fortran libraries |
 | CMake | on `PATH` | ≥ 3.24 — turbo-stack, MOM6, TIM and pFUnit each require it |
-| `make` or `ninja` | on `PATH`; Unix Makefiles by default, `--ninja` picks Ninja | either |
+| `make` or `ninja` | on `PATH` | Unix Makefiles by default, running the build scrips `--ninja` picks Ninja instead |
 
 Compiler flags are the same story: CMake seeds them from `FFLAGS` / `CFLAGS` /
 `CXXFLAGS` natively and appends the project's own, so there is no script flag for
@@ -56,7 +92,7 @@ them.
 Everything else — AMReX, pFUnit, FMS and TIM — turbo-stack can build from `submodules/` when your environment does not already supply it prebuilt.
 To supply one yourself instead, put its install prefix on `CMAKE_PREFIX_PATH`.
 pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/`
-subdirectory that `find_package` will not walk into, so point `PFUNIT_DIR` at
+subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at
 `<prefix>/PFUNIT-X.Y/cmake`.
 
 > [!NOTE]
@@ -104,7 +140,7 @@ scripts/build_local_with_spack_env.sh --build_dir DIR # build somewhere other th
 ```
 
 `--help` on any of them prints the authoritative list. On Derecho, prepend
-`qcmd -A <project_code> --` (or run inside an interactive job).
+`qcmd -A <project_code> --` as in the [quickstart](#quickstart-on-derecho).
 
 [![turbo-stack build/test pipeline](docs/build_test_orchestration.png)](docs/build_test_orchestration.png)
 
