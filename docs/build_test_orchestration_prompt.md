@@ -61,10 +61,11 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
     → Tier 1); deps = the selected backend only — `turbo_build_fms` for FMS2 or `turbo_build_tim` for
     TIM (mutually exclusive; both Tier 2); pFUnit / AMReX (Tier 1.5) come from spack.
   - `build_on_derecho.sh`: toolchain = source `derecho_cpu_gcc_openmpi.sh` (builds nothing → Tier 1);
-    deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim` (pFUnit/AMReX = Tier 1.5; FMS/TIM = Tier 2).
+    deps = `turbo_build_pfunit` (only with `--tests`) plus, per `--infra`, `_amrex + _tim` or `_fms`
+    (pFUnit/AMReX = Tier 1.5; FMS/TIM = Tier 2).
   - `build_local_with_system_toolchain.sh`: toolchain = source `local_toolchain_on_path.sh` (verify
-    only, builds nothing → Tier 1); deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim` (all from
-    submodule, like Derecho) — the bring-your-own-toolchain local path (no spack, no modules).
+    only, builds nothing → Tier 1); deps = the same conditional set as Derecho (all from submodule) —
+    the bring-your-own-toolchain local path (no spack, no modules).
 - Each driver → its builder's Stage-1 toolchain node (xlabel "loop: --infra FMS2, then TIM").
 - Each builder's Stage-1 deps node → the shared **`build_turbo_stack.sh`** ellipse (xlabel "exec"); its
   label notes "exec'd by each builder" + "Stage 2: cmake configure/build → ctest (Tier 3)".  Unit tests
