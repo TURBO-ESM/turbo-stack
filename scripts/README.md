@@ -117,7 +117,7 @@ step. Prefer Spack to manage the whole toolchain? Use
 Each runs the real single-backend builder once per backend (each in its own
 process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
 a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  All
-three support the `fetch_*` / `*_ROOT` overrides described below.
+three support the `*_ROOT` source overrides described below.
 
 ### Explicit, iterative (any flavor)
 
