@@ -35,6 +35,8 @@ git submodule update --init --recursive
 
 ### One liner to build and test both backends (TIM and FMS2) in a batch job. 
 ```bash
+git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
+cd turbo-stack
 qsub test_turbo_stack_on_derecho.sh
 ```
 That driver is a true one liner that:
@@ -56,7 +58,7 @@ qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
 ```
 
 ### Build on Derecho yourself:
-All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so a fresh clone to a built MOM6 is two commands:
+All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so a fresh clone to a built is:
 
 ```bash
 git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
@@ -73,10 +75,8 @@ build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
 
 
-> [!NOTE]
-> The Derecho toolchain recipe runs `module purge` before loading its own set
-> (`gcc cmake openmpi netcdf parallelio`), so any modules you loaded yourself are
-> discarded. It is also why nothing in the next section needs setting here.
+> [NOTE]
+> These Derecho scripts run `module purge` before loading their own set of modules. So any modules you loaded yourself are discarded. 
 
 ## Prerequisites
 
