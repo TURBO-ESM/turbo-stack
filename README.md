@@ -33,43 +33,27 @@ git submodule update --init --recursive
 ````
 ## Quickstart on Derecho
 
-### One liner to build and test both backends (TIM and FMS) in a batch job. 
+### One liner to build and test both backends (TIM and FMS2) in a batch job. 
 ```bash
 qsub test_turbo_stack_on_derecho.sh
 ```
-That driver carries its own PBS directives (project code, one node, 128 cores,
-1 hour) and writes nothing into your clone. A `qsub` option on the command line
-overrides the matching directive in the script — the project code is the one you
-will usually want, since it is hardcoded to `NCGD0067`:
+That driver is a true one liner that:
+  - Sets its own PBS directives (turbo project code, 1 cpu node with 128 cores, 1 hour), 
+  - Puts the build artifacts under `$TMPDIR`, outside your turbo-stack clone (it writes nothing into the checkout),
+  - Writes a job log to `turbo-stack-on-derecho-test.o<jobid>` in the directory you submitted from. The log begins with a testing matrix (the commit and branch of turbo-stack, MOM6, TIM and FMS2 that actually got built) and closes with a build summary giving PASS / FAIL per backend. Each backend also gets its own log under `$TURBO_BUILD_SYSTEM_TEST_DIR/logs/`.
+
+**Change the run options:** Adding a `qsub` option to the command line overrides the matching directive in the script — e.g. to run under a different project code for 30 minutes:
 
 ```bash
-qsub -A <project_code> -l walltime=02:00:00 test_turbo_stack_on_derecho.sh
+qsub -A <project_code> -l walltime=00:30:00 test_turbo_stack_on_derecho.sh
 ```
 
-Each backend is built and tested in its own directory under
-`$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or
-`/tmp` if `TMPDIR` is unset), so the two executables end up at:
-
-```
-$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-TIM/mom6_build/config_src/drivers/solo_driver/MOM6
-$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-FMS2/mom6_build/config_src/drivers/solo_driver/MOM6
-```
-
-Want the artifacts somewhere durable instead — two backends built from scratch,
-dependencies included, is not small — point that variable at scratch. The job
-deliberately omits `#PBS -V`, so it inherits nothing from your submit shell;
-`-v` is how you pass one in:
+**Change where the build artifacts are written:** Each backend is built and tested in its own directory under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or `/tmp` if `TMPDIR` is unset), so the two executables land at `<that dir>/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6`. If you want them somewhere else, set that variable. Unlike the job scripts in `examples/`, this driver does **not** repoint `TMPDIR` at scratch, and with no `#PBS -V` it will not inherit one you exported before submitting — so pass an explicit path for anything you want to keep:
 
 ```bash
 qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
-     -A <project_code> test_turbo_stack_on_derecho.sh
+     test_turbo_stack_on_derecho.sh
 ```
-
-Your job log opens with a testing matrix — the commit and branch of turbo-stack,
-MOM6, TIM and FMS actually built — and closes with a build summary giving
-PASS / FAIL per backend. PBS writes it to `turbo-stack-on-derecho-test.o<jobid>`
-in the directory you submitted from, and there is a separate per-backend log
-under `$TURBO_BUILD_SYSTEM_TEST_DIR/logs/`.
 
 ### Build on Derecho yourself:
 All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so a fresh clone to a built MOM6 is two commands:
@@ -86,7 +70,7 @@ qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
 build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 ```
 
-The build_on_derecho.sh script contains a number of useful options, see all with -h or --help. Some commonly used ones are `--infra FMS2` for the FMS2 backend (the default is TIM), `--clean` to rebuild from scratch. 
+The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
 
 
 > [!NOTE]
