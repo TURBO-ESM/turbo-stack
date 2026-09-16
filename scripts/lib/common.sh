@@ -39,17 +39,46 @@ _TURBO_COMMON_SH=1
 # stopping at the first non-comment line.  Every user-facing script keeps its
 # usage in that header, so --help stays in sync from one source of truth.
 turbo_print_header_usage() {
-    local file="$1" line stripped shebang_seen=false
+    local file="$1" line stripped
     [[ -r "$file" ]] || { echo "usage: (no header found for '$file')"; return 0; }
+    # Two candidates, gathered in one pass:
+    #   usage_block  the comment block starting at a "# Usage:" line.  A
+    #                qsub-able driver carries #PBS directives above its usage
+    #                text with a blank line between, so its FIRST comment block
+    #                is the scheduler directives, not its usage.
+    #   first_block  the first comment block after the shebang -- the shape
+    #                every other script here uses (some have no "Usage:" line).
+    # Pure bash on purpose: a grep pipeline that matches nothing exits
+    # non-zero, and the drivers run under `set -euo pipefail`, so that would
+    # abort the script and print no usage at all.
+    local -a usage_block=() first_block=()
+    local shebang_seen=false collecting_first=false first_done=false
+    local collecting_usage=false usage_done=false
     while IFS= read -r line; do
         if [[ "$shebang_seen" == false && "$line" == '#!'* ]]; then
             shebang_seen=true
+            collecting_first=true
             continue
         fi
-        [[ "$line" == '#'* ]] || break
-        stripped="${line#\#}"          # drop leading '#'
-        printf '%s\n' "${stripped# }"  # drop one following space, keep indent
+        stripped="${line#\#}"        # drop leading '#'
+        stripped="${stripped# }"     # drop one following space, keep indent
+        if [[ "$usage_done" == false ]]; then
+            if [[ "$collecting_usage" == true ]]; then
+                if [[ "$line" == '#'* ]]; then usage_block+=("$stripped"); else usage_done=true; fi
+            elif [[ "$line" =~ ^#[[:space:]]*Usage: ]]; then
+                collecting_usage=true
+                usage_block+=("$stripped")
+            fi
+        fi
+        if [[ "$first_done" == false && "$collecting_first" == true ]]; then
+            if [[ "$line" == '#'* ]]; then first_block+=("$stripped"); else first_done=true; fi
+        fi
     done < "$file"
+    if [[ ${#usage_block[@]} -gt 0 ]]; then
+        printf '%s\n' "${usage_block[@]}"
+    elif [[ ${#first_block[@]} -gt 0 ]]; then
+        printf '%s\n' "${first_block[@]}"
+    fi
 }
 
 # ── Root resolution ──────────────────────────────────────────────────────────
