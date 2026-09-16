@@ -39,10 +39,18 @@ git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
 cd turbo-stack
 qsub test_turbo_stack_on_derecho.sh
 ```
-That driver is a true one liner that:
-  - Sets its own PBS directives (turbo project code, 1 cpu node with 128 cores, 1 hour), 
-  - Puts the build artifacts under `$TMPDIR`, outside your turbo-stack clone (it writes nothing into the checkout),
-  - Writes a job log to `turbo-stack-on-derecho-test.o<jobid>` in the directory you submitted from. The log begins with a testing matrix (the commit and branch of turbo-stack, MOM6, TIM and FMS2 that actually got built) and closes with a build summary giving PASS / FAIL per backend. Each backend also gets its own log under `$TURBO_BUILD_SYSTEM_TEST_DIR/logs/`.
+That driver is a true one liner: it carries its own PBS directives (turbo
+project code, one node, 128 cores, one hour), then for each backend in turn —
+TIM and FMS2 — loads Derecho's module toolchain, builds the dependencies from
+the pinned submodules, builds MOM6, and runs the pFUnit suite. Each backend gets
+its own process and its own build directory, and the run ends with a PASS / FAIL
+verdict for each.
+
+It is deliberately self-contained: with no `#PBS -V`, nothing from your login
+shell reaches the job, so what gets tested is exactly what the repo pins. It
+writes nothing into your checkout, and the job log lands in
+`turbo-stack-on-derecho-test.o<jobid>` in the directory you submitted from, with
+a per-backend log alongside the builds.
 
 **Change the run options:** Adding a `qsub` option to the command line overrides the matching directive in the script — e.g. to run under a different project code for 30 minutes:
 
