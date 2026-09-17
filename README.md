@@ -60,7 +60,13 @@ This script contains a number of useful options; see them all with `-h` or `--he
 > This script is really just a thin wrapper around [`build_on_derecho.sh`](scripts/build_on_derecho.sh), which builds and tests turbo-stack with a single backend on Derecho. You can run that one directly instead if you prefer — see [Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself) in the `scripts/` README.
 
 ## Overview of software stack
-turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is never involved. Building and running those tests is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
+turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent  executables, boxes are libraries we link against, and the colored boxes in the background show which repository the source code comes from. 
+
+> Note MARBL is little bit of an outlier here because we make it a library we can link against in CMake in trubo-stack. But we will probably move the cmake build into MARBL later so that it can be a normal "External" in the box at the bottom later. 
+
+[![cmake dependency dag](docs/cmake_dependency_dag.png)](docs/cmake_dependency_dag.png)
+
+Building and running the the pFUnit tests in [tests](tests/) is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
 [![two stage pipeline](docs/two_stage_pipeline.png)](docs/two_stage_pipeline.png)
 
 So we split this into a two phase process.
@@ -71,7 +77,7 @@ Setting up the environment, phase 1, varies from machine to machine. While phase
 
 There are some scripts in this repository to automate the entire process (phase 1 and 2) on specific machines ([Derecho](#quickstart-on-derecho)) or with specific tools ([Spack](scripts/README.md#one-command-spack-flavor)). Most of the work in those scripts has to do with setting up the environment, phase 1.
 
-To help describe what we mean by the environment a dependency diagram of the turbo-stack software stack is shown below. The diagram is incomplete but shows the major pieces. You will also need a few more things: bash, common unix / linux command line tools that are called in our bash scripts, git, etc.
+To help describe what we mean by the environment, a dependency diagram of the turbo-stack software stack is shown below. The diagram is incomplete but shows the major pieces. You will also need a few more things: bash, common unix / linux command line tools that are called in our bash scripts, git, etc.
 
 [![turbo-stack dependency_tiers](docs/dependency_tiers.png)](docs/dependency_tiers.png)
 
@@ -179,7 +185,7 @@ Each of these is one command that takes you from a fresh clone to a MOM6 executa
 | Laptop / workstation, toolchain already on `PATH` | `scripts/build_local_with_system_toolchain.sh` |
 | Derecho (NCAR), Lmod modules | `scripts/build_on_derecho.sh` |
 
-They take the same options:
+They all take the same options, and `-h` or `--help` on any of them prints the authoritative list. Some examples are:
 
 ```bash
 scripts/build_local_with_spack_env.sh                 # default: TIM backend, Release
@@ -192,11 +198,11 @@ scripts/build_local_with_spack_env.sh --ninja         # Ninja instead of Unix Ma
 scripts/build_local_with_spack_env.sh --build_dir DIR # build somewhere other than build/default
 ```
 
-`--help` on any of them prints the authoritative list. On Derecho, prepend
-`qcmd -A <project_code> --` as in
-[Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself).
+See [Workflows](scripts/README.md#workflows) in the `scripts/` README for the full
+reference on each of these — including the Derecho `qcmd` invocation and the
+explicit, step-by-step alternative to the one-command scripts.
 
-## Infrastructure backends
+### Infrastructure backends
 
 MOM6 is built against exactly one infrastructure layer, chosen with `--infra`:
 
@@ -208,7 +214,7 @@ built: `--infra TIM` builds TIM, `--infra FMS2` builds FMS. Switching backends
 in an existing build directory is safe — the flag is always passed to CMake
 explicitly, so a previous choice never sticks in the cache.
 
-## Where the build lands
+### Where the build lands
 
 With no `--build_dir`, the build lands inside the checkout you ran the scripts from:
 
@@ -222,7 +228,7 @@ Passing `--build_dir DIR` moves both: the build tree to `DIR` and the
 dependencies to `DIR/deps/{build,install}/`. Both locations are outside `bin/`,
 so a CMake build and a legacy mkmf build can coexist.
 
-## Unit tests
+### Unit tests
 
 The [pFUnit](https://github.com/Goddard-Fortran-Ecosystem/pFUnit) suite in [`tests/`](tests/) is **opt-in**. Add `--tests` to build the test suite and run it under `ctest`:
 
