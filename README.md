@@ -60,9 +60,9 @@ This script contains a number of useful options; see them all with `-h` or `--he
 > This script is really just a thin wrapper around [`build_on_derecho.sh`](scripts/build_on_derecho.sh), which builds and tests turbo-stack with a single backend on Derecho. You can run that one directly instead if you prefer — see [Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself) in the `scripts/` README.
 
 ## Overview of software stack
-turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent  executables, boxes are libraries we link against, and the colored boxes in the background show which repository the source code comes from. 
+turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent executables, boxes are libraries we link against, the diamond represents a switch keyed on the option that selects a backend, and the colored boxes in the background show which repository the source code comes from. 
 
-> Note MARBL is little bit of an outlier here because we make it a library we can link against in CMake in trubo-stack. But we will probably move the cmake build into MARBL later so that it can be a normal "External" in the box at the bottom later. 
+> Note MARBL is a little bit of an outlier here: we make it a library we can link against in CMake, but we do that from inside the turbo-stack repository. We will probably move the CMake build into MARBL later, so that it can be a normal "External" in the box at the bottom.
 
 [![cmake dependency dag](docs/cmake_dependency_dag.png)](docs/cmake_dependency_dag.png)
 
@@ -127,7 +127,7 @@ exports `SPACK_ROOT` for you and there is nothing to set. Otherwise export it by
 hand — the build script sources `setup-env.sh` itself, so you do not have to:
 
 ```bash
-export SPACK_ROOT=~/spack
+export SPACK_ROOT=/path/to/where/you/pulled/spack
 ```
 
 The `turbo_stack` environment is created on first use by
@@ -180,7 +180,7 @@ in the `scripts/` README for the full reference on each of these.
 
 ## Build with a specific backend yourself — pick the recipe for your machine
 
-Each of these is one command that takes you from a fresh clone to a MOM6 executable: it prepares the environment, builds the dependencies your environment did not supply, then configures and builds turbo-stack.
+Each of these is one command that takes you from a fresh clone to a MOM6 executable: it prepares the environment, builds the dependencies your environment did not supply, then configures and builds turbo-stack. See [Workflows](scripts/README.md#workflows) in the `scripts/` README for the full reference on each of these.
 
 | Your machine | Command |
 |---|---|
@@ -200,8 +200,6 @@ scripts/build_local_with_spack_env.sh --parallel 16   # 16 parallel build jobs
 scripts/build_local_with_spack_env.sh --ninja         # Ninja instead of Unix Makefiles
 scripts/build_local_with_spack_env.sh --build_dir DIR # build somewhere other than build/default
 ```
-
-See [Workflows](scripts/README.md#workflows) in the `scripts/` README for the full reference on each of these.
 
 ### Infrastructure backends
 
@@ -245,7 +243,7 @@ ctest --test-dir build/default
 
 See [`tests/README.md`](tests/README.md) for how to add one.
 
-## Building against a development tree or a branch
+### Building against a development tree or a branch
 
 To build a co-developed component from somewhere other than its pinned
 submodule, export its `*_ROOT` before building. No flag, no cloning by the build
