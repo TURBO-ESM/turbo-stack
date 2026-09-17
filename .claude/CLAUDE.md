@@ -132,6 +132,22 @@ CI does the latter — `actions/checkout` puts the branch in a sibling directory
 and sets `MOM6_ROOT`. There is no turbo-stack-specific machinery for this: the
 build scripts only ever know about `MOM6_ROOT`.
 
+### The MOM6 ↔ TIM AMReX bridge
+
+`turbo_build_tim` passes `-DTIM_ENABLE_MOM_BRIDGE=ON` unconditionally, so TIM
+always provides `TIM::mom_bridge`. Whether MOM6 compiles and links it is decided
+in MOM6, not here: the CMake block lives only on `dev/turbo-debug`, and inside it
+`if(MOM6_INFRA STREQUAL "TIM")` keeps FMS2 compiled out. **Do not add a flag or a
+CI conditional for this.** Stage 1 cannot know whether the bridge is needed — only
+the MOM6 source knows whether it carries the `#ifdef _TIM` call sites, and Stage 1
+never sees that source. Asking the caller reintroduces a per-lane CI conditional;
+reading the branch name does not work, since CI builds a detached ref. It costs one
+3-TU compile (~3 s) where it is unused, and nothing on those link lines.
+
+MOM6 hard-errors at configure if `MOM6_INFRA=TIM` and `TIM::mom_bridge` is
+missing, so TIM's side must be in place before MOM6's merges. See
+[`scripts/README.md`](../scripts/README.md).
+
 ### Spack environment
 
 Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS and TIM are intentionally not in spack: `build_local_with_spack_env.sh` builds the selected backend via `turbo_build_fms`/`turbo_build_tim` (in `scripts/lib/common.sh`) from the local source tree (`$FMS_ROOT`/`$TIM_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
@@ -249,3 +265,26 @@ Clang-format (Google style, C++20, 120-char limit) is enforced on PRs and auto-a
 ## Code Style
 
 C++ files must pass `clang-format` (config in `.clang-format`): Google style base, C++20, 120-char line limit, Allman braces.
+
+## Verification discipline for mechanical multi-site edits
+
+A Fortran identifier (a dummy argument, a derived-type field, a struct
+being restructured) is often encoded in more than one place that doesn't
+look alike textually — a subroutine's header argument list vs. its
+separate declaration line, several near-identical mirrored subroutines
+(zonal/meridional pairs), or several call sites with slightly different
+surrounding comments. A targeted edit or find/replace reporting success
+only means the specific text it matched changed, not that every
+occurrence of the identifier did. After any rename or multi-site
+mechanical edit, before considering it done: grep the full scope of the
+change (the whole subroutine, or the whole file) for the old identifier,
+zero tolerance for hits outside comments — don't rely on re-reading only
+the lines you intended to touch. Same discipline applies to inserting a
+new executable statement into an existing subroutine: re-scan the rest of
+that subroutine's declaration section first, since Fortran requires every
+declaration before every executable statement and a misplaced insertion
+produces a cascade of unrelated-looking parse errors below it rather than
+an error at the actual mistake. Applies to any Fortran editing in this
+repo or its submodules, not only MOM6's array-container conversion skill
+family (`submodules/MOM6/.claude/skills/array_container_lessons/SKILL.md`
+§11 has the fuller writeup and worked examples).
