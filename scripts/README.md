@@ -40,7 +40,7 @@ actually runs. It has **two stages** (see `docs/build_test_orchestration.png`):
      once). *Which* deps need building is the machine-specific part: e.g. spack
      supplies pFUnit/AMReX prebuilt so locally you build only FMS/TIM, while
      Derecho's modules provide neither so you build all four.
-2. **Stage 2 — build turbo-stack** *(uniform)* — `build_turbo_stack.sh` runs cmake
+2. **Stage 2 — build turbo-stack** *(same across machines)* — `build_turbo_stack.sh` runs cmake
    configure + build (and `ctest` when `--tests` is given; unit tests are opt-in),
    compiling Tier 3 (turbo-stack, MOM6, MARBL) against the prepared environment.
 
@@ -54,14 +54,14 @@ run a builder once per backend via the shared core in `lib/common.sh`.
 
 ```
 scripts/
-  README.md                                   # ← this file
+  README.md                                   #  this file
 
   # Utilities sourced by other scripts:
   lib/
     common.sh                                 #   SHARED CORE — root resolution, arg parsing, turbo_build_*, builder core (turbo_run_backend_builder), matrix/verdict
     build_dep.sh                              #   build_dep() — build one cmake dep (+ rebuild sentinel)
 
-  # STAGE 1 (env setup) — environment setup only, one file per flavor (sourced)
+  # STAGE 1 environment setup only - one file per flavor (sourced)
   setup_environment/
     spack_local_environment.sh                #   spack environment activation
     local_toolchain_on_path.sh                #   generic — toolchain already on PATH (no spack/modules)
@@ -75,7 +75,7 @@ scripts/
   build_local_with_system_toolchain.sh        # ORCHESTRATOR — stage 1 via bring your own toolchain
   build_on_derecho.sh                         # ORCHESTRATOR — stage 1 via Derecho's Lmod modules
 
-# (repo top level) — end-to-end drivers, BOTH backends:
+# (repo top level) — high level end-to-end drivers, BOTH backends:
 test_turbo_stack_locally.sh                   # local (spack)
 test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
@@ -83,7 +83,21 @@ test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 
 ---
 
+## Build and test both backends, one command
+
+```bash
+./test_turbo_stack_locally.sh                  # local (spack)
+./test_turbo_stack_with_system_toolchain.sh    # local (bring-your-own toolchain on PATH)
+./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
+```
+
+Each runs the real single-backend builder once per backend (each in its own
+process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
+a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  All
+three support the `*_ROOT` source overrides described below.
+
 ## Workflows
+Scripts that run through phase 1 and phase 2 for a single backend. 
 
 ### One-command (spack flavor)
 
@@ -118,18 +132,21 @@ only *verifies* the toolchain is present — it builds nothing), then the
 step. Prefer Spack to manage the whole toolchain? Use
 `build_local_with_spack_env.sh` instead.
 
-### Both backends, one command (end-to-end test)
+### Build on Derecho yourself:
+All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so getting from a fresh clone to a built MOM6 executable is:
 
 ```bash
-./test_turbo_stack_locally.sh                  # local (spack)
-./test_turbo_stack_with_system_toolchain.sh    # local (bring-your-own toolchain on PATH)
-./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
+qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
 ```
 
-Each runs the real single-backend builder once per backend (each in its own
-process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
-a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  All
-three support the `*_ROOT` source overrides described below.
+`qcmd` puts the compile on a compute node — drop it if you are already inside an interactive job. `--tests` is optional, it builds and runs the pFUnit test suite. The default location the MOM6 executable ends up at:
+
+```
+build/default/mom6_build/config_src/drivers/solo_driver/MOM6
+```
+
+The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
+
 
 ### Explicit, iterative (any flavor)
 
@@ -363,7 +380,7 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
   build a different copy, run *its* scripts. If an exported `TURBO_STACK_ROOT`
   disagrees with the script's own location the script hard-errors (unset it)
   rather than silently using the other copy (the multi-checkout footgun).
-- `SPACK_ROOT` — required for the spack flavor (local builds). But sourcing the shell startup script that spack provides for you should set this already.
+- `SPACK_ROOT` — required for the spack flavor. But sourcing the shell startup script that spack provides for you should set this already.
 
 Optional, for testing against local dev trees:
 

@@ -57,25 +57,7 @@ qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
 **Options**
 This script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--only TIM` or `--only FMS2` to select a specific backend instead of both, and `--clean` to rebuild everything from scratch (removes the entire build directory).
 
-> This script is really just a thin wrapper around a script that builds and tests turbo-stack with a single backend on Derecho [build_on_derecho.sh](scripts/build_on_derecho.sh). You can run that script directly instead if you prefer.
-
-### Build on Derecho yourself:
-All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so getting from a fresh clone to a built MOM6 executable is:
-
-```bash
-git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
-cd turbo-stack
-qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
-```
-
-`qcmd` puts the compile on a compute node — drop it if you are already inside an interactive job. `--tests` is optional, it builds and runs the pFUnit test suite. The default location the MOM6 executable ends up at:
-
-```
-build/default/mom6_build/config_src/drivers/solo_driver/MOM6
-```
-
-The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
-
+> This script is really just a thin wrapper around [`build_on_derecho.sh`](scripts/build_on_derecho.sh), which builds and tests turbo-stack with a single backend on Derecho. You can run that one directly instead if you prefer — see [Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself) in the `scripts/` README.
 
 ## Overview of software stack
 turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6 rather than run through it: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is never involved. Building and running those tests is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
@@ -217,7 +199,8 @@ scripts/build_local_with_spack_env.sh --build_dir DIR # build somewhere other th
 ```
 
 `--help` on any of them prints the authoritative list. On Derecho, prepend
-`qcmd -A <project_code> --` as in the [quickstart](#quickstart-on-derecho).
+`qcmd -A <project_code> --` as in
+[Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself).
 
 [![turbo-stack build/test pipeline](docs/build_test_orchestration.png)](docs/build_test_orchestration.png)
 
