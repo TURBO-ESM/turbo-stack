@@ -29,7 +29,7 @@ git submodule update --init --recursive
 ````
 ## Quickstart on Derecho
 
-### One liner to build and test both backends (TIM and FMS2) in a batch job. 
+### One liner to build and test both backends (TIM and FMS2) in a batch job
 ```bash
 git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
 cd turbo-stack
