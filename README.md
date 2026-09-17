@@ -26,7 +26,8 @@ git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
 If you already cloned this repo but forgot the `--recursive` you can get the submodules at anytime with:
 ```bash
 git submodule update --init --recursive
-````
+```
+
 ## Quickstart on Derecho
 
 ### One liner to build and test both backends (TIM and FMS2) in a batch job
@@ -337,3 +338,4 @@ after a `spack/spack.yaml` change is a manual step — see
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
 | [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
+| `docs/*.dot` | Sources for the three figures above, plus `build_test_orchestration` which `scripts/README.md` uses. After editing one, re-render and commit the PNG: `dot -Tpng -o docs/<name>.png docs/<name>.dot`. Each figure's `*_prompt.md` records what it must show |
