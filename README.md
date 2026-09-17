@@ -82,7 +82,6 @@ build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 
 The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
 
-
 > [NOTE]
 > These Derecho scripts run `module purge` before loading their own set of modules. So any modules you loaded yourself are discarded. 
 
@@ -154,8 +153,6 @@ export SPACK_ROOT=~/spack
 The `turbo_stack` environment is created on first use by
 [`scripts/build_local_with_spack_env.sh`](scripts/build_local_with_spack_env.sh).
 
-
-
 ### Tier 2 — Infrastructure backend
 FMS and TIM are the two backends MOM6's infrastructure layer sits on, and the two
 we co-develop: TIM is TURBO's own AMReX-based layer, while FMS is GFDL's Flexible
@@ -185,7 +182,24 @@ MARBL, so here only the *source* can be swapped.
   also where the pFUnit suite in [`tests/`](tests/) lives. The suite is opt-in, so
   it is only configured when you pass `--tests`.
 
-## Build it — pick the recipe for your machine
+## Testing both backends end to end
+
+There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. They write nothing into your checkout — artifacts go under
+`$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`):
+
+```bash
+./test_turbo_stack_locally.sh                   # Spack toolchain
+./test_turbo_stack_with_system_toolchain.sh     # your own toolchain on PATH
+./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
+```
+
+`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact
+directory first, for a genuine from-scratch run; `--parallel N` sets the job
+count. The matrix reports the commit and branch of
+turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule
+or from an override — so a log says exactly what was tested.
+
+## Build with a specific backend yourself — pick the recipe for your machine
 
 Each of these is one command that takes you from a fresh clone to a MOM6
 executable: it prepares the environment, builds the dependencies your
@@ -260,6 +274,26 @@ ctest --test-dir build/default
 
 See [`tests/README.md`](tests/README.md) for how to add one.
 
+## Building against a development tree or a branch
+
+To build a co-developed component from somewhere other than its pinned
+submodule, export its `*_ROOT` before building. No flag, no cloning by the build
+scripts:
+
+```bash
+export MOM6_ROOT=$PATH_TO_YOUR_OWN/MOM6
+export TIM_ROOT=$PATH_TO_YOUR_OWN/TIM
+export FMS_ROOT=$PATH_TO_YOUR_OWN/FMS
+
+# Now this overrides the submodules and uses your own copy MOM6, TIM, and FMS at the provided paths
+./test_turbo_stack_locally.sh
+```
+
+`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and the
+testing matrix reports each as `(override)` or `(submodule)` so a log says what
+was built. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way but go unreported.
+To build a *branch* you do not have checked out, either move the submodule onto it or clone it yourself and point `*_ROOT` there — both recipes are in [`scripts/README.md`](scripts/README.md#building-a-mom6-branch-you-dont-have-checked-out).
+
 ## Running example experiments
 
 [`examples/`](examples/) holds ready-to-run standalone MOM6 configurations
@@ -297,55 +331,6 @@ directory, i.e., to remove all untracked output files (except the archive):
 make clean
 ```
 
-## Testing both backends end to end
-
-The drivers at the repo root build **and** `ctest` a backend from scratch, once
-per backend, and print a per-backend matrix and PASS/FAIL verdict. They write
-nothing into your checkout — artifacts go under
-`$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`):
-
-```bash
-./test_turbo_stack_locally.sh                   # Spack toolchain
-./test_turbo_stack_with_system_toolchain.sh     # your own toolchain on PATH
-./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
-```
-
-`--only FMS2|TIM` narrows to one backend; `--clean` starts from scratch;
-`--parallel N` sets the job count. The matrix reports the commit and branch of
-turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule
-or from an override — so a log says exactly what was tested.
-
-## Building against a development tree or a branch
-
-To build a co-developed component from somewhere other than its pinned
-submodule, export its `*_ROOT` before building. No flag, no cloning by the build
-scripts:
-
-```bash
-export MOM6_ROOT=$PATH_TO_YOUR_OWN/MOM6
-export TIM_ROOT=$PATH_TO_YOUR_OWN/TIM
-export FMS_ROOT=$PATH_TO_YOUR_OWN/FMS
-
-# Now this overrides the submodules and uses your own copy MOM6, TIM, and FMS at the provided paths
-./test_turbo_stack_locally.sh
-```
-
-`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and the
-testing matrix reports each as `(override)` or `(submodule)` so a log says what
-was built. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way but go unreported.
-To build a *branch* you do not have checked out, either move the submodule onto it or clone it yourself and point `*_ROOT` there — both recipes are in [`scripts/README.md`](scripts/README.md#building-a-mom6-branch-you-dont-have-checked-out).
-
-## Going further
-
-| Document | What it covers |
-|---|---|
-| [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — dependency tiers, the two-stage pipeline, `build_dep`, source overrides, parallelism, every environment variable |
-| [`docs/legacy_build_system.md`](docs/legacy_build_system.md) | The original mkmf `build.sh` build system |
-| [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
-| [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
-| [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
-| `docs/*.dot` | The figure above and its siblings. Regenerate a PNG with `dot -Tpng -o docs/<name>.png docs/<name>.dot`; the matching `*_prompt.md` documents what each figure must show |
-
 ## Continuous integration
 
 CI covers both build systems in separate lanes and separate containers:
@@ -359,3 +344,14 @@ The CMake lane runs four cells: the pinned MOM6 submodule and the tip of MOM6's
 `dev/turbo-debug` branch, each against both backends. Refreshing the CI image
 after a `spack/spack.yaml` change is a manual step — see
 [`docker/README.md`](docker/README.md).
+
+## Going further
+
+| Document | What it covers |
+|---|---|
+| [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — dependency tiers, the two-stage pipeline, `build_dep`, source overrides, parallelism, every environment variable |
+| [`docs/legacy_build_system.md`](docs/legacy_build_system.md) | The original mkmf `build.sh` build system |
+| [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
+| [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
+| [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
+| `docs/*.dot` | The figure above and its siblings. Regenerate a PNG with `dot -Tpng -o docs/<name>.png docs/<name>.dot`; the matching `*_prompt.md` documents what each figure must show |
