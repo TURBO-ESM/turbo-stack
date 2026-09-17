@@ -87,7 +87,7 @@ The `build_on_derecho.sh` script contains a number of useful options; see them a
 
 ## Overview of software stack
 turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6 rather than run through it: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is never involved. Building and running those tests is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
-[![two stange pipeline](docs/two_stage_pipeline.png)](docs/two_stage_pipeline.png)
+[![two stage pipeline](docs/two_stage_pipeline.png)](docs/two_stage_pipeline.png)
 
 So we split this into a two phase process.
  1. **Set up the environment** — put the toolchain on `PATH` and make every dependency turbo-stack does not compile itself discoverable (tiers 1, 1.5 and 2 below).
