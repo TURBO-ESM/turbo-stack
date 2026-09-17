@@ -55,17 +55,25 @@ run a builder once per backend via the shared core in `lib/common.sh`.
 ```
 scripts/
   README.md                                   # ← this file
-  lib/                                        # sourced libraries:
+
+  # Utilities sourced by other scripts:
+  lib/
     common.sh                                 #   SHARED CORE — root resolution, arg parsing, turbo_build_*, builder core (turbo_run_backend_builder), matrix/verdict
     build_dep.sh                              #   build_dep() — build one cmake dep (+ rebuild sentinel)
-  build_local_with_spack_env.sh               # ORCHESTRATOR — spack flavor, single backend
-  build_local_with_system_toolchain.sh        # ORCHESTRATOR — from-source local (bring-your-own toolchain), single backend
-  build_on_derecho.sh                         # ORCHESTRATOR — Derecho (Lmod modules), single backend
-  build_turbo_stack.sh                        # STAGE 2 — build turbo-stack: cmake configure + build (+ ctest with --tests) (exec'd)
-  setup_environment/                          # STAGE 1 (env setup) — toolchain ONLY, one file per flavor (sourced)
-    spack_local_environment.sh                #   spack env activation
-    local_toolchain_on_path.sh                #   generic local — toolchain already on PATH (no spack/modules)
-    derecho_cpu_gcc_openmpi.sh                #   real Derecho via Lmod modules (CPU, gcc, OpenMPI)
+
+  # STAGE 1 (env setup) — environment setup only, one file per flavor (sourced)
+  setup_environment/
+    spack_local_environment.sh                #   spack environment activation
+    local_toolchain_on_path.sh                #   generic — toolchain already on PATH (no spack/modules)
+    derecho_cpu_gcc_openmpi.sh                #   Derecho via Lmod modules
+
+  # STAGE 2 — build turbo-stack: cmake configure + build (+ ctest with --tests)
+  build_turbo_stack.sh
+
+  # Orchestrators - Do stage 1 and 2 for a single backend (TIM or FMS2)
+  build_local_with_spack_env.sh               # ORCHESTRATOR — stage 1 via spack
+  build_local_with_system_toolchain.sh        # ORCHESTRATOR — stage 1 via bring your own toolchain
+  build_on_derecho.sh                         # ORCHESTRATOR — stage 1 via Derecho's Lmod modules
 
 # (repo top level) — end-to-end drivers, BOTH backends:
 test_turbo_stack_locally.sh                   # local (spack)
@@ -355,7 +363,7 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
   build a different copy, run *its* scripts. If an exported `TURBO_STACK_ROOT`
   disagrees with the script's own location the script hard-errors (unset it)
   rather than silently using the other copy (the multi-checkout footgun).
-- `SPACK_ROOT` — required for the spack flavor (local builds).
+- `SPACK_ROOT` — required for the spack flavor (local builds). But sourcing the shell startup script that spack provides for you should set this already.
 
 Optional, for testing against local dev trees:
 

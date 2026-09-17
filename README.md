@@ -13,11 +13,7 @@ This repository brings together various components that make up the TURBO Stack,
  - development and testing utilities
  - and future libraries and components that will be developed as part of the TURBO project.
 
-> [!IMPORTANT]
-> **There are two build systems.** This README documents the **CMake** build
-> system, which is where new work should go. The original mkmf `build.sh` build
-> still works and is still exercised in CI; it is documented in
-> [`docs/legacy_build_system.md`](docs/legacy_build_system.md).
+> **There are two build systems.** This README documents the **CMake** build system, which is where new work should go. The original mkmf `build.sh` build still works and is still exercised in CI; it is documented in [`docs/legacy_build_system.md`](docs/legacy_build_system.md).
 
 ## Getting the code
 
@@ -39,18 +35,9 @@ git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
 cd turbo-stack
 qsub test_turbo_stack_on_derecho.sh
 ```
-That driver is a true one liner: it carries its own PBS directives (turbo
-project code, one node, 128 cores, one hour), then for each backend in turn —
-TIM and FMS2 — loads Derecho's module toolchain, builds the dependencies from
-the pinned submodules, builds MOM6, and runs the pFUnit suite. Each backend gets
-its own process and its own build directory, and the run ends with a PASS / FAIL
-verdict for each.
+That driver is a true one liner: it carries its own PBS directives (turbo project code, one node, 128 cores, one hour run time, etc.), then for each backend in turn — TIM and FMS2 — loads some dependencies using Derecho's modules, builds the remaining dependencies from the pinned submodules, builds MOM6, and runs the pFUnit suite. Each backend gets its own build directory, and the run ends with a PASS / FAIL verdict for each.
 
-It is deliberately self-contained: with no `#PBS -V`, nothing from your login
-shell reaches the job, so what gets tested is exactly what the repo pins. It
-writes nothing into your checkout, and the job log lands in
-`turbo-stack-on-derecho-test.o<jobid>` in the directory you submitted from, with
-a per-backend log alongside the builds.
+It is deliberately self-contained: nothing from your login shell reaches the job, scripts run `module purge` before loading their own set of modules (so any modules you loaded yourself prior to launch will not be used), and no `#PBS -V` so environment variables don't make it into the job. It writes nothing into your checkout, and the job log lands in `turbo-stack-on-derecho-test.o<jobid>` in the directory you submitted from, with a per-backend log alongside the builds.
 
 **Change the run options:** Adding a `qsub` option to the command line overrides the matching directive in the script — e.g. to run under a different project code for 30 minutes:
 
@@ -58,15 +45,22 @@ a per-backend log alongside the builds.
 qsub -A <project_code> -l walltime=00:30:00 test_turbo_stack_on_derecho.sh
 ```
 
-**Change where the build artifacts are written:** Each backend is built and tested in its own directory under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or `/tmp` if `TMPDIR` is unset), so the two executables land at `<that dir>/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6`. If you want them somewhere else, set that variable. Unlike the job scripts in `examples/`, this driver does **not** repoint `TMPDIR` at scratch, and with no `#PBS -V` it will not inherit one you exported before submitting — so pass an explicit path for anything you want to keep:
+**Change where the build artifacts are written:** Each backend is built and tested in its own directory under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or `/tmp` if `TMPDIR` is unset), so the two executables land at `<that dir>/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6`. If you want them somewhere else, set that variable — and note that `$TMPDIR` inside a
+job is not the scratch filesystem and need not outlive the job, so pass an explicit
+path for anything you want to keep:
 
 ```bash
 qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
      test_turbo_stack_on_derecho.sh
 ```
 
+**Options**
+This script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--only TIM` or `--only FMS2` to select a specific backend instead of both, and `--clean` to rebuild everything from scratch (removes the entire build directory).
+
+> This script is really just a thin wrapper around a script that builds and tests turbo-stack with a single backend on Derecho [build_on_derecho.sh](scripts/build_on_derecho.sh). You can run that script directly instead if you prefer.
+
 ### Build on Derecho yourself:
-All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so a fresh clone to a built is:
+All prerequisites to build turbo-stack are already available on Derecho as Lmod modules, and `build_on_derecho.sh` loads them for you, so getting from a fresh clone to a built MOM6 executable is:
 
 ```bash
 git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
@@ -82,8 +76,6 @@ build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 
 The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
 
-> [NOTE]
-> These Derecho scripts run `module purge` before loading their own set of modules. So any modules you loaded yourself are discarded. 
 
 ## Overview of software stack
 turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6 rather than run through it: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is never involved. Building and running those tests is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
