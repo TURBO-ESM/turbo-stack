@@ -60,11 +60,11 @@ This script contains a number of useful options; see them all with `-h` or `--he
 > This script is really just a thin wrapper around [`build_on_derecho.sh`](scripts/build_on_derecho.sh), which builds and tests turbo-stack with a single backend on Derecho. You can run that one directly instead if you prefer — see [Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself) in the `scripts/` README.
 
 ## Overview of software stack
-turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6 rather than run through it: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is never involved. Building and running those tests is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
+turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is never involved. Building and running those tests is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
 [![two stage pipeline](docs/two_stage_pipeline.png)](docs/two_stage_pipeline.png)
 
 So we split this into a two phase process.
- 1. **Set up the environment** — put the toolchain on `PATH` and make every dependency turbo-stack does not compile itself discoverable (tiers 1, 1.5 and 2 below).
+ 1. **Set up the environment** — put the toolchain on `PATH` and make every dependency turbo-stack does not compile itself discoverable (tiers 1, 1.5 and 2 in the figure below).
  2. **Build turbo-stack** — `build_turbo_stack.sh` runs `cmake` configure and build against that prepared environment, compiling tier 3 (turbo-stack's tests, MOM6, MARBL). Given `--tests` it then runs the suite under `ctest`.
 
 Setting up the environment, phase 1, varies from machine to machine. While phase 2 is the same across all machines, essentially just calling build_turbo_stack.sh.
@@ -156,7 +156,7 @@ MARBL, so here only the *source* can be swapped.
   also where the pFUnit suite in [`tests/`](tests/) lives. The suite is opt-in, so
   it is only configured when you pass `--tests`.
 
-## Testing both backends end to end
+## Scripts to build and test both backends
 
 There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. They write nothing into your checkout — artifacts go under
 `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`):
@@ -167,17 +167,11 @@ There are high level drivers at the repo root that build **and** `ctest` both ba
 ./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ```
 
-`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact
-directory first, for a genuine from-scratch run; `--parallel N` sets the job
-count. The matrix reports the commit and branch of
-turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule
-or from an override — so a log says exactly what was tested.
+`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first, for a genuine from-scratch run; `--parallel N` sets the job count. The matrix reports the commit and branch of turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend.
 
 ## Build with a specific backend yourself — pick the recipe for your machine
 
-Each of these is one command that takes you from a fresh clone to a MOM6
-executable: it prepares the environment, builds the dependencies your
-environment did not supply, then configures and builds turbo-stack.
+Each of these is one command that takes you from a fresh clone to a MOM6 executable: it prepares the environment, builds the dependencies your environment did not supply, then configures and builds turbo-stack.
 
 | Your machine | Command |
 |---|---|
@@ -201,11 +195,6 @@ scripts/build_local_with_spack_env.sh --build_dir DIR # build somewhere other th
 `--help` on any of them prints the authoritative list. On Derecho, prepend
 `qcmd -A <project_code> --` as in
 [Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself).
-
-[![turbo-stack build/test pipeline](docs/build_test_orchestration.png)](docs/build_test_orchestration.png)
-
-*What each of those scripts does (click to enlarge). The three builders differ only in how the
-environment is prepared; everything from `build_turbo_stack.sh` down is identical.*
 
 ## Infrastructure backends
 
@@ -264,9 +253,8 @@ export FMS_ROOT=/path/to/your/FMS
 ./test_turbo_stack_locally.sh
 ```
 
-`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and the
-testing matrix reports each as `(override)` or `(submodule)` so a log says what
-was built. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way but go unreported.
+`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and the testing matrix reports each as `(override)` or `(submodule)` so a log says what was built. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way but go unreported.
+
 To build a *branch* you do not have checked out, either move the submodule onto it or clone it yourself and point `*_ROOT` there — both recipes are in [`scripts/README.md`](scripts/README.md#building-a-mom6-branch-you-dont-have-checked-out).
 
 ## Running example experiments
@@ -329,5 +317,3 @@ after a `spack/spack.yaml` change is a manual step — see
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
 | [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
-| [`src/amrex_mini_app/README.md`](src/amrex_mini_app/README.md) | The AMReX tripolar-grid mini-app — a self-contained CMake build, separate from the one above |
-| `docs/*.dot` | Sources for the three figures embedded above, plus `cmake_dependency_dag` which is committed but not embedded. Regenerate a PNG with `dot -Tpng -o docs/<name>.png docs/<name>.dot`; the matching `*_prompt.md` documents what each figure must show |
