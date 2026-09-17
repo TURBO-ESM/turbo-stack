@@ -20,7 +20,9 @@ they differ by *source*. "Our code" is not a tier: the repos we co-develop —
 first-class hot-swaps, reporting each as `(override)` or `(submodule)` in the
 testing matrix. Every `build_dep` dep in fact honors a `*_ROOT` source override
 — AMReX/pFUnit (Tier 1.5) via `AMREX_ROOT` / `PFUNIT_ROOT` — it just goes
-unreported in the matrix. MARBL is pinned-submodule-only.
+unreported in the matrix. MARBL is pinned-submodule-only -- it currently rides along in Tier 3 as a MOM6
+dependency; pushing it down into Tier 1.5 as an external library is a possible
+future move.
 
 ## Pipeline (environment setup → build turbo-stack)
 

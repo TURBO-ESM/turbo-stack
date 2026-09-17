@@ -86,9 +86,32 @@ The `build_on_derecho.sh` script contains a number of useful options; see them a
 > [NOTE]
 > These Derecho scripts run `module purge` before loading their own set of modules. So any modules you loaded yourself are discarded. 
 
-## Prerequisites
+## Overview of software stack
+turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6 rather than run through it: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is never involved. Building and running those tests is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
+[![two stange pipeline](docs/two_stage_pipeline.png)](docs/two_stage_pipeline.png)
 
-turbo-stack never builds these for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. The build scripts take no `-D` pass-through, so each one is selected through the environment:
+So we split this into a two phase process.
+ 1. **Set up the environment** — put the toolchain on `PATH` and make every dependency turbo-stack does not compile itself discoverable (tiers 1, 1.5 and 2 below).
+ 2. **Build turbo-stack** — `build_turbo_stack.sh` runs `cmake` configure and build against that prepared environment, compiling tier 3 (turbo-stack's tests, MOM6, MARBL). Given `--tests` it then runs the suite under `ctest`.
+
+Setting up the environment, phase 1, varies from machine to machine. While phase 2 is the same across all machines, essentially just calling build_turbo_stack.sh.
+
+There are some scripts in this repository to automate the entire process (phase 1 and 2) on specific machines ([Derecho](#quickstart-on-derecho)) or with specific tools ([Spack](scripts/README.md#one-command-spack-flavor)). Most of the work in those scripts has to do with setting up the environment, phase 1.
+
+To help describe what we mean by the environment a dependency diagram of the turbo-stack software stack is shown below. The diagram is incomplete but shows the major pieces. You will also need a few more things: bash, common unix / linux command line tools that are called in our bash scripts, git, etc.
+
+[![turbo-stack dependency_tiers](docs/dependency_tiers.png)](docs/dependency_tiers.png)
+
+For comparison with the previous figure we consider everything in tiers 1, 1.5, and 2 as needing to be set up prior to calling build_turbo_stack.sh, which essentially builds everything in tier 3.
+
+The sections below cover what you have to supply and how. The full policy — which
+tier turbo-stack never builds, optionally builds, and always builds, and who the
+members are — is the dependency contract in
+[`scripts/README.md`](scripts/README.md#dependency-contract-tiers).
+
+### Tier 1 - Prerequisites (no source supplied via submodules)
+
+turbo-stack does not supply the source code of these as submodules and will not build them for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. None of these scripts accept `cmake -D…` options, so each requirement below is picked up from the environment instead:
 
 | Requirement | Sufficient to set | Notes |
 |---|---|---|
@@ -97,7 +120,7 @@ turbo-stack never builds these for you. You are expected to supply them in the e
 | MPI | `mpicc`, `mpifort` (or `mpif90`) and `mpicxx` (or `mpic++`) on `PATH`, or `MPI_HOME` | the Fortran and C wrappers; the TIM/AMReX path uses the C++ one too |
 | NetCDF | `nc-config` / `nf-config` on `PATH`, or `NetCDF_ROOT`, or the install prefix on `CMAKE_PREFIX_PATH` | need the C and Fortran libraries |
 | CMake | on `PATH` | ≥ 3.24 — turbo-stack, MOM6, TIM and pFUnit each require it |
-| `make` or `ninja` | on `PATH` | Unix Makefiles by default, running the build scrips `--ninja` picks Ninja instead |
+| `make` or `ninja` | on `PATH` | Unix Makefiles by default, running the build scripts with `--ninja` picks Ninja instead |
 
 Compiler flags are the same story: CMake seeds them from `FFLAGS` / `CFLAGS` /
 `CXXFLAGS` natively and appends the project's own, so there is no script flag for
@@ -108,30 +131,43 @@ them.
 > a build directory — CMake caches them. To change compiler or flags in a build
 > directory you have already configured, rebuild with `--clean`.
 
-Everything else — AMReX, pFUnit, FMS and TIM — turbo-stack can build from `submodules/` when your environment does not already supply it prebuilt.
-To supply one yourself instead, put its install prefix on `CMAKE_PREFIX_PATH`.
-pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/`
-subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at
-`<prefix>/PFUNIT-X.Y/cmake`.
+> We do provide ways to get these via a Spack environment (below). And via a container image (coming soon!).
 
-> [!NOTE]
-> `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
-> prefixes — each names a *source tree* for turbo-stack to build. See
-> [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
+### Tier 1.5 - Prerequisites, but we supply the source via a submodule
 
-The Spack flavor below shortens the list: [`spack/spack.yaml`](spack/spack.yaml)
-supplies CMake, `make`/`ninja`, MPI, NetCDF, ParallelIO, pFUnit and AMReX, so all
-you need is a base compiler and `SPACK_ROOT` pointing at a
-[Spack](https://github.com/spack/spack) clone. If you already source Spack's
-`share/spack/setup-env.sh` (from your shell profile, say), it exports `SPACK_ROOT`
-for you and there is nothing to set. Otherwise export it by hand — the build
-script sources `setup-env.sh` itself, so you do not have to:
+AMReX and pFUnit are external libraries. The source code is provided via submodules. However you can bring your own install by adding its install prefix on `CMAKE_PREFIX_PATH`. pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at `<prefix>/PFUNIT-X.Y/cmake`.
+
+#### Getting tiers 1 and 1.5 from Spack
+
+[`spack/spack.yaml`](spack/spack.yaml) supplies CMake, `make`/`ninja`, MPI,
+NetCDF, ParallelIO, pFUnit and AMReX — everything in tier 1 except a base
+compiler, plus both of tier 1.5. So all you need is a compiler and `SPACK_ROOT`
+pointing at a [Spack](https://github.com/spack/spack) clone. If you already
+source Spack's `share/spack/setup-env.sh` (from your shell profile, say), it
+exports `SPACK_ROOT` for you and there is nothing to set. Otherwise export it by
+hand — the build script sources `setup-env.sh` itself, so you do not have to:
 
 ```bash
 export SPACK_ROOT=~/spack
 ```
 
-The `turbo_stack` environment is created on first use.
+The `turbo_stack` environment is created on first use by
+[`scripts/build_local_with_spack_env.sh`](scripts/build_local_with_spack_env.sh).
+
+
+
+### Tier 2 - Infrastructure Backend
+FMS and TIM are the two backends MOM6's infrastructure layer sits on, and the two
+we co-develop: TIM is TURBO's own AMReX-based layer, while FMS is GFDL's Flexible
+Modeling System tracked in a [TURBO-ESM fork](https://github.com/TURBO-ESM/FMS).
+turbo-stack supplies both as submodules and builds whichever one `--infra`
+selects. To supply one yourself instead, put its install prefix on
+`CMAKE_PREFIX_PATH`.
+
+> [!NOTE]
+> `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
+> prefixes — each names a *source tree* for turbo-stack to build. See
+> [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
 
 ## Build it — pick the recipe for your machine
 
