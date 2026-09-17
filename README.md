@@ -109,7 +109,7 @@ tier turbo-stack never builds, optionally builds, and always builds, and who the
 members are — is the dependency contract in
 [`scripts/README.md`](scripts/README.md#dependency-contract-tiers).
 
-### Tier 1 - Prerequisites (no source supplied via submodules)
+### Tier 1 — Prerequisites (no source supplied via submodules)
 
 turbo-stack does not supply the source code of these as submodules and will not build them for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. None of these scripts accept `cmake -D…` options, so each requirement below is picked up from the environment instead:
 
@@ -133,7 +133,7 @@ them.
 
 > We do provide ways to get these via a Spack environment (below). And via a container image (coming soon!).
 
-### Tier 1.5 - Prerequisites, but we supply the source via a submodule
+### Tier 1.5 — Prerequisites, but we supply the source via a submodule
 
 AMReX and pFUnit are external libraries. The source code is provided via submodules. However you can bring your own install by adding its install prefix on `CMAKE_PREFIX_PATH`. pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at `<prefix>/PFUNIT-X.Y/cmake`.
 
@@ -156,7 +156,7 @@ The `turbo_stack` environment is created on first use by
 
 
 
-### Tier 2 - Infrastructure Backend
+### Tier 2 — Infrastructure backend
 FMS and TIM are the two backends MOM6's infrastructure layer sits on, and the two
 we co-develop: TIM is TURBO's own AMReX-based layer, while FMS is GFDL's Flexible
 Modeling System tracked in a [TURBO-ESM fork](https://github.com/TURBO-ESM/FMS).
@@ -168,6 +168,22 @@ selects. To supply one yourself instead, put its install prefix on
 > `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
 > prefixes — each names a *source tree* for turbo-stack to build. See
 > [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
+
+### Tier 3 — What turbo-stack always builds
+
+turbo-stack, MOM6 and MARBL are compiled inline on every build, pulled in with
+`add_subdirectory` from the top-level [`CMakeLists.txt`](CMakeLists.txt). This is
+the tier phase 2 exists to build. Unlike tiers 1.5 and 2 there is no
+bring-your-own-install option — nothing goes looking for a prebuilt MOM6 or
+MARBL, so here only the *source* can be swapped.
+
+- **MOM6** is read from `MOM6_ROOT`, the one source override the build cannot do
+  without: CMake hard-errors when it is unset, so the build scripts default it to
+  `submodules/MOM6` for you. Point it elsewhere to build a fork or a branch.
+- **MARBL** comes from `submodules/MARBL` only — it has no `*_ROOT` override.
+- **turbo-stack** itself is whichever checkout you ran the scripts from, which is
+  also where the pFUnit suite in [`tests/`](tests/) lives. The suite is opt-in, so
+  it is only configured when you pass `--tests`.
 
 ## Build it — pick the recipe for your machine
 
