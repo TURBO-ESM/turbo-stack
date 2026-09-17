@@ -243,22 +243,37 @@ ctest --test-dir build/default
 
 See [`tests/README.md`](tests/README.md) for how to add one.
 
-### Building against a development tree or a branch
+## Building against a development tree or a branch
 
 To build a co-developed component from somewhere other than its pinned
 submodule, export its `*_ROOT` before building. No flag, no cloning by the build
-scripts:
+scripts — and it works the same for the high-level testers and the
+single-backend build scripts:
 
 ```bash
 export MOM6_ROOT=/path/to/your/MOM6
 export TIM_ROOT=/path/to/your/TIM
 export FMS_ROOT=/path/to/your/FMS
 
-# Now this overrides the submodules and uses your own copy MOM6, TIM, and FMS at the provided paths
+# the high-level tester: builds and ctests both backends
 ./test_turbo_stack_locally.sh
+
+# or a single-backend build script, picking up the same overrides
+scripts/build_local_with_spack_env.sh --infra TIM
 ```
 
-`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and the testing matrix reports each as `(override)` or `(submodule)` so a log says what was built. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way but go unreported.
+`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones; `AMREX_ROOT`
+and `PFUNIT_ROOT` work the same way. What gets *reported* differs between the
+two entry points:
+
+- the **testers** print the testing matrix, naming turbo-stack, MOM6, TIM and
+  FMS and marking each `(override)` or `(submodule)`, so the log says exactly
+  what was built. AMReX and pFUnit are not in that matrix.
+- the **build scripts** do not print the matrix, but `build_dep` announces each
+  dependency as it resolves it, e.g.
+  `[build_dep] fms: source = /path/to/your/FMS (from $FMS_ROOT)`. MOM6 is
+  resolved by CMake rather than `build_dep`, and is only mentioned when you have
+  *not* overridden it (`[common] MOM6_ROOT unset -> defaulting to submodule:`).
 
 To build a *branch* you do not have checked out, either move the submodule onto it or clone it yourself and point `*_ROOT` there — both recipes are in [`scripts/README.md`](scripts/README.md#building-a-mom6-branch-you-dont-have-checked-out).
 
