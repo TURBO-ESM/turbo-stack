@@ -175,6 +175,9 @@ There are high level drivers at the repo root that build **and** `ctest` both ba
 
 `--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first, for a genuine from-scratch run; `--parallel N` sets the job count. The matrix reports the commit and branch of turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend.
 
+See [Build and test both backends, one command](scripts/README.md#build-and-test-both-backends-one-command)
+in the `scripts/` README for the full reference on each of these.
+
 ## Build with a specific backend yourself — pick the recipe for your machine
 
 Each of these is one command that takes you from a fresh clone to a MOM6 executable: it prepares the environment, builds the dependencies your environment did not supply, then configures and builds turbo-stack.
@@ -198,9 +201,7 @@ scripts/build_local_with_spack_env.sh --ninja         # Ninja instead of Unix Ma
 scripts/build_local_with_spack_env.sh --build_dir DIR # build somewhere other than build/default
 ```
 
-See [Workflows](scripts/README.md#workflows) in the `scripts/` README for the full
-reference on each of these — including the Derecho `qcmd` invocation and the
-explicit, step-by-step alternative to the one-command scripts.
+See [Workflows](scripts/README.md#workflows) in the `scripts/` README for the full reference on each of these.
 
 ### Infrastructure backends
 
