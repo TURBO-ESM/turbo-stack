@@ -3,8 +3,8 @@
 # build/ - CMake build trees (build_turbo_stack.sh and the orchestrators)
 # deps/  - dependencies the orchestrators build from submodules/
 bin/
-build/
-deps/
+/build/
+/deps/
 
 # experiment output files:
 CPU_stats

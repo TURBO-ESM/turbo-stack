@@ -52,12 +52,11 @@ turbo_print_header_usage() {
     # non-zero, and the drivers run under `set -euo pipefail`, so that would
     # abort the script and print no usage at all.
     local -a usage_block=() first_block=()
-    local shebang_seen=false collecting_first=false first_done=false
+    local shebang_seen=false collecting_first=true first_done=false
     local collecting_usage=false usage_done=false
     while IFS= read -r line; do
         if [[ "$shebang_seen" == false && "$line" == '#!'* ]]; then
             shebang_seen=true
-            collecting_first=true
             continue
         fi
         stripped="${line#\#}"        # drop leading '#'

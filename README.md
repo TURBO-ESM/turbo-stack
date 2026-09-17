@@ -246,7 +246,7 @@ explicitly, so a previous choice never sticks in the cache.
 
 ## Where the build lands
 
-With no `--build_dir`, a build from the repo root produces:
+With no `--build_dir`, the build lands inside the checkout you ran the scripts from:
 
 | Path | Contents |
 |---|---|
@@ -281,9 +281,9 @@ submodule, export its `*_ROOT` before building. No flag, no cloning by the build
 scripts:
 
 ```bash
-export MOM6_ROOT=$PATH_TO_YOUR_OWN/MOM6
-export TIM_ROOT=$PATH_TO_YOUR_OWN/TIM
-export FMS_ROOT=$PATH_TO_YOUR_OWN/FMS
+export MOM6_ROOT=/path/to/your/MOM6
+export TIM_ROOT=/path/to/your/TIM
+export FMS_ROOT=/path/to/your/FMS
 
 # Now this overrides the submodules and uses your own copy MOM6, TIM, and FMS at the provided paths
 ./test_turbo_stack_locally.sh
@@ -354,4 +354,5 @@ after a `spack/spack.yaml` change is a manual step — see
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
 | [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
-| `docs/*.dot` | The figure above and its siblings. Regenerate a PNG with `dot -Tpng -o docs/<name>.png docs/<name>.dot`; the matching `*_prompt.md` documents what each figure must show |
+| [`src/amrex_mini_app/README.md`](src/amrex_mini_app/README.md) | The AMReX tripolar-grid mini-app — a self-contained CMake build, separate from the one above |
+| `docs/*.dot` | Sources for the three figures embedded above, plus `cmake_dependency_dag` which is committed but not embedded. Regenerate a PNG with `dot -Tpng -o docs/<name>.png docs/<name>.dot`; the matching `*_prompt.md` documents what each figure must show |
