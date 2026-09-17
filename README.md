@@ -135,7 +135,7 @@ turbo-stack supplies both as submodules and builds whichever one `--infra`
 selects. To supply one yourself instead, put its install prefix on
 `CMAKE_PREFIX_PATH`.
 
-> [!NOTE]
+> [!WARNING]
 > `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
 > prefixes — each names a *source tree* for turbo-stack to build. See
 > [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
