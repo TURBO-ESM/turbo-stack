@@ -51,7 +51,7 @@ run a builder once per backend via the shared core in `lib/common.sh`.
 ---
 
 ## Layout
-
+Roughly in order from lowest level to highest level.
 ```
 scripts/
   README.md                                   #  this file
@@ -75,7 +75,7 @@ scripts/
   build_local_with_system_toolchain.sh        # ORCHESTRATOR — stage 1 via bring your own toolchain
   build_on_derecho.sh                         # ORCHESTRATOR — stage 1 via Derecho's Lmod modules
 
-# (repo top level) — high level end-to-end drivers, BOTH backends:
+# (repo top level) — high level end-to-end drivers, wraps orchestrators automate building and testing BOTH backends:
 test_turbo_stack_locally.sh                   # local (spack)
 test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
@@ -91,10 +91,10 @@ test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
 ```
 
-Each runs the real single-backend builder once per backend (each in its own
-process, from scratch), builds + `ctest`s turbo-stack for FMS2 and TIM, and prints
-a per-backend matrix/verdict. `--only FMS2|TIM`, `--parallel N`, `--clean`.  All
-three support the `*_ROOT` source overrides described below.
+Each runs the real single-backend builder once per backend, each in its own
+process and its own build directory, and builds + `ctest`s turbo-stack for both
+FMS2 and TIM. `--only FMS2|TIM`, `--parallel N`, `--clean`. All three support the
+`*_ROOT` source overrides described below.
 
 Two different things get printed, and they are easy to conflate:
 

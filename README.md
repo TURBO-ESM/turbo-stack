@@ -66,7 +66,7 @@ turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2
 
 [![cmake dependency dag](docs/cmake_dependency_dag.png)](docs/cmake_dependency_dag.png)
 
-Building and running the the pFUnit tests in [tests](tests/) is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
+Building and running the pFUnit tests in [tests](tests/) is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
 [![two stage pipeline](docs/two_stage_pipeline.png)](docs/two_stage_pipeline.png)
 
 So we split this into a two phase process.
@@ -188,7 +188,7 @@ Each of these is one command that takes you from a fresh clone to a MOM6 executa
 | Laptop / workstation, toolchain already on `PATH` | `scripts/build_local_with_system_toolchain.sh` |
 | Derecho (NCAR), Lmod modules | `scripts/build_on_derecho.sh` |
 
-They all take the same options, and `-h` or `--help` on any of them prints the authoritative list. Some examples are:
+They all take the same options — `build_local_with_spack_env.sh` adds `--recreate-spack-env` — and `-h` or `--help` on any of them prints the authoritative list. Some examples are:
 
 ```bash
 scripts/build_local_with_spack_env.sh                 # default: TIM backend, Release
