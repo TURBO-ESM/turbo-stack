@@ -434,8 +434,11 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
 
 ## Environment
 
-No script here accepts `cmake -D…` options, so everything CMake needs is selected
-through the environment.
+None of the entry-point scripts take `cmake -D…` configure options on their
+command line, so everything CMake needs is selected through the environment. The
+two `--` pass-throughs above are not exceptions to that: `build_dep`'s carries
+each dependency's canonical flags down from the `turbo_build_*` wrappers, and
+`build_turbo_stack.sh`'s goes to `cmake --build`, not to configure.
 
 ### Toolchain selection — read by CMake itself
 

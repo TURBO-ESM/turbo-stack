@@ -91,7 +91,7 @@ members are — is the dependency contract in
 
 ### Tier 1 — Prerequisites (no source supplied via submodules)
 
-turbo-stack does not supply the source code of these as submodules and will not build them for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. None of these scripts accept `cmake -D…` options, so each requirement below is picked up from the environment instead:
+turbo-stack does not supply the source code of these as submodules and will not build them for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. None of these scripts take `cmake -D…` configure options on their command line, so each requirement below is picked up from the environment instead:
 
 | Requirement | Sufficient to set | Notes |
 |---|---|---|
