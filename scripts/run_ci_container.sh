@@ -198,7 +198,7 @@ done
 if [[ -n "$MOM6_ROOT" ]]; then
     [[ -f "$MOM6_ROOT/CMakeLists.txt" ]] || {
         echo "Error: '$MOM6_ROOT' has no CMakeLists.txt -- that is not a MOM6 checkout" >&2
-        echo "       with the CMake build system (it lives on dev/turbo* branches)." >&2
+        echo "       with the CMake build system (not every MOM6 branch has it)." >&2
         exit 1
     }
     for _p in pkg/CVMix-src pkg/GSW-Fortran; do
