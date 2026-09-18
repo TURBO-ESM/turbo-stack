@@ -2,17 +2,29 @@
 # Usage: ./scripts/build_with_container.sh [options]
 #
 # Build turbo-stack (+ the pFUnit unit tests, with --tests) for ONE infra backend
-# inside the image CI uses: ghcr.io/turbo-esm/turbo-stack/turbo-ci, which ships the
-# compiler and the Tier 1 + Tier 1.5 dependencies (MPI, NetCDF, CMake, pFUnit,
-# AMReX) prebuilt in a Spack env.  Nothing but a container engine is needed on the
-# host.
+# in a container, so nothing but a container engine is needed on the host.
 #
-# It does three things: mount your checkout (plus any MOM6 / FMS / TIM tree you
-# want built instead of the pinned submodule), then run the command CI runs --
-# scripts/build_local_with_spack_env.sh --infra <backend> [--tests] -- which
-# activates the prebaked Spack env, builds the Tier-2 backend, then configures,
-# builds and tests turbo-stack.  So a red box in .github/workflows/cmake-build.yaml
-# usually reproduces here, without pushing a branch and waiting on Actions.
+# This is the container member of the single-backend builder family.  Its siblings
+# differ in one thing -- who supplies the toolchain and the upstream deps:
+#
+#   build_local_with_spack_env.sh         a Spack env you own
+#   build_local_with_system_toolchain.sh  whatever is on your PATH
+#   build_on_derecho.sh                   Derecho's Lmod modules
+#   build_with_container.sh               the container image  (this file)
+#
+# Here the image supplies them: ghcr.io/turbo-esm/turbo-stack/turbo-ci ships the
+# compiler and the Tier 1 + Tier 1.5 dependencies (MPI, NetCDF, CMake, pFUnit,
+# AMReX) prebuilt in a Spack env.  It mounts your checkout (plus any MOM6 / FMS /
+# TIM tree you want built instead of the pinned submodule) and runs
+# scripts/build_local_with_spack_env.sh --infra <backend> [--tests] inside the
+# image, which activates the prebaked env, builds the Tier-2 backend, then
+# configures, builds and tests turbo-stack.
+#
+# That image is also the one CI uses, and this runs the same builder command, so a
+# red box in .github/workflows/cmake-build.yaml will often reproduce here without
+# pushing a branch.  Treat that as a useful consequence rather than the contract:
+# the known divergence is that CI checks a MOM6 branch out fresh beside the
+# workspace, where this builds the tree you hand it.
 #
 #     scripts/build_with_container.sh --infra TIM --tests
 #     MOM6_ROOT=~/projects/MOM6 scripts/build_with_container.sh --infra TIM --tests
@@ -306,9 +318,10 @@ elif [[ -t 1 ]]; then
     _tty=(-t)
 fi
 
-# --- the command CI runs, inside the container ---------------------------------
-# Mirrors the `run:` steps of cmake-build.yaml, in order, then hands off to the
-# builder -- which owns Spack activation, the dep build and the turbo-stack build.
+# --- the build command, inside the container -----------------------------------
+# Applies the same environment fixes cmake-build.yaml's `run:` steps apply, in the
+# same order, then hands off to the builder -- which owns Spack activation, the dep
+# build and the turbo-stack build.
 _build_args=()
 [[ "$TURBO_B_DEBUG" == true ]] && _build_args+=(--debug)
 [[ "$TURBO_B_CLEAN" == true ]] && _build_args+=(--clean)

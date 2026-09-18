@@ -28,7 +28,7 @@ The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is w
 
 Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict. `test_turbo_stack_with_system_toolchain.sh` is the same for a bring-your-own toolchain already on `PATH` (no spack).
 
-### Local test in the CI container (a ready-made environment)
+### Build and test in a container (a ready-made environment)
 
 ```bash
 scripts/build_with_container.sh --infra TIM --tests                        # pinned sources, one backend
@@ -39,7 +39,7 @@ scripts/build_with_container.sh --shell                                    # int
 
 No host toolchain needed: the image ships the compiler plus Tier 1 + 1.5 (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack env, so the container builds only Tier 2 (the selected backend, from its submodule) and Tier 3. Export `MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own path and forwarded; **the branch it is checked out on is what gets built** — switch branches there and re-run to test another. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized. `PFUNIT_ROOT`/`AMREX_ROOT` are not forwarded: the image supplies pFUnit and AMReX from its Spack env, so an override would have no effect.
 
-Runs exactly what `cmake-build.yaml` runs (`build_local_with_spack_env.sh --infra X --tests`) inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the workflow's env (`CMAKE_BUILD_PARALLEL_LEVEL`, PRRTE oversubscribe), its `safe.directory` step, and its two guardrails (assert the prebaked `turbo_stack` env; warn when the image's baked `spack.yaml` lags the checkout). The checkout is mounted at its own path (so `TURBO_STACK_ROOT` matches inside and out); no host `SPACK_ROOT` is used — and an exported one pointing at a *different* checkout hard-errors, which is what you hit first when running from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched. Artifacts default to `$TMPDIR/turbo_ci_container_test/<checkout>` (per checkout, so worktrees don't collide); the container runs as root (as CI does) and ownership is handed back when a run ends (a failed build included), with a killed or interrupted run repaired by the next run or `--fix-ownership`. Interrupting a run does not reliably stop the container -- bash holds the signal until `docker run` returns, and the build inside can survive it (`docker ps` / `docker rm -f`). The default image is refreshed on every run, because `gcc-openmpi` is a mutable tag and a stale local copy builds against an out-of-date dependency stack; naming an image (`--image`, or `TURBO_CI_IMAGE`) turns that off so a pinned tag is used as-is, and `--pull` / `--no-pull` force either way. A failed refresh warns and continues when the image is already local. `build_with_container.sh` options: the builder flags plus `--image`, `--pull`, `--no-pull`, `--shell`, `--fix-ownership` (engine via `$TURBO_CONTAINER_ENGINE`, default docker).
+The container member of the builder/tester families — same axis as the Spack, system-toolchain and Derecho scripts, differing only in who supplies the toolchain and upstream deps (here, the image). It runs `build_local_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the workflow's env (`CMAKE_BUILD_PARALLEL_LEVEL`, PRRTE oversubscribe), its `safe.directory` step, and its two guardrails (assert the prebaked `turbo_stack` env; warn when the image's baked `spack.yaml` lags the checkout). The checkout is mounted at its own path (so `TURBO_STACK_ROOT` matches inside and out); no host `SPACK_ROOT` is used — and an exported one pointing at a *different* checkout hard-errors, which is what you hit first when running from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched. Artifacts default to `$TMPDIR/turbo_ci_container_test/<checkout>` (per checkout, so worktrees don't collide); the container runs as root (as CI does) and ownership is handed back when a run ends (a failed build included), with a killed or interrupted run repaired by the next run or `--fix-ownership`. Interrupting a run does not reliably stop the container -- bash holds the signal until `docker run` returns, and the build inside can survive it (`docker ps` / `docker rm -f`). The default image is refreshed on every run, because `gcc-openmpi` is a mutable tag and a stale local copy builds against an out-of-date dependency stack; naming an image (`--image`, or `TURBO_CI_IMAGE`) turns that off so a pinned tag is used as-is, and `--pull` / `--no-pull` force either way. A failed refresh warns and continues when the image is already local. `build_with_container.sh` options: the builder flags plus `--image`, `--pull`, `--no-pull`, `--shell`, `--fix-ownership` (engine via `$TURBO_CONTAINER_ENGINE`, default docker).
 
 ### Local build (spack flavor, one command)
 
@@ -248,13 +248,13 @@ and a `spack.yaml` change does not reach CI until the producer workflow is
 re-run manually (`gh workflow run build-turbo-ci-container.yaml`) — see
 [`docker/README.md`](../docker/README.md).
 
-That same image doubles as a ready-made local build environment, so most of this
-lane can be run without pushing a branch: `scripts/build_with_container.sh --infra TIM
+That same image is what `build_with_container.sh` / `test_turbo_stack_with_container.sh`
+build in, so much of this lane can be exercised without pushing a branch: `scripts/build_with_container.sh --infra TIM
 --tests` (one backend), `./test_turbo_stack_with_container.sh` (both), `--shell`
 to debug inside it, and `MOM6_ROOT`/`FMS_ROOT`/`TIM_ROOT` to build trees of your
-own instead of the pinned commits. Not a pixel-perfect replica — CI checks its MOM6 branch out
-fresh beside the workspace, where the local runner builds the tree you point it
-at. See "Local test in the CI container" above.
+own instead of the pinned commits. Reproducing CI is a consequence of sharing the image, not the
+purpose of those scripts, and not a guarantee: CI checks its MOM6 branch out fresh
+beside the workspace, where the local runner builds the tree you point it at. See "Local test in the CI container" above.
 
 Branches that trigger CI: `main` for the CMake lane; `main` plus the legacy
 `ci-tests` / `container-ci` branches for the mkmf lane. Any workflow can also be

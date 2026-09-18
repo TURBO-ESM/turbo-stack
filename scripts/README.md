@@ -68,7 +68,7 @@ scripts/
 test_turbo_stack_locally.sh                   # local (spack)
 test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
-test_turbo_stack_with_container.sh           # inside the CI container (reproduce CI locally)
+test_turbo_stack_with_container.sh           # in a container (the image CI also uses)
 ```
 
 ---
@@ -125,7 +125,7 @@ container driver supports `MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` — the sources
 builds. `PFUNIT_ROOT` / `AMREX_ROOT` are not forwarded: the image supplies pFUnit
 and AMReX from its Spack env, so an override there would have no effect.
 
-### In the CI container (a ready-made environment)
+### In a container (a ready-made environment)
 
 The `turbo-ci` image ships the compiler and the Tier 1 + Tier 1.5 dependencies
 (MPI, NetCDF, CMake, pFUnit, AMReX) already installed in a Spack env, so there is
@@ -147,10 +147,15 @@ branches, switch branches there and run again. A MOM6 tree's nested submodules
 (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized — MOM6's CMakeLists
 hard-fails without them, and the script checks up front rather than 20 minutes in.
 
-Because it is CI's image and CI's command, a failure in
-`.github/workflows/cmake-build.yaml` usually reproduces here — with the caveat
-that CI checks a MOM6 branch out fresh beside the workspace, where this builds the
-tree you hand it.
+This is the container member of the builder/tester families — the same axis as
+the Spack, bring-your-own-toolchain and Derecho scripts, differing only in who
+supplies the toolchain and the upstream deps. Here the image does, which is why
+nothing but a container engine is needed on the host.
+
+The image is also the one CI uses and the commands match, so a failure in
+`.github/workflows/cmake-build.yaml` will often reproduce here — useful, but not
+a guarantee. The known divergence: CI checks a MOM6 branch out fresh beside the
+workspace, where this builds the tree you hand it.
 
 `build_with_container.sh` takes the usual builder flags and forwards them to
 `build_local_with_spack_env.sh` *inside* the container, adding what the workflow

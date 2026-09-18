@@ -1,11 +1,17 @@
 #!/bin/bash
 # test_turbo_stack_with_container.sh
 #
-# End-to-end test driver (CI container).  Runs what
-# .github/workflows/turbo-cmake-container-tests.yaml runs -- the CMake build plus
-# the pFUnit unit tests, for BOTH infra backends (TIM, FMS2) -- inside the same
-# image CI uses, so a CI failure can be reproduced locally without pushing a
-# branch.  Thin wrapper: it parses the common driver args, then hands off to
+# End-to-end test driver (container).  Builds and `ctest`s BOTH infra backends
+# (TIM, FMS2) in a container, so nothing but a container engine is needed on the
+# host.  The container member of the driver family, alongside
+# test_turbo_stack_locally.sh (a Spack env), test_turbo_stack_with_system_toolchain.sh
+# (your PATH) and test_turbo_stack_on_derecho.sh (Lmod modules).
+#
+# The image is the one .github/workflows/turbo-cmake-container-tests.yaml uses and
+# the commands match, so this will often reproduce a CI failure without pushing a
+# branch -- a consequence worth having, not the purpose.
+#
+# Thin wrapper: it parses the common driver args, then hands off to
 # turbo_run_test_driver (scripts/lib/common.sh), which runs the real container
 # wrapper scripts/build_with_container.sh once per backend in its own process and
 # prints a per-backend matrix/verdict.
