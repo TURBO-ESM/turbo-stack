@@ -48,9 +48,16 @@
 #                       CMAKE_BUILD_PARALLEL_LEVEL (CI sets 4).  Default: nproc.
 #   --image REF         Container image (default: the tag CI consumes, below).
 #                       `gcc-openmpi` is MUTABLE -- pin gcc-openmpi-<sha> to
-#                       reproduce a specific CI run.
-#   --pull              Refresh the image before running (it is pulled
-#                       automatically when absent).
+#                       reproduce a specific CI run.  Naming an image (here or
+#                       via TURBO_CI_IMAGE) also turns the default refresh off,
+#                       so a pinned tag is used as-is.
+#   --pull              Force a refresh even when an image was named.
+#   --no-pull           Skip the refresh and use whatever is local.  The default
+#                       image IS refreshed on every run: `gcc-openmpi` is
+#                       mutable, and a stale local copy silently builds against
+#                       an out-of-date dependency stack.  A failed refresh is
+#                       not fatal when the image is already present -- it warns
+#                       and continues.
 #   --shell             Start an interactive shell in the container, Spack env
 #                       activated, instead of building.  Same mounts and
 #                       environment; for iterating on a failure.
@@ -89,19 +96,29 @@ _default_image="ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi"
 # --recreate-spack-env in build_local_with_spack_env.sh).
 _image="${TURBO_CI_IMAGE:-$_default_image}"
 _engine="${TURBO_CONTAINER_ENGINE:-docker}"
-_pull=false
+# Refresh the default image by default: `gcc-openmpi` is a mutable tag, so a
+# local copy goes stale silently and builds against an out-of-date dependency
+# stack (this cost a round of confusion when a cached image predated a spack.yaml
+# spec).  An image named explicitly is left alone -- naming one is how you ask
+# for a specific thing, including an older one.  `_pull` unset means "not asked
+# for either way", resolved after parsing.
+_pull=""
+[[ -n "${TURBO_CI_IMAGE:-}" ]] && _pull=false
 _shell=false
 _fix_ownership=false
 _args=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --image)         _turbo_opt_needs_value "$1" "$#" || exit 1; _image="$2"; shift 2 ;;
+        --image)         _turbo_opt_needs_value "$1" "$#" || exit 1; _image="$2"
+                         [[ -z "$_pull" ]] && _pull=false; shift 2 ;;
         --pull)          _pull=true; shift ;;
+        --no-pull)       _pull=false; shift ;;
         --shell)         _shell=true; shift ;;
         --fix-ownership) _fix_ownership=true; shift ;;
         *)               _args+=("$1"); shift ;;
     esac
 done
+: "${_pull:=true}"   # no --pull/--no-pull and no named image: refresh
 
 # Everything else is the standard builder vocabulary (--infra/--tests/--build_dir/
 # --debug/--clean/--ninja/--parallel/--help), validated once, in one place, and

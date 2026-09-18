@@ -173,7 +173,8 @@ back to you before the container exits, and the PRRTE oversubscribe policy is se
 They also mirror the workflow's two guardrails: refuse an image with no prebaked
 `turbo_stack` env (which would otherwise silently start a ~1 h source build), and
 warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
-covers the rest — `--image` / `--pull` to pin or refresh the image, `--build_dir`,
+covers the rest — `--image` to pin one (which also stops the default refresh),
+`--pull` / `--no-pull` to force it either way, `--build_dir`,
 `--fix-ownership`.
 
 Artifacts live on the bind mount, so they outlive the container: after a failure,
