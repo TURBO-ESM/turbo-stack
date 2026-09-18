@@ -57,7 +57,7 @@ scripts/
   build_local_with_spack_env.sh               # ORCHESTRATOR — spack flavor, single backend
   build_local_with_system_toolchain.sh        # ORCHESTRATOR — from-source local (bring-your-own toolchain), single backend
   build_on_derecho.sh                         # ORCHESTRATOR — Derecho (Lmod modules), single backend
-  run_ci_container.sh                         # WRAPPER — runs build_local_with_spack_env.sh inside the CI container, single backend
+  build_with_container.sh                         # WRAPPER — runs build_local_with_spack_env.sh inside the CI container, single backend
   build_turbo_stack.sh                        # STAGE 2 — build turbo-stack: cmake configure + build (+ ctest with --tests) (exec'd)
   setup_environment/                          # STAGE 1 (env setup) — toolchain ONLY, one file per flavor (sourced)
     spack_local_environment.sh                #   spack env activation
@@ -133,11 +133,11 @@ no toolchain to set up: the container builds the Tier-2 backend and then
 turbo-stack, against the sources you point it at.
 
 ```bash
-scripts/run_ci_container.sh --infra TIM --tests                     # pinned sources
+scripts/build_with_container.sh --infra TIM --tests                     # pinned sources
 MOM6_ROOT=~/projects/MOM6 \
-    scripts/run_ci_container.sh --infra TIM --tests                 # your MOM6, as checked out
+    scripts/build_with_container.sh --infra TIM --tests                 # your MOM6, as checked out
 ./test_turbo_stack_in_ci_container.sh                               # both backends, matrix + verdict
-scripts/run_ci_container.sh --shell                                 # interactive shell, Spack env active
+scripts/build_with_container.sh --shell                                 # interactive shell, Spack env active
 ```
 
 Sources are swapped the usual way: export `MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT`
@@ -152,7 +152,7 @@ Because it is CI's image and CI's command, a failure in
 that CI checks a MOM6 branch out fresh beside the workspace, where this builds the
 tree you hand it.
 
-`run_ci_container.sh` takes the usual builder flags and forwards them to
+`build_with_container.sh` takes the usual builder flags and forwards them to
 `build_local_with_spack_env.sh` *inside* the container, adding what the workflow
 adds (`CMAKE_BUILD_PARALLEL_LEVEL`, the PRRTE oversubscribe policy,
 `git config --global --add safe.directory '*'`, and the workflow's two guardrails —
@@ -410,4 +410,4 @@ Optional, for testing against local dev trees:
   (default: the pinned submodule). Mounted into the CI container when set.
 - `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").
 - `TURBO_CI_IMAGE`, `TURBO_CONTAINER_ENGINE` — image / container CLI for
-  `run_ci_container.sh` (defaults: the tag CI consumes, and `docker`).
+  `build_with_container.sh` (defaults: the tag CI consumes, and `docker`).

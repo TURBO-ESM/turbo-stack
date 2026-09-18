@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: ./scripts/run_ci_container.sh [options]
+# Usage: ./scripts/build_with_container.sh [options]
 #
 # Build turbo-stack (+ the pFUnit unit tests, with --tests) for ONE infra backend
 # inside the image CI uses: ghcr.io/turbo-esm/turbo-stack/turbo-ci, which ships the
@@ -14,8 +14,8 @@
 # builds and tests turbo-stack.  So a red box in .github/workflows/cmake-build.yaml
 # usually reproduces here, without pushing a branch and waiting on Actions.
 #
-#     scripts/run_ci_container.sh --infra TIM --tests
-#     MOM6_ROOT=~/projects/MOM6 scripts/run_ci_container.sh --infra TIM --tests
+#     scripts/build_with_container.sh --infra TIM --tests
+#     MOM6_ROOT=~/projects/MOM6 scripts/build_with_container.sh --infra TIM --tests
 #
 # Swap a source the repo-wide way: export MOM6_ROOT, FMS_ROOT or TIM_ROOT (see
 # scripts/lib/build_dep.sh) and that tree is mounted at its own path and built, on
@@ -73,12 +73,12 @@
 #   CMAKE_BUILD_PARALLEL_LEVEL        Parallel jobs, when --parallel is not given
 #
 # Examples:
-#   scripts/run_ci_container.sh --infra TIM --tests             # pinned sources, TIM
+#   scripts/build_with_container.sh --infra TIM --tests             # pinned sources, TIM
 #   MOM6_ROOT=~/projects/MOM6 \
-#     scripts/run_ci_container.sh --infra TIM --tests           # your MOM6, as checked out
-#   scripts/run_ci_container.sh --infra FMS2 --tests \
+#     scripts/build_with_container.sh --infra TIM --tests           # your MOM6, as checked out
+#   scripts/build_with_container.sh --infra FMS2 --tests \
 #       --build_dir /tmp/turbo-ci/fms2                          # keep the clone clean
-#   scripts/run_ci_container.sh --shell                         # poke around inside
+#   scripts/build_with_container.sh --shell                         # poke around inside
 
 set -eo pipefail
 

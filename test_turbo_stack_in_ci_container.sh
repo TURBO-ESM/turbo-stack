@@ -7,7 +7,7 @@
 # image CI uses, so a CI failure can be reproduced locally without pushing a
 # branch.  Thin wrapper: it parses the common driver args, then hands off to
 # turbo_run_test_driver (scripts/lib/common.sh), which runs the real container
-# wrapper scripts/run_ci_container.sh once per backend in its own process and
+# wrapper scripts/build_with_container.sh once per backend in its own process and
 # prints a per-backend matrix/verdict.
 #
 # Its siblings run the same two stages on a host toolchain instead of in a
@@ -25,7 +25,7 @@
 # $TURBO_STACK_ROOT: each backend builds under $TURBO_BUILD_SYSTEM_TEST_DIR, which
 # is mounted into the container, and the artifacts are handed back to your uid
 # before each container exits.  They outlive the container, so
-# `scripts/run_ci_container.sh --shell` re-enters the same build tree and can
+# `scripts/build_with_container.sh --shell` re-enters the same build tree and can
 # re-run ctest with no rebuild.
 #
 # Options:
@@ -67,7 +67,7 @@ TURBO_JOBS="$(command -v nproc >/dev/null 2>&1 && nproc || echo 4)"
 turbo_parse_driver_args "$@"
 turbo_resolve_stack_root
 
-_runner="$TURBO_STACK_ROOT/scripts/run_ci_container.sh"
+_runner="$TURBO_STACK_ROOT/scripts/build_with_container.sh"
 
 # Container builds get their own artifact root, separate from the host-toolchain
 # drivers' $TMPDIR/turbo_build_system_test: the same build dir cannot be shared,

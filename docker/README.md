@@ -149,12 +149,12 @@ environment as the consumer workflow, against a checkout whose submodules are
 already initialized (the container fetches nothing):
 
 ```bash
-scripts/run_ci_container.sh --infra TIM --tests    # one backend, pinned sources
+scripts/build_with_container.sh --infra TIM --tests    # one backend, pinned sources
 MOM6_ROOT=~/projects/MOM6 \
-    scripts/run_ci_container.sh --infra TIM --tests  # build your MOM6, as checked out
+    scripts/build_with_container.sh --infra TIM --tests  # build your MOM6, as checked out
 ./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
 ./test_turbo_stack_in_ci_container.sh --only TIM   # one backend
-scripts/run_ci_container.sh --shell                # interactive shell, Spack env active
+scripts/build_with_container.sh --shell                # interactive shell, Spack env active
 ```
 
 Swapping a source works the same way it does everywhere else in the repo: export
@@ -178,7 +178,7 @@ covers the rest — `--image` to pin one (which also stops the default refresh),
 `--fix-ownership`.
 
 Artifacts live on the bind mount, so they outlive the container: after a failure,
-`scripts/run_ci_container.sh --shell` drops you into the same build tree, where
+`scripts/build_with_container.sh --shell` drops you into the same build tree, where
 `ctest --test-dir <dir>` re-runs the suite with no rebuild.
 
 The image sets `SPACK_ROOT` but deliberately does **not** activate the Spack
@@ -198,7 +198,7 @@ Two caveats, if you do it by hand:
 - **Build artifacts land in your checkout owned by root**, since the container
   runs as root against a bind mount. Pass `--build_dir` to keep them somewhere
   disposable, and hand them back with
-  `scripts/run_ci_container.sh --fix-ownership --build_dir DIR` (the scripts above
+  `scripts/build_with_container.sh --fix-ownership --build_dir DIR` (the scripts above
   do this themselves when a run ends, and repair a run that was killed or
   interrupted with the container left running).
 - **MPI oversubscription.** The pFUnit suites run `mpirun -np 4`
