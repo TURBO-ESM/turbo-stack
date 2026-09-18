@@ -42,8 +42,9 @@
 # instead; that difference is deliberate and costs nothing here, since the build
 # needs no privilege (it also makes the image's OMPI_ALLOW_RUN_AS_ROOT moot).
 # On a ROOTLESS engine --user is skipped: there container-root is already mapped to
-# your uid, and forcing --user would write files owned by an unusable subuid.  That
-# is about the rootless MODE, not about podman -- rootless docker behaves the same.
+# your uid, and forcing --user would instead map you to a subuid that owns nothing,
+# so the first write to a bind mount fails outright.  That is about the rootless
+# MODE, not about podman -- rootless docker maps uids the same way.
 # Artifacts live on the bind mount and outlive the container: a later --shell (or
 # another run) re-enters the same build tree, where `ctest --test-dir <dir>` re-runs
 # the suite with no rebuild.
@@ -269,16 +270,21 @@ fi
 # that at the source rather than repairing it afterwards.
 #
 # EXCEPT on a rootless engine, where the container's root is ALREADY mapped to your
-# uid: passing --user there maps you to a SUBUID instead, and artifacts come back
-# owned by neither you nor root -- removing them then needs `podman unshare` or
-# `nsenter`, strictly worse than the root-owned files this replaced.  So probe the
-# engine and skip --user.
+# uid.  Passing --user there maps you to a SUBUID (uid 1000 in the container ->
+# 100999 on the host, per /etc/subuid) which owns nothing, so the build does not
+# merely leave awkward files -- its first write to a bind mount fails with
+# "Permission denied" and the run dies.  So probe the engine and skip --user.
 #
 # Keep this even if the team standardizes on docker: rootless DOCKER
 # (dockerd-rootless-setuptool.sh; Docker Desktop on Linux) has the same uid mapping
 # as rootless podman.  The predicate is about the rootless mode, not the CLI.
-# Not exercised against a real rootless daemon -- reasoned from the uid mapping, so
-# if anyone ever finds subuid-owned artifacts, this is the thing to look at.
+#
+# Verified on rootless podman 4.9.3: predicate true; build --infra TIM --tests
+# exit 0, ctest 40/40, all 4068 artifacts owned by the invoking user and removable
+# without `podman unshare`; and Spack did NOT re-clone, because as container-root it
+# can read the cache baked into the image's /root (hence no HOME mount on this path).
+# The counterfactual was measured too: --user on podman -> `touch` on the mounted
+# build dir fails immediately.
 _engine_is_rootless() {
     local info
     info=$("$_engine" info 2>/dev/null) || return 1
