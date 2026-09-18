@@ -42,7 +42,8 @@
 # instead; that difference is deliberate and costs nothing here, since the build
 # needs no privilege (it also makes the image's OMPI_ALLOW_RUN_AS_ROOT moot).
 # On a ROOTLESS engine --user is skipped: there container-root is already mapped to
-# your uid, and forcing --user would write files owned by an unusable subuid.
+# your uid, and forcing --user would write files owned by an unusable subuid.  That
+# is about the rootless MODE, not about podman -- rootless docker behaves the same.
 # Artifacts live on the bind mount and outlive the container: a later --shell (or
 # another run) re-enters the same build tree, where `ctest --test-dir <dir>` re-runs
 # the suite with no rebuild.
@@ -267,10 +268,17 @@ fi
 # mount comes back root-owned and undeletable.  Running as the invoking uid avoids
 # that at the source rather than repairing it afterwards.
 #
-# EXCEPT on a rootless engine (rootless docker, rootless podman), where the
-# container's root is ALREADY mapped to your uid: passing --user there maps you to
-# a subuid instead, and the artifacts come back owned by something you cannot
-# delete without `podman unshare`.  So probe the engine and skip --user.
+# EXCEPT on a rootless engine, where the container's root is ALREADY mapped to your
+# uid: passing --user there maps you to a SUBUID instead, and artifacts come back
+# owned by neither you nor root -- removing them then needs `podman unshare` or
+# `nsenter`, strictly worse than the root-owned files this replaced.  So probe the
+# engine and skip --user.
+#
+# Keep this even if the team standardizes on docker: rootless DOCKER
+# (dockerd-rootless-setuptool.sh; Docker Desktop on Linux) has the same uid mapping
+# as rootless podman.  The predicate is about the rootless mode, not the CLI.
+# Not exercised against a real rootless daemon -- reasoned from the uid mapping, so
+# if anyone ever finds subuid-owned artifacts, this is the thing to look at.
 _engine_is_rootless() {
     local info
     info=$("$_engine" info 2>/dev/null) || return 1
