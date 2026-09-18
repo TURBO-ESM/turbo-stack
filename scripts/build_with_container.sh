@@ -36,13 +36,21 @@
 # checkout does.  For both backends in one go plus a matrix/verdict, use
 # ./test_turbo_stack_with_container.sh, which calls this once per backend.
 #
-# The container runs as root, like CI's job container, so what it writes to the
-# bind mounts lands root-owned; ownership is handed back to you when the run ends,
-# a failed build included.  A run that is killed outright, or interrupted in a way
-# that leaves the container going, is repaired by the next run or --fix-ownership.
+# The container runs as YOU (--user), not as root, so everything it writes to the
+# bind mounts is yours already -- no ownership repair step, and nothing left behind
+# that you cannot delete if a run is killed.  CI's job container runs as root
+# instead; that difference is deliberate and costs nothing here, since the build
+# needs no privilege (it also makes the image's OMPI_ALLOW_RUN_AS_ROOT moot).
+# On a ROOTLESS engine --user is skipped: there container-root is already mapped to
+# your uid, and forcing --user would write files owned by an unusable subuid.
 # Artifacts live on the bind mount and outlive the container: a later --shell (or
 # another run) re-enters the same build tree, where `ctest --test-dir <dir>` re-runs
 # the suite with no rebuild.
+#
+# Running as a non-root uid means Spack cannot read the package cache baked into the
+# image's /root (mode 700), and would re-clone it (~20k objects) every run.  So a
+# small host cache directory is mounted as HOME -- first run populates it, later runs
+# start instantly.  See TURBO_CI_HOME below.
 #
 # Options:
 #   --infra FMS2|TIM    Infrastructure backend (default: TIM).  One per run.
@@ -73,15 +81,15 @@
 #   --shell             Start an interactive shell in the container, Spack env
 #                       activated, instead of building.  Same mounts and
 #                       environment; for iterating on a failure.
-#   --fix-ownership     Hand the build artifacts back to you and exit.  Only needed
-#                       after a run that was killed, or interrupted with the
-#                       container left running; a run that ends does this itself.
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
 #   MOM6_ROOT / FMS_ROOT / TIM_ROOT   Build these trees instead of the submodules
 #   TURBO_CI_IMAGE                    Default image (overrides the built-in default)
 #   TURBO_CONTAINER_ENGINE            Container CLI (default: docker)
+#   TURBO_CI_HOME                     Host dir mounted as the container's HOME, to
+#                                     persist Spack's package cache across runs
+#                                     (default: ${XDG_CACHE_HOME:-~/.cache}/turbo-ci-home)
 #   CMAKE_BUILD_PARALLEL_LEVEL        Parallel jobs, when --parallel is not given
 #
 # Examples:
@@ -117,7 +125,6 @@ _engine="${TURBO_CONTAINER_ENGINE:-docker}"
 _pull=""
 [[ -n "${TURBO_CI_IMAGE:-}" ]] && _pull=false
 _shell=false
-_fix_ownership=false
 _args=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -126,7 +133,6 @@ while [[ $# -gt 0 ]]; do
         --pull)          _pull=true; shift ;;
         --no-pull)       _pull=false; shift ;;
         --shell)         _shell=true; shift ;;
-        --fix-ownership) _fix_ownership=true; shift ;;
         *)               _args+=("$1"); shift ;;
     esac
 done
@@ -249,39 +255,48 @@ if [[ -n "$TURBO_B_BUILD_DIR" ]]; then
     if [[ "$_build_dir" != "$TURBO_STACK_ROOT" && "$_build_dir" != "$TURBO_STACK_ROOT"/* ]]; then
         _mounts+=(-v "$_build_dir:$_build_dir")
     fi
-    _chown_targets=("$_build_dir")
+    _artifacts=("$_build_dir")
 else
     # CI's layout: both land inside the checkout (see build_turbo_stack.sh and
     # turbo_run_backend_builder for the defaults).
-    _chown_targets=("$TURBO_STACK_ROOT/build" "$TURBO_STACK_ROOT/deps")
+    _artifacts=("$TURBO_STACK_ROOT/build" "$TURBO_STACK_ROOT/deps")
 fi
 
-# --- ownership -----------------------------------------------------------------
-# The container writes as root, so bind-mounted artifacts come back root-owned.
-# Hand them back in a throwaway container on the way out.  The test is "is anything
-# here not mine?", not "did I just run?", so this also repairs a previous run that
-# never got to fire -- and costs nothing (no container at all) when there is
-# nothing to fix, as on a rootless engine.
+# --- run as you, not as root -------------------------------------------------
+# Rootful engines default to uid 0, so anything the container writes to a bind
+# mount comes back root-owned and undeletable.  Running as the invoking uid avoids
+# that at the source rather than repairing it afterwards.
 #
-# It runs once `docker run` has returned, which is the only moment bash can run a
-# trap: a signal arriving while a foreground command is in flight is held until
-# that command finishes.  Interrupting a run therefore does not reliably stop the
-# build -- the container can survive the signal and keep going (`docker ps`, then
-# `docker rm -f`) -- and ownership is repaired on the next run or --fix-ownership.
-_uidgid="$(id -u):$(id -g)"
-_chown_back() {
-    local rc=$?
-    [[ -n "$(find "${_chown_targets[@]}" ! -user "$(id -u)" -print -quit 2>/dev/null)" ]] || return $rc
-    echo "[ci-container] restoring ownership ($_uidgid) of: ${_chown_targets[*]}"
-    "$_engine" run --rm "${_mounts[@]}" "$_image" \
-        chown -R "$_uidgid" -- "${_chown_targets[@]}" >/dev/null 2>&1 || true
-    return $rc
+# EXCEPT on a rootless engine (rootless docker, rootless podman), where the
+# container's root is ALREADY mapped to your uid: passing --user there maps you to
+# a subuid instead, and the artifacts come back owned by something you cannot
+# delete without `podman unshare`.  So probe the engine and skip --user.
+_engine_is_rootless() {
+    local info
+    info=$("$_engine" info 2>/dev/null) || return 1
+    grep -qiE 'rootless"?[: ]+true|name=rootless' <<<"$info"
 }
 
-if [[ "$_fix_ownership" == true ]]; then
-    _ensure_image || exit 1
-    _chown_back
-    exit 0
+_user=()
+if _engine_is_rootless; then
+    echo "[ci-container] rootless $_engine -- running as container root, which maps to your uid"
+else
+    _user=(--user "$(id -u):$(id -g)")
+fi
+
+# A non-root uid cannot read the Spack package cache baked into the image's /root
+# (mode 700), so Spack re-clones its package repo (~20k objects) on every run.
+# Mount a persistent host dir as HOME: the first run populates it (~100 MB), later
+# runs start instantly.  HOME is set EXPLICITLY rather than left to a passwd lookup,
+# so the uid need not exist in the image's /etc/passwd -- usually it does not.
+_home_env=()
+if [[ ${#_user[@]} -gt 0 ]]; then
+    _ci_home="${TURBO_CI_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/turbo-ci-home}"
+    mkdir -p "$_ci_home"
+    _ci_home=$(cd -P -- "$_ci_home" && pwd)
+    _mounts+=(-v "$_ci_home:$_ci_home")
+    _home_env=(-e "HOME=$_ci_home")
+    _notes+=("$(printf '%-9s = %s' "home" "$_ci_home") (Spack package cache, persists between runs)")
 fi
 
 # --- preflight: the submodules the container consumes but cannot fetch ---------
@@ -290,7 +305,6 @@ fi
 # guard stands down for a component whose <NAME>_ROOT is set above.
 turbo_guard_builder_submodules 2
 _ensure_image || exit 1
-trap _chown_back EXIT INT TERM
 
 # --- environment ---------------------------------------------------------------
 # The two settings cmake-build.yaml puts on the job; everything else the build needs
@@ -344,6 +358,8 @@ fi
 _cmd=$(cat <<EOF
 set -eo pipefail
 
+mkdir -p "\$HOME"
+
 # Assert the prebaked env, as the workflow's first step does.  Without it,
 # spack_local_environment.sh's default --create-if-missing applies and a wrong or
 # stale image would not error -- it would silently start a ~1 h from-source
@@ -380,8 +396,8 @@ echo "[ci-container] image     = $_image"
 echo "[ci-container] checkout  = $TURBO_STACK_ROOT (same path inside the container)"
 for _n in "${_notes[@]}"; do echo "[ci-container] $_n"; done
 echo "[ci-container] jobs      = $_jobs"
-echo "[ci-container] artifacts = ${_chown_targets[*]} (root-owned until the run ends)"
+echo "[ci-container] artifacts = ${_artifacts[*]}"
 
-"$_engine" run --rm --init "${_tty[@]}" "${_mounts[@]}" "${_env[@]}" \
-    -w "$TURBO_STACK_ROOT" "$_image" \
+"$_engine" run --rm --init "${_user[@]}" "${_tty[@]}" "${_mounts[@]}" \
+    "${_env[@]}" "${_home_env[@]}" -w "$TURBO_STACK_ROOT" "$_image" \
     bash -c "$_cmd"

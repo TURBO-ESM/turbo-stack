@@ -29,8 +29,8 @@
 # them, and the matrix below then reports the component as (override).  Whatever
 # branch a tree is on is what gets built.  Nothing is written into
 # $TURBO_STACK_ROOT: each backend builds under $TURBO_BUILD_SYSTEM_TEST_DIR, which
-# is mounted into the container, and the artifacts are handed back to your uid
-# before each container exits.  They outlive the container, so
+# is mounted into the container.  The container runs as you, so those artifacts are
+# yours as they are written.  They outlive the container, so
 # `scripts/build_with_container.sh --shell` re-enters the same build tree and can
 # re-run ctest with no rebuild.
 #
@@ -47,8 +47,9 @@
 #   TURBO_CONTAINER_ENGINE       Container CLI (default: docker)
 #   TURBO_STACK_ROOT             turbo-stack clone (optional; self-located)
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Artifact root (default:
-#                                $TMPDIR/turbo_ci_container_test/<checkout dir name>,
-#                                so sibling worktrees never share a build dir)
+#                                $TMPDIR/turbo_ci_container_test/<checkout>-<hash>,
+#                                keyed on the checkout's full path, so no two
+#                                checkouts ever share a build dir)
 #   MOM6_ROOT / FMS_ROOT /       Build these trees instead of the submodules; each
 #   TIM_ROOT                     is mounted into every container.
 #
@@ -84,15 +85,12 @@ _runner="$TURBO_STACK_ROOT/scripts/build_with_container.sh"
 # turbo-stack is developed across several git worktrees, and cmake caches the source
 # dir it configured: two checkouts sharing one build dir is a hard error ("does not
 # match the source ... used to generate cache"), so key the default on the checkout.
-: "${TURBO_BUILD_SYSTEM_TEST_DIR:=${TMPDIR:-/tmp}/turbo_ci_container_test/$(basename -- "$TURBO_STACK_ROOT")}"
+# On the FULL path, not its basename: ~/work/turbo-stack and ~/review/turbo-stack
+# share a basename and would collide into exactly that error.  Name it for the
+# basename (readable) and disambiguate with a short hash of the whole path.
+_ckt=$(printf '%s' "$TURBO_STACK_ROOT" | (sha256sum 2>/dev/null || shasum -a 256) | cut -c1-8)
+: "${TURBO_BUILD_SYSTEM_TEST_DIR:=${TMPDIR:-/tmp}/turbo_ci_container_test/$(basename -- "$TURBO_STACK_ROOT")-$_ckt}"
 export TURBO_BUILD_SYSTEM_TEST_DIR
 echo "[ci-container] artifacts under $TURBO_BUILD_SYSTEM_TEST_DIR"
-
-# --clean's rm -rf runs here on the host, but the container writes as root.  A run
-# killed outright leaves root-owned dirs we cannot unlink, so repair them first --
-# --fix-ownership is a no-op when there is nothing to repair, which is the usual case.
-if [[ "${TURBO_CLEAN:-false}" == true && -d "$TURBO_BUILD_SYSTEM_TEST_DIR" ]]; then
-    bash "$_runner" --fix-ownership --build_dir "$TURBO_BUILD_SYSTEM_TEST_DIR"
-fi
 
 turbo_run_test_driver "$_runner"

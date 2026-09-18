@@ -167,15 +167,14 @@ forwarded: this image supplies pFUnit and AMReX from its Spack env, so an overri
 would have no effect.
 
 They handle both caveats below: artifacts default to
-`$TMPDIR/turbo_ci_container_test/<checkout>` — outside your clone, and keyed on the
-checkout so sibling worktrees never share a build dir — with their ownership handed
-back to you before the container exits, and the PRRTE oversubscribe policy is set.
+`$TMPDIR/turbo_ci_container_test/<checkout>-<hash>` — outside your clone, and keyed
+on the checkout's full path so no two checkouts share a build dir — they are written
+as your uid rather than root's, and the PRRTE oversubscribe policy is set.
 They also mirror the workflow's two guardrails: refuse an image with no prebaked
 `turbo_stack` env (which would otherwise silently start a ~1 h source build), and
 warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
 covers the rest — `--image` to pin one (which also stops the default refresh),
-`--pull` / `--no-pull` to force it either way, `--build_dir`,
-`--fix-ownership`.
+`--pull` / `--no-pull` to force it either way, `--build_dir`.
 
 Artifacts live on the bind mount, so they outlive the container: after a failure,
 `scripts/build_with_container.sh --shell` drops you into the same build tree, where
@@ -195,15 +194,15 @@ docker run --rm -it -v "$PWD:/work" -w /work \
 
 Two caveats, if you do it by hand:
 
-- **Build artifacts land in your checkout owned by root**, since the container
-  runs as root against a bind mount. Pass `--build_dir` to keep them somewhere
-  disposable, and hand them back with
-  `scripts/build_with_container.sh --fix-ownership --build_dir DIR` (the scripts above
-  do this themselves when a run ends, and repair a run that was killed or
-  interrupted with the container left running).
+- **Build artifacts land in your checkout owned by root**, since that recipe runs
+  as root against a bind mount, and you cannot delete them afterwards. Pass
+  `--build_dir` to keep them somewhere disposable, or add
+  `--user "$(id -u):$(id -g)" -e HOME=/tmp/h` to run as yourself — which is what
+  the scripts above do, so the problem never arises with them.
 - **MPI oversubscription.** The pFUnit suites run `mpirun -np 4`
   (`@test(npes=[1,2,4])`). On a machine with fewer than 4 slots, OpenMPI 5's
   PRRTE refuses to launch with "not enough slots"; export
   `PRTE_MCA_rmaps_default_mapping_policy=":oversubscribe"` (what the consumer
-  workflow does). Running as root is already handled — the image sets
-  `OMPI_ALLOW_RUN_AS_ROOT{,_CONFIRM}`, which OpenMPI 5 otherwise blocks.
+  workflow does). Running as root is handled too — the image sets
+  `OMPI_ALLOW_RUN_AS_ROOT{,_CONFIRM}`, which OpenMPI 5 otherwise blocks; running
+  as yourself makes that moot.
