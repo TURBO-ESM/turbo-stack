@@ -68,7 +68,7 @@ scripts/
 test_turbo_stack_locally.sh                   # local (spack)
 test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
-test_turbo_stack_in_ci_container.sh           # inside the CI container (reproduce CI locally)
+test_turbo_stack_with_container.sh           # inside the CI container (reproduce CI locally)
 ```
 
 ---
@@ -114,7 +114,7 @@ step. Prefer Spack to manage the whole toolchain? Use
 ./test_turbo_stack_locally.sh                  # local (spack)
 ./test_turbo_stack_with_system_toolchain.sh    # local (bring-your-own toolchain on PATH)
 ./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
-./test_turbo_stack_in_ci_container.sh          # inside the CI container (see below)
+./test_turbo_stack_with_container.sh          # inside the CI container (see below)
 ```
 
 Each runs the real single-backend builder once per backend (each in its own
@@ -136,7 +136,7 @@ turbo-stack, against the sources you point it at.
 scripts/build_with_container.sh --infra TIM --tests                     # pinned sources
 MOM6_ROOT=~/projects/MOM6 \
     scripts/build_with_container.sh --infra TIM --tests                 # your MOM6, as checked out
-./test_turbo_stack_in_ci_container.sh                               # both backends, matrix + verdict
+./test_turbo_stack_with_container.sh                               # both backends, matrix + verdict
 scripts/build_with_container.sh --shell                                 # interactive shell, Spack env active
 ```
 

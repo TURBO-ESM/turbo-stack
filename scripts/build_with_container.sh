@@ -22,7 +22,7 @@
 # whatever branch it happens to be checked out on.  Everything else comes from the
 # submodules, which the container does NOT fetch -- initialize them first, as CI's
 # checkout does.  For both backends in one go plus a matrix/verdict, use
-# ./test_turbo_stack_in_ci_container.sh, which calls this once per backend.
+# ./test_turbo_stack_with_container.sh, which calls this once per backend.
 #
 # The container runs as root, like CI's job container, so what it writes to the
 # bind mounts lands root-owned; ownership is handed back to you when the run ends,

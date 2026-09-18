@@ -33,7 +33,7 @@ Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the rea
 ```bash
 scripts/build_with_container.sh --infra TIM --tests                        # pinned sources, one backend
 MOM6_ROOT=~/MOM6 scripts/build_with_container.sh --infra TIM --tests       # your MOM6, as checked out
-./test_turbo_stack_in_ci_container.sh                                  # both backends, matrix + verdict
+./test_turbo_stack_with_container.sh                                  # both backends, matrix + verdict
 scripts/build_with_container.sh --shell                                    # interactive shell, Spack env active
 ```
 
@@ -85,7 +85,7 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 | Script | Role | How invoked |
 |---|---|---|
 | `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
-| `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_in_ci_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
+| `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
 | `scripts/build_local_with_spack_env.sh`, `build_local_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
 | `scripts/build_with_container.sh` | Wrapper — runs `build_local_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
@@ -250,7 +250,7 @@ re-run manually (`gh workflow run build-turbo-ci-container.yaml`) — see
 
 That same image doubles as a ready-made local build environment, so most of this
 lane can be run without pushing a branch: `scripts/build_with_container.sh --infra TIM
---tests` (one backend), `./test_turbo_stack_in_ci_container.sh` (both), `--shell`
+--tests` (one backend), `./test_turbo_stack_with_container.sh` (both), `--shell`
 to debug inside it, and `MOM6_ROOT`/`FMS_ROOT`/`TIM_ROOT` to build trees of your
 own instead of the pinned commits. Not a pixel-perfect replica — CI checks its MOM6 branch out
 fresh beside the workspace, where the local runner builds the tree you point it

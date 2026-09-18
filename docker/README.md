@@ -152,8 +152,8 @@ already initialized (the container fetches nothing):
 scripts/build_with_container.sh --infra TIM --tests    # one backend, pinned sources
 MOM6_ROOT=~/projects/MOM6 \
     scripts/build_with_container.sh --infra TIM --tests  # build your MOM6, as checked out
-./test_turbo_stack_in_ci_container.sh              # both backends, matrix + verdict
-./test_turbo_stack_in_ci_container.sh --only TIM   # one backend
+./test_turbo_stack_with_container.sh              # both backends, matrix + verdict
+./test_turbo_stack_with_container.sh --only TIM   # one backend
 scripts/build_with_container.sh --shell                # interactive shell, Spack env active
 ```
 

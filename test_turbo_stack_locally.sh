@@ -9,7 +9,7 @@
 # per backend -- and prints a per-backend matrix/verdict.  Its siblings,
 # test_turbo_stack_on_derecho.sh (Lmod modules) and test_turbo_stack_with_system_toolchain.sh
 # (bring-your-own toolchain on PATH), are identical except for their toolchain and builder;
-# test_turbo_stack_in_ci_container.sh runs this same spack flavor inside the CI container.  See
+# test_turbo_stack_with_container.sh runs this same spack flavor inside the CI container.  See
 # docs/build_test_orchestration_prompt.md and docs/dependency_tiers_prompt.md.
 #
 # Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules; the builder

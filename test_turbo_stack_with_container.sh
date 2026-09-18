@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_turbo_stack_in_ci_container.sh
+# test_turbo_stack_with_container.sh
 #
 # End-to-end test driver (CI container).  Runs what
 # .github/workflows/turbo-cmake-container-tests.yaml runs -- the CMake build plus
