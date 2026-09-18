@@ -8,13 +8,18 @@
 > full in [`scripts/README.md`](../scripts/README.md).
 
 The two build systems are independent — different drivers, different dependency
-handling, different output locations — so they do not interfere with each other.
-Both are exercised in CI, in separate lanes:
+handling, different output locations — so they do not interfere with each other,
+and both are exercised in CI, in separate lanes:
 
-| Lane | Workflows |
-|---|---|
-| legacy (this document) | `build-tests.yaml`, `build-tests-iturbo.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` |
-| CMake | `turbo-cmake-container-tests.yaml` (via the reusable `cmake-build.yaml`) |
+| | legacy (this document) | CMake |
+|---|---|---|
+| Driver | `./build.sh` | the `scripts/` orchestrators ([README](../README.md)) |
+| MOM6 executable | `bin/<compiler>/MOM6_using_<infra>/MOM6/MOM6` | `build/default/mom6_build/config_src/drivers/solo_driver/MOM6` |
+| CI workflows | `build-tests.yaml`, `build-tests-iturbo.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | `turbo-cmake-container-tests.yaml` (via the reusable `cmake-build.yaml`) |
+
+The legacy path varies with `--compiler` and `--infra`; the CMake one moves as a
+whole with `--build_dir` (see
+[Where the build lands](../README.md#where-the-build-lands)).
 
 Everything below is the build documentation as it stood before the CMake build
 system landed, preserved so that existing instructions, job scripts and habits
