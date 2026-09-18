@@ -69,10 +69,12 @@ digraph build_test_orchestration {
     core -> s_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
     core -> d_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
 
-    // Overrides (default = pinned submodule).  Only the co-developed repos
-    // (FMS/TIM, Tier 2; MOM6, Tier 3) have a *_ROOT source swap.
+    // Overrides (default = pinned submodule).  A *_ROOT is read only where that
+    // dep is built from submodule: FMS/TIM (Tier 2) everywhere, MOM6 (Tier 3) at
+    // Stage 2, and AMReX/pFUnit (Tier 1.5) only in the two from-source builders
+    // -- the spack flavor takes those prebuilt and never consults their roots.
     hotswap [shape=note, fillcolor="#fff2cc", style=filled, fontsize=10,
-             label="Overrides (default = pinned submodule):\n*_ROOT points at a dev tree or a separate clone"];
+             label="Overrides (default = pinned submodule):\n*_ROOT points at a dev tree or a separate clone.\nTier 1.5 (AMREX_ROOT / PFUNIT_ROOT): the two from-source\nbuilders only -- the spack flavor takes those prebuilt."];
     hotswap -> l_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
     hotswap -> s_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];
     hotswap -> d_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT"];

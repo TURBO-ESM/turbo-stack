@@ -111,7 +111,10 @@ them.
 > a build directory — CMake caches them. To change compiler or flags in a build
 > directory you have already configured, rebuild with `--clean`.
 
-> We do provide ways to get these via a Spack environment (below). And via a container image (coming soon!).
+> You do not have to assemble tier 1 by hand. A [Spack environment](#getting-tiers-1-and-15-from-spack)
+> supplies it, and so does the `turbo-ci` container image used by CI, which ships tiers 1 and 1.5
+> prebuilt — today you pull it and drive the build yourself, as
+> [`docker/README.md`](docker/README.md) shows. Scripts that wrap that in one command are on the way.
 
 ### Tier 1.5 — Prerequisites, but we supply the source via a submodule
 
@@ -263,9 +266,16 @@ export FMS_ROOT=/path/to/your/FMS
 scripts/build_local_with_spack_env.sh --infra TIM
 ```
 
-`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones; `AMREX_ROOT`
-and `PFUNIT_ROOT` work the same way. What gets *reported* differs between the
-two entry points:
+`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and they work
+with every entry point. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way, but
+only where the builder actually builds tier 1.5 from submodule — the from-source
+builders (`build_local_with_system_toolchain.sh`, `build_on_derecho.sh`, and
+their testers). The Spack flavor shown above takes AMReX and pFUnit prebuilt
+from the Spack environment and never consults those two variables; to swap them
+there, put your own install prefix on `CMAKE_PREFIX_PATH` as described under
+[tier 1.5](#tier-15--prerequisites-but-we-supply-the-source-via-a-submodule).
+
+What gets *reported* differs between the two entry points:
 
 - the **testers** print the testing matrix, naming turbo-stack, MOM6, TIM and
   FMS and marking each `(override)` or `(submodule)`, so the log says exactly

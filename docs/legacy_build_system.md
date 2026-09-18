@@ -115,8 +115,14 @@ the path to the executable differs. For a legacy build:
 
 ```bash
 cd examples/double_gyre/
-../../bin/intel/MOM6_using_FMS2/MOM6/MOM6
+../../bin/intel/MOM6_using_TIM/MOM6/MOM6
 ```
+
+The path encodes what you built: `bin/<compiler>/MOM6_using_<infra>/MOM6/MOM6`.
+The command above is what a default `./build.sh` produces (`intel`, `TIM`); a
+`./build.sh --compiler gnu --infra FMS2` lands at
+`bin/gnu/MOM6_using_FMS2/MOM6/MOM6` instead. The `job-*.sh` scripts in each
+example set `COMPILER` and `INFRA` at the top for the same reason.
 
 See the [top-level README](../README.md) for the equivalent CMake paths and for
 the `make archive` / `make clean` workflow, which is build-system independent.

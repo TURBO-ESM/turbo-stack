@@ -37,9 +37,11 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 - `scripts/lib/common.sh` is the shared-helpers substrate used by all scripts (NOT a flow step): show
   it as a side note, high level — "root self-location · arg parsing · `turbo_build_*` wrappers · the
   per-backend loop + verdict (`turbo_run_test_driver`)".
-- Source overrides default to the pinned submodule: `*_ROOT` points at a local dev tree of a
-  co-developed repo (MOM6/FMS/TIM).  `FMS_ROOT`/`TIM_ROOT` feed each builder's Stage-1 dep builds;
-  `MOM6_ROOT` feeds Stage-2's CMake.
+- Source overrides default to the pinned submodule: `*_ROOT` points at a local dev tree or a separate
+  clone.  `FMS_ROOT`/`TIM_ROOT` feed each builder's Stage-1 dep builds; `MOM6_ROOT` feeds Stage-2's
+  CMake.  `AMREX_ROOT`/`PFUNIT_ROOT` exist too, but are read only by the two from-source builders,
+  which build Tier 1.5 from submodule — state that in the note rather than adding arrows for them:
+  the spack flavor takes AMReX/pFUnit prebuilt and never consults those roots.
 
 ### Visual language
 - Test-driver ellipses `#fffacd`.
