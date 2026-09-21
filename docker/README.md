@@ -18,12 +18,13 @@ ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
 | `gcc-openmpi-<short-sha>` | Immutable — always published; pin this to reproduce or bisect an image regression |
 | `buildcache` | BuildKit layer cache, not a runnable image |
 
-## The two workflows
+## The workflows
 
 | Workflow | Role |
 |---|---|
 | `.github/workflows/build-turbo-ci-container.yaml` | **Producer** — builds the image and pushes it to GHCR. Manual only (`workflow_dispatch`), so a merge never waits on a 1-hour build. |
 | `.github/workflows/turbo-cmake-container-tests.yaml` | **Consumer** — runs `scripts/build_local_with_spack_env.sh --infra {TIM,FMS2} --tests` inside the image, on pushes to `main` and on PRs. |
+| `.github/workflows/container-driver-scripts.yaml` | **Script check** — runs `./test_turbo_stack_with_container.sh` on the runner *host*, so the wrapper that pulls, mounts and enters the image is itself under test. The consumer above enters the image via `container:`, which bypasses that wrapper entirely. Path-filtered to the scripts it covers. |
 
 This is additive to the legacy `build-tests.yaml` / `unit-tests.yaml`, which
 exercise the **mkmf** `build.sh` path in the `ncarcisl/cisldev-*` containers.

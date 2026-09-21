@@ -221,6 +221,7 @@ separate lanes, in different containers:
 |---|---|---|
 | `build-tests*.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | legacy mkmf `./build.sh` | `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`, activated via `/container/config_env.sh` |
 | `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
+| `container-driver-scripts.yaml` | **CMake, via the host-side wrapper** (`./test_turbo_stack_with_container.sh`) | same image, but pulled and entered by `scripts/build_with_container.sh` on the runner host rather than by `container:` |
 
 The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
 libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
@@ -241,6 +242,14 @@ different trigger or failure policy without touching the other. The
 so the pFUnit suite has to run against it too — possible at all only because
 MOM6's CMake build system now lives on both branches, the same CMakeLists tree
 having been ported to `dev/turbo-debug`.
+
+`container-driver-scripts.yaml` is a different question from either group: it is
+the only lane that executes `scripts/build_with_container.sh`. The four cells
+above declare `container:` on the job, so GitHub pulls the image and the wrapper
+never runs — its mounts, its rootless/`--user` decision, its `HOME` cache and its
+preflight guards would otherwise be covered by nothing. It runs the driver with no
+flags (FMS2 then TIM, pinned submodules), and is path-filtered to the scripts it
+covers so it does not add ~20 min to every PR.
 
 The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
 (`turbo_stack`) so CI does not rebuild dependencies each run. It is **private**,

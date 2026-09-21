@@ -1,0 +1,133 @@
+# Exercise the HOST-SIDE container scripts -- the ones nothing else in CI runs.
+#
+# The sibling lane (turbo-cmake-container-tests.yaml -> cmake-build.yaml) tests the
+# same image and the same builder, but it gets into the container by declaring
+# `container:` on the job: GitHub pulls the image, and scripts/build_with_container.sh
+# never executes.  So the ~400 lines that stand between a developer and that build --
+# mount construction, the rootless/--user decision, the HOME cache that keeps Spack
+# from re-cloning its package repo, the image refresh, the submodule preflight, and
+# the forwarding of the builder vocabulary -- have no coverage at all.  A change
+# there can break every local run while every box on the PR stays green.
+#
+# This lane closes that gap by running what a developer actually types:
+#
+#     ./test_turbo_stack_with_container.sh        # FMS2, then TIM, then a verdict
+#
+# with nothing configured, so the driver's own defaults (artifact root, job count,
+# image tag) are part of what is under test.
+#
+# What it does NOT cover, on purpose:
+#
+#   * The rootless branch of build_with_container.sh.  Hosted runners give us
+#     rootful docker, which takes the --user path; the rootless path was verified by
+#     hand on podman 4.9.3 (see the comment above _engine_is_rootless).  Covering it
+#     here would mean installing podman on the runner to test a predicate, not a build.
+#   * MOM6 dev/turbo-debug.  This lane asks "do the scripts work", not "does MOM6's
+#     tip still build" -- that is the sibling lane's question, and it answers it
+#     against both MOM6 sources already.  Pinned submodules only, so a red box here
+#     means the scripts broke and nothing else.
+#
+# Fork PRs will fail at the login step: the image is private, and a fork's
+# GITHUB_TOKEN cannot read this repo's packages.  Same limitation as the sibling
+# lane; it is a property of the package being private, not of this workflow.
+name: turbo-stack container scripts (host)
+
+# The two `paths` lists are duplicated on purpose -- GitHub Actions does not
+# support YAML anchors, so there is no way to write the list once.  Keep them
+# in sync.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "test_turbo_stack_with_container.sh"
+      - "scripts/build_with_container.sh"
+      - "scripts/build_local_with_spack_env.sh"
+      - "scripts/build_turbo_stack.sh"
+      - "scripts/lib/**"
+      - ".github/workflows/container-driver-scripts.yaml"
+  pull_request:
+    branches: ["main"]
+    # Two full backend builds is ~20 min that the sibling lane has already spent on
+    # the same commit, so charge it only to the PRs that can actually invalidate it:
+    # the driver, the wrapper, the builder it calls inside, and the shared library.
+    # Do NOT make this a required check while the filter is here -- a required check
+    # that never gets queued blocks the merge button forever.
+    paths:
+      - "test_turbo_stack_with_container.sh"
+      - "scripts/build_with_container.sh"
+      - "scripts/build_local_with_spack_env.sh"
+      - "scripts/build_turbo_stack.sh"
+      - "scripts/lib/**"
+      - ".github/workflows/container-driver-scripts.yaml"
+
+permissions:
+  contents: read
+  packages: read
+
+# A 20-minute lane should not keep running for a commit that has been superseded.
+concurrency:
+  group: container-scripts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  driver:
+    name: test_turbo_stack_with_container.sh (FMS2 + TIM)
+    runs-on: ubuntu-latest
+    # The two backends run sequentially in one job, because that is how the driver
+    # runs them and the second one reusing the first one's Spack cache is part of
+    # what we want to see work. ~25 min when healthy; the cap is for a hung MPI test.
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
+    steps:
+      # Recursive, like the sibling lane: the container fetches nothing, and the
+      # wrapper's preflight refuses to start without submodules/MOM6 (plus its own
+      # nested pkg/CVMix-src, pkg/GSW-Fortran), submodules/MARBL and the backend.
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      # The wrapper pulls the image itself -- the default tag is mutable, so it
+      # refreshes on every run. It cannot supply credentials, by design: logging in
+      # is a one-time host setup step (docker/README.md), not something a build
+      # script should do. So the host is logged in first, here, exactly as a
+      # developer's machine is.
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Two sequential builds plus a multi-GB image is the one resource this lane
+      # can plausibly run out of, and the failure it produces ("no space left on
+      # device", from inside a container, mid-compile) does not name its own cause.
+      # The rootless grep is the same text build_with_container.sh keys its --user
+      # decision on, so the log says which branch this run took.
+      - name: Runner facts
+        run: |
+          docker info 2>/dev/null | grep -iE 'server version|rootless' || true
+          echo "nproc: $(nproc)"
+          df -h /
+
+      # No env, no flags: the point is that the defaults work. The driver is
+      # fail-soft per backend (it records each rc, prints a verdict table, and
+      # exits non-zero if either failed), so a broken FMS2 still tells us about TIM.
+      #
+      # tee'd because the driver's own per-backend logs land under its artifact
+      # root, which is a temp path this job does not otherwise name -- and the
+      # driver already streams both of them to stdout, so this one file is a
+      # superset of what it wrote there.
+      - name: Run the container driver
+        run: ./test_turbo_stack_with_container.sh 2>&1 | tee container-driver.log
+
+      - name: Upload the driver log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-driver-log
+          path: container-driver.log
+          if-no-files-found: warn
