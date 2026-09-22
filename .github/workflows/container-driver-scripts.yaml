@@ -66,9 +66,11 @@ permissions:
   packages: read
 
 # A 20-minute lane should not keep running for a commit that has been superseded.
+# PRs only: on `main` a cancelled run would leave the branch's status cancelled
+# whenever two merges land close together, which is worse than paying for both.
 concurrency:
   group: container-scripts-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   driver:
