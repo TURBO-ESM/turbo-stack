@@ -13,7 +13,7 @@ To create a new directory of tests, create a new directory in `tests` (for examp
 Once you have your test file (`test_subroutine.pf` for example), add the following line to the `CMakeLists.txt`:
 
 ```cmake
-add_mom_test(test_module PFUNIT_FILE test_module.pf)
+add_mom_test(test_module.pf LINK_LIBRARIES MOM6::infra)
 ```
 
 This creates a cmake target called test_module and adds the pfunit file `test_module.pf` to the target binary.
@@ -23,20 +23,21 @@ Lastly, you will need to add the directory to the main CMakeLists.txt file in th
 To add another unit test file, simply add the appropriate file (for example, `test_module.pf`) to the needed directory.  Then in the `CMakeLists.txt` file, add the following line below the other `add_mom_test` calls:
 
 ```cmake
-add_mom_test(test_module PFUNIT_FILE test_module.pf)
+add_mom_test(test_module.pf LINK_LIBRARIES MOM6::infra)
 ```
 
 ### Runtime file requirements
 CMake provides the utility to add runtime files to the test directory.  For example, tests requiring `mpp` require a Fortran namelist file named `input.nml` residing in the same directory as the test binary.
 
-To add a small file to the test runtime directory, add the source file needed (for example, `input.nl` ) to the `tests/config` directory.
+To add a small file to the test runtime directory, add the source file needed (for example, `input.nml`) to the `tests/config` directory.
 
-Then in the CMakeLists.txt for that test, add the following line:
+Then in the CMakeLists.txt for that test, call the helper (defined in
+`cmake/add_mom_test.cmake`) that copies `config/input.nml` into the test's build directory:
 ```cmake
-configure_file(${CONFIG_FILES}/input.nml input.nml COPYONLY)
+copy_dummy_fms_input_nml()
 ```
 
-This will copy the file from the `config` directory to the build directory where the test resides making it available at runtime to the tests.
+This copies the file from the `config` directory to the build directory where the test resides, making it available at runtime to the tests. For other runtime files, `configure_file(${CONFIG_FILES}/<file> <file> COPYONLY)` still works.
 
 > [!NOTE]
 > While transitioning to AMReX, the backend **REQUIRES** an `input.nml` in the same directory as the target binary.
@@ -94,7 +95,7 @@ module subroutine_tests
 
   @testCase()
   type, extends(MOM_MPI_test_case) :: module_under_test_case
-  end type module_under_test
+  end type module_under_test_case
 
 contains
 ...
@@ -109,8 +110,8 @@ contains
 
   @test(npes=[4])
   subroutine test_functionality(this)
-    class (MOM_comms_infra_test_case), intent(inout) :: this
-    ! module level parameters for test and calls to appropiate module APIs.
+    class (module_under_test_case), intent(inout) :: this
+    ! module level parameters for test and calls to appropriate module APIs.
 
     ! @assert* calls
   end subroutine test_functionality

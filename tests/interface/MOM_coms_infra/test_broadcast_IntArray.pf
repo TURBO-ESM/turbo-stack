@@ -26,10 +26,15 @@ contains
  
     rank = this%getProcessRank()
    
-    !------------------------------- 
+    !-------------------------------
     ! allocate and initialize memory
     !-------------------------------
-    call actual_c%alloc(actual,lb=[0,0,-1],ub=[len1,len2,len3])
+    ! Allocate, then view, as two steps -- see the note in
+    ! test_broadcast_RealArray.pf: the one-step `alloc(actual,lb=,ub=)` does
+    ! not exist on dev/turbo-debug, where the pointer-associating overloads
+    ! moved into a separate `allocView` generic.
+    call actual_c%allocInt(lb=[0,0,-1],ub=[len1,len2,len3])
+    call actual_c%view(actual)
     allocate(expected(0:len1,0:len2,-1:len3))
    
     actual = rank

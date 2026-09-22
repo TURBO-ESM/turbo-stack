@@ -1,0 +1,32 @@
+module test_any_across_pes
+  use pfunit
+  use MOM_coms_infra, only : any_across_PEs
+  use MOM_test_case
+  use iso_fortran_env, only : int32
+  implicit none
+
+  @testCase()
+  type, extends(MOM_MPI_test_case) :: test_case_any_across_pes
+  end type test_case_any_across_pes
+
+contains
+
+  @test(npes=[4])
+  subroutine test_AnyAcrossPEs(this)
+    class (test_case_any_across_pes), intent(inout) :: this
+    integer(kind=int32) :: comm_rank
+    logical :: actual_global_any
+
+    comm_rank = this%getProcessRank()
+
+    ! Test where we expect at least one rank to be true
+    actual_global_any = any_across_PEs(modulo(comm_rank,2) == 0)
+    @assertTrue(actual_global_any)
+
+    ! Test where we expect all ranks to be false
+    actual_global_any = any_across_PEs(comm_rank == -1)
+    @assertFalse(actual_global_any)
+
+  end subroutine test_AnyAcrossPEs
+
+end module test_any_across_pes

@@ -1,0 +1,159 @@
+# Reusable: build + ctest turbo-stack against one MOM6 source, both infra backends.
+#
+# Not triggered directly -- callers invoke it once per MOM6 source they want
+# tested (see turbo-cmake-container-tests.yaml). Each call renders as its own
+# node in the run graph, so a failure names which MOM6 source broke without
+# anyone decoding matrix cell labels.
+#
+# Runs scripts/build_local_with_spack_env.sh inside ghcr.io/.../turbo-ci (built
+# by build-turbo-ci-container.yaml). The image already has SPACK_ROOT set and the
+# "turbo_stack" Spack env installed, so the script activates that env (no
+# reinstall), builds only the selected Tier-2 backend from its submodule, then
+# cmake-configures/builds turbo-stack and runs ctest (unit tests are opt-in via
+# --tests; ctest uses --no-tests=error).
+name: turbo-stack CMake build (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      mom6_ref:
+        description: >-
+          MOM6 ref to build (branch/tag/SHA). Empty means the commit turbo-stack
+          pins as a submodule.
+        required: false
+        default: ""
+        type: string
+      mom6_label:
+        description: Human-readable name for the MOM6 source, used in job names.
+        required: false
+        default: "pinned submodule"
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-test:
+    name: build+test (${{ matrix.infra }})
+    runs-on: ubuntu-latest
+    # ~9 min when healthy. A deadlocked MPI test would otherwise hang for the 6 h
+    # default.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        infra: [TIM, FMS2]
+    container:
+      # Must match `env.IMAGE` in build-turbo-ci-container.yaml. Hard-coded rather
+      # than derived: GHCR requires an all-lowercase path (the repo is
+      # TURBO-ESM/turbo-stack), and the `env` context is not available here.
+      # `gcc-openmpi` is a mutable tag -- a producer rebuild changes what CI
+      # tests. Pin a `gcc-openmpi-<sha>` tag to bisect an image regression.
+      image: ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      # Hosted ubuntu-latest runners have ~4 cores; parallelize every cmake --build
+      # in the pipeline (FMS/TIM deps + turbo-stack) without per-call flags.
+      CMAKE_BUILD_PARALLEL_LEVEL: "4"
+      # The pFUnit suites launch `mpirun -np 4` (@test(npes=[1,2,4])), but PRRTE
+      # (OpenMPI 5) sees only ~2 slots (physical cores) on the hosted runner and
+      # refuses to launch 4 procs ("not enough slots"). Let it oversubscribe so
+      # the MPI tests run in CI. This is a runner constraint, so it lives here
+      # rather than baked into the image (harmless on many-core machines too).
+      PRTE_MCA_rmaps_default_mapping_policy: ":oversubscribe"
+      # For the job-summary line below. Passed through the environment rather
+      # than interpolated into the shell string directly: ${{ }} expands before
+      # the shell parses the line, so a value with shell metacharacters would be
+      # executed rather than quoted.
+      MOM6_REF: ${{ inputs.mom6_ref }}
+    steps:
+      # Fail fast, BEFORE the (heavy, recursive) checkout. build_local_with_spack_env.sh
+      # calls spack_local_environment.sh without --no-create, so its default
+      # --create-if-missing applies: a missing env would NOT error, it would start a
+      # full ~1 h from-source dependency build and die on this job's timeout with no
+      # explanation. Assert the prebaked env up front instead.
+      - name: Assert the prebaked Spack env is present
+        run: |
+          . "$SPACK_ROOT/share/spack/setup-env.sh"
+          spack env list | grep -qw turbo_stack || {
+            echo "::error::Image is missing the 'turbo_stack' Spack env -- rebuild it with build-turbo-ci-container.yaml"
+            exit 1
+          }
+
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v7
+        with:
+          # 'recursive' is the simple, correct choice. It also pulls AMReX/pFUnit,
+          # which the Spack flavor does NOT use (Spack provides them) -- harmless
+          # but heavy. Future optimization: submodules:false + a targeted
+          #   git submodule update --init --recursive -- \
+          #     submodules/MOM6 submodules/MARBL submodules/infra/FMS2 submodules/infra/TIM
+          submodules: recursive
+
+      # '*' rather than an enumerated list: the ownership check applies per
+      # repository, and a recursive checkout is 16 of them -- the workspace, the
+      # seven submodules, their nested ones four levels down (pFUnit ->
+      # fArgParse -> gFTL-shared -> gFTL), plus mom6-ref and its two.
+      # safe.directory matches exact paths or '*' and has no prefix glob, so a
+      # list silently stops covering a submodule the day someone adds one.
+      # Nothing is traded away for the convenience: the check guards against
+      # another user on the same machine planting a repo, an ephemeral
+      # single-tenant job container has none, and the --global config this
+      # writes lives in the container root's HOME and dies with the job.
+      - name: Allow git operations on the checkout (root container)
+        run: git config --global --add safe.directory '*'
+
+      # The image bakes spack.yaml at image-build time and the producer is manual, so
+      # the env CI runs against can silently lag the repo's spec (see docker/README.md).
+      # Compare the copy the image kept (Dockerfile.turbo-ci COPYs it to this path)
+      # against the checkout, and surface a PR annotation when they differ.
+      # Warn, not fail: the producer/consumer decoupling is deliberate, and the CMake
+      # lane does not need every spec in spack.yaml to be present.
+      - name: Warn if the image's Spack env is stale vs the checkout
+        run: |
+          if ! diff -q /opt/turbo-spack/spack.yaml spack/spack.yaml >/dev/null; then
+            echo "::warning::Baked spack.yaml differs from the checkout -- re-run build-turbo-ci-container.yaml to refresh the image"
+            diff -u /opt/turbo-spack/spack.yaml spack/spack.yaml || true
+          fi
+
+      # Selecting the MOM6 source is orchestration, so it happens here rather than
+      # inside the build scripts, which know only MOM6_ROOT. Checked out beside
+      # the workspace rather than into submodules/MOM6, so the submodule checkout
+      # stays on the pinned commit and the two calls cannot interfere.
+      #
+      # TURBO-ESM/MOM6 is public, so the default GITHUB_TOKEN suffices -- no PAT.
+      # `ref` is a typed action input rather than a shell argument, so a value
+      # starting with '-' cannot be read as an option, and an unresolvable ref
+      # fails the step instead of silently falling back to something stale.
+      - name: Check out MOM6 ${{ inputs.mom6_label }}
+        if: inputs.mom6_ref != ''
+        uses: actions/checkout@v7
+        with:
+          repository: TURBO-ESM/MOM6
+          ref: ${{ inputs.mom6_ref }}
+          path: mom6-ref
+          # MOM6 carries its own submodules (pkg/CVMix-src, pkg/GSW-Fortran) and
+          # its top-level CMakeLists hard-fails without them.
+          submodules: recursive
+          # Nothing here needs history; this is a build input, not a repo we work in.
+          fetch-depth: 1
+
+      # The resolved SHA goes to the job summary because a branch tip is
+      # ephemeral: "which MOM6 did this test?" has to be answerable from the run
+      # page, not only from log text that ages out with the run.
+      - name: Point MOM6_ROOT at it
+        if: inputs.mom6_ref != ''
+        run: |
+          echo "MOM6_ROOT=$GITHUB_WORKSPACE/mom6-ref" >> "$GITHUB_ENV"
+          echo "MOM6 \`$MOM6_REF\` @ \`$(git -C "$GITHUB_WORKSPACE/mom6-ref" rev-parse HEAD)\`" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build + test turbo-stack (${{ matrix.infra }}, MOM6 ${{ inputs.mom6_label }})
+        # SPACK_ROOT comes from the image (ENV). This one command runs the whole
+        # Spack-flavor pipeline: activate env -> build backend -> cmake -> ctest.
+        # Identical for every call: MOM6_ROOT (set above, or unset for the pinned
+        # call) is what selects the MOM6 source.
+        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests

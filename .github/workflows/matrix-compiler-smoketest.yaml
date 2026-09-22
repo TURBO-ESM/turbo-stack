@@ -40,7 +40,7 @@ jobs:
         shell: bash -elo pipefail {0}
 
     container:
-      image: ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
+      image: docker.io/ncarcisl/cisldev-${{ matrix.arch }}-almalinux9-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -86,4 +86,4 @@ jobs:
         run: |
           echo "Running double gyre test..."
           cd ./examples/double_gyre
-          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6/MOM6
+          mpiexec -n 2 ${{ matrix.extra_mpiexec_args }} ../../bin/${COMPILER_FAMILY}/MOM6_using_TIM/MOM6/MOM6

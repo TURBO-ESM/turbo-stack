@@ -1,0 +1,79 @@
+# Consumer: exercise the NEW CMake build system against each MOM6 source we care
+# about. All the build logic lives once in cmake-build.yaml; this file only says
+# *which* MOM6 sources get tested.
+#
+# Two calls, deliberately separate jobs rather than a second matrix axis:
+#
+#     MOM6 pinned submodule ─┬── build+test (TIM)
+#                            └── build+test (FMS2)
+#
+#     MOM6 dev/turbo-debug ──┬── build+test (TIM)
+#                            └── build+test (FMS2)
+#
+# They mean different things -- one is a deterministic gate on the commit
+# turbo-stack pins, the other tracks the tip of a branch in another repository
+# that moves independently of this one. Rendering them as one 4-cell matrix
+# implies they are the same kind of check. As separate nodes in the run graph, a
+# red box names which MOM6 source broke, and either group can later be given a
+# different trigger or failure policy without touching the other.
+#
+# No edge between them: they share nothing and neither gates the other.
+#
+# Reproducible locally without pushing a branch. The pinned group is just the
+# default; for the other, either move the submodule onto the branch, or point
+# MOM6_ROOT at a separate clone:
+#
+#     ./test_turbo_stack_locally.sh                        # the pinned group
+#
+#     git -C submodules/MOM6 checkout dev/turbo-debug      # simplest
+#     ./test_turbo_stack_locally.sh
+#     git -C submodules/MOM6 checkout -                    # put it back
+#
+#     git clone --depth 1 -b dev/turbo-debug \
+#         https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
+#     git -C /tmp/mom6-debug submodule update --init --recursive --depth 1
+#     MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_locally.sh
+name: turbo-stack CMake build (container)
+
+# Only main + PRs. The sibling workflows (build-tests.yaml, unit-tests.yaml) also
+# list the ci-tests/container-ci branches; that is not needed here -- to exercise
+# this workflow on a feature branch, dispatch it against that branch and the run
+# uses that branch's file:
+#     gh workflow run turbo-cmake-container-tests.yaml --ref <your-branch>
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  # The commit turbo-stack pins as a submodule. Deterministic: it only changes
+  # when someone moves the pointer in a reviewable commit.
+  pinned:
+    name: MOM6 pinned submodule
+    uses: ./.github/workflows/cmake-build.yaml
+    with:
+      mom6_ref: ""
+      mom6_label: pinned submodule
+
+  # The tip of MOM6's dev/turbo-debug, which is what issue #251 asked for: TURBO
+  # development happens on that branch, so the pFUnit suite has to run against it
+  # and not only against the pin.
+  #
+  # Blocking, deliberately. This couples turbo-stack's PR status to a branch in
+  # another repository -- a push to MOM6 can redden a turbo-stack PR that had
+  # nothing to do with it. Accepted for now: the two are co-developed by the same
+  # team and catching integration breakage immediately is worth more than an
+  # always-green gate. If that stops being true, `continue-on-error: true` here
+  # downgrades it to a warning without touching anything else.
+  turbo-debug:
+    name: MOM6 dev/turbo-debug
+    uses: ./.github/workflows/cmake-build.yaml
+    with:
+      mom6_ref: dev/turbo-debug
+      mom6_label: dev/turbo-debug

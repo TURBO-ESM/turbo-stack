@@ -36,7 +36,13 @@ Optionally, you can specify a compiler other than the default `intel`, e.g.,
 ./build.sh --compiler gnu
 ```
 
-Once the build is complete, the executable will be at `bin/[COMPILER]/MOM6/MOM6`.
+You can also specify an infrastructure layer other than the default `FMS2`, e.g.,
+
+```bash
+./build.sh --infra TIM
+```
+
+Once the build is complete, the executable will be at `bin/[COMPILER]/MOM6_using_[INFRA]/MOM6/MOM6`.
 
 
 ### Building the MOM6 executable on other machines:
@@ -77,13 +83,13 @@ To run one of the lightweight examples, such as `double_gyre`, you can execute t
 
 ```bash
 cd examples/double_gyre/
-../../bin/intel/MOM6/MOM6
+../../bin/intel/MOM6_using_FMS2/MOM6/MOM6
 ```
 
 For computationally more expensive examples, such as `benchmark`, you need to run MOM6 in parallel.
 
 ```bash
-mpirun ../../bin/intel/MOM6/MOM6
+mpirun ../../bin/intel/MOM6_using_FMS2/MOM6/MOM6
 ```
 
 Example job submission scripts are provided in all of the example directories. Make sure to adjust 

@@ -1,0 +1,105 @@
+digraph turbo_stack_deps {
+    rankdir=TB;
+    compound=true;
+    node [shape=box, fontname="Helvetica", fontsize=11];
+    edge [fontsize=9];
+    splines=ortho;
+
+    // ── External packages ────────────────────────────────────────────────────
+    subgraph cluster_external {
+        label="External";
+        style=filled; color="#f5f5dc"; fontname="Helvetica-Bold";
+
+        hdf5      [label="HDF5",                  fillcolor="#fffacd", style=filled];
+        netcdf_c  [label="NetCDF::NetCDF_C",       fillcolor="#fffacd", style=filled];
+        netcdf_f  [label="NetCDF::NetCDF_Fortran", fillcolor="#fffacd", style=filled];
+        mpi       [label="MPI::MPI_Fortran",       fillcolor="#fffacd", style=filled];
+        amrex     [label="AMReX",                  fillcolor="#fffacd", style=filled];
+        pfunit    [label="PFUNIT::pfunit",         fillcolor="#fffacd", style=filled];
+    }
+
+    netcdf_c -> hdf5;
+    netcdf_f -> netcdf_c;
+
+    // ── FMS2 ─────────────────────────────────────────────────────────────────
+    subgraph cluster_fms2 {
+        label="FMS2  (FMS_ROOT)";
+        style=filled; color="#dce8f5"; fontname="Helvetica-Bold";
+
+        fms_r8 [label="FMS::fms_r8", fillcolor="#add8e6", style=filled];
+    }
+
+    fms_r8 -> netcdf_c;
+    fms_r8 -> netcdf_f;
+    fms_r8 -> mpi;
+
+    // ── TIM ──────────────────────────────────────────────────────────────────
+    subgraph cluster_tim {
+        label="TIM repo  (TIM_ROOT)";
+        style=filled; color="#fde8d8"; fontname="Helvetica-Bold";
+
+        tim_r8 [label="TIM::tim_r8", fillcolor="#ffcc99", style=filled];
+    }
+
+    tim_r8 -> amrex;
+    tim_r8 -> netcdf_c;
+    tim_r8 -> netcdf_f;
+    tim_r8 -> mpi;
+
+    // ── TURBO::infra_r8 (backend-agnostic INTERFACE wrapper) ─────────────────
+    turbo_infra [label="TURBO::infra_r8",
+                 shape=diamond, fillcolor="#c8e6c9", style=filled, fontsize=10];
+    turbo_infra -> fms_r8  [style=dashed, xlabel="MOM6_INFRA=FMS2"];
+    turbo_infra -> tim_r8  [style=dashed, xlabel="MOM6_INFRA=TIM"];
+    // Explicit so libnetcdf.so's absolute path lands on every link line that
+    // uses TURBO::infra_r8 (see turbo-stack CMakeLists.txt). Solid: always present.
+    turbo_infra -> netcdf_c;
+
+    // ── MARBL (turbo-stack owned) ─────────────────────────────────────────────
+    subgraph cluster_marbl {
+        label="turbo-stack  marbl_build/\n(submodules/MARBL)";
+        style=filled; color="#ede0f5"; fontname="Helvetica-Bold";
+
+        mom6_marbl [label="MARBL::marbl", fillcolor="#d8b4fe", style=filled];
+    }
+
+    // ── MOM6 repo ────────────────────────────────────────────────────────────
+    subgraph cluster_mom6 {
+        label="MOM6 repo  (MOM6_ROOT)";
+        style=filled; color="#d8f0d8"; fontname="Helvetica-Bold";
+
+        cvmix    [label="MOM6::CVMix",          fillcolor="#90ee90", style=filled];
+        gsw      [label="MOM6::GSW",            fillcolor="#90ee90", style=filled];
+        infra    [label="MOM6::infra",          fillcolor="#90ee90", style=filled];
+        fw       [label="MOM6::framework",      fillcolor="#90ee90", style=filled];
+        ocean    [label="MOM6::ocean",          fillcolor="#52c452", style=filled];
+        mom6_exe [label="MOM6  (executable)",   fillcolor="#2e8b57", style=filled,
+                  fontcolor=white, shape=ellipse];
+    }
+
+    gsw     -> netcdf_c;
+    gsw     -> netcdf_f;
+    infra   -> turbo_infra;
+    infra   -> mpi;
+    infra   -> netcdf_f;
+    fw      -> infra;
+    ocean   -> fw;
+    ocean   -> cvmix;
+    ocean   -> gsw;
+    ocean   -> mom6_marbl;
+    mom6_exe -> ocean;
+
+    // ── turbo-stack tests ─────────────────────────────────────────────────────
+    subgraph cluster_tests {
+        label="turbo-stack  tests/";
+        style=filled; color="#f0e8d8"; fontname="Helvetica-Bold";
+
+        tests [label="pFUnit unit tests\n(executable)", fillcolor="#f4a460", style=filled,
+               shape=ellipse];
+    }
+
+    tests -> fw;
+    tests -> infra;
+    tests -> turbo_infra;
+    tests -> pfunit;
+}

@@ -1,0 +1,10 @@
+# docker/Dockerfile.turbo-ci only needs spack/ from the build context.
+# Exclude everything heavy so the context stays tiny and deterministic
+# (submodules alone — AMReX, MOM6, pFUnit — are gigabytes when initialized).
+.git
+submodules/
+build/
+deps/
+bin/
+dev-utils/
+*.log

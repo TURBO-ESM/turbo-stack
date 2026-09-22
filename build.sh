@@ -5,17 +5,16 @@ ROOTDIR=$(pwd -P)
 MKMF_ROOT=${ROOTDIR}/build-utils/mkmf
 TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
-SHR_ROOT=${ROOTDIR}/submodules/CESM_share
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
-INFRA_ROOT=${ROOTDIR}/submodules/FMS
+INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
-UNIT_TEST_ROOT=${ROOTDIR}/tests
+UNIT_TEST_ROOT=${ROOTDIR}/tests-legacy
 
 # Default values for CLI arguments
 COMPILER="intel"
 MACHINE="ncar"
-INFRA="FMS2"
+INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
 OFFLOAD=0 # False
 DEBUG=0 # False
@@ -24,16 +23,27 @@ OVERRIDE=0 # False
 UNIT_TESTS_ONLY=0 # False
 CMAKE_BUILD_TYPE="Release"
 
+# Find valid values for INFRA
+for dir in `ls -d ${ROOTDIR}/submodules/infra/*`; do
+  if [ ! -z "${VALID_INFRA}" ]; then
+    VALID_INFRA="${VALID_INFRA}, `(basename ${dir})`"
+  else
+    VALID_INFRA=`(basename ${dir})`
+  fi
+done
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --help)
             echo "Usage: $0 [--compiler <compiler>] [--machine <machine>] [--memory-mode <memory_mode>] [--infra <infra>] [--codecov] [--offload] [--debug] [--override]"
-            echo "Build script for MOM6 with FMS."
+            echo "Build script for MOM6 with FMS2 or TIM infrastructure"
+            echo "Can run infrastructure layer unit tests instead of building the full MOM6 executable"
             echo "  --compiler <compiler>        Compiler to use (default: intel)"
             echo "  --machine <machine>          Machine type (default: ncar)"
             echo "  --memory-mode <memory_mode>  Memory mode (default: dynamic_symmetric)"
-            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build (default: FMS2)"
+            echo "  --infra <infra>              Subdirectory of config_src/infra/ to build"
+            echo "                               (valid values [${VALID_INFRA}]; default: TIM)"
             echo "  --codecov                    Enable code coverage (default: disabled)"
             echo "  --debug                      Enable debug mode (default: disabled)"
             echo "  --override                   If a build already exists, clear it and rebuild (default: false)"
@@ -67,10 +77,9 @@ while [[ "$#" -gt 0 ]]; do
             OVERRIDE=1 ;;
         --infra)
             INFRA="$2"
-            if [[ "${INFRA}" == "TIM" ]]; then
-              INFRA_ROOT=${ROOTDIR}/submodules/TIM
-            elif [[ "${INFRA}" != "FMS2" ]]; then
-              echo "--infra option ${INFRA} not valid.  Valid options are FMS2 or TIM."
+            INFRA_ROOT=${ROOTDIR}/submodules/infra/${INFRA}
+            if [[ ! -d "${INFRA_ROOT}" ]]; then
+              echo "--infra option ${INFRA} not valid.  Valid options are [${VALID_INFRA}]."
               exit 1
             fi
             shift ;;
@@ -196,7 +205,7 @@ if [ -z "${JOBS}"  ]; then
 fi
 echo "Using ${JOBS} jobs"
 
-BLD_PATH=${ROOTDIR}/bin/${COMPILER}
+BLD_PATH=${ROOTDIR}/bin/${COMPILER}/MOM6_using_${INFRA}
 
 # If override is set, remove existing build directory
 if [ $OVERRIDE -eq 1 ]; then
@@ -216,22 +225,16 @@ if [ "$MACHINE" == "ncar" ]; then
   HOST=$(hostname)
   # Load modules if on derecho
   if [ ! "${HOST:0:5}" == "crhtc" ] && [ ! "${HOST:0:6}" == "casper" ]; then
-    module --force purge
-    . /glade/u/apps/derecho/23.09/spack/opt/spack/lmod/8.7.24/gcc/7.5.0/c645/lmod/lmod/init/sh
-    module load cesmdev/1.0 ncarenv/23.09
+    module reset
     case $COMPILER in
       "intel" )
-        module load craype intel/2023.2.1 mkl ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2 esmf/8.6.0
+        module load ncarenv/25.10 intel/2025.2.1 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "gnu" )
-        module load craype gcc/12.2.0 cray-libsci/23.02.1.1 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 parallelio/2.6.2-debug esmf/8.6.0-debug
+        module load ncarenv/25.10 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "nvhpc" )
-        if [ $OFFLOAD -eq 1 ]; then
-          module load craype nvhpc/24.9 ncarcompilers/1.0.0 cmake cray-mpich/8.1.29 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3 cuda/12.2.1
-        else
-          module load craype nvhpc/23.7 ncarcompilers/1.0.0 cmake cray-mpich/8.1.27 netcdf-mpi/4.9.2 parallel-netcdf/1.12.3
-        fi
+        module load ncarenv/25.10 cuda/12.9.0 hdf5/1.14.6 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
@@ -240,34 +243,47 @@ if [ "$MACHINE" == "ncar" ]; then
   fi
 fi
 
-# comma-separated list of files in src/framework that are needed to build $LININFRA (for FMS2, at least)
-MOM6_infra_framework_deps_list=$(cat << EOF
-MOM_string_functions.F90
-MOM_io.F90
-MOM_array_transform.F90
-MOM_domains.F90
-MOM_error_handler.F90
-posix.F90
-MOM_file_parser.F90
-MOM_coms.F90
-MOM_document.F90
-MOM_cpu_clock.F90
-MOM_unit_scaling.F90
-MOM_dyn_horgrid.F90
-MOM_hor_index.F90
-MOM_ensemble_manager.F90
-MOM_io_file.F90
-MOM_netcdf.F90
-EOF
-)
-MOM6_infra_framework_deps=$(echo ${MOM6_infra_framework_deps_list} | tr ' ' ',')
-# comma-separated list of files in src/core that are needed to build $LIBINFRA (for FMS2, at least)
-MOM6_infra_core_deps=MOM_grid.F90,MOM_verticalGrid.F90
-MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA},src/framework/{$MOM6_infra_framework_deps},src/core/{$MOM6_infra_core_deps}}
+MOM6_infra_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/infra/${INFRA}}
 MOM6_src_files=${MOM_ROOT}/{config_src/memory/${MEMORY_MODE},config_src/drivers/solo_driver,pkg/CVMix-src/src/shared,pkg/GSW-Fortran/modules,../MARBL/src,config_src/external,src/{*,*/*}}/
 
-# 0) Build AMReX if needed
+# 0) Build AMReX if needed; also set -D_TIM for MOM6 build
 if [[ "${INFRA}" == "TIM" ]]; then
+  # ParallelIO (PIO2) dependency for TIM. Resolution order: caller-provided
+  # PIO_INSTALL_PATH, the Derecho parallelio module (NCAR_ROOT_PARALLELIO),
+  # a prebuilt install advertised via PIO (set by both the CI containers and
+  # the Derecho module), and finally a download-and-build of the pinned
+  # source tarball.
+  if [[ -z "${PIO_INSTALL_PATH}" && -n "${NCAR_ROOT_PARALLELIO}" ]]; then
+    PIO_INSTALL_PATH="${NCAR_ROOT_PARALLELIO}"
+  fi
+  if [[ -z "${PIO_INSTALL_PATH}" && -n "${PIO}" ]]; then
+    PIO_INSTALL_PATH="${PIO}"
+  fi
+  if [[ -z "${PIO_INSTALL_PATH}" ]]; then
+    echo "Path to ParallelIO not declared.  Downloading and building libpioc."
+    cd "${BLD_PATH}"
+    mkdir -p parallelio
+    cd parallelio
+
+    PIO_INSTALL_PATH="$(pwd)/install"
+
+    # Redeclaring variables needed because they are not exported
+    TEMPLATE=${TEMPLATE}                   \
+    JOBS=${JOBS}                           \
+    PIO_SRC_PATH=$(pwd)/src                \
+    PIO_BLD_PATH=$(pwd)/build              \
+    CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}   \
+    PIO_INSTALL_PATH=${PIO_INSTALL_PATH}   \
+      make -j${JOBS} -C ${ROOTDIR}/build-utils/pio-utils/ build_pio
+  fi
+  # libpioc may live in lib or lib64 depending on the install layout.
+  PIO_LIB_DIR="lib"
+  if [[ ! -e "${PIO_INSTALL_PATH}/lib/libpioc.a" && ! -e "${PIO_INSTALL_PATH}/lib/libpioc.so" && -d "${PIO_INSTALL_PATH}/lib64" ]]; then
+    PIO_LIB_DIR="lib64"
+  fi
+  PIO_INCLUDE_FLAGS="-I${PIO_INSTALL_PATH}/include"
+  PIO_LINK_FLAGS="-L${PIO_INSTALL_PATH}/${PIO_LIB_DIR} -lpioc"
+
   # Check if AMREX_INSTALL_PATH was provided or if need to build from submodule first.
   if [[ -z "${AMREX_INSTALL_PATH}" ]]; then
     echo "Path to AMReX not declared.  Building AMReX through submodule."
@@ -284,10 +300,12 @@ if [[ "${INFRA}" == "TIM" ]]; then
     AMREX_BLD_PATH=$(pwd)/build              \
     CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}     \
     AMREX_INSTALL_PATH=${AMREX_INSTALL_PATH} \
-      make -j${JOBS} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
+      make -j${JOBS} OFFLOAD=${OFFLOAD} -C ${ROOTDIR}/build-utils/amrex-utils/ build_amrex
   fi
   AMREX_LINK_FLAGS="-L${AMREX_INSTALL_PATH}/lib -lamrex"
   AMREX_INCLUDE_FLAGS="-I${AMREX_INSTALL_PATH}/include"
+
+  FFLAGS="-D_TIM"
 fi
 
 # 0a) Build pFUnit if needed
@@ -314,17 +332,14 @@ fi
 
 # 1) Build Underlying Infrastructure Library
 if [[ "${INFRA}" == "TIM" ]]; then
-  INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS}"
-  INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS}"
+  INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
+  INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
 fi
 
 cd ${BLD_PATH}
 mkdir -p ${INFRA}
 cd ${INFRA}
 ${MKMF_ROOT}/list_paths ${INFRA_ROOT}
-# We need shr_const_mod.F90 and shr_kind_mod.F90 from ${SHR_ROOT}/src to build FMS
-echo "${SHR_ROOT}/src/shr_kind_mod.F90" >> path_names
-echo "${SHR_ROOT}/src/shr_const_mod.F90" >> path_names
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -o "${INFRA_INCLUDE_FLAGS}" -l "${INFRA_LINKING_FLAGS}" -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
 
@@ -332,9 +347,9 @@ make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.
 LINKING_FLAGS="-L../MOM6-infra -linfra-${INFRA} -L../${INFRA} -l${INFRA}"
 INCLUDE_OPTS="-I../${INFRA} -I../MOM6-infra"
 if [[ "${INFRA}" == "TIM" ]]; then
-  INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS}"
-  # -lstdc++ link flag needed for older ocmpilers (especially non llvm based ones)
-  LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS}"
+  INCLUDE_OPTS="${INCLUDE_OPTS} ${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
+  # -lstdc++ link flag needed for older compilers (especially non llvm based ones)
+  LINKING_FLAGS="${LINKING_FLAGS} -lstdc++ ${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
 fi
 
 # 2) Build MOM6 infra
@@ -371,7 +386,10 @@ else
   cd MOM6
   expanded=$(eval echo ${MOM6_src_files})
   ${MKMF_ROOT}/list_paths -l ${expanded}
-  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p MOM6 -l "${LINKING_FLAGS}" -c '-Duse_libMPI -Duse_netCDF -DSPMD' path_names
+  ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -o "${INCLUDE_OPTS}" -p MOM6 -l "${LINKING_FLAGS}" -c "${FFLAGS} -Duse_libMPI -Duse_netCDF -DSPMD" path_names
+  # Append a recipe-less dependency rule so the library timestamps are tracked,
+  # and so a relink is triggered when the infra libraries are rebuilt.
+  echo "MOM6: ../MOM6-infra/${LIBINFRA} ../${INFRA}/lib${INFRA}.a" >> Makefile
   make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} MOM6
 fi
 
