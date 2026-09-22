@@ -18,12 +18,13 @@ ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
 | `gcc-openmpi-<short-sha>` | Immutable — always published; pin this to reproduce or bisect an image regression |
 | `buildcache` | BuildKit layer cache, not a runnable image |
 
-## The two workflows
+## The workflows
 
 | Workflow | Role |
 |---|---|
 | `.github/workflows/build-turbo-ci-container.yaml` | **Producer** — builds the image and pushes it to GHCR. Manual only (`workflow_dispatch`), so a merge never waits on a 1-hour build. |
 | `.github/workflows/turbo-cmake-container-tests.yaml` | **Consumer** — runs `scripts/build_local_with_spack_env.sh --infra {TIM,FMS2} --tests` inside the image, on pushes to `main` and on PRs. |
+| `.github/workflows/container-driver-scripts.yaml` | **Script check** — runs `./test_turbo_stack_with_container.sh` on the runner *host*, so the wrapper that pulls, mounts and enters the image is itself under test. The consumer above enters the image via `container:`, which bypasses that wrapper entirely. Path-filtered to the scripts it covers. |
 
 This is additive to the legacy `build-tests.yaml` / `unit-tests.yaml`, which
 exercise the **mkmf** `build.sh` path in the `ncarcisl/cisldev-*` containers.
@@ -139,11 +140,54 @@ find image".
 Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`) and `SPACK_REF`
 (default `v1.2.2`, pinned for reproducibility).
 
-## Running the CI build locally
+## Building locally in this image
+
+The image is a ready-made build environment, not just CI's: it ships the compiler
+and the Tier 1 + Tier 1.5 dependencies (MPI, NetCDF, CMake, pFUnit, AMReX)
+installed in the `turbo_stack` Spack env, so nothing but a container engine is
+needed on the host. Two scripts drive it — same image, same commands and
+environment as the consumer workflow, against a checkout whose submodules are
+already initialized (the container fetches nothing):
+
+```bash
+scripts/build_with_container.sh --infra TIM --tests    # one backend, pinned sources
+MOM6_ROOT=~/projects/MOM6 \
+    scripts/build_with_container.sh --infra TIM --tests  # build your MOM6, as checked out
+./test_turbo_stack_with_container.sh              # both backends, matrix + verdict
+./test_turbo_stack_with_container.sh --only TIM   # one backend
+scripts/build_with_container.sh --shell                # interactive shell, Spack env active
+```
+
+Swapping a source works the same way it does everywhere else in the repo: export
+`MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own path,
+forwarded into the container, and built on whatever branch it is checked out on —
+so testing several branches means switching branches there and running again. A
+MOM6 tree needs its nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`)
+initialized; the script checks up front. `PFUNIT_ROOT` / `AMREX_ROOT` are not
+forwarded: this image supplies pFUnit and AMReX from its Spack env, so an override
+would have no effect.
+
+They handle both caveats below: artifacts are written as your uid rather than
+root's, and the PRRTE oversubscribe policy is set. Where they land differs by script:
+`test_turbo_stack_with_container.sh` uses `$TMPDIR/turbo_ci_container_test/<checkout>-<hash>`
+(outside your clone, keyed on its full path so no two checkouts collide), while
+`scripts/build_with_container.sh` alone defaults to `$TURBO_STACK_ROOT/build/default`
+— CI's layout, *inside* the checkout — unless you pass `--build_dir`.
+They also mirror the workflow's two guardrails: refuse an image with no prebaked
+`turbo_stack` env (which would otherwise silently start a ~1 h source build), and
+warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
+covers the rest — `--image` to pin one (which also stops the default refresh),
+`--pull` / `--no-pull` to force it either way, `--build_dir`.
+
+Artifacts outlive the container, so after a failure
+`scripts/build_with_container.sh --shell` drops you back in and
+`ctest --test-dir <dir>` re-runs the suite with no rebuild — passing the same
+`--build_dir` that run used, since `--shell` otherwise takes the default above.
 
 The image sets `SPACK_ROOT` but deliberately does **not** activate the Spack
-environment — the repo scripts own activation. Reproducing what CI does, against
-a checkout whose submodules are already initialized:
+environment — the repo scripts own activation (`--shell` activates it for you, so
+an interactive session has `cmake` and the MPI wrappers on `PATH`). The raw recipe
+underneath, to run by hand:
 
 ```bash
 docker run --rm -it -v "$PWD:/work" -w /work \
@@ -152,14 +196,17 @@ docker run --rm -it -v "$PWD:/work" -w /work \
               && scripts/build_local_with_spack_env.sh --infra TIM --tests'
 ```
 
-Two caveats:
+Two caveats, if you do it by hand:
 
-- **Build artifacts land in your checkout owned by root**, since the container
-  runs as root against a bind mount. Pass `--build_dir` to keep them somewhere
-  disposable, or clean up afterwards.
+- **Build artifacts land in your checkout owned by root**, since that recipe runs
+  as root against a bind mount, and you cannot delete them afterwards. Pass
+  `--build_dir` to keep them somewhere disposable, or add
+  `--user "$(id -u):$(id -g)" -e HOME=/tmp/h` to run as yourself — which is what
+  the scripts above do, so the problem never arises with them.
 - **MPI oversubscription.** The pFUnit suites run `mpirun -np 4`
   (`@test(npes=[1,2,4])`). On a machine with fewer than 4 slots, OpenMPI 5's
   PRRTE refuses to launch with "not enough slots"; export
   `PRTE_MCA_rmaps_default_mapping_policy=":oversubscribe"` (what the consumer
-  workflow does). Running as root is already handled — the image sets
-  `OMPI_ALLOW_RUN_AS_ROOT{,_CONFIRM}`, which OpenMPI 5 otherwise blocks.
+  workflow does). Running as root is handled too — the image sets
+  `OMPI_ALLOW_RUN_AS_ROOT{,_CONFIRM}`, which OpenMPI 5 otherwise blocks; running
+  as yourself makes that moot.
