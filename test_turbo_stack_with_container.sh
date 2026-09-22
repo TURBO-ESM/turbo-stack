@@ -1,41 +1,32 @@
 #!/bin/bash
 # test_turbo_stack_with_container.sh
 #
-# End-to-end test driver (container).  Builds and `ctest`s BOTH infra backends
-# (TIM, FMS2) in a container, so nothing but a container engine is needed on the
-# host.  The container member of the driver family, alongside
-# test_turbo_stack_locally.sh (a Spack env), test_turbo_stack_with_system_toolchain.sh
-# (your PATH) and test_turbo_stack_on_derecho.sh (Lmod modules).
-#
-# The image is the one .github/workflows/turbo-cmake-container-tests.yaml uses and
-# the commands match, so this will often reproduce a CI failure without pushing a
-# branch -- a consequence worth having, not the purpose.
-#
-# Thin wrapper: it parses the common driver args, then hands off to
-# turbo_run_test_driver (scripts/lib/common.sh), which runs the real container
-# wrapper scripts/build_with_container.sh once per backend in its own process and
-# prints a per-backend matrix/verdict.
-#
-# Its siblings run the same two stages on a host toolchain instead of in a
-# container: test_turbo_stack_locally.sh (spack), test_turbo_stack_on_derecho.sh
-# (Lmod modules), test_turbo_stack_with_system_toolchain.sh (bring-your-own on
-# PATH).  See docs/build_test_orchestration_prompt.md, docs/dependency_tiers_prompt.md
-# and docker/README.md.
+# End-to-end test driver (container).  Thin wrapper: it parses the common driver
+# args, then hands off to turbo_run_test_driver (scripts/lib/common.sh), which builds
+# + ctests each selected backend (FMS2, TIM) by running the real single-backend
+# builder scripts/build_with_container.sh in its own process, and prints a
+# per-backend matrix/verdict.  Its siblings -- test_turbo_stack_locally.sh (a Spack
+# env), test_turbo_stack_on_derecho.sh (Lmod modules) and
+# test_turbo_stack_with_system_toolchain.sh (bring-your-own on PATH) -- are identical
+# except for their toolchain and builder.  Here a container image supplies it, so
+# nothing but a container engine is needed on the host.  It is the image CI uses, so
+# this will often reproduce a CI failure without pushing a branch.  See
+# docker/README.md, docs/build_test_orchestration_prompt.md and
+# docs/dependency_tiers_prompt.md.
 #
 # Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules -- the container
-# fetches nothing, so initialize them first (the wrapper guards them).  To build a
-# tree of your own instead, export MOM6_ROOT / FMS_ROOT / TIM_ROOT before running:
-# they are inherited by both per-backend runs, which mount those trees and forward
-# them, and the matrix below then reports the component as (override).  Whatever
-# branch a tree is on is what gets built.  Nothing is written into
-# $TURBO_STACK_ROOT: each backend builds under $TURBO_BUILD_SYSTEM_TEST_DIR, which
-# is mounted into the container.  The container runs as you, so those artifacts are
-# yours as they are written.  They outlive the container, so you can re-enter a
-# backend's build tree and re-run ctest with no rebuild -- but NAME it.  A bare
-# `build_with_container.sh --shell` takes that script's own default
-# ($TURBO_STACK_ROOT/build/default), which is not where this driver built:
+# fetches nothing, so initialize them first (the wrapper guards them).  Export
+# MOM6_ROOT / FMS_ROOT / TIM_ROOT to build your own trees instead: each is mounted and
+# forwarded to both per-backend runs, and the matrix reports the component as
+# (override).  Nothing is written into $TURBO_STACK_ROOT -- each backend builds under
+# $TURBO_BUILD_SYSTEM_TEST_DIR, as you rather than as root, and those artifacts
+# outlive the container.  To re-enter one, name it:
+#
 #     scripts/build_with_container.sh --shell \
 #         --build_dir $TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-TIM
+#
+# A bare --shell takes that script's own default instead, which is not where this
+# driver built.
 #
 # Options:
 #   --only FMS2|TIM     Run only the named backend (default: both, as CI's matrix)
@@ -80,17 +71,13 @@ turbo_resolve_stack_root
 _runner="$TURBO_STACK_ROOT/scripts/build_with_container.sh"
 
 # Container builds get their own artifact root, separate from the host-toolchain
-# drivers' $TMPDIR/turbo_build_system_test: the same build dir cannot be shared,
-# because the container's toolchain lives at a different prefix (/opt/spack) and
-# cmake aborts when a cached compiler path changes.
+# drivers' $TMPDIR/turbo_build_system_test: the container's toolchain lives at a
+# different prefix (/opt/spack), and cmake aborts when a cached compiler path changes.
 #
-# Per checkout, too -- unlike the host-toolchain drivers, which use one fixed path.
-# turbo-stack is developed across several git worktrees, and cmake caches the source
-# dir it configured: two checkouts sharing one build dir is a hard error ("does not
-# match the source ... used to generate cache"), so key the default on the checkout.
-# On the FULL path, not its basename: ~/work/turbo-stack and ~/review/turbo-stack
-# share a basename and would collide into exactly that error.  Name it for the
-# basename (readable) and disambiguate with a short hash of the whole path.
+# Keyed per checkout, too, since cmake also caches the source dir it configured and
+# turbo-stack is developed across worktrees.  On the FULL path, not the basename:
+# ~/work/turbo-stack and ~/review/turbo-stack would otherwise collide into exactly
+# that error.  Named for the basename (readable), disambiguated by a short hash.
 _ckt=$(printf '%s' "$TURBO_STACK_ROOT" | (sha256sum 2>/dev/null || shasum -a 256) | cut -c1-8)
 : "${TURBO_BUILD_SYSTEM_TEST_DIR:=${TMPDIR:-/tmp}/turbo_ci_container_test/$(basename -- "$TURBO_STACK_ROOT")-$_ckt}"
 export TURBO_BUILD_SYSTEM_TEST_DIR

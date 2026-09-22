@@ -4,87 +4,64 @@
 # Build turbo-stack (+ the pFUnit unit tests, with --tests) for ONE infra backend
 # in a container, so nothing but a container engine is needed on the host.
 #
-# This is the container member of the single-backend builder family.  Its siblings
-# differ in one thing -- who supplies the toolchain and the upstream deps:
+# The container member of the single-backend builder family; the siblings differ
+# only in who supplies the toolchain and the upstream deps:
 #
 #   build_local_with_spack_env.sh         a Spack env you own
 #   build_local_with_system_toolchain.sh  whatever is on your PATH
 #   build_on_derecho.sh                   Derecho's Lmod modules
 #   build_with_container.sh               the container image  (this file)
 #
-# Here the image supplies them: ghcr.io/turbo-esm/turbo-stack/turbo-ci ships the
-# compiler and the Tier 1 + Tier 1.5 dependencies (MPI, NetCDF, CMake, pFUnit,
-# AMReX) prebuilt in a Spack env.  It mounts your checkout (plus any MOM6 / FMS /
-# TIM tree you want built instead of the pinned submodule) and runs
-# scripts/build_local_with_spack_env.sh --infra <backend> [--tests] inside the
-# image, which activates the prebaked env, builds the Tier-2 backend, then
-# configures, builds and tests turbo-stack.
+# Here the image does: ghcr.io/turbo-esm/turbo-stack/turbo-ci ships the compiler and
+# the Tier 1 + Tier 1.5 deps (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack
+# env.  It mounts your checkout and runs build_local_with_spack_env.sh inside the
+# image, which activates that env, builds the Tier-2 backend, then configures, builds
+# and tests turbo-stack.  CI uses the same image and the same command, so a red box in
+# cmake-build.yaml will often reproduce here -- a useful consequence, not a contract
+# (CI checks its MOM6 branch out fresh; this builds the tree you hand it).  For both
+# backends plus a verdict, use ./test_turbo_stack_with_container.sh.
 #
-# That image is also the one CI uses, and this runs the same builder command, so a
-# red box in .github/workflows/cmake-build.yaml will often reproduce here without
-# pushing a branch.  Treat that as a useful consequence rather than the contract:
-# the known divergence is that CI checks a MOM6 branch out fresh beside the
-# workspace, where this builds the tree you hand it.
+# Swap a source the repo-wide way: export MOM6_ROOT, FMS_ROOT or TIM_ROOT and that
+# tree is mounted at its own path and built, on whatever branch it is checked out on.
+# Everything else comes from the submodules, which the container does NOT fetch --
+# initialize them first, as CI's checkout does.
 #
-#     scripts/build_with_container.sh --infra TIM --tests
-#     MOM6_ROOT=~/projects/MOM6 scripts/build_with_container.sh --infra TIM --tests
-#
-# Swap a source the repo-wide way: export MOM6_ROOT, FMS_ROOT or TIM_ROOT (see
-# scripts/lib/build_dep.sh) and that tree is mounted at its own path and built, on
-# whatever branch it happens to be checked out on.  Everything else comes from the
-# submodules, which the container does NOT fetch -- initialize them first, as CI's
-# checkout does.  For both backends in one go plus a matrix/verdict, use
-# ./test_turbo_stack_with_container.sh, which calls this once per backend.
-#
-# The container runs as YOU (--user), not as root, so everything it writes to the
-# bind mounts is yours already -- no ownership repair step, and nothing left behind
-# that you cannot delete if a run is killed.  CI's job container runs as root
-# instead; that difference is deliberate and costs nothing here, since the build
-# needs no privilege (it also makes the image's OMPI_ALLOW_RUN_AS_ROOT moot).
-# On a ROOTLESS engine --user is skipped: there container-root is already mapped to
-# your uid, and forcing --user would instead map you to a subuid that owns nothing,
-# so the first write to a bind mount fails outright.  That is about the rootless
-# MODE, not about podman -- rootless docker maps uids the same way.
-# Artifacts live on the bind mount and outlive the container: a later --shell (or
-# another run) re-enters the same build tree, where `ctest --test-dir <dir>` re-runs
-# the suite with no rebuild.  "Same" means the same --build_dir -- pass the one the
-# earlier run used.  Two runs agree by default only when both took the default, which
-# test_turbo_stack_with_container.sh never does (it passes a per-backend dir).
-#
-# Running as a non-root uid means Spack cannot read the package cache baked into the
-# image's /root (mode 700), and would re-clone it (~20k objects) every run.  So a
-# small host cache directory is mounted as HOME -- first run populates it, later runs
-# start instantly.  See TURBO_CI_HOME below.
+# The container runs as YOU (--user), so what it writes to the bind mounts is already
+# yours: no ownership repair, nothing undeletable after a killed run.  Skipped on a
+# rootless engine, where container-root already maps to your uid.  A non-root uid
+# cannot read the Spack package cache baked into the image's /root (mode 700), so a
+# host dir is mounted as HOME to persist it -- without it Spack re-clones ~20k objects
+# per run (TURBO_CI_HOME below).  Artifacts outlive the container: a later --shell
+# re-enters the build tree, where `ctest --test-dir <dir>` re-runs the suite with no
+# rebuild.  Pass the --build_dir the earlier run used; otherwise both take the default
+# and only agree by accident.
 #
 # Options:
 #   --infra FMS2|TIM    Infrastructure backend (default: TIM).  One per run.
 #   --tests             Also build + run the pFUnit unit tests (default: off, as in
 #                       every other builder).  CI always passes this.
 #   --build_dir DIR     Build directory (default: $TURBO_STACK_ROOT/build/default,
-#                       i.e. what CI uses).  Deps land in $DIR/deps/.  A path
-#                       outside the checkout is mounted in as well -- prefer one,
-#                       so the container never writes into your clone.
+#                       i.e. what CI uses).  Deps land in $DIR/deps/.  A path outside
+#                       the checkout is mounted in as well -- prefer one, so the
+#                       container never writes into your clone.
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean             Clean rebuild from scratch (passed through: wipes the
-#                       Stage-1 dep builds/installs, plus cmake --fresh)
+#   --clean             Clean rebuild from scratch (passed through: wipes the Stage-1
+#                       dep builds/installs, plus cmake --fresh)
 #   --ninja             Use the Ninja generator (passed through)
-#   --parallel N, -j N  Parallel build jobs.  Exported into the container as
-#                       CMAKE_BUILD_PARALLEL_LEVEL (CI sets 4).  Default: nproc.
+#   --parallel N, -j N  Parallel build jobs, exported as CMAKE_BUILD_PARALLEL_LEVEL
+#                       (CI sets 4).  Default: nproc.
 #   --image REF         Container image (default: the tag CI consumes, below).
-#                       `gcc-openmpi` is MUTABLE -- pin gcc-openmpi-<sha> to
-#                       reproduce a specific CI run.  Naming an image (here or
-#                       via TURBO_CI_IMAGE) also turns the default refresh off,
-#                       so a pinned tag is used as-is.
+#                       `gcc-openmpi` is MUTABLE -- pin gcc-openmpi-<sha> to reproduce
+#                       a specific CI run.  Naming an image also turns the default
+#                       refresh off, so a pinned tag is used as-is.
 #   --pull              Force a refresh even when an image was named.
-#   --no-pull           Skip the refresh and use whatever is local.  The default
-#                       image IS refreshed on every run: `gcc-openmpi` is
-#                       mutable, and a stale local copy silently builds against
-#                       an out-of-date dependency stack.  A failed refresh is
-#                       not fatal when the image is already present -- it warns
-#                       and continues.
+#   --no-pull           Skip the refresh and use whatever is local.  The default image
+#                       IS refreshed every run: `gcc-openmpi` is mutable, and a stale
+#                       local copy silently builds against an out-of-date dependency
+#                       stack.  A failed refresh warns and continues if the image is
+#                       already present.
 #   --shell             Start an interactive shell in the container, Spack env
-#                       activated, instead of building.  Same mounts and
-#                       environment; for iterating on a failure.
+#                       activated, instead of building.  Same mounts and environment.
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
@@ -182,22 +159,18 @@ _ensure_image() {
 _mounts=(-v "$TURBO_STACK_ROOT:$TURBO_STACK_ROOT")
 _notes=()
 
-# In a git WORKTREE, .git is a file pointing at <main repo>/.git/worktrees/<name> --
-# an absolute path outside the checkout -- and the submodule gitdirs live under it
-# too.  Without that directory every `git` call inside the container dies with
-# "fatal: not a git repository", and build_dep cannot read the source SHA for its
-# rebuild sentinel.  Mount it read-only: the build only reads SHAs, and a root
-# container has no business writing to the main repo's .git.  A normal clone keeps
-# .git inside the checkout, so this adds no mount at all.
+# In a git WORKTREE, .git is a file pointing at <main repo>/.git/worktrees/<name>,
+# outside the checkout -- and the submodule gitdirs live under it too.  Without that
+# directory every `git` call inside the container dies with "fatal: not a git
+# repository", and build_dep cannot read the source SHA for its rebuild sentinel.
+# Read-only: the build only reads SHAs.  A normal clone adds no mount at all.
 _mount_git_dir() {   # <checkout>
     local git_dir
     git_dir=$(git -C "$1" rev-parse --git-common-dir 2>/dev/null) || return 0
     [[ "$git_dir" == /* && "$git_dir" != "$1"/* ]] || return 0
     git_dir=$(cd -P -- "$git_dir" && pwd)
-    # Nothing to do when the git dir already rides in on the checkout mount (a
-    # submodule's .git/modules/... , say): it is visible without help, and a
-    # second, read-only bind would only shadow a writable one git may need to
-    # refresh an index in.
+    # Skip a git dir already covered by the checkout mount (a submodule's
+    # .git/modules/..., say): a second read-only bind would shadow a writable one.
     [[ "$git_dir" != "$TURBO_STACK_ROOT" && "$git_dir" != "$TURBO_STACK_ROOT"/* ]] || return 0
     _mounts+=(-v "$git_dir:$git_dir:ro")
     _notes+=("$(printf '%-9s = %s' "git dir" "$git_dir") (read-only; $1 is a worktree)")
@@ -206,17 +179,12 @@ _mount_git_dir "$TURBO_STACK_ROOT"
 
 # --- source overrides: build YOUR MOM6 / FMS / TIM, not the pinned submodule ----
 # <NAME>_ROOT is the repo-wide way to swap a component's source: build_dep resolves
-# it, and the submodule guards stand down for it.  The only extra thing needed here
-# is visibility -- mount the tree at its own path and forward the variable, so the
-# value means the same inside the container as out.  Whatever branch the tree is on
-# is what gets built; switch branches on the host and run again.
+# it and the submodule guards stand down.  All that is needed here is visibility --
+# mount the tree at its own path (read-write: git may refresh its index) and forward
+# the variable, so the value means the same inside the container as out.
 #
-# Mounted read-write, not :ro: the build writes nothing into a source tree, but git
-# may refresh its index there.  The build dir is elsewhere either way.
-#
-# PFUNIT_ROOT / AMREX_ROOT are deliberately NOT forwarded: this image supplies
-# pFUnit and AMReX from its Spack env, so the builder never calls build_dep for them
-# and an override would silently have no effect.
+# PFUNIT_ROOT / AMREX_ROOT are NOT forwarded: the image supplies pFUnit and AMReX
+# from its Spack env, so an override would silently have no effect.
 _env=()
 for _var in MOM6_ROOT FMS_ROOT TIM_ROOT; do
     _dir="${!_var}"
@@ -228,11 +196,9 @@ for _var in MOM6_ROOT FMS_ROOT TIM_ROOT; do
     _dir=$(cd -P -- "$_dir" && pwd)
     export "$_var=$_dir"
     _env+=(-e "$_var=$_dir")
-    # The SOURCE bind is only needed when the tree sits outside the checkout.
-    # Its git dir is a separate question: a linked worktree placed INSIDE the
-    # checkout still keeps .git elsewhere, and build_dep reads the source SHA
-    # with git -- so probe every override, not just the out-of-tree ones.
-    # (_mount_git_dir adds nothing when there is nothing to add.)
+    # The SOURCE bind is only needed for a tree outside the checkout; its git dir is
+    # a separate question -- a worktree placed INSIDE the checkout still keeps .git
+    # elsewhere, and build_dep reads the SHA with git.  So probe every override.
     if [[ "$_dir" != "$TURBO_STACK_ROOT" && "$_dir" != "$TURBO_STACK_ROOT"/* ]]; then
         _mounts+=(-v "$_dir:$_dir")
     fi
@@ -281,37 +247,24 @@ else
 fi
 
 # --- run as you, not as root -------------------------------------------------
-# Rootful engines default to uid 0, so anything the container writes to a bind
-# mount comes back root-owned and undeletable.  Running as the invoking uid avoids
-# that at the source rather than repairing it afterwards.
+# Rootful engines default to uid 0, so bind-mounted artifacts come back root-owned
+# and undeletable.  Running as the invoking uid avoids that at the source.
 #
-# EXCEPT on a rootless engine, where the container's root is ALREADY mapped to your
-# uid.  Passing --user there maps you to a SUBUID (uid 1000 in the container ->
-# 100999 on the host, per /etc/subuid) which owns nothing, so the build does not
-# merely leave awkward files -- its first write to a bind mount fails with
-# "Permission denied" and the run dies.  So probe the engine and skip --user.
+# EXCEPT on a rootless engine, where container-root is ALREADY your uid: --user there
+# maps you to a subuid (1000 -> 100999, per /etc/subuid) that owns nothing, and the
+# first write to a bind mount fails with "Permission denied".  So probe, and skip it.
+# This is about the rootless MODE, not the CLI -- rootless docker maps uids the same
+# way rootless podman does.
 #
-# Keep this even if the team standardizes on docker: rootless DOCKER
-# (dockerd-rootless-setuptool.sh; Docker Desktop on Linux) has the same uid mapping
-# as rootless podman.  The predicate is about the rootless mode, not the CLI.
-#
-# Verified on rootless podman 4.9.3: predicate true; build --infra TIM --tests
-# exit 0, ctest 40/40, all 4068 artifacts owned by the invoking user and removable
-# without `podman unshare`; and Spack did NOT re-clone, because as container-root it
-# can read the cache baked into the image's /root (hence no HOME mount on this path).
-# The counterfactual was measured too: --user on podman -> `touch` on the mounted
-# build dir fails immediately.
+# Measured on rootless podman 4.9.3: predicate true, --infra TIM --tests exit 0,
+# ctest 40/40, all 4068 artifacts owned by the invoking user; and the counterfactual,
+# --user on podman, fails `touch` on the mounted build dir immediately.
 _engine_is_rootless() {
     local info
     info=$("$_engine" info 2>/dev/null) || return 1
-    # Three spellings, because the engines disagree about how to say it:
-    #   podman info           ->  "rootless: true"
-    #   docker info           ->  a BARE "rootless" line under Security Options
-    #   docker info --format  ->  "name=rootless"
-    # Only podman's was verified on real hardware (4.9.3).  Missing docker's is
-    # not benign: the predicate returns false, --user goes on, and in a rootless
-    # namespace that maps to a subuid owning nothing -- so the first write to a
-    # bind mount fails with "Permission denied" and the run dies.
+    # The engines disagree on spelling: podman says "rootless: true", docker prints a
+    # BARE "rootless" line under Security Options, and `docker info --format` says
+    # "name=rootless".  Only podman's is verified on real hardware.
     grep -qiE '^[[:space:]]*rootless[[:space:]]*$|rootless"?[: ]+true|name=rootless' <<<"$info"
 }
 
@@ -342,12 +295,10 @@ fi
 # build_local_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
 # guard stands down for a component whose <NAME>_ROOT is set above.
 turbo_guard_builder_submodules 2
-# The pinned submodule needs the same MOM6 check as an override.  The guard above
-# proves only that submodules/MOM6 itself is initialized -- `submodule update
-# --init` WITHOUT --recursive leaves pkg/CVMix-src and pkg/GSW-Fortran empty, and
-# nothing else catches that until MOM6's CMakeLists hard-fails, a multi-GB image
-# pull and a dependency build later.  After the guard, not before, so an
-# uninitialized submodules/MOM6 reports itself rather than its nested ones.
+# The pinned submodule needs the same check: the guard above proves only that
+# submodules/MOM6 exists, and `submodule update --init` without --recursive leaves
+# pkg/* empty -- otherwise found a multi-GB pull and a dep build later.  After the
+# guard, so an uninitialized submodules/MOM6 reports itself.
 if [[ -z "$MOM6_ROOT" ]]; then
     _check_mom6_tree "$TURBO_STACK_ROOT/submodules/MOM6"
 fi
