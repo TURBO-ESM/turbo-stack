@@ -30,9 +30,12 @@
 # branch a tree is on is what gets built.  Nothing is written into
 # $TURBO_STACK_ROOT: each backend builds under $TURBO_BUILD_SYSTEM_TEST_DIR, which
 # is mounted into the container.  The container runs as you, so those artifacts are
-# yours as they are written.  They outlive the container, so
-# `scripts/build_with_container.sh --shell` re-enters the same build tree and can
-# re-run ctest with no rebuild.
+# yours as they are written.  They outlive the container, so you can re-enter a
+# backend's build tree and re-run ctest with no rebuild -- but NAME it.  A bare
+# `build_with_container.sh --shell` takes that script's own default
+# ($TURBO_STACK_ROOT/build/default), which is not where this driver built:
+#     scripts/build_with_container.sh --shell \
+#         --build_dir $TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-TIM
 #
 # Options:
 #   --only FMS2|TIM     Run only the named backend (default: both, as CI's matrix)

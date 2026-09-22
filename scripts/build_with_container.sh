@@ -47,7 +47,9 @@
 # MODE, not about podman -- rootless docker maps uids the same way.
 # Artifacts live on the bind mount and outlive the container: a later --shell (or
 # another run) re-enters the same build tree, where `ctest --test-dir <dir>` re-runs
-# the suite with no rebuild.
+# the suite with no rebuild.  "Same" means the same --build_dir -- pass the one the
+# earlier run used.  Two runs agree by default only when both took the default, which
+# test_turbo_stack_with_container.sh never does (it passes a per-backend dir).
 #
 # Running as a non-root uid means Spack cannot read the package cache baked into the
 # image's /root (mode 700), and would re-clone it (~20k objects) every run.  So a
@@ -192,6 +194,11 @@ _mount_git_dir() {   # <checkout>
     git_dir=$(git -C "$1" rev-parse --git-common-dir 2>/dev/null) || return 0
     [[ "$git_dir" == /* && "$git_dir" != "$1"/* ]] || return 0
     git_dir=$(cd -P -- "$git_dir" && pwd)
+    # Nothing to do when the git dir already rides in on the checkout mount (a
+    # submodule's .git/modules/... , say): it is visible without help, and a
+    # second, read-only bind would only shadow a writable one git may need to
+    # refresh an index in.
+    [[ "$git_dir" != "$TURBO_STACK_ROOT" && "$git_dir" != "$TURBO_STACK_ROOT"/* ]] || return 0
     _mounts+=(-v "$git_dir:$git_dir:ro")
     _notes+=("$(printf '%-9s = %s' "git dir" "$git_dir") (read-only; $1 is a worktree)")
 }
@@ -221,10 +228,15 @@ for _var in MOM6_ROOT FMS_ROOT TIM_ROOT; do
     _dir=$(cd -P -- "$_dir" && pwd)
     export "$_var=$_dir"
     _env+=(-e "$_var=$_dir")
+    # The SOURCE bind is only needed when the tree sits outside the checkout.
+    # Its git dir is a separate question: a linked worktree placed INSIDE the
+    # checkout still keeps .git elsewhere, and build_dep reads the source SHA
+    # with git -- so probe every override, not just the out-of-tree ones.
+    # (_mount_git_dir adds nothing when there is nothing to add.)
     if [[ "$_dir" != "$TURBO_STACK_ROOT" && "$_dir" != "$TURBO_STACK_ROOT"/* ]]; then
         _mounts+=(-v "$_dir:$_dir")
-        _mount_git_dir "$_dir"
     fi
+    _mount_git_dir "$_dir"
     _notes+=("$(printf '%-9s = %s (%s)' "${_var%_ROOT}" "$_dir" \
         "$(git -C "$_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'not a git tree')")")
 done
@@ -232,19 +244,23 @@ done
 # MOM6 is the one source consumed as source rather than built as a dep, and its
 # top-level CMakeLists hard-fails without these; catch it here rather than 20
 # minutes into a container build.  CI gets them via submodules:recursive.
-if [[ -n "$MOM6_ROOT" ]]; then
-    [[ -f "$MOM6_ROOT/CMakeLists.txt" ]] || {
-        echo "Error: '$MOM6_ROOT' has no CMakeLists.txt -- that is not a MOM6 checkout" >&2
+_check_mom6_tree() {   # <mom6 tree>
+    [[ -f "$1/CMakeLists.txt" ]] || {
+        echo "Error: '$1' has no CMakeLists.txt -- that is not a MOM6 checkout" >&2
         echo "       with the CMake build system (not every MOM6 branch has it)." >&2
         exit 1
     }
+    local _p
     for _p in pkg/CVMix-src pkg/GSW-Fortran; do
-        [[ -e "$MOM6_ROOT/$_p/.git" ]] || {
-            echo "Error: MOM6 submodule '$_p' is not initialized in $MOM6_ROOT." >&2
-            echo "       git -C \"$MOM6_ROOT\" submodule update --init --recursive" >&2
+        [[ -e "$1/$_p/.git" ]] || {
+            echo "Error: MOM6 submodule '$_p' is not initialized in $1." >&2
+            echo "       git -C \"$1\" submodule update --init --recursive" >&2
             exit 1
         }
     done
+}
+if [[ -n "$MOM6_ROOT" ]]; then
+    _check_mom6_tree "$MOM6_ROOT"
 fi
 
 # --- build dir, and the artifacts handed back afterwards -----------------------
@@ -288,7 +304,15 @@ fi
 _engine_is_rootless() {
     local info
     info=$("$_engine" info 2>/dev/null) || return 1
-    grep -qiE 'rootless"?[: ]+true|name=rootless' <<<"$info"
+    # Three spellings, because the engines disagree about how to say it:
+    #   podman info           ->  "rootless: true"
+    #   docker info           ->  a BARE "rootless" line under Security Options
+    #   docker info --format  ->  "name=rootless"
+    # Only podman's was verified on real hardware (4.9.3).  Missing docker's is
+    # not benign: the predicate returns false, --user goes on, and in a rootless
+    # namespace that maps to a subuid owning nothing -- so the first write to a
+    # bind mount fails with "Permission denied" and the run dies.
+    grep -qiE '^[[:space:]]*rootless[[:space:]]*$|rootless"?[: ]+true|name=rootless' <<<"$info"
 }
 
 _user=()
@@ -318,6 +342,15 @@ fi
 # build_local_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
 # guard stands down for a component whose <NAME>_ROOT is set above.
 turbo_guard_builder_submodules 2
+# The pinned submodule needs the same MOM6 check as an override.  The guard above
+# proves only that submodules/MOM6 itself is initialized -- `submodule update
+# --init` WITHOUT --recursive leaves pkg/CVMix-src and pkg/GSW-Fortran empty, and
+# nothing else catches that until MOM6's CMakeLists hard-fails, a multi-GB image
+# pull and a dependency build later.  After the guard, not before, so an
+# uninitialized submodules/MOM6 reports itself rather than its nested ones.
+if [[ -z "$MOM6_ROOT" ]]; then
+    _check_mom6_tree "$TURBO_STACK_ROOT/submodules/MOM6"
+fi
 _ensure_image || exit 1
 
 # --- environment ---------------------------------------------------------------
