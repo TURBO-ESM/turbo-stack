@@ -168,25 +168,21 @@ forwarded: this image supplies pFUnit and AMReX from its Spack env, so an overri
 would have no effect.
 
 They handle both caveats below: artifacts are written as your uid rather than
-root's, and the PRRTE oversubscribe policy is set. Where those artifacts land differs
-by script, so check before assuming your clone stays clean —
-`test_turbo_stack_with_container.sh` builds each backend under
-`$TMPDIR/turbo_ci_container_test/<checkout>-<hash>`, outside your clone and keyed on
-the checkout's full path so no two checkouts share a build dir, while
-`scripts/build_with_container.sh` on its own defaults to
-`$TURBO_STACK_ROOT/build/default` — CI's layout, *inside* the checkout — unless you
-pass `--build_dir`.
+root's, and the PRRTE oversubscribe policy is set. Where they land differs by script:
+`test_turbo_stack_with_container.sh` uses `$TMPDIR/turbo_ci_container_test/<checkout>-<hash>`
+(outside your clone, keyed on its full path so no two checkouts collide), while
+`scripts/build_with_container.sh` alone defaults to `$TURBO_STACK_ROOT/build/default`
+— CI's layout, *inside* the checkout — unless you pass `--build_dir`.
 They also mirror the workflow's two guardrails: refuse an image with no prebaked
 `turbo_stack` env (which would otherwise silently start a ~1 h source build), and
 warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
 covers the rest — `--image` to pin one (which also stops the default refresh),
 `--pull` / `--no-pull` to force it either way, `--build_dir`.
 
-Artifacts live on the bind mount, so they outlive the container: after a failure,
-`scripts/build_with_container.sh --shell` drops you back in, where
-`ctest --test-dir <dir>` re-runs the suite with no rebuild. Pass the same
-`--build_dir` the failing run used: `--shell` otherwise takes the default above,
-which is not where `test_turbo_stack_with_container.sh` built.
+Artifacts outlive the container, so after a failure
+`scripts/build_with_container.sh --shell` drops you back in and
+`ctest --test-dir <dir>` re-runs the suite with no rebuild — passing the same
+`--build_dir` that run used, since `--shell` otherwise takes the default above.
 
 The image sets `SPACK_ROOT` but deliberately does **not** activate the Spack
 environment — the repo scripts own activation (`--shell` activates it for you, so

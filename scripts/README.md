@@ -157,11 +157,9 @@ The image is also the one CI uses and the commands match, so a failure in
 a guarantee. The known divergence: CI checks a MOM6 branch out fresh beside the
 workspace, where this builds the tree you hand it.
 
-The traffic runs the other way too: `.github/workflows/container-driver-scripts.yaml`
-runs `./test_turbo_stack_with_container.sh` on the runner host, so these two scripts
-are themselves under test. That is the only lane that executes them — the CMake lane
-reaches the same image by declaring `container:` on the job, which bypasses the
-wrapper entirely.
+It runs the other way too: `.github/workflows/container-driver-scripts.yaml` runs
+`./test_turbo_stack_with_container.sh` on the runner host — the only lane that
+executes these scripts, since the CMake lane's `container:` job bypasses the wrapper.
 
 `build_with_container.sh` takes the usual builder flags and forwards them to
 `build_local_with_spack_env.sh` *inside* the container, adding what the workflow
