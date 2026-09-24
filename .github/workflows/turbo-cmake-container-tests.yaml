@@ -75,5 +75,5 @@ jobs:
     name: MOM6 dev/turbo-debug
     uses: ./.github/workflows/cmake-build.yaml
     with:
-      mom6_ref: dev/turbo-debug
-      mom6_label: dev/turbo-debug
+      mom6_ref: turbo-debug-checksum-interface-update
+      mom6_label: turbo-debug-checksum-interface-update
