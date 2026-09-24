@@ -1,8 +1,8 @@
 # docker/Dockerfile.turbo-ci
 #
-# turbo-stack CI base image: Ubuntu + a system GCC/GFortran toolchain + Spack,
-# with the turbo-stack Spack environment ("turbo_stack") pre-created and
-# installed from the repo's own spack/spack.yaml
+# turbo-stack CI base image: Ubuntu + one compiler toolchain + Spack, with the
+# turbo-stack Spack environment ("turbo_stack") pre-created and installed from
+# the repo's own spack/spack.yaml
 # (cmake, ninja, gmake, openmpi, netcdf-fortran, parallelio, pfunit +mpi,
 # amrex +fortran).
 #
@@ -17,9 +17,14 @@
 # The env name MUST be "turbo_stack" so it matches the default env name in
 # scripts/setup_environment/spack_local_environment.sh.
 #
-# Build context is the repo root (so spack/ is available to COPY).  --load puts the
-# tag in the local image store: redundant on the default `docker` driver, required
-# with a `docker-container` builder, which otherwise discards the result.
+# One Dockerfile builds every image flavor, named <compiler>-<mpi>. The compiler
+# is chosen by the COMPILER build arg (see docker/install_compiler.sh); MPI is
+# always OpenMPI for now, because spack/spack.yaml requires it.
+#
+# Build context is the repo root (so spack/ and docker/ are available to COPY).
+# --load puts the tag in the local image store: redundant on the default `docker`
+# driver, required with a `docker-container` builder, which otherwise discards
+# the result.
 #     docker buildx build --load -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
 
 ARG BASE_IMAGE=ubuntu:24.04
@@ -27,13 +32,13 @@ FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# --- 1) OS build tools + Spack bootstrap prerequisites + system GCC/GFortran ---
-# The system compiler is registered with Spack via `spack compiler find`, so no
-# compiler is rebuilt from source. Package list mirrors the Spack prerequisites
-# already used by the repo's amrex-mini-app CI, adapted to apt.
+# --- 1) OS build tools + Spack bootstrap prerequisites ------------------------
+# Shared by every flavor. The compiler itself is installed in step 3.
+# build-essential stays here regardless: it brings make and the libc headers
+# every compiler needs. Package list mirrors the Spack prerequisites already
+# used by the repo's amrex-mini-app CI, adapted to apt.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
-        gfortran \
         ca-certificates \
         curl \
         git \
@@ -57,12 +62,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG SPACK_REF=v1.2.2
 ENV SPACK_ROOT=/opt/spack
 RUN git clone --depth=1 --branch "${SPACK_REF}" https://github.com/spack/spack.git "${SPACK_ROOT}" \
-    && . "${SPACK_ROOT}/share/spack/setup-env.sh" \
-    && spack compiler find \
-    && spack compiler list \
     && rm -rf "${SPACK_ROOT}/var/spack/cache"
 
-# --- 3) Bake the turbo_stack Spack environment via the repo's OWN recipe -------
+# --- 3) The flavor's compiler, registered with Spack ---------------------------
+# Everything above is shared by all flavors; from here on each flavor has its
+# own layers. See docker/install_compiler.sh for the supported families.
+ARG COMPILER=gcc
+COPY docker/install_compiler.sh /opt/turbo-compiler/install_compiler.sh
+RUN bash /opt/turbo-compiler/install_compiler.sh "${COMPILER}"
+
+# --- 4) Bake the turbo_stack Spack environment via the repo's OWN recipe -------
 # create_spack_environment.sh does: spack env create -> concretize -> install.
 # It only needs SPACK_ROOT (set above) because we pass the spack.yaml path
 # explicitly, so no turbo-stack checkout is required at image-build time.
@@ -84,7 +93,9 @@ ARG SPACK_TARGET=x86_64_v3
 # Expensive layer: concretize + install the whole dependency stack from source.
 # Kept as its own RUN so it caches independently of the best-effort cleanup below
 # (a cleanup change must not force a full dependency rebuild).
-RUN TURBO_SPACK_TARGET="${SPACK_TARGET}" \
+# TURBO_SPACK_COMPILER makes the flavor's compiler a hard requirement, so Spack
+# cannot quietly build part of the stack with some other compiler it finds.
+RUN TURBO_SPACK_TARGET="${SPACK_TARGET}" TURBO_SPACK_COMPILER="${COMPILER}" \
     bash /opt/turbo-spack/create_spack_environment.sh turbo_stack /opt/turbo-spack/spack.yaml
 
 # Best-effort cache trimming. `spack clean -a` can abort on a symlink
@@ -96,16 +107,37 @@ RUN . "${SPACK_ROOT}/share/spack/setup-env.sh"; \
 # until the pipeline is validated end-to-end, so gc can't silently remove
 # something the FMS/TIM builds need. Add it here once CI is green.
 
-# --- 4) Sanity check: the env exists and is installed --------------------------
+# --- 5) The compilers turbo-stack builds with ----------------------------------
+# The Spack flavor of the build scripts never picks a compiler; it only activates
+# the env. Without these, CMake falls back to whatever cc/c++/f95 it finds on
+# PATH -- which matches the Spack stack only if the image happens to contain
+# exactly that one compiler. install_compiler.sh points these fixed paths at the
+# flavor's compiler, so the ENV can be static.
+ENV CC=/opt/turbo-compiler/bin/cc \
+    CXX=/opt/turbo-compiler/bin/c++ \
+    FC=/opt/turbo-compiler/bin/fc
+
+# --- 6) Sanity check: the env exists, is installed, and used one compiler ------
 # `spack find` exits 0 even when specs in the env are NOT installed (it just marks
 # them "-"), so checking its exit status proves nothing. Assert the absence of any
 # "-" marker instead. The install above already fails the build via set -eo pipefail
 # in create_spack_environment.sh; this is the check that a partially-installed env
 # cannot slip through.
+#
+# Then assert every compiled package was built by the flavor's compiler: `none`
+# is a package with nothing to compile, anything else must be %${COMPILER}@...
+# At least one must match, so the check cannot pass by checking nothing.
 RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
     && spack env list | grep -qw turbo_stack \
     && spack -e turbo_stack find --no-groups \
-    && ! spack -e turbo_stack find --no-groups | grep -q '^ *- '
+    && ! spack -e turbo_stack find --no-groups | grep -q '^ *- ' \
+    && spack -e turbo_stack find --no-groups --format '{name} {%compiler}' > /tmp/compilers \
+    && if grep -v -E " (none|%${COMPILER}@.*)$" /tmp/compilers; then \
+           echo "ERROR: the packages above were not built with ${COMPILER}" >&2; exit 1; \
+       fi \
+    && grep -q " %${COMPILER}@" /tmp/compilers \
+    && rm /tmp/compilers \
+    && "$CC" --version && "$CXX" --version && "$FC" --version
 
 # OpenMPI 5 (PRRTE) refuses to launch as root by default. CI job containers
 # (GitHub Actions) and local `docker run` execute as root, and the pFUnit suites
