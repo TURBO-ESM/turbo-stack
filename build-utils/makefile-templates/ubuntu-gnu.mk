@@ -29,7 +29,7 @@ CFLAGS := -D__IFC
 CFLAGS_REPRO= -O2
 CFLAGS_DEBUG = -O0 -g
 
-CXXFLAGS := -std=c++17
+CXXFLAGS := -std=c++20
 
 LDFLAGS :=
 

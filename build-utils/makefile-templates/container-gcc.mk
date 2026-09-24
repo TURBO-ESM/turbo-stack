@@ -24,7 +24,7 @@ CFLAGS := -D__IFC
 
 LDFLAGS :=
 
-CXXFLAGS := -std=c++17
+CXXFLAGS := -std=c++20
 
 ifeq ($(CODECOV),1)
 	FFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/

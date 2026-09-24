@@ -41,7 +41,7 @@ jobs:
         run: |
           cd submodules/MOM6/
           git fetch origin
-          git checkout --recurse-submodules dev/turbo-debug
+          git checkout --recurse-submodules turbo-debug-checksum-interface-update
           echo "Head of dev/turbo-debug is this commit:"
           git log -1 --decorate
           cd ../..
