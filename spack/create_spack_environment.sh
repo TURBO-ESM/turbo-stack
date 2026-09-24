@@ -31,9 +31,11 @@
 # Creates a named Spack environment, installs all packages, and prints
 # the activation command. Does NOT activate — user must run the printed command.
 #
-# To build an environment with a specific compiler (it must be registered with
-# Spack first, e.g. `spack compiler find /path/to/its/bin`):
-#   TURBO_SPACK_COMPILER=llvm ./spack/create_spack_environment.sh turbo_stack_llvm
+# TURBO_SPACK_COMPILER controls only how the environment's packages are built;
+# the compiler must already be registered with Spack
+# (`spack compiler find /path/to/its/bin`). turbo-stack itself is built with
+# whatever FC/CC/CXX name (see scripts/README.md), so point those at the same
+# compiler.
 
 set -eo pipefail
 

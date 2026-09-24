@@ -69,10 +69,9 @@ jobs:
   # another repository -- a push to MOM6 can redden a turbo-stack PR that had
   # nothing to do with it. Accepted for now: the two are co-developed by the same
   # team and catching integration breakage immediately is worth more than an
-  # always-green gate. If that stops being true, `allow_failure: true` under
-  # `with:` downgrades it to a warning without touching anything else. (Not
-  # `continue-on-error` here: GitHub rejects it on a job that calls a reusable
-  # workflow, so cmake-build.yaml applies it to its own jobs instead.)
+  # always-green gate. If that stops being true, it can be made non-blocking with
+  # `continue-on-error` on the job inside cmake-build.yaml -- not on this job:
+  # GitHub rejects `continue-on-error` on a job that calls a reusable workflow.
   turbo-debug:
     name: MOM6 dev/turbo-debug
     uses: ./.github/workflows/cmake-build.yaml

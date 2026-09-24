@@ -57,11 +57,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # flavor:           the image tag, <compiler>-<mpi>
-          # compiler/version: arguments to docker/install_compiler.sh
+          # flavor:   the image tag, <compiler>-<mpi>
+          # compiler: the argument to docker/install_compiler.sh
           - flavor: gcc-openmpi
             compiler: gcc
-            compiler_version: ""
     # One build per flavor at a time. Two concurrent dispatches would race to push
     # the same mutable tag and would both export mode=max to the same cache tag.
     # Queue instead of cancel: a nearly-finished 1 h build should not be thrown
@@ -112,7 +111,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             COMPILER=${{ matrix.compiler }}
-            COMPILER_VERSION=${{ matrix.compiler_version }}
           # Registry-backed layer cache stored as a :buildcache-<flavor> tag in
           # GHCR -- one per flavor, because a mode=max export replaces the whole
           # cache tag, so flavors sharing one would evict each other.

@@ -68,9 +68,8 @@ RUN git clone --depth=1 --branch "${SPACK_REF}" https://github.com/spack/spack.g
 # Everything above is shared by all flavors; from here on each flavor has its
 # own layers. See docker/install_compiler.sh for the supported families.
 ARG COMPILER=gcc
-ARG COMPILER_VERSION=
 COPY docker/install_compiler.sh /opt/turbo-compiler/install_compiler.sh
-RUN bash /opt/turbo-compiler/install_compiler.sh "${COMPILER}" "${COMPILER_VERSION}"
+RUN bash /opt/turbo-compiler/install_compiler.sh "${COMPILER}"
 
 # --- 4) Bake the turbo_stack Spack environment via the repo's OWN recipe -------
 # create_spack_environment.sh does: spack env create -> concretize -> install.
@@ -127,6 +126,7 @@ ENV CC=/opt/turbo-compiler/bin/cc \
 #
 # Then assert every compiled package was built by the flavor's compiler: `none`
 # is a package with nothing to compile, anything else must be %${COMPILER}@...
+# At least one must match, so the check cannot pass by checking nothing.
 RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
     && spack env list | grep -qw turbo_stack \
     && spack -e turbo_stack find --no-groups \
@@ -135,6 +135,7 @@ RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
     && if grep -v -E " (none|%${COMPILER}@.*)$" /tmp/compilers; then \
            echo "ERROR: the packages above were not built with ${COMPILER}" >&2; exit 1; \
        fi \
+    && grep -q " %${COMPILER}@" /tmp/compilers \
     && rm /tmp/compilers \
     && "$CC" --version && "$CXX" --version && "$FC" --version
 

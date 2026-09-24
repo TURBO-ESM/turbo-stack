@@ -1,5 +1,5 @@
 #!/bin/bash
-# docker/install_compiler.sh FAMILY [VERSION]
+# docker/install_compiler.sh FAMILY
 #
 # Installs one compiler toolchain into the turbo-ci image and makes it the one
 # everything uses. Run by docker/Dockerfile.turbo-ci (step 3), after Spack is
@@ -15,21 +15,19 @@
 # passes it to create_spack_environment.sh as TURBO_SPACK_COMPILER.
 #
 # Supported:
-#   gcc    the distribution default (VERSION must be empty)
+#   gcc    the distribution's default gcc/g++/gfortran
 #
 # Adding a family is one case below: install it, then set cc/cxx/fc/bindir and
 # the string its Fortran `--version` output must contain.
 
 set -euo pipefail
 
-family=${1:?usage: install_compiler.sh FAMILY [VERSION]}
-version=${2:-}
+family=${1:?usage: install_compiler.sh FAMILY}
 
 die() { echo "install_compiler.sh: $*" >&2; exit 1; }
 
 case "$family" in
     gcc)
-        [[ -z "$version" ]] || die "gcc: only the distribution default is supported (got VERSION='$version')"
         apt-get update
         apt-get install -y --no-install-recommends gcc g++ gfortran
         rm -rf /var/lib/apt/lists/*
@@ -48,7 +46,9 @@ ln -sfn "$cxx" /opt/turbo-compiler/bin/c++
 ln -sfn "$fc"  /opt/turbo-compiler/bin/fc
 
 # Catch a wrong symlink here rather than as a confusing CMake failure later.
-/opt/turbo-compiler/bin/fc --version | grep -q "$fc_banner" \
+# A here-string, not a pipe: under pipefail, `grep -q` exiting at its first match
+# can SIGPIPE the writer and fail the check even though it matched.
+grep -q "$fc_banner" <<< "$(/opt/turbo-compiler/bin/fc --version)" \
     || die "/opt/turbo-compiler/bin/fc -> $fc does not report '$fc_banner'"
 
 # shellcheck source=/dev/null
