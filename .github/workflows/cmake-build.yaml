@@ -36,14 +36,6 @@ on:
         required: false
         default: "gcc-openmpi"
         type: string
-      allow_failure:
-        description: >-
-          Report a failure without failing the calling workflow. For lanes not yet
-          expected to pass. Lives here because `continue-on-error` cannot be set on
-          a job that calls a reusable workflow, only on the jobs inside it.
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -53,7 +45,6 @@ jobs:
   build-test:
     name: build+test (${{ matrix.infra }}, ${{ inputs.flavor }})
     runs-on: ubuntu-latest
-    continue-on-error: ${{ inputs.allow_failure }}
     # ~9 min when healthy. A deadlocked MPI test would otherwise hang for the 6 h
     # default.
     timeout-minutes: 60
