@@ -22,13 +22,18 @@
 #                     applied as a requirement, so an impossible value (an x86
 #                     level on Apple Silicon) fails concretization rather than
 #                     silently degrading.
+#   TURBO_SPACK_COMPILER  Compiler that must build every package, as a Spack
+#                     spec, e.g. gcc or llvm@21. When unset, Spack chooses among
+#                     the compilers it knows about. Applied as a requirement on
+#                     the c, cxx and fortran virtuals, so a compiler Spack does
+#                     not know fails concretization rather than being replaced.
 #
 # Creates a named Spack environment, installs all packages, and prints
 # the activation command. Does NOT activate — user must run the printed command.
 #
-# To experiment with a compiler-specific environment:
-#   1. Copy spack/spack.yaml -> spack/spack_<compiler>.yaml and adjust compiler/mpi entries
-#   2. Run: ./spack/create_spack_environment.sh turbo-<compiler> spack/spack_<compiler>.yaml
+# To build an environment with a specific compiler (it must be registered with
+# Spack first, e.g. `spack compiler find /path/to/its/bin`):
+#   TURBO_SPACK_COMPILER=llvm ./spack/create_spack_environment.sh turbo_stack_llvm
 
 set -eo pipefail
 
@@ -88,6 +93,15 @@ spack env activate "$spack_environment_name"
 if [[ -n "${TURBO_SPACK_TARGET:-}" ]]; then
     echo "Pinning target to $TURBO_SPACK_TARGET (TURBO_SPACK_TARGET) ..."
     spack config add "packages:all:require:target=${TURBO_SPACK_TARGET}"
+fi
+
+# Compiler pin, applied the same way and for the same reason: it is a property
+# of where the environment is built (one image flavor), not of the spec.
+if [[ -n "${TURBO_SPACK_COMPILER:-}" ]]; then
+    echo "Requiring compiler $TURBO_SPACK_COMPILER (TURBO_SPACK_COMPILER) ..."
+    for _lang in c cxx fortran; do
+        spack config add "packages:${_lang}:require:[${TURBO_SPACK_COMPILER}]"
+    done
 fi
 
 echo "Concretizing ..."
