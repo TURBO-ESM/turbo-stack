@@ -46,9 +46,7 @@ It is deliberately self-contained: nothing from your login shell reaches the job
 qsub -A <project_code> -l walltime=00:30:00 test_turbo_stack_on_derecho.sh
 ```
 
-**Change where the build artifacts are written:** Each backend is built and tested in its own directory under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or `/tmp` if `TMPDIR` is unset), so the two executables land at `<that dir>/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6`. If you want them somewhere else, set that variable — and note that `$TMPDIR` inside a
-job is not the scratch filesystem and need not outlive the job, so pass an explicit
-path for anything you want to keep:
+**Change where the build artifacts are written:** Each backend is built and tested in its own directory under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or `/tmp` if `TMPDIR` is unset), so the two executables land at `<that dir>/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6`. If you want them somewhere else, set that variable — and note that `$TMPDIR` inside a job is not the scratch filesystem and need not outlive the job, so pass an explicit path for anything you want to keep:
 
 ```bash
 qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
@@ -168,8 +166,7 @@ MARBL, so here only the *source* can be swapped.
 
 ## Scripts to build and test both backends
 
-There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. They write nothing into your checkout — artifacts go under
-`$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`):
+There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. They write nothing into your checkout — artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`):
 
 ```bash
 ./test_turbo_stack_locally.sh                   # Spack toolchain
