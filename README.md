@@ -23,7 +23,7 @@ Clone the repository along with all submodules:
 git clone --recursive https://github.com/TURBO-ESM/turbo-stack.git
 ```
 
-If you already cloned this repo but forgot the `--recursive` you can get the submodules at anytime with:
+If you already cloned this repo but forgot the `--recursive` you can get the submodules at any time with:
 ```bash
 git submodule update --init --recursive
 ```
@@ -38,7 +38,7 @@ qsub test_turbo_stack_on_derecho.sh
 ```
 That driver is a true one liner: it carries its own PBS directives (turbo project code, one node, 128 cores, one hour run time, etc.), then for each backend in turn — TIM and FMS2 — loads some dependencies using Derecho's modules, builds the remaining dependencies from the pinned submodules, builds MOM6, and runs the pFUnit suite. Each backend gets its own build directory, and the run ends with a PASS / FAIL verdict for each.
 
-It is deliberately self-contained: nothing from your login shell reaches the job, scripts run `module purge` before loading their own set of modules (so any modules you loaded yourself prior to launch will not be used), and no `#PBS -V` so environment variables don't make it into the job. It writes nothing into your checkout, and the job log lands in `turbo-stack-on-derecho-test.o<jobid>` in the directory you submitted from, with a per-backend log alongside the builds.
+It is deliberately self-contained: nothing from your login shell reaches the job, scripts run `module purge` before loading their own set of modules (so any modules you loaded yourself prior to launch will not be used), and no `#PBS -V` so environment variables don't make it into the job. The builds land outside your checkout (see below); the one file PBS writes where you submitted from is the job log, `turbo-stack-on-derecho-test.o<jobid>`. A per-backend log sits alongside the builds.
 
 **Change the run options:** Adding a `qsub` option to the command line overrides the matching directive in the script — e.g. to run under a different project code for 30 minutes:
 
@@ -56,7 +56,7 @@ qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
 **Options**
 This script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--only TIM` or `--only FMS2` to select a specific backend instead of both, and `--clean` to rebuild everything from scratch (removes the entire build directory).
 
-> This script is really just a thin wrapper around [`build_on_derecho.sh`](scripts/build_on_derecho.sh), which builds and tests turbo-stack with a single backend on Derecho. You can run that one directly instead if you prefer — see [Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself) in the `scripts/` README.
+> This script is really just a thin wrapper around [`build_on_derecho.sh`](scripts/build_on_derecho.sh), which builds turbo-stack with a single backend on Derecho — and, given `--tests`, runs the pFUnit suite. You can run that one directly instead if you prefer — see [Build on Derecho yourself](scripts/README.md#build-on-derecho-yourself) in the `scripts/` README.
 
 ## Overview of software stack
 turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent executables, boxes are libraries we link against, the diamond represents a switch keyed on the option that selects a backend, and the colored boxes in the background show which repository the source code comes from. 
@@ -95,7 +95,7 @@ turbo-stack does not supply the source code of these as submodules and will not 
 |---|---|---|
 | Fortran compiler | `FC`, else CMake tries to find it by searching `PATH` | GNU, Intel / IntelLLVM, NVHPC / PGI, or Flang / LLVMFlang. Any other compiler ID is a hard configure error — `cmake/TurboCompilerFlags.cmake` carries no flag set for it |
 | C and C++ compilers | `CC` and `CXX`, else CMake tries to find them by searching `PATH` | the top-level project enables `C CXX`, so both C and C++ compilers are needed |
-| MPI | `mpicc`, `mpifort` (or `mpif90`) and `mpicxx` (or `mpic++`) on `PATH`, or `MPI_HOME` | the Fortran and C wrappers; the TIM/AMReX path uses the C++ one too |
+| MPI | `mpicc`, `mpifort` (or `mpif90`) and `mpicxx` (or `mpic++`) on `PATH` | the Fortran and C wrappers; the TIM/AMReX path uses the C++ one too. `MPI_HOME` is enough for CMake itself — so for a direct `build_turbo_stack.sh` run — but `build_local_with_system_toolchain.sh` checks for the wrappers on `PATH` and stops without them |
 | NetCDF | `nc-config` / `nf-config` on `PATH`, or `NetCDF_ROOT`, or the install prefix on `CMAKE_PREFIX_PATH` | need the C and Fortran libraries |
 | CMake | on `PATH` | ≥ 3.24 — turbo-stack, MOM6, TIM and pFUnit each require it |
 | `make` or `ninja` | on `PATH` | Unix Makefiles by default, running the build scripts with `--ninja` picks Ninja instead |
@@ -116,7 +116,7 @@ them.
 
 ### Tier 1.5 — Prerequisites, but we supply the source via a submodule
 
-AMReX and pFUnit are external libraries. The source code is provided via submodules. However you can bring your own install by adding its install prefix on `CMAKE_PREFIX_PATH`. pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at `<prefix>/PFUNIT-X.Y/cmake`.
+AMReX and pFUnit are external libraries. The source code is provided via submodules, and which build script you run decides where they come from: the Spack flavor takes both prebuilt from its Spack environment, and the from-source builders always build them from the submodule (or from an `AMREX_ROOT` / `PFUNIT_ROOT` source tree). None of the one-command builders will pick up an install of your own. To use one, take the [explicit flow](scripts/README.md#explicit-iterative-any-flavor): source a toolchain recipe, skip `turbo_build_amrex` / `turbo_build_pfunit`, prepend your install prefix to `CMAKE_PREFIX_PATH`, then run `build_turbo_stack.sh`. pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at `<prefix>/PFUNIT-X.Y/cmake`.
 
 #### Getting tiers 1 and 1.5 from Spack
 
@@ -139,9 +139,11 @@ The `turbo_stack` environment is created on first use by
 FMS and TIM are the two backends MOM6's infrastructure layer sits on, and the two
 we co-develop: TIM is TURBO's own AMReX-based layer, while FMS is GFDL's Flexible
 Modeling System tracked in a [TURBO-ESM fork](https://github.com/TURBO-ESM/FMS).
-turbo-stack supplies both as submodules and builds whichever one `--infra`
-selects. To supply one yourself instead, put its install prefix on
-`CMAKE_PREFIX_PATH`.
+turbo-stack supplies both as submodules, and every one-command builder builds
+whichever one `--infra` selects — from the submodule, or from an `FMS_ROOT` /
+`TIM_ROOT` source tree. A prebuilt install of your own is used only in the
+explicit flow, the same way as for tier 1.5: skip `turbo_build_fms` /
+`turbo_build_tim` and put its install prefix on `CMAKE_PREFIX_PATH`.
 
 > [!WARNING]
 > `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
@@ -166,7 +168,7 @@ MARBL, so here only the *source* can be swapped.
 
 ## Scripts to build and test both backends
 
-There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. They write nothing into your checkout — artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`):
+There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. Artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`), so with the default they write nothing into your checkout — a Derecho batch job's PBS log aside:
 
 ```bash
 ./test_turbo_stack_locally.sh                   # Spack toolchain
@@ -264,12 +266,15 @@ scripts/build_local_with_spack_env.sh --infra TIM
 ```
 
 `MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and they work
-with every entry point. `AMREX_ROOT` and `PFUNIT_ROOT` work the same way, but
-only where the builder actually builds tier 1.5 from submodule — the from-source
-builders (`build_local_with_system_toolchain.sh`, `build_on_derecho.sh`, and
-their testers). The Spack flavor shown above takes AMReX and pFUnit prebuilt
-from the Spack environment and never consults those two variables; to swap them
-there, put your own install prefix on `CMAKE_PREFIX_PATH` as described under
+with every build script and tester, and with the explicit flow's `turbo_build_*`
+wrappers. A bare `build_turbo_stack.sh` reads only `MOM6_ROOT`: it builds no
+backend, so it finds FMS or TIM installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
+and `PFUNIT_ROOT` work the same way, but only where the builder actually builds
+tier 1.5 from submodule — the from-source builders
+(`build_local_with_system_toolchain.sh`, `build_on_derecho.sh`, and their
+testers). The Spack flavor shown above takes AMReX and pFUnit prebuilt from the
+Spack environment and never consults those two variables; to build against your
+own there, use the explicit flow described under
 [tier 1.5](#tier-15--prerequisites-but-we-supply-the-source-via-a-submodule).
 
 What gets *reported* differs between the two entry points:

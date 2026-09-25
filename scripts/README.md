@@ -15,12 +15,19 @@ turbo-stack classifies every dependency by **its build policy** — see
 | **3 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`); only the SOURCE can be swapped | turbo-stack, MOM6, MARBL |
 
 Tiers 1.5 and 2 share the same build policy (build-from-submodule or supply-prebuilt);
-they differ by *source*. "Our code" is not a tier: the repos we co-develop —
+they differ by *source*. Which option is taken is fixed per builder, not chosen
+by you: every one-command builder builds its Tier 2 backend from source, and
+Tier 1.5 is taken prebuilt from the Spack env by the Spack flavor and built from
+source by the other two. A prebuilt install of your own is used only in the
+[explicit flow](#explicit-iterative-any-flavor).
+
+"Our code" is not a tier: the repos we co-develop —
 **FMS, TIM** (Tier 2) and **MOM6** (Tier 3) — are the ones the drivers treat as
 first-class hot-swaps, reporting each as `(override)` or `(submodule)` in the
 testing matrix. Every `build_dep` dep in fact honors a `*_ROOT` source override
 — AMReX/pFUnit (Tier 1.5) via `AMREX_ROOT` / `PFUNIT_ROOT` — it just goes
-unreported in the matrix. MARBL is pinned-submodule-only -- it currently rides along in Tier 3 as a MOM6
+unreported in the matrix, and it applies only where a builder builds them, which
+the Spack flavor never does. MARBL is pinned-submodule-only -- it currently rides along in Tier 3 as a MOM6
 dependency; pushing it down into Tier 1.5 as an external library is a possible
 future move.
 
@@ -93,15 +100,17 @@ test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 
 Each runs the real single-backend builder once per backend, each in its own
 process and its own build directory, and builds + `ctest`s turbo-stack for both
-FMS2 and TIM. `--only FMS2|TIM`, `--parallel N`, `--clean`. All three support the
-`*_ROOT` source overrides described below.
+FMS2 and TIM. `--only FMS2|TIM`, `--parallel N`, `--clean`. All three honor the
+`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` source overrides described below;
+`AMREX_ROOT` / `PFUNIT_ROOT` only the two from-source ones, since
+`test_turbo_stack_locally.sh` takes AMReX and pFUnit prebuilt from Spack.
 
 Two different things get printed, and they are easy to conflate:
 
 - a **testing matrix** at the start (`turbo_print_matrix`) — the commit and branch
   of turbo-stack, MOM6, TIM and FMS, each marked `(override)` or `(submodule)`.
-  AMReX and pFUnit are *not* in it even though `AMREX_ROOT` and `PFUNIT_ROOT`
-  work; `build_dep` announces those as it resolves them instead.
+  AMReX and pFUnit are *not* in it, even where `AMREX_ROOT` and `PFUNIT_ROOT`
+  apply; `build_dep` announces those as it resolves them instead.
 - a **build summary** at the end (`turbo_verdict`) — `PASS` / `FAIL` / `SKIPPED`
   per backend.
 
@@ -115,8 +124,9 @@ executables end up at:
 $TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6
 ```
 
-`--clean` removes that whole directory first. Nothing is written into
-`$TURBO_STACK_ROOT`.
+`--clean` removes that whole directory first. With the default location, no
+build artifact is written into `$TURBO_STACK_ROOT` — only a Derecho batch job's
+PBS log, when you submit from there (see below).
 
 ### Submitting the Derecho driver as a batch job
 
@@ -435,7 +445,8 @@ When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.
 ## Environment
 
 None of the entry-point scripts take `cmake -D…` configure options on their
-command line, so everything CMake needs is selected through the environment. The
+command line, so whatever their own flags (`--infra`, `--debug`, `--tests`, …) do
+not select comes from the environment. The
 two `--` pass-throughs above are not exceptions to that: `build_dep`'s carries
 each dependency's canonical flags down from the `turbo_build_*` wrappers, and
 `build_turbo_stack.sh`'s goes to `cmake --build`, not to configure.
@@ -446,7 +457,7 @@ each dependency's canonical flags down from the `turbo_build_*` wrappers, and
 |---|---|
 | `FC`, `CC`, `CXX` | the Fortran / C / C++ compiler. Unset, CMake searches `PATH`. |
 | `FFLAGS`, `CFLAGS`, `CXXFLAGS` | seed `CMAKE_<LANG>_FLAGS`; the project appends its own flags on top. |
-| `MPI_HOME` | hint for `find_package(MPI)` when the compiler wrappers are not on `PATH`. |
+| `MPI_HOME` | hint for `find_package(MPI)` when the compiler wrappers are not on `PATH` — enough for a direct `build_turbo_stack.sh` run, but not for `build_local_with_system_toolchain.sh`, whose toolchain check requires the wrappers on `PATH`. |
 | `NetCDF_ROOT` | hint for `FindNetCDF` when `nc-config` / `nf-config` are not on `PATH`. |
 | `CMAKE_PREFIX_PATH` | where prebuilt dependencies are found. `build_dep` appends each install prefix it creates. |
 | `PFUNIT_DIR` | pFUnit's cmake dir. `build_dep` exports it because pFUnit installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not walk into. |
@@ -475,4 +486,5 @@ Optional, for testing against local dev trees:
 
 - `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` — hot-swap a co-developed repo's source
   (default: the pinned submodule).
+- `AMREX_ROOT`, `PFUNIT_ROOT` — the same, for the from-source builders only.
 - `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").
