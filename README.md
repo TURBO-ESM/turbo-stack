@@ -116,29 +116,18 @@ If we add, remove, or change options we will try to keep the above list up to da
 
 ### Choosing an infrastructure backend
 
-MOM6 is built against exactly one infrastructure layer, chosen with `--infra`:
-
-- **`TIM`** — Turbo Infrastructure for MOM, backed by AMReX. **The default.**
-- **`FMS2`** — the traditional Flexible Modeling System layer; the reference backend.
-
-The two are mutually exclusive, and the choice decides which dependency gets
-built: `--infra TIM` builds TIM, `--infra FMS2` builds FMS. Switching backends
-in an existing build directory is safe — the flag is always passed to CMake
-explicitly, so a previous choice never sticks in the cache.
+MOM6 is built against one infrastructure backend, picked with `--infra`: `TIM`
+(the default, backed by AMReX) or `FMS2`. See
+[Tier 2 — Infrastructure backend](scripts/README.md#tier-2--infrastructure-backend)
+in the `scripts/` README for how the choice works.
 
 ### Where the build lands
 
-With no `--build_dir`, the build lands inside the checkout you ran the scripts from:
-
-| Path | Contents |
-|---|---|
-| `build/default/` | turbo-stack's CMake build tree |
-| `build/default/mom6_build/config_src/drivers/solo_driver/MOM6` | the standalone MOM6 executable |
-| `deps/default/build/`, `deps/default/install/` | the dependencies built from `submodules/` |
-
-Passing `--build_dir DIR` moves both: the build tree to `DIR` and the
-dependencies to `DIR/deps/{build,install}/`. Both locations are outside `bin/`,
-so a CMake build and a legacy mkmf build can coexist.
+By default the build lands inside your checkout: turbo-stack's build tree, MOM6
+executable included, in `build/default/`, and the dependencies it built in
+`deps/default/`. `--build_dir DIR` moves both — see
+[Where the build lands](scripts/README.md#where-the-build-lands) in the
+`scripts/` README.
 
 ### Running the unit tests
 

@@ -135,8 +135,18 @@ The `turbo_stack` environment is created on first use by
 FMS and TIM are the two backends MOM6's infrastructure layer sits on, and the two
 we co-develop: TIM is TURBO's own AMReX-based layer, while FMS is GFDL's Flexible
 Modeling System tracked in a [TURBO-ESM fork](https://github.com/TURBO-ESM/FMS).
+MOM6 is built against exactly one of them, chosen with `--infra`:
+
+- **`TIM`** — Turbo Infrastructure for MOM, backed by AMReX. **The default.**
+- **`FMS2`** — the traditional Flexible Modeling System layer; the reference backend.
+
+The two are mutually exclusive, and the choice decides which dependency gets
+built: `--infra TIM` builds TIM, `--infra FMS2` builds FMS. Switching backends
+in an existing build directory is safe — the flag is always passed to CMake
+explicitly, so a previous choice never sticks in the cache.
+
 turbo-stack supplies both as submodules, and every one-command builder builds
-whichever one `--infra` selects — from the submodule, or from an `FMS_ROOT` /
+the one `--infra` selects — from the submodule, or from an `FMS_ROOT` /
 `TIM_ROOT` source tree. A prebuilt install of your own is used only in the
 explicit flow, the same way as for tier 1.5: skip `turbo_build_fms` /
 `turbo_build_tim` and put its install prefix on `CMAKE_PREFIX_PATH`.
@@ -461,24 +471,29 @@ exactly which commit was tested.
 
 ---
 
-## Where do dep builds + installs land?
+## Where the build lands
 
-The orchestrators derive the deps location from `--build_dir`:
+With no `--build_dir`, a single-backend builder puts everything inside the
+checkout you ran it from:
 
-- `build_local_with_spack_env.sh --build_dir /scratch/foo` → deps land at `/scratch/foo/deps/{build,install}/`.
-- `build_local_with_system_toolchain.sh --build_dir /scratch/foo` → same.
-- `build_on_derecho.sh --build_dir /scratch/foo` → same.
-- No orchestrator given a `--build_dir`: deps land at `$TURBO_STACK_ROOT/deps/default/`.
+| Path | Contents |
+|---|---|
+| `build/default/` | turbo-stack's CMake build tree |
+| `build/default/mom6_build/config_src/drivers/solo_driver/MOM6` | the standalone MOM6 executable |
+| `deps/default/build/`, `deps/default/install/` | the dependencies built from `submodules/` |
 
-- The end-to-end test drivers build each backend independently under
-  `$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir).
+Passing `--build_dir DIR` moves both, the same way for all three builders: the
+build tree to `DIR` and the dependencies to `DIR/deps/{build,install}/`. Both
+locations are outside `bin/`, so a CMake build and a legacy mkmf build can
+coexist.
 
-turbo-stack's own build tree is the `--build_dir` itself (default
-`$TURBO_STACK_ROOT/build/default`), and the MOM6 executable lands inside it at
-`mom6_build/config_src/drivers/solo_driver/MOM6` — MOM6 is added with
-`add_subdirectory(... mom6_build)` and sets no `RUNTIME_OUTPUT_DIRECTORY`, so the
-path mirrors MOM6's own source layout. With `--tests`, `ctest` can be re-run
-against an existing tree with `ctest --test-dir <build_dir>`.
+The executable's path mirrors MOM6's own source layout, because MOM6 is added
+with `add_subdirectory(... mom6_build)` and sets no `RUNTIME_OUTPUT_DIRECTORY`.
+With `--tests`, `ctest` can be re-run against an existing tree with
+`ctest --test-dir <build_dir>`.
+
+The end-to-end test drivers build each backend independently under
+`$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir).
 
 An out-of-tree MOM6 source (`MOM6_ROOT`) is a build *input*, not a build
 artifact, so it does not land here at all — see above.

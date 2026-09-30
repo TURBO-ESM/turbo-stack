@@ -19,7 +19,7 @@ and both are exercised in CI, in separate lanes:
 
 The legacy path varies with `--compiler` and `--infra`; the CMake one moves as a
 whole with `--build_dir` (see
-[Where the build lands](../README.md#where-the-build-lands)).
+[Where the build lands](../scripts/README.md#where-the-build-lands)).
 
 Everything below is the build documentation as it stood before the CMake build
 system landed, preserved so that existing instructions, job scripts and habits
