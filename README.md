@@ -38,7 +38,7 @@ One script takes you from a fresh clone to a MOM6 executable: it sets up the env
 | Laptop / workstation, let Spack manage the toolchain | `scripts/build_local_with_spack_env.sh` |
 | Laptop / workstation, toolchain already on `PATH` | `scripts/build_local_with_system_toolchain.sh` |
 
-Each builds MOM6 against one [infrastructure backend](#choosing-an-infrastructure-backend), TIM unless you ask for FMS2. To build and test both backends in one go, see [Build and test both backends in one command](#build-and-test-both-backends-in-one-command). [Workflows](scripts/README.md#workflows) in the `scripts/` README is the full reference for these scripts.
+Each builds MOM6 against one [infrastructure backend](#choosing-an-infrastructure-backend), TIM unless you ask for FMS2. To build and test both backends in one go, see [Build and test both backends in one command](#build-and-test-both-backends-in-one-command). [`scripts/README.md`](scripts/README.md) explains how the build is put together, and its [Workflows](scripts/README.md#workflows) section is the full reference for these scripts.
 
 ### On Derecho
 
@@ -62,7 +62,7 @@ scripts/build_local_with_spack_env.sh          # Spack supplies MPI, NetCDF and 
 scripts/build_local_with_system_toolchain.sh   # you already have all of it on PATH
 ```
 
-The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](#tier-1--prerequisites-no-source-supplied-via-submodules) lists what each prerequisite needs. Either way the executable lands in the same place as on Derecho.
+The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. Either way the executable lands in the same place as on Derecho.
 
 To give another machine a one-command script of its own, the way Derecho has one, write a `scripts/setup_environment/<machine>.sh` recipe that loads its toolchain, and a builder that sources it. [`build_on_derecho.sh`](scripts/build_on_derecho.sh) is the model: a toolchain hook plus one call into the shared build code. See [Pipeline](scripts/README.md#pipeline-environment-setup--build-turbo-stack) in the `scripts/` README.
 
@@ -227,6 +227,10 @@ There are high level drivers at the repo root that build **and** `ctest` both ba
 See [Build and test both backends, one command](scripts/README.md#build-and-test-both-backends-one-command)
 in the `scripts/` README for the full reference on each of these.
 
+To build or test against your own MOM6, TIM or FMS tree instead of the pinned
+submodule, see [Building against a development tree or a branch](scripts/README.md#building-against-a-development-tree-or-a-branch)
+in the `scripts/` README.
+
 ### As a batch job on Derecho
 
 ```bash
@@ -252,158 +256,6 @@ qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
 
 **Options:** see them all with `-h` or `--help`. Some commonly used ones are `--only TIM` or `--only FMS2` to select a specific backend instead of both, and `--clean` to rebuild everything from scratch (removes the entire build directory).
 
-## How the build is put together
-turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent executables, boxes are libraries we link against, the diamond represents a switch keyed on the option that selects a backend, and the colored boxes in the background show which repository the source code comes from. 
-
-> Note MARBL is a little bit of an outlier here: we make it a library we can link against in CMake, but we do that from inside the turbo-stack repository. We will probably move the CMake build into MARBL later, so that it can be a normal "External" in the box at the bottom.
-
-[![cmake dependency dag](docs/cmake_dependency_dag.png)](docs/cmake_dependency_dag.png)
-
-Building and running the pFUnit tests in [tests](tests/) is this repository's main job, alongside producing a standalone MOM6 executable. The real work gets done in [`scripts/build_turbo_stack.sh`](scripts/build_turbo_stack.sh), but a number of things (compilers, tools, libraries...) have to be set up before that script can run.
-[![two stage pipeline](docs/two_stage_pipeline.png)](docs/two_stage_pipeline.png)
-
-So we split this into a two phase process.
- 1. **Set up the environment** — put the toolchain on `PATH` and make every dependency turbo-stack does not compile itself discoverable (tiers 1, 1.5 and 2 in the figure below).
- 2. **Build turbo-stack** — `build_turbo_stack.sh` runs `cmake` configure and build against that prepared environment, compiling tier 3 (turbo-stack's tests, MOM6, MARBL). Given `--tests` it then runs the suite under `ctest`.
-
-Setting up the environment, phase 1, varies from machine to machine. While phase 2 is the same across all machines, essentially just calling build_turbo_stack.sh.
-
-The [quick-start scripts](#quick-start-build-the-mom6-executable) automate the entire process (phase 1 and 2), on a specific machine (Derecho), with a specific tool (Spack), or with a toolchain you already have. Most of the work in those scripts has to do with setting up the environment, phase 1.
-
-To help describe what we mean by the environment, a dependency diagram of the turbo-stack software stack is shown below. The diagram is incomplete but shows the major pieces. You will also need a few more things: bash, common unix / linux command line tools that are called in our bash scripts, git, etc.
-
-[![turbo-stack dependency_tiers](docs/dependency_tiers.png)](docs/dependency_tiers.png)
-
-For comparison with the previous figure we consider everything in tiers 1, 1.5, and 2 as needing to be set up prior to calling build_turbo_stack.sh, which essentially builds everything in tier 3.
-
-The sections below cover what you have to supply and how. The full policy — which
-tier turbo-stack never builds, optionally builds, and always builds, and who the
-members are — is the dependency contract in
-[`scripts/README.md`](scripts/README.md#dependency-contract-tiers).
-
-### Tier 1 — Prerequisites (no source supplied via submodules)
-
-turbo-stack does not supply the source code of these as submodules and will not build them for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. None of these scripts take `cmake -D…` configure options on their command line, so each requirement below is picked up from the environment instead:
-
-| Requirement | Sufficient to set | Notes |
-|---|---|---|
-| Fortran compiler | `FC`, else CMake tries to find it by searching `PATH` | GNU, Intel / IntelLLVM, NVHPC / PGI, or Flang / LLVMFlang. Any other compiler ID is a hard configure error — `cmake/TurboCompilerFlags.cmake` carries no flag set for it |
-| C and C++ compilers | `CC` and `CXX`, else CMake tries to find them by searching `PATH` | the top-level project enables `C CXX`, so both C and C++ compilers are needed |
-| MPI | `mpicc`, `mpifort` (or `mpif90`) and `mpicxx` (or `mpic++`) on `PATH` | the Fortran and C wrappers; the TIM/AMReX path uses the C++ one too. `MPI_HOME` is enough for CMake itself — so for a direct `build_turbo_stack.sh` run — but `build_local_with_system_toolchain.sh` checks for the wrappers on `PATH` and stops without them |
-| NetCDF | `nc-config` / `nf-config` on `PATH`, or `NetCDF_ROOT`, or the install prefix on `CMAKE_PREFIX_PATH` | need the C and Fortran libraries |
-| CMake | on `PATH` | ≥ 3.24 — turbo-stack, MOM6, TIM and pFUnit each require it |
-| `make` or `ninja` | on `PATH` | Unix Makefiles by default, running the build scripts with `--ninja` picks Ninja instead |
-
-Compiler flags are the same story: CMake seeds them from `FFLAGS` / `CFLAGS` /
-`CXXFLAGS` natively and appends the project's own, so there is no script flag for
-them.
-
-> [!IMPORTANT]
-> `CC`, `CXX`, `FC` and the `*FLAGS` are read **only on the first configure** of
-> a build directory — CMake caches them. To change compiler or flags in a build
-> directory you have already configured, rebuild with `--clean`.
-
-> You do not have to assemble tier 1 by hand. A [Spack environment](#getting-tiers-1-and-15-from-spack)
-> supplies it, and so does the `turbo-ci` container image used by CI, which ships tiers 1 and 1.5
-> prebuilt — today you pull it and drive the build yourself, as
-> [`docker/README.md`](docker/README.md) shows. Scripts that wrap that in one command are on the way.
-
-### Tier 1.5 — Prerequisites, but we supply the source via a submodule
-
-AMReX and pFUnit are external libraries. The source code is provided via submodules, and which build script you run decides where they come from: the Spack flavor takes both prebuilt from its Spack environment, and the from-source builders always build them from the submodule (or from an `AMREX_ROOT` / `PFUNIT_ROOT` source tree). None of the one-command builders will pick up an install of your own. To use one, take the [explicit flow](scripts/README.md#explicit-iterative-any-flavor): source a toolchain recipe, skip `turbo_build_amrex` / `turbo_build_pfunit`, prepend your install prefix to `CMAKE_PREFIX_PATH`, then run `build_turbo_stack.sh`. pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at `<prefix>/PFUNIT-X.Y/cmake`.
-
-#### Getting tiers 1 and 1.5 from Spack
-
-[`spack/spack.yaml`](spack/spack.yaml) supplies CMake, `make`/`ninja`, MPI,
-NetCDF, ParallelIO, pFUnit and AMReX — everything in tier 1 except a base
-compiler, plus both of tier 1.5. So all you need is a compiler and `SPACK_ROOT`
-pointing at a [Spack](https://github.com/spack/spack) clone. If you already
-source Spack's `share/spack/setup-env.sh` (from your shell profile, say), it
-exports `SPACK_ROOT` for you and there is nothing to set. Otherwise export it by
-hand — the build script sources `setup-env.sh` itself, so you do not have to:
-
-```bash
-export SPACK_ROOT=/path/to/where/you/pulled/spack
-```
-
-The `turbo_stack` environment is created on first use by
-[`scripts/build_local_with_spack_env.sh`](scripts/build_local_with_spack_env.sh).
-
-### Tier 2 — Infrastructure backend
-FMS and TIM are the two backends MOM6's infrastructure layer sits on, and the two
-we co-develop: TIM is TURBO's own AMReX-based layer, while FMS is GFDL's Flexible
-Modeling System tracked in a [TURBO-ESM fork](https://github.com/TURBO-ESM/FMS).
-turbo-stack supplies both as submodules, and every one-command builder builds
-whichever one `--infra` selects — from the submodule, or from an `FMS_ROOT` /
-`TIM_ROOT` source tree. A prebuilt install of your own is used only in the
-explicit flow, the same way as for tier 1.5: skip `turbo_build_fms` /
-`turbo_build_tim` and put its install prefix on `CMAKE_PREFIX_PATH`.
-
-> [!WARNING]
-> `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
-> prefixes — each names a *source tree* for turbo-stack to build. See
-> [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
-
-### Tier 3 — What turbo-stack always builds
-
-turbo-stack, MOM6 and MARBL are compiled inline on every build, pulled in with
-`add_subdirectory` from the top-level [`CMakeLists.txt`](CMakeLists.txt). This is
-the tier phase 2 exists to build. Unlike tiers 1.5 and 2 there is no
-bring-your-own-install option — nothing goes looking for a prebuilt MOM6 or
-MARBL, so here only the *source* can be swapped.
-
-- **MOM6** is read from `MOM6_ROOT`, the one source override the build cannot do
-  without: CMake hard-errors when it is unset, so the build scripts default it to
-  `submodules/MOM6` for you. Point it elsewhere to build a fork or a branch.
-- **MARBL** comes from `submodules/MARBL` only — it has no `*_ROOT` override.
-- **turbo-stack** itself is whichever checkout you ran the scripts from, which is
-  also where the pFUnit suite in [`tests/`](tests/) lives. The suite is opt-in, so
-  it is only configured when you pass `--tests`.
-
-## Building against a development tree or a branch
-
-To build a co-developed component from somewhere other than its pinned
-submodule, export its `*_ROOT` before building. No flag, no cloning by the build
-scripts — and it works the same for the high-level testers and the
-single-backend build scripts:
-
-```bash
-export MOM6_ROOT=/path/to/your/MOM6
-export TIM_ROOT=/path/to/your/TIM
-export FMS_ROOT=/path/to/your/FMS
-
-# the high-level tester: builds and ctests both backends
-./test_turbo_stack_locally.sh
-
-# or a single-backend build script, picking up the same overrides
-scripts/build_local_with_spack_env.sh --infra TIM
-```
-
-`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and they work
-with every build script and tester, and with the explicit flow's `turbo_build_*`
-wrappers. A bare `build_turbo_stack.sh` reads only `MOM6_ROOT`: it builds no
-backend, so it finds FMS or TIM installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
-and `PFUNIT_ROOT` work the same way, but only where the builder actually builds
-tier 1.5 from submodule — the from-source builders
-(`build_local_with_system_toolchain.sh`, `build_on_derecho.sh`, and their
-testers). The Spack flavor shown above takes AMReX and pFUnit prebuilt from the
-Spack environment and never consults those two variables; to build against your
-own there, use the explicit flow described under
-[tier 1.5](#tier-15--prerequisites-but-we-supply-the-source-via-a-submodule).
-
-What gets *reported* differs between the two entry points:
-
-- the **testers** print the testing matrix, naming turbo-stack, MOM6, TIM and
-  FMS and marking each `(override)` or `(submodule)`, so the log says exactly
-  what was built. AMReX and pFUnit are not in that matrix.
-- the **build scripts** do not print the matrix, but `build_dep` announces each
-  dependency as it resolves it, e.g.
-  `[build_dep] fms: source = /path/to/your/FMS (from $FMS_ROOT)`. MOM6 is
-  resolved by CMake rather than `build_dep`, and is only mentioned when you have
-  *not* overridden it (`[common] MOM6_ROOT unset -> defaulting to submodule:`).
-
-To build a *branch* you do not have checked out, either move the submodule onto it or clone it yourself and point `*_ROOT` there — both recipes are in [`scripts/README.md`](scripts/README.md#building-a-mom6-branch-you-dont-have-checked-out).
-
 ## Continuous integration
 
 CI covers both build systems in separate lanes and separate containers:
@@ -422,9 +274,9 @@ after a `spack/spack.yaml` change is a manual step — see
 
 | Document | What it covers |
 |---|---|
-| [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — dependency tiers, the two-stage pipeline, `build_dep`, source overrides, parallelism, every environment variable |
+| [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — how the build is put together, the dependency tiers and what you supply for each, the two-stage pipeline, `build_dep`, building against a development tree, parallelism, every environment variable |
 | [`docs/legacy_build_system.md`](docs/legacy_build_system.md) | The original mkmf `build.sh` build system |
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
 | [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
-| `docs/*.dot` | Sources for the three figures above, plus `build_test_orchestration` which `scripts/README.md` uses. After editing one, re-render and commit the PNG: `dot -Tpng -o docs/<name>.png docs/<name>.dot`. Each figure's `*_prompt.md` records what it must show |
+| `docs/*.dot` | Sources for the build-system figures, which `scripts/README.md` uses. After editing one, re-render and commit the PNG: `dot -Tpng -o docs/<name>.png docs/<name>.dot`. Each figure's `*_prompt.md` records what it must show |
