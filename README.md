@@ -38,7 +38,7 @@ One script takes you from a fresh clone to a MOM6 executable: it sets up the env
 | Laptop / workstation, let Spack manage the toolchain | `scripts/build_local_with_spack_env.sh` |
 | Laptop / workstation, toolchain already on `PATH` | `scripts/build_local_with_system_toolchain.sh` |
 
-Each builds MOM6 against one [infrastructure backend](#choosing-an-infrastructure-backend), TIM unless you ask for FMS2. To build and test both backends in one go, see [Build and test both backends in one command](#build-and-test-both-backends-in-one-command). [`scripts/README.md`](scripts/README.md) explains how the build is put together, and its [Workflows](scripts/README.md#workflows) section is the full reference for these scripts.
+Each builds MOM6 against one [infrastructure backend](#choosing-an-infrastructure-backend), TIM is the default but you can change it by passing `--infra FMS2`. To build and test both backends in one go, see [Build and test both backends in one command](#build-and-test-both-backends-in-one-command). [`scripts/README.md`](scripts/README.md) explains how the build is put together, and its [Workflows](scripts/README.md#workflows) section is the full reference for these scripts.
 
 ### On Derecho
 
@@ -62,13 +62,11 @@ scripts/build_local_with_spack_env.sh          # Spack supplies MPI, NetCDF and 
 scripts/build_local_with_system_toolchain.sh   # you already have all of it on PATH
 ```
 
-The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. Either way the executable lands in the same place as on Derecho.
-
-To give another machine a one-command script of its own, the way Derecho has one, write a `scripts/setup_environment/<machine>.sh` recipe that loads its toolchain, and a builder that sources it. [`build_on_derecho.sh`](scripts/build_on_derecho.sh) is the model: a toolchain hook plus one call into the shared build code. See [Pipeline](scripts/README.md#pipeline-environment-setup--build-turbo-stack) in the `scripts/` README.
+The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. 
 
 ### Build options
 
-All three scripts take the same options — `build_local_with_spack_env.sh` adds `--recreate-spack-env` — and `-h` or `--help` on any of them prints them. For `build_on_derecho.sh`:
+All three scripts take the same options and `-h` or `--help` on any of them prints them. Note `build_local_with_spack_env.sh` adds the option `--recreate-spack-env`. The output for `build_on_derecho.sh`:
 
 ```text
 $ scripts/build_on_derecho.sh --help
@@ -114,7 +112,7 @@ Examples:
   build_on_derecho.sh --debug --clean        # clean Debug rebuild (deps + turbo-stack)
 ```
 
-The script's own `--help` is authoritative if this copy ever falls behind it.
+If we add, remove, or change options we will try to keep the above list up to date. But each script's own `--help` is authoritative if this copy ever falls behind it.
 
 ### Choosing an infrastructure backend
 
@@ -214,7 +212,7 @@ make clean
 
 ## Build and test both backends in one command
 
-There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. Artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`), so with the default they write nothing into your checkout — a Derecho batch job's PBS log aside:
+There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. Artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`), so with the default they write nothing into your checkout. However a Derecho batch job's PBS log is written in the directory where you launched the job:
 
 ```bash
 ./test_turbo_stack_locally.sh                   # Spack toolchain
@@ -222,7 +220,7 @@ There are high level drivers at the repo root that build **and** `ctest` both ba
 ./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ```
 
-`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first, for a genuine from-scratch run; `--parallel N` sets the job count. The matrix reports the commit and branch of turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend.
+`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
 
 See [Build and test both backends, one command](scripts/README.md#build-and-test-both-backends-one-command)
 in the `scripts/` README for the full reference on each of these.
