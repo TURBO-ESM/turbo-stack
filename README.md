@@ -131,36 +131,12 @@ executable included, in `build/default/`, and the dependencies it built in
 
 ### Running the unit tests
 
-The [pFUnit](https://github.com/Goddard-Fortran-Ecosystem/pFUnit) suite in [`tests/`](tests/) is **opt-in**. Add `--tests` to any of the build commands above to build the suite as well and run it under `ctest` once the build finishes:
-
-```bash
-qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
-```
-
-The run ends with `ctest`'s report — here from a CI run with the TIM backend, trimmed:
-
-```text
-Test project /path/to/turbo-stack/build/default
-      Start  1: test_broadcast_int1D
- 1/40 Test  #1: test_broadcast_int1D ...................   Passed    0.10 sec
-      Start  2: test_broadcast_int320D
- 2/40 Test  #2: test_broadcast_int320D .................   Passed    0.09 sec
-...
-      Start 40: test_create_mom_domain
-40/40 Test #40: test_create_mom_domain .................   Passed    0.10 sec
-
-100% tests passed, 0 tests failed out of 40
-
-Total Test time (real) =   3.80 sec
-```
-
-The tests are MPI-aware — each declares the PE counts it runs on, e.g. `@test(npes=[4])`. They cover MOM6's infrastructure interface layer against whichever backend you built, not MOM6's ocean code itself. To re-run them without rebuilding:
-
-```bash
-ctest --test-dir build/default
-```
-
-See [`tests/README.md`](tests/README.md) for how to add one.
+Add `--tests` to any of the build commands above to also build the
+[pFUnit](https://github.com/Goddard-Fortran-Ecosystem/pFUnit) suite in
+[`tests/`](tests/) and run it under `ctest`. See
+[Running the unit tests](scripts/README.md#running-the-unit-tests) in the
+`scripts/` README for what a run prints and how to re-run the suite, and
+[`tests/README.md`](tests/README.md) for how to add a test.
 
 ### Running example experiments
 

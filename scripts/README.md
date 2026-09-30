@@ -489,8 +489,6 @@ coexist.
 
 The executable's path mirrors MOM6's own source layout, because MOM6 is added
 with `add_subdirectory(... mom6_build)` and sets no `RUNTIME_OUTPUT_DIRECTORY`.
-With `--tests`, `ctest` can be re-run against an existing tree with
-`ctest --test-dir <build_dir>`.
 
 The end-to-end test drivers build each backend independently under
 `$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir).
@@ -500,6 +498,41 @@ artifact, so it does not land here at all — see above.
 
 In the explicit flow you pass the `build` and `install` roots straight to the
 `turbo_build_*` wrappers, so any layout is possible.
+
+## Running the unit tests
+
+The [pFUnit](https://github.com/Goddard-Fortran-Ecosystem/pFUnit) suite in [`tests/`](../tests/) is **opt-in**. Add `--tests` to any of the single-backend builders to build the suite as well and run it under `ctest` once the build finishes:
+
+```bash
+qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
+```
+
+The run ends with `ctest`'s report — here from a CI run with the TIM backend, trimmed:
+
+```text
+Test project /path/to/turbo-stack/build/default
+      Start  1: test_broadcast_int1D
+ 1/40 Test  #1: test_broadcast_int1D ...................   Passed    0.10 sec
+      Start  2: test_broadcast_int320D
+ 2/40 Test  #2: test_broadcast_int320D .................   Passed    0.09 sec
+...
+      Start 40: test_create_mom_domain
+40/40 Test #40: test_create_mom_domain .................   Passed    0.10 sec
+
+100% tests passed, 0 tests failed out of 40
+
+Total Test time (real) =   3.80 sec
+```
+
+The tests are MPI-aware — each declares the PE counts it runs on, e.g. `@test(npes=[4])`. They cover MOM6's infrastructure interface layer against whichever backend you built, not MOM6's ocean code itself. To re-run them without rebuilding, point `ctest` at the build tree (your `--build_dir`, if you gave one):
+
+```bash
+ctest --test-dir build/default
+```
+
+See [`tests/README.md`](../tests/README.md) for how to add one.
+
+The end-to-end test drivers always pass `--tests` to the builder they run.
 
 ---
 
