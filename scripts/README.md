@@ -266,7 +266,7 @@ Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_st
 
 **Sentinel**: `<build-dir>/.installed` is a small KV file recording the source SHA, source path, install prefix, and a sha256 of the (sorted) cmake args. Skip-on-rerun fires only when all four match. Flipping a cmake flag (e.g. `-DAMReX_GPU_BACKEND=CUDA`) triggers a rebuild.
 
-**Side effects on success**: appends `$install_prefix` to `CMAKE_PREFIX_PATH` with a dedup guard. For `name=pfunit`, also exports `PFUNIT_DIR` pointing at the versioned cmake-dir glob.
+**Side effects on success**: prepends `$install_prefix` to `CMAKE_PREFIX_PATH` with a dedup guard, so the install it just made is found ahead of any other already on the path. For `name=pfunit`, also exports `PFUNIT_DIR` pointing at the versioned cmake-dir glob.
 
 ---
 
@@ -459,7 +459,7 @@ each dependency's canonical flags down from the `turbo_build_*` wrappers, and
 | `FFLAGS`, `CFLAGS`, `CXXFLAGS` | seed `CMAKE_<LANG>_FLAGS`; the project appends its own flags on top. |
 | `MPI_HOME` | hint for `find_package(MPI)` when the compiler wrappers are not on `PATH` — enough for a direct `build_turbo_stack.sh` run, but not for `build_local_with_system_toolchain.sh`, whose toolchain check requires the wrappers on `PATH`. |
 | `NetCDF_ROOT` | hint for `FindNetCDF` when `nc-config` / `nf-config` are not on `PATH`. |
-| `CMAKE_PREFIX_PATH` | where prebuilt dependencies are found. `build_dep` appends each install prefix it creates. |
+| `CMAKE_PREFIX_PATH` | where prebuilt dependencies are found. `build_dep` prepends each install prefix it creates. |
 | `PFUNIT_DIR` | pFUnit's cmake dir. `build_dep` exports it because pFUnit installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not walk into. |
 
 > [!IMPORTANT]
