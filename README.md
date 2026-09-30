@@ -239,22 +239,11 @@ qsub test_turbo_stack_on_derecho.sh
 
 That driver is a true one liner: it carries its own PBS directives (turbo project code, one node, 128 cores, one hour run time, etc.), then for each backend in turn — TIM and FMS2 — runs [`build_on_derecho.sh`](#on-derecho) with the unit tests switched on: it loads some dependencies using Derecho's modules, builds the remaining dependencies from the pinned submodules, builds MOM6, and runs the pFUnit suite. Each backend gets its own build directory, and the run ends with a PASS / FAIL verdict for each.
 
-It is deliberately self-contained: nothing from your login shell reaches the job, scripts run `module purge` before loading their own set of modules (so any modules you loaded yourself prior to launch will not be used), and no `#PBS -V` so environment variables don't make it into the job. The builds land outside your checkout (see below); the one file PBS writes where you submitted from is the job log, `turbo-stack-on-derecho-test.o<jobid>`. A per-backend log sits alongside the builds.
+It is deliberately self-contained: nothing from your login shell reaches the job, scripts run `module purge` before loading their own set of modules (so any modules you loaded yourself prior to launch will not be used), and no `#PBS -V` so environment variables don't make it into the job. The builds land outside your checkout; the one file PBS writes where you submitted from is the job log, `turbo-stack-on-derecho-test.o<jobid>`. A per-backend log sits alongside the builds.
 
-**Change the run options:** Adding a `qsub` option to the command line overrides the matching directive in the script — e.g. to run under a different project code for 30 minutes:
-
-```bash
-qsub -A <project_code> -l walltime=00:30:00 test_turbo_stack_on_derecho.sh
-```
-
-**Change where the build artifacts are written:** Each backend is built and tested in its own directory under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default: `$TMPDIR/turbo_build_system_test`, or `/tmp` if `TMPDIR` is unset), so the two executables land at `<that dir>/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6`. If you want them somewhere else, set that variable — and note that `$TMPDIR` inside a job is not the scratch filesystem and need not outlive the job, so pass an explicit path for anything you want to keep:
-
-```bash
-qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
-     test_turbo_stack_on_derecho.sh
-```
-
-**Options:** see them all with `-h` or `--help`. Some commonly used ones are `--only TIM` or `--only FMS2` to select a specific backend instead of both, and `--clean` to rebuild everything from scratch (removes the entire build directory).
+To change the project code or walltime, or where the builds are written, see
+[Submitting the Derecho driver as a batch job](scripts/README.md#submitting-the-derecho-driver-as-a-batch-job)
+in the `scripts/` README.
 
 ## Continuous integration
 

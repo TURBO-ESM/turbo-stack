@@ -207,7 +207,9 @@ test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 
 Each runs the real single-backend builder once per backend, each in its own
 process and its own build directory, and builds + `ctest`s turbo-stack for both
-FMS2 and TIM. `--only FMS2|TIM`, `--parallel N`, `--clean`. All three honor the
+FMS2 and TIM. `-h` / `--help` lists their options; the common ones are
+`--only FMS2|TIM` to build one backend instead of both, `--clean` to rebuild
+from scratch, and `--parallel N`. All three honor the
 `MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` source overrides described below;
 `AMREX_ROOT` / `PFUNIT_ROOT` only the two from-source ones, since
 `test_turbo_stack_locally.sh` takes AMReX and pFUnit prebuilt from Spack.
@@ -241,7 +243,7 @@ PBS log, when you submit from there (see below).
 `-q main`, one node with 128 cores, one hour — so `qsub
 test_turbo_stack_on_derecho.sh` is the whole command. A `qsub` option on the
 command line overrides the matching directive, which is how to supply your own
-project code:
+project code or walltime — e.g. another project code for 30 minutes:
 
 ```bash
 qsub -A <project_code> -l walltime=00:30:00 test_turbo_stack_on_derecho.sh
@@ -250,8 +252,10 @@ qsub -A <project_code> -l walltime=00:30:00 test_turbo_stack_on_derecho.sh
 It deliberately omits `#PBS -V`, so the job inherits nothing from the submitting
 shell and therefore tests exactly what the repo pins. That also means an exported
 `TURBO_BUILD_SYSTEM_TEST_DIR` will **not** reach it — pass it with `-v`. Worth
-doing for anything you want to keep, since unlike the job scripts in `examples/`
-this driver does not repoint `TMPDIR` at scratch:
+doing for anything you want to keep: the default sits under `$TMPDIR`, which
+inside a job is not the scratch filesystem and need not outlive the job, and
+unlike the job scripts in `examples/` this driver does not repoint `TMPDIR` at
+scratch:
 
 ```bash
 qsub -v TURBO_BUILD_SYSTEM_TEST_DIR=/glade/derecho/scratch/$USER/turbo-test \
