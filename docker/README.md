@@ -8,15 +8,19 @@ ninja, gmake, OpenMPI, netcdf-fortran, ParallelIO, pFUnit, AMReX) on every run.
 Rebuilding that stack from source takes ~1 hour. Reusing a prebuilt image, a
 turbo-stack build + full pFUnit suite for one backend takes ~8–9 minutes.
 
+The Dockerfile builds one image per **image flavor**, named `<compiler>-<mpi>`
+after the toolchain inside it. `gcc-openmpi` is the only flavor today — see
+[Image flavors](#image-flavors).
+
 ```
 ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
 ```
 
 | Tag | Meaning |
 |---|---|
-| `gcc-openmpi` | **Mutable** — what CI consumes. Published only from `main` |
-| `gcc-openmpi-<short-sha>` | Immutable — always published; pin this to reproduce or bisect an image regression |
-| `buildcache` | BuildKit layer cache, not a runnable image |
+| `<flavor>`, e.g. `gcc-openmpi` | **Mutable** — what CI consumes. Published only from `main` |
+| `<flavor>-<short-sha>` | Immutable — always published; pin this to reproduce or bisect an image regression |
+| `buildcache-<flavor>` | BuildKit layer cache, not a runnable image |
 
 ## The two workflows
 
@@ -30,18 +34,40 @@ exercise the **mkmf** `build.sh` path in the `ncarcisl/cisldev-*` containers.
 Different build system, so the two do not overlap; retiring the legacy
 workflows is a separate follow-up.
 
+## Image flavors
+
+Every flavor is the same recipe with a different compiler. The `COMPILER` build
+arg (default `gcc`) picks it, and `install_compiler.sh` installs that compiler
+from the distribution's packages and registers it with Spack. MPI is OpenMPI in
+every flavor for now, because `spack/spack.yaml` requires it.
+
+The flavor's compiler builds both halves of the stack. The Spack env is created
+with `TURBO_SPACK_COMPILER=<compiler>`, a hard requirement on every package, and
+the image build fails if any package was built by anything else. turbo-stack
+itself is built with `CC`, `CXX` and `FC`, which the image sets to
+`/opt/turbo-compiler/bin/{cc,c++,fc}` — symlinks to the flavor's compiler. CMake
+reads the compilers from those variables (see
+[Environment](../scripts/README.md#environment)); unset, it takes whatever `cc` /
+`f95` it finds on `PATH`, which matches the Spack stack only while the image
+holds a single compiler.
+
+Adding a flavor is a case in `install_compiler.sh` and an entry in the
+producer's `matrix`. Each flavor has its own tags, cache tag and concurrency
+group, so flavors neither wait on nor evict each other. A caller of
+`cmake-build.yaml` selects one with its `flavor` input (default `gcc-openmpi`).
+
 ## Refreshing the image after a dependency change
 
-Change `spack/spack.yaml` (or `spack/create_spack_environment.sh`, or
-`Dockerfile.turbo-ci`), then run the producer — **Actions → Build turbo-stack CI
-container → Run workflow**, or:
+Change `spack/spack.yaml` (or `spack/create_spack_environment.sh`,
+`Dockerfile.turbo-ci` or `install_compiler.sh`), then run the producer —
+**Actions → Build turbo-stack CI container → Run workflow**, or:
 
 ```bash
-gh workflow run build-turbo-ci-container.yaml            # from main: refreshes gcc-openmpi
+gh workflow run build-turbo-ci-container.yaml            # from main: refreshes every flavor
 ```
 
-Nothing else picks the change up. The consumer always pulls the prebuilt
-`gcc-openmpi` tag, so **a `spack.yaml` edit has no effect on CI until the image
+Nothing else picks the change up. The consumer always pulls a flavor's prebuilt
+mutable tag, so **a `spack.yaml` edit has no effect on CI until the image
 is rebuilt** — that decoupling is deliberate (a merge shouldn't block on a 1-hour
 build) but it is easy to forget.
 
@@ -52,9 +78,10 @@ your branch — the run uses that branch's `Dockerfile.turbo-ci` and `spack.yaml
 gh workflow run build-turbo-ci-container.yaml --ref my-branch
 ```
 
-A branch run publishes only `gcc-openmpi-<sha>`, never the shared `gcc-openmpi`
-tag, so it cannot hand the team an unvalidated image. To have CI actually *use*
-that image, point the consumer's `container.image` at the sha tag temporarily.
+A branch run publishes only `<flavor>-<sha>` tags, never the shared mutable
+ones, so it cannot hand the team an unvalidated image. To have CI actually *use*
+that image, point `container.image` in `cmake-build.yaml` at the sha tag
+temporarily.
 
 ### Why the image pins a Spack target
 
@@ -122,9 +149,9 @@ access — ask a TURBO-ESM owner to add you under the package's **Manage access*
 
 ## Building it locally
 
-The build context is the repo root, so `spack/` is available to `COPY`. Only
-`spack/` is used — `.dockerignore` keeps `submodules/` and `.git` out, so the
-context stays small even in an initialized checkout.
+The build context is the repo root, so `spack/` and `docker/` are available to
+`COPY`. Only those two are used — `.dockerignore` keeps `submodules/` and `.git`
+out, so the context stays small even in an initialized checkout.
 
 ```bash
 docker buildx build --load -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
@@ -136,8 +163,9 @@ you have a `docker-container` builder active (`docker buildx create --use`) —
 without it that driver discards the result and `docker run` fails with "Unable to
 find image".
 
-Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`) and `SPACK_REF`
-(default `v1.2.2`, pinned for reproducibility).
+Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`), `SPACK_REF`
+(default `v1.2.2`, pinned for reproducibility) and `COMPILER` (default `gcc`; see
+[Image flavors](#image-flavors)).
 
 ## Running the CI build locally
 
