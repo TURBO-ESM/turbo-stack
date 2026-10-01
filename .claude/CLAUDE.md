@@ -206,7 +206,7 @@ separate lanes, in different containers:
 | Lane | Build system | Container |
 |---|---|---|
 | `build-tests*.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | legacy mkmf `./build.sh` | `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`, activated via `/container/config_env.sh` |
-| `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
+| `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:<compiler>-<mpi>` (only `gcc-openmpi` so far; `cmake-build.yaml`'s `flavor` input picks it), built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
 
 The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
 libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
@@ -229,10 +229,12 @@ MOM6's CMake build system now lives on both branches, the same CMakeLists tree
 having been ported to `dev/turbo-debug`.
 
 The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
-(`turbo_stack`) so CI does not rebuild dependencies each run. It is **private**,
-and a `spack.yaml` change does not reach CI until the producer workflow is
-re-run manually (`gh workflow run build-turbo-ci-container.yaml`) — see
-[`docker/README.md`](../docker/README.md).
+(`turbo_stack`) so CI does not rebuild dependencies each run. There is one image
+per `<compiler>-<mpi>` flavor, all from the same Dockerfile, and each builds its
+Spack stack with that compiler and sets `FC`/`CC`/`CXX` to it. The images are
+**private**, and a `spack.yaml` change does not reach CI until the producer
+workflow is re-run manually (`gh workflow run build-turbo-ci-container.yaml`) —
+see [`docker/README.md`](../docker/README.md).
 
 Branches that trigger CI: `main` for the CMake lane; `main` plus the legacy
 `ci-tests` / `container-ci` branches for the mkmf lane. Any workflow can also be
