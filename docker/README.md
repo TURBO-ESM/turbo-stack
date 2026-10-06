@@ -9,8 +9,8 @@ Rebuilding that stack from source takes ~1 hour. Reusing a prebuilt image, a
 turbo-stack build + full pFUnit suite for one backend takes ~8–9 minutes.
 
 The Dockerfile builds one image per **image flavor**, named `<compiler>-<mpi>`
-after the toolchain inside it. `gcc-openmpi` is the only flavor today — see
-[Image flavors](#image-flavors).
+after the toolchain inside it: `gcc-openmpi`, and `llvm-openmpi` for clang and
+flang — see [Image flavors](#image-flavors).
 
 ```
 ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
@@ -36,10 +36,13 @@ workflows is a separate follow-up.
 
 ## Image flavors
 
-Every flavor is the same recipe with a different compiler. The `COMPILER` build
-arg (default `gcc`) picks it, and `install_compiler.sh` installs that compiler
-from the distribution's packages and registers it with Spack. MPI is OpenMPI in
-every flavor for now, because `spack/spack.yaml` requires it.
+Every flavor is the same recipe with a different compiler, which
+`install_compiler.sh` installs from apt packages and registers with Spack:
+Ubuntu's gcc for `gcc-openmpi`, and LLVM 21's clang and flang from apt.llvm.org
+for `llvm-openmpi`. The `COMPILER` build arg picks the family (default `gcc`),
+and `COMPILER_VERSION` the version for a family that takes one (llvm requires
+it). MPI is OpenMPI in every flavor for now, because `spack/spack.yaml` requires
+it.
 
 The flavor's compiler builds both halves of the stack. The Spack env is created
 with `TURBO_SPACK_COMPILER=<compiler>`, a hard requirement on every package, and
@@ -51,10 +54,20 @@ reads the compilers from those variables (see
 `f95` it finds on `PATH`, which matches the Spack stack only while the image
 holds a single compiler.
 
-Adding a flavor is a case in `install_compiler.sh` and an entry in the
-producer's `matrix`. Each flavor has its own tags, cache tag and concurrency
-group, so flavors neither wait on nor evict each other. A caller of
-`cmake-build.yaml` selects one with its `flavor` input (default `gcc-openmpi`).
+Adding a flavor is a case in `install_compiler.sh`, plus an entry in the
+`FLAVORS` list of the producer's `select` job and an option for its `flavor`
+input. Each flavor has its own tags, cache tag and concurrency group, so flavors
+neither wait on nor evict each other. A caller of `cmake-build.yaml` selects one
+with its `flavor` input (default `gcc-openmpi`).
+
+A new flavor's mutable tag only exists once the producer has run on `main`, so
+after merging one, build it there:
+
+```bash
+gh workflow run build-turbo-ci-container.yaml -f flavor=<flavor>
+```
+
+Until then, CI jobs that use it fail to pull the image.
 
 ## Refreshing the image after a dependency change
 
@@ -63,7 +76,8 @@ Change `spack/spack.yaml` (or `spack/create_spack_environment.sh`,
 **Actions → Build turbo-stack CI container → Run workflow**, or:
 
 ```bash
-gh workflow run build-turbo-ci-container.yaml            # from main: refreshes every flavor
+gh workflow run build-turbo-ci-container.yaml                          # from main: every flavor
+gh workflow run build-turbo-ci-container.yaml -f flavor=llvm-openmpi   # just one
 ```
 
 Nothing else picks the change up. The consumer always pulls a flavor's prebuilt
@@ -80,8 +94,9 @@ gh workflow run build-turbo-ci-container.yaml --ref my-branch
 
 A branch run publishes only `<flavor>-<sha>` tags, never the shared mutable
 ones, so it cannot hand the team an unvalidated image. To have CI actually *use*
-that image, point `container.image` in `cmake-build.yaml` at the sha tag
-temporarily.
+that image, temporarily give a caller in `turbo-cmake-container-tests.yaml` the
+sha tag as its flavor (`flavor: llvm-openmpi-<sha>`); `cmake-build.yaml` uses
+the flavor verbatim as the image tag.
 
 ### Why the image pins a Spack target
 
@@ -155,6 +170,8 @@ out, so the context stays small even in an initialized checkout.
 
 ```bash
 docker buildx build --load -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
+docker buildx build --load -f docker/Dockerfile.turbo-ci \
+    --build-arg COMPILER=llvm --build-arg COMPILER_VERSION=21 -t turbo-ci:llvm-openmpi .
 ```
 
 `--load` is what puts the tag in your local image store, so the `docker run`
@@ -164,8 +181,8 @@ without it that driver discards the result and `docker run` fails with "Unable t
 find image".
 
 Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`), `SPACK_REF`
-(default `v1.2.2`, pinned for reproducibility) and `COMPILER` (default `gcc`; see
-[Image flavors](#image-flavors)).
+(default `v1.2.2`, pinned for reproducibility), and `COMPILER` (default `gcc`)
+and `COMPILER_VERSION` (default empty; see [Image flavors](#image-flavors)).
 
 ## Running the CI build locally
 
