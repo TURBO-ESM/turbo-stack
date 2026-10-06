@@ -238,31 +238,31 @@ separate lanes, in different containers:
 | Lane | Build system | Container |
 |---|---|---|
 | `build-tests*.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | legacy mkmf `./build.sh` | `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`, activated via `/container/config_env.sh` |
-| `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:<compiler>-<mpi>` (only `gcc-openmpi` so far; `cmake-build.yaml`'s `flavor` input picks it), built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
-| `container-driver-scripts.yaml` | **CMake, via the host-side wrapper** (`./test_turbo_stack_with_container.sh`) | same image, but pulled and entered by `scripts/build_with_container.sh` on the runner host rather than by `container:` |
+| `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:<compiler>-<mpi>` (`gcc-openmpi`, and `llvm-openmpi` for the LLVM group; `cmake-build.yaml`'s `flavor` input picks it), built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
+| `container-driver-scripts.yaml` | **CMake, via the host-side wrapper** (`./test_turbo_stack_with_container.sh`) | the same `gcc-openmpi` image, but pulled and entered by `scripts/build_with_container.sh` on the runner host rather than by `container:` |
 
 The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
 libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
-`gha-runner-turbo` runner. The CMake lane is currently gcc + OpenMPI on
-`ubuntu-latest` only, over 4 cells arranged as **two groups of two**:
-`turbo-cmake-container-tests.yaml` calls the reusable `cmake-build.yaml` once per
-MOM6 source, and each call fans out over the infra backends (TIM, FMS2).
+`gha-runner-turbo` runner. The CMake lane runs on `ubuntu-latest` only, over 6
+cells arranged as **three groups of two**: `turbo-cmake-container-tests.yaml`
+calls the reusable `cmake-build.yaml` once per MOM6 source and compiler, and each
+call fans out over the infra backends (TIM, FMS2).
 
 | Group | MOM6 source | Character |
 |---|---|---|
-| `MOM6 pinned` | the submodule commit | deterministic gate |
-| `MOM6 dev/turbo-debug` | tip of that branch, via `MOM6_ROOT` | tracks a moving external branch |
+| `MOM6 pinned` | the submodule commit | deterministic gate (gcc) |
+| `MOM6 dev/turbo-debug` | tip of that branch, via `MOM6_ROOT` | tracks a moving external branch (gcc) |
+| `MOM6 pinned, LLVM` | the submodule commit, in the `llvm-openmpi` image | non-blocking (`allow_failure`) until TIM#42 and FMS#7 land |
 
-Two jobs rather than a second matrix axis because they mean different things: a
-red box then names which MOM6 source broke, and either group can be given a
-different trigger or failure policy without touching the other. The
-`dev/turbo-debug` group exists because TURBO development happens on that branch,
-so the pFUnit suite has to run against it too — possible at all only because
-MOM6's CMake build system now lives on both branches, the same CMakeLists tree
-having been ported to `dev/turbo-debug`.
+Separate jobs rather than matrix axes because they mean different things: a red
+box then names which MOM6 source or compiler broke, and each group has its own
+trigger or failure policy. The `dev/turbo-debug` group exists because TURBO
+development happens on that branch, so the pFUnit suite has to run against it
+too — possible at all only because MOM6's CMake build system now lives on both
+branches, the same CMakeLists tree having been ported to `dev/turbo-debug`.
 
 `container-driver-scripts.yaml` asks a different question: it is the only lane that
-executes `scripts/build_with_container.sh`. The four cells above declare `container:`
+executes `scripts/build_with_container.sh`. The six cells above declare `container:`
 on the job, so the wrapper never runs — its mounts, rootless/`--user` decision, `HOME`
 cache and preflight guards would be covered by nothing. Runs the driver with no flags
 (FMS2 then TIM, pinned), path-filtered so it does not add ~20 min to every PR.
