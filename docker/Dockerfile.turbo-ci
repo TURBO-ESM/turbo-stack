@@ -18,14 +18,17 @@
 # scripts/setup_environment/spack_local_environment.sh.
 #
 # One Dockerfile builds every image flavor, named <compiler>-<mpi>. The compiler
-# is chosen by the COMPILER build arg (see docker/install_compiler.sh); MPI is
-# always OpenMPI for now, because spack/spack.yaml requires it.
+# is chosen by the COMPILER build arg, plus COMPILER_VERSION for a family that
+# takes one (see docker/install_compiler.sh); MPI is always OpenMPI for now,
+# because spack/spack.yaml requires it.
 #
 # Build context is the repo root (so spack/ and docker/ are available to COPY).
 # --load puts the tag in the local image store: redundant on the default `docker`
 # driver, required with a `docker-container` builder, which otherwise discards
 # the result.
 #     docker buildx build --load -f docker/Dockerfile.turbo-ci -t turbo-ci:gcc-openmpi .
+#     docker buildx build --load -f docker/Dockerfile.turbo-ci \
+#         --build-arg COMPILER=llvm --build-arg COMPILER_VERSION=21 -t turbo-ci:llvm-openmpi .
 
 ARG BASE_IMAGE=ubuntu:24.04
 FROM ${BASE_IMAGE}
@@ -68,8 +71,9 @@ RUN git clone --depth=1 --branch "${SPACK_REF}" https://github.com/spack/spack.g
 # Everything above is shared by all flavors; from here on each flavor has its
 # own layers. See docker/install_compiler.sh for the supported families.
 ARG COMPILER=gcc
+ARG COMPILER_VERSION=
 COPY docker/install_compiler.sh /opt/turbo-compiler/install_compiler.sh
-RUN bash /opt/turbo-compiler/install_compiler.sh "${COMPILER}"
+RUN bash /opt/turbo-compiler/install_compiler.sh "${COMPILER}" "${COMPILER_VERSION}"
 
 # --- 4) Bake the turbo_stack Spack environment via the repo's OWN recipe -------
 # create_spack_environment.sh does: spack env create -> concretize -> install.
