@@ -36,6 +36,14 @@ on:
         required: false
         default: "gcc-openmpi"
         type: string
+      allow_failure:
+        description: >-
+          Let this call's jobs fail without failing the workflow run, for a lane
+          that is expected to be red (a new compiler before its fixes land).
+          An input because GitHub rejects `continue-on-error` on the calling job.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -48,6 +56,7 @@ jobs:
     # ~9 min when healthy. A deadlocked MPI test would otherwise hang for the 6 h
     # default.
     timeout-minutes: 60
+    continue-on-error: ${{ inputs.allow_failure }}
     strategy:
       fail-fast: false
       matrix:
