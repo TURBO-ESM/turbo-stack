@@ -1,8 +1,9 @@
 # Producer: build the turbo-stack CI base images and push them to GHCR.
 #
-# One image per flavor, named <compiler>-<mpi> (the matrix below), all from
-# docker/Dockerfile.turbo-ci. A flavor is added by adding a matrix entry and a
-# case in docker/install_compiler.sh.
+# One image per flavor, named <compiler>-<mpi> (the FLAVORS list in the `select`
+# job), all from docker/Dockerfile.turbo-ci. A flavor is added by adding an entry
+# to that list, an option to `inputs.flavor`, and a case in
+# docker/install_compiler.sh.
 #
 # The image bakes the repo's own Spack environment (spack/spack.yaml, env name
 # "turbo_stack") so that CI does not rebuild Tier-1/Tier-1.5 dependencies
@@ -18,7 +19,8 @@
 # spack/create_spack_environment.sh, docker/Dockerfile.turbo-ci,
 # docker/install_compiler.sh): Actions ->
 # "Build turbo-stack CI container" -> Run workflow, or
-#     gh workflow run build-turbo-ci-container.yaml
+#     gh workflow run build-turbo-ci-container.yaml                      # every flavor
+#     gh workflow run build-turbo-ci-container.yaml -f flavor=llvm-openmpi  # one
 #
 # To validate a recipe change BEFORE merging it, dispatch against your branch --
 # the run uses that branch's Dockerfile and spack.yaml:
@@ -32,6 +34,15 @@ name: Build turbo-stack CI container
 
 on:
   workflow_dispatch:
+    inputs:
+      flavor:
+        description: Which image to build -- one flavor, or all of them.
+        type: choice
+        default: all
+        options:
+          - all
+          - gcc-openmpi
+          - llvm-openmpi
 
 permissions:
   contents: read
@@ -47,8 +58,40 @@ env:
   IMAGE: ghcr.io/turbo-esm/turbo-stack/turbo-ci
 
 jobs:
+  # Picks the flavors to build. A job of its own because a static matrix cannot
+  # be filtered by an input: `matrix` is not available in a job-level `if`, and a
+  # matrix `include` entry that matches nothing adds a combination rather than
+  # dropping one.
+  select:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      include: ${{ steps.pick.outputs.include }}
+    steps:
+      - name: Pick flavors
+        id: pick
+        env:
+          WANT: ${{ inputs.flavor }}
+          # Every flavor this workflow builds.
+          #   flavor:           the image tag, <compiler>-<mpi>
+          #   compiler/version: the arguments to docker/install_compiler.sh
+          FLAVORS: |
+            [
+              {"flavor": "gcc-openmpi",  "compiler": "gcc",  "compiler_version": ""},
+              {"flavor": "llvm-openmpi", "compiler": "llvm", "compiler_version": "21"}
+            ]
+        run: |
+          picked=$(jq -c --arg want "$WANT" \
+              '[.[] | select($want == "all" or .flavor == $want)]' <<< "$FLAVORS")
+          if [[ "$picked" == "[]" ]]; then
+              echo "::error::unknown flavor '$WANT'"
+              exit 1
+          fi
+          echo "include=$picked" >> "$GITHUB_OUTPUT"
+
   build-and-push:
     name: build+push (${{ matrix.flavor }})
+    needs: select
     runs-on: ubuntu-latest
     # A full from-source Spack build is ~1 h; anything past 3 h means a hung
     # fetch or compile, so fail rather than burn the 6 h default.
@@ -56,11 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # flavor:   the image tag, <compiler>-<mpi>
-          # compiler: the argument to docker/install_compiler.sh
-          - flavor: gcc-openmpi
-            compiler: gcc
+        include: ${{ fromJSON(needs.select.outputs.include) }}
     # One build per flavor at a time. Two concurrent dispatches would race to push
     # the same mutable tag and would both export mode=max to the same cache tag.
     # Queue instead of cancel: a nearly-finished 1 h build should not be thrown
@@ -111,6 +150,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             COMPILER=${{ matrix.compiler }}
+            COMPILER_VERSION=${{ matrix.compiler_version }}
           # Registry-backed layer cache stored as a :buildcache-<flavor> tag in
           # GHCR -- one per flavor, because a mode=max export replaces the whole
           # cache tag, so flavors sharing one would evict each other.
