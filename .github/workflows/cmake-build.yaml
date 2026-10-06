@@ -38,9 +38,11 @@ on:
         type: string
       allow_failure:
         description: >-
-          Let this call's jobs fail without failing the workflow run, for a lane
-          that is expected to be red (a new compiler before its fixes land).
-          An input because GitHub rejects `continue-on-error` on the calling job.
+          Let the build+test step fail without failing the job, for a lane that
+          is expected to be red (a new compiler before its fixes land). The job
+          stays green and the failure is reported as a warning annotation, so
+          an expected failure doesn't show as a red check on every PR. An input
+          because GitHub rejects `continue-on-error` on the calling job.
         required: false
         default: false
         type: boolean
@@ -56,7 +58,6 @@ jobs:
     # ~9 min when healthy. A deadlocked MPI test would otherwise hang for the 6 h
     # default.
     timeout-minutes: 60
-    continue-on-error: ${{ inputs.allow_failure }}
     strategy:
       fail-fast: false
       matrix:
@@ -173,4 +174,20 @@ jobs:
         # Spack-flavor pipeline: activate env -> build backend -> cmake -> ctest.
         # Identical for every call: MOM6_ROOT (set above, or unset for the pinned
         # call) is what selects the MOM6 source.
+        id: build
+        continue-on-error: ${{ inputs.allow_failure }}
         run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests
+
+      # Only reachable with allow_failure: the step above failed, and
+      # continue-on-error kept the job green. Say so where it will be seen.
+      - name: Report an allowed failure
+        if: steps.build.outcome == 'failure'
+        env:
+          INFRA: ${{ matrix.infra }}
+          FLAVOR: ${{ inputs.flavor }}
+          MOM6_LABEL: ${{ inputs.mom6_label }}
+        run: |
+          msg="build+test failed ($INFRA, $FLAVOR, MOM6 $MOM6_LABEL). allow_failure is set, so the job still passes."
+          echo "::warning title=Allowed failure::$msg"
+          echo "> [!WARNING]" >> "$GITHUB_STEP_SUMMARY"
+          echo "> $msg" >> "$GITHUB_STEP_SUMMARY"

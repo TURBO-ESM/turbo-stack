@@ -219,7 +219,7 @@ call fans out over the infra backends (TIM, FMS2).
 |---|---|---|
 | `MOM6 pinned` | the submodule commit | deterministic gate (gcc) |
 | `MOM6 dev/turbo-debug` | tip of that branch, via `MOM6_ROOT` | tracks a moving external branch (gcc) |
-| `MOM6 pinned, LLVM` | the submodule commit, in the `llvm-openmpi` image | non-blocking (`allow_failure`) until TIM#42 and FMS#7 land |
+| `MOM6 pinned, LLVM` | the submodule commit, in the `llvm-openmpi` image | non-blocking until TIM#42 and FMS#7 land: `allow_failure` keeps the job green and reports a failure as a warning annotation |
 
 Separate jobs rather than matrix axes because they mean different things: a red
 box then names which MOM6 source or compiler broke, and each group has its own
