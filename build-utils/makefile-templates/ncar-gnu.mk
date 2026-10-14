@@ -27,12 +27,12 @@ CXXFLAGS := -std=c++20
 
 # Compilation Mode-specific flags
 ifeq ($(CODECOV),1)
-	FFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
-	CFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
+	FFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/ -ffp-contract=off
+	CFLAGS += -O0 -g -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/ -ffp-contract=off
 	LDFLAGS += -fprofile-arcs -ftest-coverage -fprofile-dir=./codecov/
 else ifeq ($(DEBUG),1)
-	FFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=zero,overflow -fcheck=bounds
-	CFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=invalid,zero,overflow -fcheck=bounds
+	FFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=zero,overflow -fcheck=bounds -ffp-contract=off
+	CFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=invalid,zero,overflow -fcheck=bounds -ffp-contract=off
 else # Production build
 	FFLAGS += -O2 -ffp-contract=off
 	CFLAGS += -O2 -ffp-contract=off
