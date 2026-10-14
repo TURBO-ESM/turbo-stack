@@ -28,7 +28,7 @@ CFLAGS_REPRO = -O2
 CFLAGS_DEBUG =
 CPPFLAGS := $(shell pkg-config --cflags yaml-0.1)
 
-CXXFLAGS := --std=c++17
+CXXFLAGS := --std=c++20
 
 # Get compile flags based on target macros.
 ifeq ($(DEBUG),1)
