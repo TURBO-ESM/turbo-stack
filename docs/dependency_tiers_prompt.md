@@ -61,9 +61,10 @@ two tiers by source type (co-developed vs external submodule):
   FMS rightmost (for its `FMS_ROOT` line). Two invisible spacer nodes (`style=invis`) pad the band's
   left half so FMS/TIM stay right-of-centre and the `TIM_ROOT` hot-swap label clears the cluster
   title. In practice FMS/TIM are always built from submodule (the co-developed TURBO-ESM repos, which
-  is why they — not AMReX/pFUnit — carry `*_ROOT` source swaps).
+  is why they — not AMReX/pFUnit — are drawn with `*_ROOT` hot-swap lines).
 - **Tier 1.5 — External upstream libraries that are submodules.**  Source: turbo-stack CAN get it via
-  submodule (no `*_ROOT` override — these are not co-developed).  Build: turbo-stack CAN build the
+  submodule; `AMREX_ROOT` / `PFUNIT_ROOT` swap that source wherever a builder builds them, but these
+  are not co-developed, so draw no hot-swap line to them.  Build: turbo-stack CAN build the
   submodule source OR you provide a PREBUILT install on `CMAKE_PREFIX_PATH` (`find_package`).  Cluster
   `#f5f5dc`, nodes `#fffacd`. Members (left→right): `pFUnit`, `AMReX`.  In practice they come prebuilt
   from the Tier-1 provider where available (e.g. spack) and are built from submodule where it is not
