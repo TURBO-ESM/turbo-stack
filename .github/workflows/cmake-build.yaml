@@ -88,15 +88,20 @@ jobs:
         with:
           # 'recursive' is the simple, correct choice. It also pulls AMReX/pFUnit,
           # which the Spack flavor does NOT use (Spack provides them) -- harmless
-          # but heavy. Future optimization: submodules:false + a targeted
+          # but heavy. It also pulls protoMOMxx's own extern/TIM, which nothing
+          # builds: protoMOMxx is built against submodules/infra/TIM. Future
+          # optimization: submodules:false + a targeted
           #   git submodule update --init --recursive -- \
           #     submodules/MOM6 submodules/MARBL submodules/infra/FMS2 submodules/infra/TIM
+          #   git submodule update --init -- submodules/protoMOMxx
+          # (the last one non-recursive, so extern/TIM is skipped).
           submodules: recursive
 
       # '*' rather than an enumerated list: the ownership check applies per
-      # repository, and a recursive checkout is 16 of them -- the workspace, the
-      # seven submodules, their nested ones four levels down (pFUnit ->
-      # fArgParse -> gFTL-shared -> gFTL), plus mom6-ref and its two.
+      # repository, and a recursive checkout is 18 of them -- the workspace, the
+      # eight submodules, their nested ones four levels down (pFUnit ->
+      # fArgParse -> gFTL-shared -> gFTL), protoMOMxx's extern/TIM, plus
+      # mom6-ref and its two.
       # safe.directory matches exact paths or '*' and has no prefix glob, so a
       # list silently stops covering a submodule the day someone adds one.
       # Nothing is traded away for the convenience: the check guards against
