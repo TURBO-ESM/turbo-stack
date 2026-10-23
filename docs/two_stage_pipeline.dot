@@ -41,10 +41,11 @@ digraph two_stage_pipeline {
             pfunit_install [label="pFUnit install", shape=cylinder, fillcolor="#bcd4ec", style=filled];
             amrex_install  [label="AMReX install",  shape=cylinder, fillcolor="#bcd4ec", style=filled];
             tim_install    [label="TIM install",    shape=cylinder, fillcolor="#bcd4ec", style=filled];
+            protomom_install [label="protoMOMxx install", shape=cylinder, fillcolor="#bcd4ec", style=filled];
         }
 
         // All nodes in same rank, left to right ordering
-        { rank=same; compilers; cmake; make_or_ninja; mpi_install; netcdf_install; hdf5_install; fms_install; pfunit_install; amrex_install; tim_install; }
+        { rank=same; compilers; cmake; make_or_ninja; mpi_install; netcdf_install; hdf5_install; fms_install; pfunit_install; amrex_install; tim_install; protomom_install; }
 
         // Invisible edges to maintain left-to-right order
         compilers -> cmake [style=invis, weight=10];
@@ -55,7 +56,8 @@ digraph two_stage_pipeline {
         hdf5_install -> fms_install [style=invis, weight=10];
         fms_install -> pfunit_install [style=invis, weight=10];
         pfunit_install -> amrex_install [style=invis, weight=10];
-        amrex_install -> tim_install [style=invis];
+        amrex_install -> tim_install [style=invis, weight=10];
+        tim_install -> protomom_install [style=invis];
 
         stage1_outputs [label="Expected environment  (shell state)\nPATH · CC, CXX, FC  ·  CMAKE_PREFIX_PATH  ·  PFUNIT_DIR",
                         fillcolor="#c8e6c9", style=filled];
@@ -66,11 +68,12 @@ digraph two_stage_pipeline {
     netcdf_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     hdf5_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
 
-    // Submodule dep installs (Tier 1.5: AMReX/pFUnit; Tier 2: FMS/TIM)
+    // Submodule dep installs (Tier 1.5: AMReX/pFUnit; Tier 2: FMS/TIM/protoMOMxx)
     fms_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     pfunit_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH and PFUNIT_DIR"];
     amrex_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     tim_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
+    protomom_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
 
     compilers     -> stage1_outputs [xlabel="CC, CXX, FC"];
     cmake         -> stage1_outputs [xlabel="PATH"];

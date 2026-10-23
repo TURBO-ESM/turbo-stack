@@ -30,7 +30,7 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
   - The **test driver** does: parse args · loop backends · print verdict (put these in its label).
   - The **builder** box contains its Stage 1 (environment setup) steps: source the toolchain env
     (builds nothing → Tier 1) and build the upstream deps (`turbo_build_*` from submodule, or a
-    `*_ROOT` override — AMReX/pFUnit = Tier 1.5, FMS/TIM = Tier 2).
+    `*_ROOT` override — AMReX/pFUnit = Tier 1.5, FMS/TIM/protoMOMxx = Tier 2).
   - **`build_turbo_stack.sh`** is Stage 2 (cmake configure/build → ctest; builds Tier 3), exec'd by
     each builder, and is SHARED by both paths (a single node both paths converge on).
   - The verdict is printed by the test driver.
@@ -38,7 +38,8 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
   it as a side note, high level — "root self-location · arg parsing · `turbo_build_*` wrappers · the
   per-backend loop + verdict (`turbo_run_test_driver`)".
 - Source overrides default to the pinned submodule: `*_ROOT` points at a local dev tree of a
-  co-developed repo (MOM6/FMS/TIM).  `FMS_ROOT`/`TIM_ROOT` feed each builder's Stage-1 dep builds;
+  co-developed repo (MOM6/FMS/TIM/protoMOMxx).  `FMS_ROOT`/`TIM_ROOT`/`PROTOMOMXX_ROOT` feed each
+  builder's Stage-1 dep builds;
   `MOM6_ROOT` feeds Stage-2's CMake.
 
 ### Visual language
@@ -58,13 +59,18 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 - Three **builder clusters** (the boxes ARE the builder scripts), each containing a Stage-1 toolchain
   box → Stage-1 deps box:
   - `build_local_with_spack_env.sh`: toolchain = source `spack_local_environment.sh` (builds nothing
-    → Tier 1); deps = the selected backend only — `turbo_build_fms` for FMS2 or `turbo_build_tim` for
-    TIM (mutually exclusive; both Tier 2); pFUnit / AMReX (Tier 1.5) come from spack.
+    → Tier 1); deps = the selected backend only — `turbo_build_fms` for FMS2, or `turbo_build_tim`
+    then `turbo_build_protomomxx` for TIM (mutually exclusive; all Tier 2); pFUnit / AMReX (Tier 1.5)
+    come from spack.  Label: `turbo_build_fms | turbo_build_tim ; _protomomxx`.
   - `build_on_derecho.sh`: toolchain = source `derecho_cpu_gcc_openmpi.sh` (builds nothing → Tier 1);
-    deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim` (pFUnit/AMReX = Tier 1.5; FMS/TIM = Tier 2).
+    deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim ; _protomomxx` (pFUnit/AMReX = Tier 1.5;
+    FMS/TIM/protoMOMxx = Tier 2).
   - `build_local_with_system_toolchain.sh`: toolchain = source `local_toolchain_on_path.sh` (verify
-    only, builds nothing → Tier 1); deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim` (all from
-    submodule, like Derecho) — the bring-your-own-toolchain local path (no spack, no modules).
+    only, builds nothing → Tier 1); deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim ; _protomomxx`
+    (all from submodule, like Derecho) — the bring-your-own-toolchain local path (no spack, no modules).
+  - protoMOMxx is built only for the TIM backend, right after TIM, into the same prefix. It provides
+    `protoMOMxx::mom_bridge`, which MOM6 `dev/turbo-debug` links under TIM. The deps labels list it
+    as one more `turbo_build_*` call; don't add a separate node for it.
 - Each driver → its builder's Stage-1 toolchain node (xlabel "loop: --infra FMS2, then TIM").
 - Each builder's Stage-1 deps node → the shared **`build_turbo_stack.sh`** ellipse (xlabel "exec"); its
   label notes "exec'd by each builder" + "Stage 2: cmake configure/build → ctest (Tier 3)".  Unit tests
@@ -72,5 +78,5 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 - Shared `build_turbo_stack.sh` → **verdict** box ("testing matrix + per-backend verdict … printed by
   the test driver").
 - **`common.sh` note** → each driver, dashed (`color="#5b7aa6"`, `arrowhead=odot`, `constraint=false`).
-- **Overrides note** → each builder's Stage-1 deps box (xlabel "FMS_ROOT / TIM_ROOT") and → the shared
+- **Overrides note** → each builder's Stage-1 deps box (xlabel "FMS_ROOT / TIM_ROOT /\nPROTOMOMXX_ROOT") and → the shared
   Stage-2 ellipse (xlabel "MOM6_ROOT"), dashed (`color="#a06000"`, `arrowhead=odot`, `constraint=false`).
