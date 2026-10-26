@@ -214,7 +214,7 @@ CI covers both build systems in separate lanes and separate containers:
 
 | Lane | Workflows | Build system |
 |---|---|---|
-| CMake | `turbo-cmake-container-tests.yaml` (via the reusable `cmake-build.yaml`) | `scripts/build_local_with_spack_env.sh` in the prebuilt `turbo-ci` image |
+| CMake | `turbo-cmake-container-tests.yaml` (via the reusable `cmake-build.yaml`) | `scripts/build_local_with_spack_env.sh` in a prebuilt `turbo-ci` image |
 | legacy | `build-tests.yaml`, `build-tests-iturbo.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | `./build.sh` in the NCAR CISL dev containers |
 
 The CMake lane runs the pinned MOM6 submodule and the tip of MOM6's
@@ -230,6 +230,6 @@ after a `spack/spack.yaml` change is a manual step — see
 | [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — how the build is put together, the dependency tiers and what you supply for each, the two-stage pipeline, `build_dep`, building against a development tree, parallelism, every environment variable |
 | [`docs/legacy_build_system.md`](docs/legacy_build_system.md) | The original mkmf `build.sh` build system |
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
-| [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
+| [`docker/README.md`](docker/README.md) | The CI container images and the workflows that build and consume them |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
 | `docs/*.dot` | Sources for the build-system figures, which `scripts/README.md` uses. After editing one, re-render and commit the PNG: `dot -Tpng -o docs/<name>.png docs/<name>.dot`. Each figure's `*_prompt.md` records what it must show |
