@@ -107,8 +107,8 @@ configure — see [Environment](#environment).
 
 > You do not have to assemble tier 1 by hand. A [Spack environment](#getting-tiers-1-and-15-from-spack)
 > supplies it, and so does the `turbo-ci` container image used by CI, which ships tiers 1 and 1.5
-> prebuilt — today you pull it and drive the build yourself, as
-> [`docker/README.md`](../docker/README.md) shows. Scripts that wrap that in one command are on the way.
+> prebuilt. [`build_with_container.sh`](#in-a-container-a-ready-made-environment) builds inside that
+> image, so all you need on your machine is a container engine.
 
 ### Tier 1.5 — Prerequisites, but we supply the source via a submodule
 
@@ -492,14 +492,15 @@ scripts/build_local_with_spack_env.sh --infra TIM
 ```
 
 `MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and they work
-with every build script and tester, and with the explicit flow's `turbo_build_*`
-wrappers. A bare `build_turbo_stack.sh` reads only `MOM6_ROOT`: it builds no
+with every build script and tester (the container scripts mount each tree into the
+container), and with the explicit flow's `turbo_build_*` wrappers. A bare `build_turbo_stack.sh` reads only `MOM6_ROOT`: it builds no
 backend, so it finds FMS or TIM installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
 and `PFUNIT_ROOT` work the same way, but only where the builder actually builds
 tier 1.5 from submodule — the from-source builders
 (`build_local_with_system_toolchain.sh`, `build_on_derecho.sh`, and their
-testers). The Spack flavor shown above takes AMReX and pFUnit prebuilt from the
-Spack environment and never consults those two variables; to build against your
+testers). The Spack flavor shown above, which the container scripts also run,
+takes AMReX and pFUnit prebuilt from a Spack environment and never consults those
+two variables; to build against your
 own there, use the explicit flow described under
 [tier 1.5](#tier-15--prerequisites-but-we-supply-the-source-via-a-submodule).
 
@@ -563,7 +564,7 @@ checkout you ran it from:
 | `build/default/mom6_build/config_src/drivers/solo_driver/MOM6` | the standalone MOM6 executable |
 | `deps/default/build/`, `deps/default/install/` | the dependencies built from `submodules/` |
 
-Passing `--build_dir DIR` moves both, the same way for all three builders: the
+Passing `--build_dir DIR` moves both, the same way for all four builders: the
 build tree to `DIR` and the dependencies to `DIR/deps/{build,install}/`. Both
 locations are outside `bin/`, so a CMake build and a legacy mkmf build can
 coexist.

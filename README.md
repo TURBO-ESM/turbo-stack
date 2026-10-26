@@ -37,6 +37,7 @@ One script takes you from a fresh clone to a MOM6 executable: it sets up the env
 | Derecho (NCAR), Lmod modules | `scripts/build_on_derecho.sh` |
 | Laptop / workstation, let Spack manage the toolchain | `scripts/build_local_with_spack_env.sh` |
 | Laptop / workstation, toolchain already on `PATH` | `scripts/build_local_with_system_toolchain.sh` |
+| Any x86-64 machine with Docker or Podman, no toolchain at all | `scripts/build_with_container.sh` |
 
 Each builds MOM6 against one [infrastructure backend](#choosing-an-infrastructure-backend), TIM is the default but you can change it by passing `--infra FMS2`. To build and test both backends in one go, see [Build and test both backends in one command](#build-and-test-both-backends-in-one-command). [`scripts/README.md`](scripts/README.md) explains how the build is put together, and its [Workflows](scripts/README.md#workflows) section is the full reference for these scripts.
 
@@ -60,13 +61,14 @@ On a laptop or workstation, pick a script by where the toolchain — compilers, 
 ```bash
 scripts/build_local_with_spack_env.sh          # Spack supplies MPI, NetCDF and CMake
 scripts/build_local_with_system_toolchain.sh   # you already have all of it on PATH
+scripts/build_with_container.sh                # the CI container image supplies all of it
 ```
 
-The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. 
+The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. The container script needs only Docker or Podman and a one-time login to the private image, and the image is x86-64 only; see [In a container](scripts/README.md#in-a-container-a-ready-made-environment).
 
 ### Build options
 
-All three scripts take the same options and `-h` or `--help` on any of them prints them. Note `build_local_with_spack_env.sh` adds the option `--recreate-spack-env`. The output for `build_on_derecho.sh`:
+All four scripts take the same options and `-h` or `--help` on any of them prints them. Note `build_local_with_spack_env.sh` adds the option `--recreate-spack-env`, and `build_with_container.sh` adds `--image`, `--pull`, `--no-pull` and `--shell`. The output for `build_on_derecho.sh`:
 
 ```text
 $ scripts/build_on_derecho.sh --help
@@ -177,12 +179,13 @@ make clean
 
 ## Build and test both backends in one command
 
-There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. Artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`), so with the default they write nothing into your checkout. However a Derecho batch job's PBS log is written in the directory where you launched the job:
+There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. Artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`, and a directory of its own for the container driver), so with the default they write nothing into your checkout. However a Derecho batch job's PBS log is written in the directory where you launched the job:
 
 ```bash
 ./test_turbo_stack_locally.sh                   # Spack toolchain
 ./test_turbo_stack_with_system_toolchain.sh     # your own toolchain on PATH
 ./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
+./test_turbo_stack_with_container.sh            # the CI container image
 ```
 
 `--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
@@ -220,7 +223,10 @@ CI covers both build systems in separate lanes and separate containers:
 The CMake lane runs four cells: the pinned MOM6 submodule and the tip of MOM6's
 `dev/turbo-debug` branch, each against both backends. Refreshing the CI image
 after a `spack/spack.yaml` change is a manual step — see
-[`docker/README.md`](docker/README.md).
+[`docker/README.md`](docker/README.md). When a script it uses changes,
+`container-driver-scripts.yaml` also runs `./test_turbo_stack_with_container.sh`
+on the runner host, since the CMake lane enters the image without the container
+scripts.
 
 ## Going further
 
@@ -229,6 +235,6 @@ after a `spack/spack.yaml` change is a manual step — see
 | [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — how the build is put together, the dependency tiers and what you supply for each, the two-stage pipeline, `build_dep`, building against a development tree, parallelism, every environment variable |
 | [`docs/legacy_build_system.md`](docs/legacy_build_system.md) | The original mkmf `build.sh` build system |
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
-| [`docker/README.md`](docker/README.md) | The CI container image and the workflows that build and consume it |
+| [`docker/README.md`](docker/README.md) | The CI container image, building in it locally, and the workflows that build and consume it |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
 | `docs/*.dot` | Sources for the build-system figures, which `scripts/README.md` uses. After editing one, re-render and commit the PNG: `dot -Tpng -o docs/<name>.png docs/<name>.dot`. Each figure's `*_prompt.md` records what it must show |

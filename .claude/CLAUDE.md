@@ -85,7 +85,7 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 | Script | Role | How invoked |
 |---|---|---|
 | `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
-| `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
+| `test_turbo_stack_locally.sh`, `test_turbo_stack_with_system_toolchain.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
 | `scripts/build_local_with_spack_env.sh`, `build_local_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
 | `scripts/build_with_container.sh` | Wrapper — runs `build_local_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
@@ -261,7 +261,7 @@ build in, so much of this lane can be exercised without pushing a branch: `scrip
 to debug inside it, and `MOM6_ROOT`/`FMS_ROOT`/`TIM_ROOT` to build trees of your
 own instead of the pinned commits. Reproducing CI is a consequence of sharing the image, not the
 purpose of those scripts, and not a guarantee: CI checks its MOM6 branch out fresh
-beside the workspace, where the local runner builds the tree you point it at. See "Local test in the CI container" above.
+beside the workspace, where the local runner builds the tree you point it at. See "Build and test in a container" above.
 
 Branches that trigger CI: `main` for the CMake lane; `main` plus the legacy
 `ci-tests` / `container-ci` branches for the mkmf lane. Any workflow can also be
