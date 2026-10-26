@@ -14,6 +14,9 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
         -fdefault-real-8 -fdefault-double-8
         -fconvert=big-endian
         -fcray-pointer -ffree-line-length-none -fno-range-check -fallow-argument-mismatch
+        # Disable FMA contraction, matching -no-fma (Intel) and -Mnofma (NVHPC)
+        # below, so Fortran results are bit-for-bit with the TIM C++ kernels.
+        -ffp-contract=off
     )
 
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES "IntelLLVM|Intel")
