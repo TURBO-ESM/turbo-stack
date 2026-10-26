@@ -137,7 +137,9 @@ jobs:
         if: inputs.mom6_ref != ''
         uses: actions/checkout@v7
         with:
-          repository: TURBO-ESM/MOM6
+          # TEMPORARY (kernel move pair validation): the MOM6 PR branch lives
+          # on this fork. Revert to TURBO-ESM/MOM6 before merging.
+          repository: mwaxmonsky/MOM6
           ref: ${{ inputs.mom6_ref }}
           path: mom6-ref
           # MOM6 carries its own submodules (pkg/CVMix-src, pkg/GSW-Fortran) and

@@ -75,5 +75,7 @@ jobs:
     name: MOM6 dev/turbo-debug
     uses: ./.github/workflows/cmake-build.yaml
     with:
-      mom6_ref: dev/turbo-debug
-      mom6_label: dev/turbo-debug
+      # TEMPORARY (kernel move pair validation): build the MOM6 PR branch from
+      # the mwaxmonsky/MOM6 fork (see cmake-build.yaml). Revert before merging.
+      mom6_ref: kernel-moving-debug
+      mom6_label: kernel-moving-debug
