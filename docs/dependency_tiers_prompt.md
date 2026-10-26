@@ -62,12 +62,13 @@ two tiers by source type (co-developed vs external submodule):
   (`style=invis`) pads the band's left half so the members stay right-of-centre and the `TIM_ROOT`
   and `PROTOMOMXX_ROOT` hot-swap labels clear the cluster title. In practice FMS/TIM/protoMOMxx are
   always built from submodule (the co-developed TURBO-ESM repos, which is why they — not
-  AMReX/pFUnit — carry `*_ROOT` source swaps). protoMOMxx is built only for the TIM backend, after
-  TIM: it provides `protoMOMxx::mom_bridge`, the C++ side of the AMReX kernels MOM6 calls under
-  `-D_TIM`, and links TIM. Only its kernel and bridge targets are built (`PROTOMOM_KERNELS_ONLY`), so
-  it is a library dependency like TIM, not a Tier-3 model.
+  AMReX/pFUnit — are drawn with `*_ROOT` hot-swap lines). protoMOMxx is built only for the TIM
+  backend, after TIM: it provides `protoMOMxx::mom_bridge`, the C++ side of the AMReX kernels MOM6
+  calls under `-D_TIM`, and links TIM. Only its kernel and bridge targets are built
+  (`PROTOMOM_KERNELS_ONLY`), so it is a library dependency like TIM, not a Tier-3 model.
 - **Tier 1.5 — External upstream libraries that are submodules.**  Source: turbo-stack CAN get it via
-  submodule (no `*_ROOT` override — these are not co-developed).  Build: turbo-stack CAN build the
+  submodule; `AMREX_ROOT` / `PFUNIT_ROOT` swap that source wherever a builder builds them, but these
+  are not co-developed, so draw no hot-swap line to them.  Build: turbo-stack CAN build the
   submodule source OR you provide a PREBUILT install on `CMAKE_PREFIX_PATH` (`find_package`).  Cluster
   `#f5f5dc`, nodes `#fffacd`. Members (left→right): `pFUnit`, `AMReX`.  In practice they come prebuilt
   from the Tier-1 provider where available (e.g. spack) and are built from submodule where it is not

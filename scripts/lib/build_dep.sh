@@ -35,7 +35,7 @@
 #                     submodule fallback; not required when $<NAME>_ROOT is set).
 #
 # Side effects on success:
-#   - Appends $install_prefix to CMAKE_PREFIX_PATH (with dedup guard).
+#   - Prepends $install_prefix to CMAKE_PREFIX_PATH (with dedup guard).
 #   - For name=pfunit: exports PFUNIT_DIR pointing at the versioned cmake dir.
 
 # Helper: expose a dep's install prefix to find_package(...) for downstream

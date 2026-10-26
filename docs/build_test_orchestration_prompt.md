@@ -37,10 +37,11 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 - `scripts/lib/common.sh` is the shared-helpers substrate used by all scripts (NOT a flow step): show
   it as a side note, high level — "root self-location · arg parsing · `turbo_build_*` wrappers · the
   per-backend loop + verdict (`turbo_run_test_driver`)".
-- Source overrides default to the pinned submodule: `*_ROOT` points at a local dev tree of a
-  co-developed repo (MOM6/FMS/TIM/protoMOMxx).  `FMS_ROOT`/`TIM_ROOT`/`PROTOMOMXX_ROOT` feed each
-  builder's Stage-1 dep builds;
-  `MOM6_ROOT` feeds Stage-2's CMake.
+- Source overrides default to the pinned submodule: `*_ROOT` points at a local dev tree or a separate
+  clone.  `FMS_ROOT`/`TIM_ROOT`/`PROTOMOMXX_ROOT` feed each builder's Stage-1 dep builds; `MOM6_ROOT`
+  feeds Stage-2's CMake.  `AMREX_ROOT`/`PFUNIT_ROOT` exist too, but are read only by the two
+  from-source builders, which build Tier 1.5 from submodule — state that in the note rather than
+  adding arrows for them: the spack flavor takes AMReX/pFUnit prebuilt and never consults those roots.
 
 ### Visual language
 - Test-driver ellipses `#fffacd`.
@@ -61,13 +62,13 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
   - `build_local_with_spack_env.sh`: toolchain = source `spack_local_environment.sh` (builds nothing
     → Tier 1); deps = the selected backend only — `turbo_build_fms` for FMS2, or `turbo_build_tim`
     then `turbo_build_protomomxx` for TIM (mutually exclusive; all Tier 2); pFUnit / AMReX (Tier 1.5)
-    come from spack.  Label: `turbo_build_fms | turbo_build_tim ; _protomomxx`.
+    come from spack.  Label: `(per --infra): turbo_build_tim ; _protomomxx | turbo_build_fms`.
   - `build_on_derecho.sh`: toolchain = source `derecho_cpu_gcc_openmpi.sh` (builds nothing → Tier 1);
-    deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim ; _protomomxx` (pFUnit/AMReX = Tier 1.5;
-    FMS/TIM/protoMOMxx = Tier 2).
+    deps = `turbo_build_pfunit` (only with `--tests`) plus, per `--infra`, `_amrex + _tim +
+    _protomomxx` or `_fms` (pFUnit/AMReX = Tier 1.5; FMS/TIM/protoMOMxx = Tier 2).
   - `build_local_with_system_toolchain.sh`: toolchain = source `local_toolchain_on_path.sh` (verify
-    only, builds nothing → Tier 1); deps = `turbo_build_pfunit ; _fms ; _amrex ; _tim ; _protomomxx`
-    (all from submodule, like Derecho) — the bring-your-own-toolchain local path (no spack, no modules).
+    only, builds nothing → Tier 1); deps = the same conditional set as Derecho (all from submodule) —
+    the bring-your-own-toolchain local path (no spack, no modules).
   - protoMOMxx is built only for the TIM backend, right after TIM, into the same prefix. It provides
     `protoMOMxx::mom_bridge`, which MOM6 `dev/turbo-debug` links under TIM. The deps labels list it
     as one more `turbo_build_*` call; don't add a separate node for it.

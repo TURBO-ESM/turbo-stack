@@ -34,22 +34,51 @@
 _TURBO_COMMON_SH=1
 
 # ── Usage / --help ───────────────────────────────────────────────────────────
-# Print a script's own leading comment block as its usage text: skip the
-# shebang, then echo the contiguous "#" header lines (leading "# " stripped),
-# stopping at the first non-comment line.  Every user-facing script keeps its
-# usage in that header, so --help stays in sync from one source of truth.
+# Print a script's usage text from its header -- the comments and blank lines
+# above its first line of code, shebang skipped, leading "# " stripped.  Every
+# user-facing script keeps its usage there, so --help stays in sync from one
+# source of truth.
 turbo_print_header_usage() {
-    local file="$1" line stripped shebang_seen=false
+    local file="$1" line stripped
     [[ -r "$file" ]] || { echo "usage: (no header found for '$file')"; return 0; }
+    # Two candidates, gathered in one pass over the header:
+    #   usage_block  the comment block starting at a "# Usage:" line.  A
+    #                qsub-able driver carries #PBS directives above its usage
+    #                text with a blank line between, so its FIRST comment block
+    #                is the scheduler directives, not its usage.
+    #   first_block  the first comment block after the shebang -- the shape
+    #                every other script here uses (some have no "Usage:" line).
+    # The scan stops at the first line of code, so a "# Usage:" comment further
+    # down (inside a function, say) can never be taken for the usage text.
+    # Pure bash on purpose: a grep pipeline that matches nothing exits
+    # non-zero, and the drivers run under `set -euo pipefail`, so that would
+    # abort the script and print no usage at all.
+    local -a usage_block=() first_block=()
+    local shebang_seen=false first_done=false collecting_usage=false
     while IFS= read -r line; do
         if [[ "$shebang_seen" == false && "$line" == '#!'* ]]; then
             shebang_seen=true
             continue
         fi
-        [[ "$line" == '#'* ]] || break
-        stripped="${line#\#}"          # drop leading '#'
-        printf '%s\n' "${stripped# }"  # drop one following space, keep indent
+        [[ "$line" == '#'* || "$line" =~ ^[[:space:]]*$ ]] || break   # end of header
+        stripped="${line#\#}"        # drop leading '#'
+        stripped="${stripped# }"     # drop one following space, keep indent
+        if [[ "$collecting_usage" == true ]]; then
+            [[ "$line" == '#'* ]] || break   # usage block complete; it wins
+            usage_block+=("$stripped")
+        elif [[ "$line" =~ ^#[[:space:]]*Usage: ]]; then
+            collecting_usage=true
+            usage_block+=("$stripped")
+        fi
+        if [[ "$first_done" == false ]]; then
+            if [[ "$line" == '#'* ]]; then first_block+=("$stripped"); else first_done=true; fi
+        fi
     done < "$file"
+    if [[ ${#usage_block[@]} -gt 0 ]]; then
+        printf '%s\n' "${usage_block[@]}"
+    elif [[ ${#first_block[@]} -gt 0 ]]; then
+        printf '%s\n' "${first_block[@]}"
+    fi
 }
 
 # ── Root resolution ──────────────────────────────────────────────────────────
