@@ -340,8 +340,10 @@ _built_by="" _built_by_ref=""
 if [[ -f "$_record" ]]; then
     read -r _built_by _built_by_ref <"$_record" || true
 fi
+_stale=false
 if [[ -n "$_image_id" && "$_built_by" != "$_image_id" ]] &&
    [[ -d "$_deps_root" || -f "$_cmake_dir/CMakeCache.txt" ]]; then
+    _stale=true
     if [[ -n "$_built_by" ]]; then
         _stale_why="was built with another image ($_built_by_ref, ${_built_by:0:12})"
     else
@@ -408,17 +410,18 @@ else
     # different image").  After the builder, not before: its --clean would remove an
     # earlier record.  Inside the container: a run that never reached the builder
     # (an engine error, the env check below) must not vouch for artifacts it never
-    # touched.  And only once BOTH stages are this image's: --clean wipes the deps
-    # first thing but resets the CMake cache only when Stage 2 configures, so a run
-    # that failed in Stage 1 still holds the old cache.  That run keeps the old
-    # record and the next one cleans again -- free here, where Stage 1 is the one
-    # dep that just failed.  A failure after Stage 2 configured is recorded, so a
-    # compile error does not turn every retry into a clean build.
+    # touched.  And when this run replaces another image's artifacts, only on
+    # success: --clean resets them in steps (the deps first, the CMake cache when
+    # Stage 2 configures, the objects at --clean-first), and only a finished build
+    # proves every step ran.  Until then each run cleans again.  Any other run
+    # started from this image's artifacts alone, so a failure is recorded too and
+    # a retry stays incremental.
     if [[ -n "$_image_id" ]]; then
-        _cache=$(printf '%q' "$_cmake_dir/CMakeCache.txt")
-        _final="_rc=0 _t0=\$(mktemp)
+        _when="[[ -d $(printf '%q' "$_deps_root") ]]"
+        [[ "$_stale" == true ]] && _when+=" && [[ \$_rc -eq 0 ]]"
+        _final="_rc=0
 $_final|| _rc=\$?
-if [[ -d $(printf '%q' "$_deps_root") ]] && [[ ! -f $_cache || $_cache -nt \$_t0 ]]; then
+if $_when; then
     printf '%s\n' $(printf '%q' "$_image_id $_image") >$(printf '%q' "$_record") || true
 fi
 exit \$_rc"
