@@ -408,11 +408,17 @@ else
     # different image").  After the builder, not before: its --clean would remove an
     # earlier record.  Inside the container: a run that never reached the builder
     # (an engine error, the env check below) must not vouch for artifacts it never
-    # touched.  Written on failure too -- whatever the builder left is this image's.
+    # touched.  And only once BOTH stages are this image's: --clean wipes the deps
+    # first thing but resets the CMake cache only when Stage 2 configures, so a run
+    # that failed in Stage 1 still holds the old cache.  That run keeps the old
+    # record and the next one cleans again -- free here, where Stage 1 is the one
+    # dep that just failed.  A failure after Stage 2 configured is recorded, so a
+    # compile error does not turn every retry into a clean build.
     if [[ -n "$_image_id" ]]; then
-        _final="_rc=0
+        _cache=$(printf '%q' "$_cmake_dir/CMakeCache.txt")
+        _final="_rc=0 _t0=\$(mktemp)
 $_final|| _rc=\$?
-if [[ -d $(printf '%q' "$_deps_root") ]]; then
+if [[ -d $(printf '%q' "$_deps_root") ]] && [[ ! -f $_cache || $_cache -nt \$_t0 ]]; then
     printf '%s\n' $(printf '%q' "$_image_id $_image") >$(printf '%q' "$_record") || true
 fi
 exit \$_rc"
