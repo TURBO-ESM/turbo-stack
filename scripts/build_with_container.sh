@@ -36,6 +36,11 @@
 # rebuild.  Pass the --build_dir the earlier run used; otherwise both take the default
 # and only agree by accident.
 #
+# Each build dir also records the image that built it (deps/.turbo-ci-image).  When
+# the image changes -- the default tag refreshes, or --image names another -- the next
+# run cleans first, as --clean does: the old deps and CMake cache point at the old
+# image's compiler and Spack stack.
+#
 # Options:
 #   --infra FMS2|TIM    Infrastructure backend (default: TIM).  One per run.
 #   --tests             Also build + run the pFUnit unit tests (default: off, as in
@@ -46,7 +51,8 @@
 #                       container never writes into your clone.
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug (passed through)
 #   --clean             Clean rebuild from scratch (passed through: wipes the Stage-1
-#                       dep builds/installs, plus cmake --fresh)
+#                       dep builds/installs, plus cmake --fresh).  Implied when the
+#                       image changed since the build dir was built (above).
 #   --ninja             Use the Ninja generator (passed through)
 #   --parallel N, -j N  Parallel build jobs, exported as CMAKE_BUILD_PARALLEL_LEVEL
 #                       (CI sets 4).  Default: nproc.
@@ -208,18 +214,22 @@ for _var in MOM6_ROOT FMS_ROOT TIM_ROOT; do
 done
 
 # MOM6 is the one source consumed as source rather than built as a dep, and its
-# top-level CMakeLists hard-fails without these; catch it here rather than 20
-# minutes into a container build.  CI gets them via submodules:recursive.
+# top-level CMakeLists hard-fails without its pkg/ submodules; catch it here rather
+# than 20 minutes into a container build.  It probes the same two files MOM6 does,
+# so it fails exactly when MOM6 would -- a tree exported without .git metadata
+# passes.  CI gets them via submodules:recursive.
 _check_mom6_tree() {   # <mom6 tree>
     [[ -f "$1/CMakeLists.txt" ]] || {
         echo "Error: '$1' has no CMakeLists.txt -- that is not a MOM6 checkout" >&2
         echo "       with the CMake build system (not every MOM6 branch has it)." >&2
         exit 1
     }
-    local _p
-    for _p in pkg/CVMix-src pkg/GSW-Fortran; do
-        [[ -e "$1/$_p/.git" ]] || {
-            echo "Error: MOM6 submodule '$_p' is not initialized in $1." >&2
+    local _f
+    for _f in pkg/CVMix-src/src/shared/cvmix_kinds_and_types.F90 \
+              pkg/GSW-Fortran/modules/gsw_mod_kinds.f90; do
+        [[ -e "$1/$_f" ]] || {
+            echo "Error: $1 is missing $_f -- MOM6's pkg/CVMix-src and" >&2
+            echo "       pkg/GSW-Fortran submodules are not initialized:" >&2
             echo "       git -C \"$1\" submodule update --init --recursive" >&2
             exit 1
         }
@@ -304,6 +314,49 @@ if [[ -z "$MOM6_ROOT" ]]; then
 fi
 _ensure_image || exit 1
 
+# --- artifacts left by a different image ---------------------------------------
+# build_dep reuses an installed dep when its source, CMake args and install prefix
+# match -- it does not see the compiler or the Spack stack that built it -- and the
+# turbo-stack build's CMakeCache.txt pins the image's Spack paths.  So once the
+# image changes (the default tag refreshes, or --image names another), the next run
+# would reuse the old image's artifacts: at best a confusing failure, at worst a
+# build that quietly mixes two toolchains.  Each
+# build dir records the image that built it; when that differs, or a dir with
+# artifacts has no record (built outside the container, or before this check),
+# clean first, exactly as --clean does.
+#
+# The two locations mirror turbo_run_backend_builder (deps) and build_turbo_stack.sh
+# (the CMake build dir).  The record lives under deps/, so every entry point's
+# --clean, which removes that dir, removes the record with it.
+if [[ -n "$_build_dir" ]]; then
+    _deps_root="$_build_dir/deps";               _cmake_dir="$_build_dir"
+else
+    _deps_root="$TURBO_STACK_ROOT/deps/default"; _cmake_dir="$TURBO_STACK_ROOT/build/default"
+fi
+_record="$_deps_root/.turbo-ci-image"
+_image_id=$("$_engine" image inspect --format '{{.Id}}' "$_image" 2>/dev/null) || _image_id=""
+_image_id="${_image_id#sha256:}"   # docker prints the prefix, podman does not
+_built_by="" _built_by_ref=""
+if [[ -f "$_record" ]]; then
+    read -r _built_by _built_by_ref <"$_record" || true
+fi
+if [[ -n "$_image_id" && "$_built_by" != "$_image_id" ]] &&
+   [[ -d "$_deps_root" || -f "$_cmake_dir/CMakeCache.txt" ]]; then
+    if [[ -n "$_built_by" ]]; then
+        _stale_why="was built with another image ($_built_by_ref, ${_built_by:0:12})"
+    else
+        _stale_why="has no record of the image that built it"
+    fi
+    if [[ "$_shell" == true ]]; then
+        echo "[ci-container] warning: the build in $_cmake_dir $_stale_why;" >&2
+        echo "[ci-container]          pass --clean to the builder before reusing it." >&2
+    elif [[ "$TURBO_B_CLEAN" != true ]]; then
+        echo "[ci-container] the build in $_cmake_dir $_stale_why;"
+        echo "[ci-container] rebuilding from scratch (--clean)"
+        TURBO_B_CLEAN=true
+    fi
+fi
+
 # --- environment ---------------------------------------------------------------
 # The two settings cmake-build.yaml puts on the job; everything else the build needs
 # (SPACK_ROOT, OMPI_ALLOW_RUN_AS_ROOT{,_CONFIRM}) is baked into the image.
@@ -351,6 +404,19 @@ echo '    scripts/build_local_with_spack_env.sh --infra $TURBO_B_INFRA --tests'
 exec bash"
 else
     _final=$(printf '%q ' scripts/build_local_with_spack_env.sh "${_build_args[@]}")
+    # Then record the image beside what it built (see "artifacts left by a
+    # different image").  After the builder, not before: its --clean would remove an
+    # earlier record.  Inside the container: a run that never reached the builder
+    # (an engine error, the env check below) must not vouch for artifacts it never
+    # touched.  Written on failure too -- whatever the builder left is this image's.
+    if [[ -n "$_image_id" ]]; then
+        _final="_rc=0
+$_final|| _rc=\$?
+if [[ -d $(printf '%q' "$_deps_root") ]]; then
+    printf '%s\n' $(printf '%q' "$_image_id $_image") >$(printf '%q' "$_record") || true
+fi
+exit \$_rc"
+    fi
 fi
 
 _cmd=$(cat <<EOF

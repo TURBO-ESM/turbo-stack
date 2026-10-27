@@ -410,7 +410,11 @@ image's `/root`, so a small host directory is mounted as `HOME` to hold it
 (`TURBO_CI_HOME`, default `${XDG_CACHE_HOME:-~/.cache}/turbo-ci-home`); the first
 run fills it, later runs start instantly. Without `--build_dir` the artifacts land
 where the other builders put them, inside the checkout (see
-[Where the build lands](#where-the-build-lands)). See `--help` and
+[Where the build lands](#where-the-build-lands)). Each build dir records the image
+that built it. The next run cleans it first when the image has changed (the
+default tag refreshed, or `--image` names another) or when it holds artifacts with
+no record (a host builder's, say), since `build_dep` would otherwise reuse deps
+built with a different compiler. See `--help` and
 [`docker/README.md`](../docker/README.md).
 
 ### Explicit, iterative (any flavor)
