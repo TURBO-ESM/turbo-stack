@@ -402,10 +402,13 @@ _build_args+=(--infra "$TURBO_B_INFRA")
 
 if [[ "$_shell" == true ]]; then
     # Not `bash -l`: a login shell re-reads /etc/profile and would undo the
-    # activation we just did.
+    # activation we just did.  The hint is the build this run's flags describe
+    # (--build_dir included), so following it rebuilds the tree being debugged.
+    _hint=$(printf '%q ' scripts/build_local_with_spack_env.sh "${_build_args[@]}")
+    _hint=${_hint% }
     _final="spack env activate turbo_stack
 echo '[ci-container] Spack env turbo_stack is active.  Build with:'
-echo '    scripts/build_local_with_spack_env.sh --infra $TURBO_B_INFRA --tests'
+printf '    %s\n' $(printf '%q' "$_hint")
 exec bash"
 else
     _final=$(printf '%q ' scripts/build_local_with_spack_env.sh "${_build_args[@]}")

@@ -37,7 +37,7 @@ One script takes you from a fresh clone to a MOM6 executable: it sets up the env
 | Derecho (NCAR), Lmod modules | `scripts/build_on_derecho.sh` |
 | Laptop / workstation, let Spack manage the toolchain | `scripts/build_local_with_spack_env.sh` |
 | Laptop / workstation, toolchain already on `PATH` | `scripts/build_local_with_system_toolchain.sh` |
-| Any x86-64 machine with Docker or Podman, no toolchain at all | `scripts/build_with_container.sh` |
+| Any x86-64 machine with AVX2 (Intel 2013+, AMD 2017+) and Docker or Podman, no toolchain at all | `scripts/build_with_container.sh` |
 
 Each builds MOM6 against one [infrastructure backend](#choosing-an-infrastructure-backend), TIM is the default but you can change it by passing `--infra FMS2`. To build and test both backends in one go, see [Build and test both backends in one command](#build-and-test-both-backends-in-one-command). [`scripts/README.md`](scripts/README.md) explains how the build is put together, and its [Workflows](scripts/README.md#workflows) section is the full reference for these scripts.
 

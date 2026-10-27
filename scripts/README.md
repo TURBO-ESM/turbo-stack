@@ -366,7 +366,10 @@ On the host you need a container engine (Docker, or Podman through
 pull needs a one-time `docker login ghcr.io`, as
 [`docker/README.md`](../docker/README.md#pulling-it-locally) shows. It is built
 for x86-64 (`linux/amd64`) only, so on an Arm machine such as an Apple Silicon Mac
-it can only run under emulation. It has not been tried on a host with SELinux
+it can only run under emulation. It also needs AVX2 (`x86_64_v3`: Intel Haswell
+2013+, AMD Zen 2017+); on an older CPU its prebuilt tools can die with an illegal
+instruction, and [`docker/README.md`](../docker/README.md#why-the-image-pins-a-spack-target)
+shows how to build an image for a lower baseline. It has not been tried on a host with SELinux
 enforcing (Fedora, RHEL). There the bind mounts keep their host labels and the
 container is denied access to them, and the script does not relabel your trees.
 With Podman, turning label separation off for your own containers gets past this:
