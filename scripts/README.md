@@ -366,7 +366,11 @@ On the host you need a container engine (Docker, or Podman through
 pull needs a one-time `docker login ghcr.io`, as
 [`docker/README.md`](../docker/README.md#pulling-it-locally) shows. It is built
 for x86-64 (`linux/amd64`) only, so on an Arm machine such as an Apple Silicon Mac
-it can only run under emulation.
+it can only run under emulation. It has not been tried on a host with SELinux
+enforcing (Fedora, RHEL). There the bind mounts keep their host labels and the
+container is denied access to them, and the script does not relabel your trees.
+With Podman, turning label separation off for your own containers gets past this:
+`label = false` under `[containers]` in `~/.config/containers/containers.conf`.
 
 Sources are swapped [the usual way](#building-against-a-development-tree-or-a-branch):
 export `MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own
@@ -395,7 +399,8 @@ executes these scripts, since the CMake lane's `container:` job bypasses the wra
 `build_with_container.sh` takes the usual builder flags and forwards them to
 `build_local_with_spack_env.sh` *inside* the container, adding what the workflow
 adds (`CMAKE_BUILD_PARALLEL_LEVEL`, the PRRTE oversubscribe policy,
-`git config --global --add safe.directory '*'`, and the workflow's two guardrails —
+`safe.directory '*'` — set through the environment, so nothing is written to
+`HOME` — and the workflow's two guardrails —
 assert the prebaked `turbo_stack` env, warn when the image's baked `spack.yaml` lags
 the checkout) plus any `<NAME>_ROOT` you set. It mounts your checkout at its own
 path, so `TURBO_STACK_ROOT` resolves identically inside and out; no host

@@ -445,9 +445,11 @@ spack env list | grep -qw turbo_stack || {
     exit 1
 }
 
-# Root against a checkout owned by another uid: git refuses without this (the
-# workflow has the same step).
-git config --global --add safe.directory '*'
+# A checkout owned by another uid: git refuses without this (the workflow has the
+# same step).  Set in the environment, not with git config --global, which would
+# write the shared TURBO_CI_HOME's .gitconfig on every run -- a line per run, and
+# a lock file that two concurrent runs can collide on.
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*'
 
 # The image bakes spack.yaml at image-build time and the producer workflow is
 # manual, so the env can lag this checkout's spec -- more easily here than in CI,
