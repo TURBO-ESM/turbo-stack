@@ -334,8 +334,8 @@ else
     _deps_root="$TURBO_STACK_ROOT/deps/default"; _cmake_dir="$TURBO_STACK_ROOT/build/default"
 fi
 _record="$_deps_root/.turbo-ci-image"
-_image_id=$("$_engine" image inspect --format '{{.Id}}' "$_image" 2>/dev/null) || _image_id=""
-_image_id="${_image_id#sha256:}"   # docker prints the prefix, podman does not
+_engine_id=$("$_engine" image inspect --format '{{.Id}}' "$_image" 2>/dev/null) || _engine_id=""
+_image_id="${_engine_id#sha256:}"   # docker prints the prefix, podman does not
 _built_by="" _built_by_ref=""
 if [[ -f "$_record" ]]; then
     read -r _built_by _built_by_ref <"$_record" || true
@@ -467,12 +467,15 @@ EOF
 )
 
 echo "[ci-container] engine    = $_engine"
-echo "[ci-container] image     = $_image"
+echo "[ci-container] image     = $_image${_image_id:+ (${_image_id:0:12})}"
 echo "[ci-container] checkout  = $TURBO_STACK_ROOT (same path inside the container)"
 for _n in "${_notes[@]}"; do echo "[ci-container] $_n"; done
 echo "[ci-container] jobs      = $_jobs"
 echo "[ci-container] artifacts = ${_artifacts[*]}"
 
+# Launch the image by the ID inspected above, not by its tag: another run can
+# refresh the tag in between, and this one would then build with an image other
+# than the one the clean decision and the record name.
 "$_engine" run --rm --init "${_user[@]}" "${_tty[@]}" "${_mounts[@]}" \
-    "${_env[@]}" "${_home_env[@]}" -w "$TURBO_STACK_ROOT" "$_image" \
+    "${_env[@]}" "${_home_env[@]}" -w "$TURBO_STACK_ROOT" "${_engine_id:-$_image}" \
     bash -c "$_cmd"
