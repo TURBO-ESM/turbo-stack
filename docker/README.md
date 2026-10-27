@@ -176,8 +176,11 @@ root's, and the PRRTE oversubscribe policy is set. Where they land differs by sc
 They also mirror the workflow's two guardrails: refuse an image with no prebaked
 `turbo_stack` env (which would otherwise silently start a ~1 h source build), and
 warn when the image's baked `spack.yaml` lags the checkout. `--help` on either
-covers the rest — `--image` to pin one (which also stops the default refresh),
-`--pull` / `--no-pull` to force it either way, `--build_dir`.
+covers the rest. `scripts/build_with_container.sh` takes `--image` to pin an image
+(which also stops the default refresh), `--pull` / `--no-pull` to force it either
+way, and `--build_dir`. The driver takes none of these: it reads the image from
+`TURBO_CI_IMAGE` (naming one stops the refresh there too) and the artifact root
+from `TURBO_BUILD_SYSTEM_TEST_DIR`.
 
 Artifacts outlive the container, so after a failure
 `scripts/build_with_container.sh --shell` drops you back in and
