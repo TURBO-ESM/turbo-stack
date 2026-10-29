@@ -12,7 +12,7 @@
 
 # --- Toolchain (Stage 1 env setup; Tier 1) -----------------------------
 module purge
-module load gcc cmake openmpi netcdf parallelio #pfunit
+module load gcc cmake openmpi hdf5-mpi netcdf-mpi parallelio #pfunit
 
 # Temporary fix so the correct C++ standard library is picked up for TIM, which
 # is built with gcc 14.3.0 on Derecho while the default compiler is still older.

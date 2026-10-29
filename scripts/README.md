@@ -328,7 +328,7 @@ build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
 
 Its Stage-1 recipe (`setup_environment/derecho_cpu_gcc_openmpi.sh`) runs
-`module purge` before loading `gcc cmake openmpi netcdf parallelio`, so any
+`module purge` before loading `gcc cmake openmpi hdf5-mpi netcdf-mpi parallelio`, so any
 modules you loaded yourself beforehand are discarded.
 
 
