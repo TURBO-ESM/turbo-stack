@@ -57,11 +57,15 @@ two tiers by source type (co-developed vs external submodule):
 - **Tier 2 — Internal (we develop) upstream libraries.**  Source: turbo-stack CAN get it via
   submodule, with the option to override and bring your own development source branch or fork
   (`*_ROOT`).  Build: turbo-stack CAN build it OR you supply a PREBUILT install on `CMAKE_PREFIX_PATH`
-  (`find_package`).  Cluster `#fdeede`. Members (left→right): `TIM` (`#ffcc99`), `FMS` (`#add8e6`) —
-  FMS rightmost (for its `FMS_ROOT` line). Two invisible spacer nodes (`style=invis`) pad the band's
-  left half so FMS/TIM stay right-of-centre and the `TIM_ROOT` hot-swap label clears the cluster
-  title. In practice FMS/TIM are always built from submodule (the co-developed TURBO-ESM repos, which
-  is why they — not AMReX/pFUnit — are drawn with `*_ROOT` hot-swap lines).
+  (`find_package`).  Cluster `#fdeede`. Members (left→right): `protoMOMxx` (`#ffe0b2`), `TIM`
+  (`#ffcc99`), `FMS` (`#add8e6`) — FMS rightmost (for its `FMS_ROOT` line). One invisible spacer node
+  (`style=invis`) pads the band's left half so the members stay right-of-centre and the `TIM_ROOT`
+  and `PROTOMOMXX_ROOT` hot-swap labels clear the cluster title. In practice FMS/TIM/protoMOMxx are
+  always built from submodule (the co-developed TURBO-ESM repos, which is why they — not
+  AMReX/pFUnit — are drawn with `*_ROOT` hot-swap lines). protoMOMxx is built only for the TIM
+  backend, after TIM: it provides `protoMOMxx::mom_bridge`, the C++ side of the AMReX kernels MOM6
+  calls under `-D_TIM`, and links TIM. Only its kernel and bridge targets are built
+  (`PROTOMOM_KERNELS_ONLY`), so it is a library dependency like TIM, not a Tier-3 model.
 - **Tier 1.5 — External upstream libraries that are submodules.**  Source: turbo-stack CAN get it via
   submodule; `AMREX_ROOT` / `PFUNIT_ROOT` swap that source wherever a builder builds them, but these
   are not co-developed, so draw no hot-swap line to them.  Build: turbo-stack CAN build the
@@ -88,20 +92,21 @@ two tiers by source type (co-developed vs external submodule):
 ### Hot-swap cross-cut (NOT a tier)
 A sticky note (`shape=note`, `#fff2cc`) labelled "*_ROOT = bring your own SOURCE (turbo-stack still
 builds it; co-developed repos) — default = pinned submodule", with dashed brown edges
-(`color="#a06000"`, `penwidth=1.4`, `arrowhead=odot`, `constraint=false`) to the three co-developed
-repos, xlabelled `FMS_ROOT`, `TIM_ROOT`, `MOM6_ROOT`.  They span Tier 2 (FMS, TIM) and Tier 3 (MOM6)
-on purpose.  This is a SOURCE override (turbo-stack still builds it) — distinct from the Tier 1.5 /
-Tier 2 option to "supply a PREBUILT install on CMAKE_PREFIX_PATH".  MOM6 and FMS sit at the right edge of their tiers so these
-lines enter from the east and stay in the clear right margin; TIM is interior, so its line necessarily
-runs through Tier 2's right side (kept off the label text by the trimmed Tier-2 label).
+(`color="#a06000"`, `penwidth=1.4`, `arrowhead=odot`, `constraint=false`) to the four co-developed
+repos, xlabelled `FMS_ROOT`, `TIM_ROOT`, `PROTOMOMXX_ROOT`, `MOM6_ROOT`.  They span Tier 2 (FMS, TIM,
+protoMOMxx) and Tier 3 (MOM6) on purpose.  This is a SOURCE override (turbo-stack still builds it) —
+distinct from the Tier 1.5 / Tier 2 option to "supply a PREBUILT install on CMAKE_PREFIX_PATH".  MOM6
+and FMS sit at the right edge of their tiers so these lines enter from the east and stay in the clear
+right margin; TIM and protoMOMxx are interior, so their lines necessarily run through Tier 2's right
+side (kept off the label text by the trimmed Tier-2 label).
 
 ### Narrative the figure must land
 - Tier is set by turbo-stack's build policy, not authorship: TIM is ours but Tier 2 (can be built or
   supplied prebuilt); MOM6 is ours but Tier 3 (always compiled inline).
 - Tier 2 and Tier 1.5 share the SAME build policy (can-build-or-prebuilt); they are split to separate
-  the co-developed TURBO-ESM repos with a `*_ROOT` source swap (FMS/TIM, Tier 2) from the external
-  third-party submodules with no source swap (AMReX/pFUnit, Tier 1.5).
+  the co-developed TURBO-ESM repos with a `*_ROOT` source swap (FMS/TIM/protoMOMxx, Tier 2) from the
+  external third-party submodules with no source swap (AMReX/pFUnit, Tier 1.5).
 - Two orthogonal axes: the BUILD axis above (never / can-build-or-prebuilt / always), and the SOURCE
-  axis — `*_ROOT` swaps the source tree of a co-developed repo (FMS/TIM/MOM6) while turbo-stack still
+  axis — `*_ROOT` swaps the source tree of a co-developed repo (FMS/TIM/protoMOMxx/MOM6) while turbo-stack still
   builds it.  Don't conflate "bring your own SOURCE" (`*_ROOT`) with "bring your own PREBUILT library"
   (`CMAKE_PREFIX_PATH` — available for Tier 1.5 and Tier 2).

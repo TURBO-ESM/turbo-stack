@@ -8,12 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Scripts self-locate `TURBO_STACK_ROOT` from their own location — you build the checkout you run from (`SPACK_ROOT` is needed for the spack flavor). To build against a local dev tree of a co-developed dependency, set its submodule override (`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT`). See [`scripts/README.md`](scripts/README.md) for the full reference, including the **dependency tier contract** (`docs/dependency_tiers.png`).
+Scripts self-locate `TURBO_STACK_ROOT` from their own location — you build the checkout you run from (`SPACK_ROOT` is needed for the spack flavor). To build against a local dev tree of a co-developed dependency, set its submodule override (`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT`). See [`scripts/README.md`](scripts/README.md) for the full reference, including the **dependency tier contract** (`docs/dependency_tiers.png`).
 
 ### Two-stage pipeline
 
 ```
-Stage 1 — environment setup (machine-specific):  toolchain [Tier 1]  +  turbo_build_* deps [AMReX/pFUnit = Tier 1.5, FMS/TIM = Tier 2]
+Stage 1 — environment setup (machine-specific):  toolchain [Tier 1]  +  turbo_build_* deps [AMReX/pFUnit = Tier 1.5, FMS/TIM/protoMOMxx = Tier 2]
 Stage 2 — build turbo-stack (uniform):           build_turbo_stack.sh  →  Tier 3 (turbo-stack, MOM6, MARBL)
 ```
 
@@ -56,7 +56,7 @@ scripts/build_local_with_spack_env.sh --recreate-spack-env --clean # nuke + recr
 
 ### Local build (from source, one command)
 
-The closest replacement for the old `build.sh` on a laptop/workstation: bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` — system packages, Homebrew, an OS module system, or an already-activated Spack/Conda env) and turbo-stack builds **all** upstream submodule deps from source (pFUnit/AMReX + FMS/TIM), then builds turbo-stack. No spack, no modules; nothing is fetched — everything comes from `submodules/`.
+The closest replacement for the old `build.sh` on a laptop/workstation: bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` — system packages, Homebrew, an OS module system, or an already-activated Spack/Conda env) and turbo-stack builds **all** upstream submodule deps from source (pFUnit/AMReX + FMS/TIM, plus protoMOMxx for TIM), then builds turbo-stack. No spack, no modules; nothing is fetched — everything comes from `submodules/`.
 
 ```bash
 scripts/build_local_with_system_toolchain.sh                    # build (default backend infra TIM, Release)
@@ -74,7 +74,7 @@ source scripts/lib/common.sh                                 # turbo_build_* + h
 source scripts/setup_environment/spack_local_environment.sh  # Stage 1: toolchain (spack); builds nothing → Tier 1
 deps="$TURBO_STACK_ROOT/deps/default"
 turbo_build_fms "$deps/build" "$deps/install"                # Stage 1: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
-scripts/build_turbo_stack.sh --infra FMS2                    # Stage 2: build turbo-stack (Tier 3); use --infra TIM after turbo_build_tim,
+scripts/build_turbo_stack.sh --infra FMS2                    # Stage 2: build turbo-stack (Tier 3); use --infra TIM after turbo_build_tim + turbo_build_protomomxx,
                                                              # add --tests to also build + run ctest
 ```
 
@@ -132,25 +132,36 @@ CI does the latter — `actions/checkout` puts the branch in a sibling directory
 and sets `MOM6_ROOT`. There is no turbo-stack-specific machinery for this: the
 build scripts only ever know about `MOM6_ROOT`.
 
-### The MOM6 ↔ TIM AMReX bridge
+### The MOM6 ↔ protoMOMxx AMReX bridge
 
-`turbo_build_tim` passes `-DTIM_ENABLE_MOM_BRIDGE=ON` unconditionally, so TIM
-always provides `TIM::mom_bridge`. Whether MOM6 compiles and links it is decided
-in MOM6, not here: the CMake block lives only on `dev/turbo-debug`, and inside it
-`if(MOM6_INFRA STREQUAL "TIM")` keeps FMS2 compiled out. **Do not add a flag or a
-CI conditional for this.** Stage 1 cannot know whether the bridge is needed — only
+The C++ side of the AMReX kernels MOM6 calls from its `#ifdef _TIM` branches lives
+in protoMOMxx (`submodules/protoMOMxx/src/mom_kernels`), not in TIM. For every TIM
+build, `turbo_build_protomomxx` runs right after `turbo_build_tim` and installs
+`protoMOMxx::mom_bridge` (which links `protoMOMxx::mom_kernels`) into the same
+prefix, built against that TIM. FMS2 builds never build it. There is no
+`-DTIM_ENABLE_MOM_BRIDGE` flag any more: TIM no longer contains the kernels.
+
+Whether MOM6 compiles and links the bridge is decided in MOM6, not here: the CMake
+block lives only on `dev/turbo-debug`. Inside `if(MOM6_INFRA STREQUAL "TIM")`, its
+`src/CMakeLists.txt` runs `find_package(protoMOMxx REQUIRED COMPONENTS MOM_BRIDGE)`,
+which finds the install through `CMAKE_PREFIX_PATH`. **Do not add a flag or a CI
+conditional for this.** Stage 1 cannot know whether the bridge is needed — only
 the MOM6 source knows whether it carries the `#ifdef _TIM` call sites, and Stage 1
 never sees that source. Asking the caller reintroduces a per-lane CI conditional;
 reading the branch name does not work, since CI builds a detached ref. It costs one
-3-TU compile (~3 s) where it is unused, and nothing on those link lines.
+small C++ build where it is unused, and nothing on those link lines.
 
-MOM6 hard-errors at configure if `MOM6_INFRA=TIM` and `TIM::mom_bridge` is
-missing, so TIM's side must be in place before MOM6's merges. See
-[`scripts/README.md`](../scripts/README.md).
+The legacy mkmf lane (`build.sh`) compiles the same `src/mom_kernels` into
+`libTIM.a`, for the TIM backend only.
+
+MOM6 hard-errors at configure if `MOM6_INFRA=TIM` and `protoMOMxx::mom_bridge` is
+missing. MOM6's switch to protoMOMxx and turbo-stack's switch (protoMOMxx
+submodule, TIM bump, `turbo_build_protomomxx`) only work together, so they merge
+as a pair. See [`scripts/README.md`](../scripts/README.md).
 
 ### Spack environment
 
-Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS and TIM are intentionally not in spack: `build_local_with_spack_env.sh` builds the selected backend via `turbo_build_fms`/`turbo_build_tim` (in `scripts/lib/common.sh`) from the local source tree (`$FMS_ROOT`/`$TIM_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
+Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS, TIM and protoMOMxx are intentionally not in spack: `build_local_with_spack_env.sh` builds the selected backend via `turbo_build_fms`, or `turbo_build_tim` then `turbo_build_protomomxx` (in `scripts/lib/common.sh`), from the local source tree (`$FMS_ROOT`/`$TIM_ROOT`/`$PROTOMOMXX_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
 
 **AMReX mini-app tests** are built with CMake separately (see `src/amrex_mini_app/CMakeLists.txt`). They use GoogleTest (C++) and require HDF5.
 
@@ -170,7 +181,7 @@ toolchain does NOT provide prebuilt — see docs/dependency_tiers.png):
       │
       └─→ turbo_run_backend_builder (lib/common.sh) — the shared Stage-1+Stage-2 body:
             ├─→ turbo_flavor_setup_toolchain          Stage 1: source the toolchain recipe (builds nothing)
-            ├─→ turbo_build_{pfunit,amrex,fms,tim}    Stage 1: build the submodule dep tiers not provided
+            ├─→ turbo_build_{pfunit,amrex,fms,tim,protomomxx}  Stage 1: build the submodule dep tiers not provided
             └─→ build_turbo_stack.sh                  Stage 2: configure + build + ctest (exec'd)
                   ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
                   ├─→ cmake build
@@ -193,7 +204,7 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 
 | Path | Purpose |
 |------|---------|
-| `submodules/` | All external dependencies (MOM6, FMS, MARBL, amrex, TIM, pFUnit, CESM_share) |
+| `submodules/` | All external dependencies (MOM6, FMS, MARBL, amrex, TIM, protoMOMxx, pFUnit, CESM_share) |
 | `build-utils/makefile-templates/` | Legacy compiler × machine makefile fragments (mkmf era — being retired) |
 | `build-utils/mkmf/` | Legacy GFDL makefile generator (being retired in favour of CMake) |
 | `tests/` | Fortran unit tests (pFUnit, MPI-aware via `@test(npes=[1,2,4])`) |

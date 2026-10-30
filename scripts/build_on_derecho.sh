@@ -7,7 +7,7 @@
 # Tier 2 (FMS/TIM) from the submodules, then builds turbo-stack (Tier 3).
 #
 # Optional environment variables (hot-swap a dep's source; default = submodule):
-#   MOM6_ROOT / FMS_ROOT / TIM_ROOT   out-of-tree source overrides
+#   MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT   out-of-tree source overrides
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)

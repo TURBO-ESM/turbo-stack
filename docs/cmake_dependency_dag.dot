@@ -38,13 +38,30 @@ digraph turbo_stack_deps {
         label="TIM repo  (TIM_ROOT)";
         style=filled; color="#fde8d8"; fontname="Helvetica-Bold";
 
-        tim_r8 [label="TIM::tim_r8", fillcolor="#ffcc99", style=filled];
+        tim_r8  [label="TIM::tim_r8", fillcolor="#ffcc99", style=filled];
+        tim_cpp [label="TIM::tim",    fillcolor="#ffcc99", style=filled];
     }
 
     tim_r8 -> amrex;
     tim_r8 -> netcdf_c;
     tim_r8 -> netcdf_f;
     tim_r8 -> mpi;
+    tim_r8 -> tim_cpp;
+    tim_cpp -> amrex;
+
+    // ── protoMOMxx (MOM C++ kernels + the bridge MOM6 calls under -D_TIM) ────
+    subgraph cluster_protomom {
+        label="protoMOMxx repo  (PROTOMOMXX_ROOT)";
+        style=filled; color="#fff0e0"; fontname="Helvetica-Bold";
+
+        mom_bridge  [label="protoMOMxx::mom_bridge",  fillcolor="#ffe0b2", style=filled];
+        mom_kernels [label="protoMOMxx::mom_kernels", fillcolor="#ffe0b2", style=filled];
+    }
+
+    mom_bridge  -> mom_kernels;
+    mom_bridge  -> tim_cpp;
+    mom_bridge  -> amrex;
+    mom_kernels -> amrex;
 
     // ── TURBO::infra_r8 (backend-agnostic INTERFACE wrapper) ─────────────────
     turbo_infra [label="TURBO::infra_r8",
@@ -87,6 +104,8 @@ digraph turbo_stack_deps {
     ocean   -> cvmix;
     ocean   -> gsw;
     ocean   -> mom6_marbl;
+    // Only MOM6 dev/turbo-debug has this link, and only under MOM6_INFRA=TIM.
+    ocean   -> mom_bridge [style=dashed, xlabel="MOM6_INFRA=TIM\n(dev/turbo-debug)"];
     mom6_exe -> ocean;
 
     // ── turbo-stack tests ─────────────────────────────────────────────────────

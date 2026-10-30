@@ -25,14 +25,15 @@ digraph turbo_stack_tiers { rankdir=TB; compound=true;
         label="Tier 2 — Internal (we develop) upstream libraries.\n\nSource: turbo-stack CAN get it via submodules but option to\noverride and bring your own development source branch or fork.\n\nBuild: turbo-stack CAN build it OR you supply a PREBUILT install\non CMAKE_PREFIX_PATH (find_package)";
         style=filled; color="#fdeede"; fontname="Helvetica-Bold";
 
-        t2_fms    [label="FMS",    fillcolor="#add8e6", style=filled];
-        t2_tim    [label="TIM",    fillcolor="#ffcc99", style=filled];
-        // Two invisible spacers keep FMS/TIM in the right half of the band (as
-        // when Tier 2 had four members), so the TIM_ROOT hot-swap label lands in
-        // the clear right margin instead of over the cluster title.
-        t2_padB [style=invis, width=1.0];
+        // Declared in reverse: visual L->R is (spacer), protoMOMxx, TIM, FMS.
+        t2_fms      [label="FMS",        fillcolor="#add8e6", style=filled];
+        t2_tim      [label="TIM",        fillcolor="#ffcc99", style=filled];
+        t2_protomom [label="protoMOMxx", fillcolor="#ffe0b2", style=filled];
+        // One invisible spacer keeps the members in the right half of the band
+        // (as when Tier 2 had four members), so the TIM_ROOT and PROTOMOMXX_ROOT
+        // hot-swap labels land clear of the cluster title.
         t2_padA [style=invis, width=1.0];
-        {rank=same; t2_fms; t2_tim; t2_padB; t2_padA;}
+        {rank=same; t2_fms; t2_tim; t2_protomom; t2_padA;}
     }
 
     // ── Tier 1.5 — externals that are submodules ──────────────────────────────
@@ -80,4 +81,5 @@ digraph turbo_stack_tiers { rankdir=TB; compound=true;
     hotswap -> t3_mom6 [style=dashed, penwidth=1.4, color="#a06000", arrowhead=odot, constraint=false, xlabel="MOM6_ROOT"];
     hotswap -> t2_fms  [style=dashed, penwidth=1.4, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT"];
     hotswap -> t2_tim  [style=dashed, penwidth=1.4, color="#a06000", arrowhead=odot, constraint=false, xlabel="TIM_ROOT"];
+    hotswap -> t2_protomom [style=dashed, penwidth=1.4, color="#a06000", arrowhead=odot, constraint=false, xlabel="PROTOMOMXX_ROOT"];
 }

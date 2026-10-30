@@ -34,18 +34,19 @@ and the common unix / linux command line tools our scripts call.
 |------|--------|---------|
 | **1 — External, not a submodule** | turbo-stack *never* gets or builds these; you supply them prebuilt (modules / spack / OS packages / hand-compiled) | compilers, MPI, NetCDF, CMake ≥ 3.24, make/ninja, HDF5 |
 | **1.5 — External, a submodule** | turbo-stack *can* build these from their submodule (`build_dep` → `find_package`) OR you supply a prebuilt install on `CMAKE_PREFIX_PATH` | AMReX, pFUnit |
-| **2 — Internal (we develop), a submodule** | turbo-stack *can* build these from their submodule (or a `*_ROOT` source override) OR you supply a prebuilt install | FMS, TIM |
+| **2 — Internal (we develop), a submodule** | turbo-stack *can* build these from their submodule (or a `*_ROOT` source override) OR you supply a prebuilt install | FMS, TIM, protoMOMxx |
 | **3 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`); only the SOURCE can be swapped | turbo-stack, MOM6, MARBL |
 
 Tiers 1.5 and 2 share the same build policy (build-from-submodule or supply-prebuilt);
 they differ by *source*. Which option is taken is fixed per builder, not chosen
-by you: every one-command builder builds its Tier 2 backend from source, and
+by you: every one-command builder builds its Tier 2 backend (and, for TIM, the
+protoMOMxx bridge) from source, and
 Tier 1.5 is taken prebuilt from the Spack env by the Spack flavor and built from
 source by the other two. A prebuilt install of your own is used only in the
 [explicit flow](#explicit-iterative-any-flavor).
 
 "Our code" is not a tier: the repos we co-develop —
-**FMS, TIM** (Tier 2) and **MOM6** (Tier 3) — are the ones the drivers treat as
+**FMS, TIM, protoMOMxx** (Tier 2) and **MOM6** (Tier 3) — are the ones the drivers treat as
 first-class hot-swaps, reporting each as `(override)` or `(submodule)` in the
 testing matrix. Every `build_dep` dep in fact honors a `*_ROOT` source override
 — AMReX/pFUnit (Tier 1.5) via `AMREX_ROOT` / `PFUNIT_ROOT` — it just goes
@@ -68,7 +69,7 @@ shows the same two stages as the scripts drive them:
      (Tier 1: compiler / MPI / NetCDF / CMake) on `PATH`. **These recipes build
      nothing** — they only prepare the shell.
    - obtain the upstream submodule deps the toolchain didn't already provide —
-     AMReX/pFUnit (Tier 1.5) and FMS/TIM (Tier 2) — via the `turbo_build_*`
+     AMReX/pFUnit (Tier 1.5) and FMS/TIM, plus protoMOMxx for TIM (Tier 2) — via the `turbo_build_*`
      wrappers in `lib/common.sh` (the canonical per-dep cmake flags live there,
      once). *Which* deps need building is the machine-specific part: e.g. spack
      supplies pFUnit/AMReX prebuilt so locally you build only FMS/TIM, while
@@ -141,18 +142,21 @@ MOM6 is built against exactly one of them, chosen with `--infra`:
 - **`FMS2`** — the traditional Flexible Modeling System layer; the reference backend.
 
 The two are mutually exclusive, and the choice decides which dependency gets
-built: `--infra TIM` builds TIM, `--infra FMS2` builds FMS. Switching backends
+built: `--infra TIM` builds TIM and then protoMOMxx (see
+[The MOM6 ↔ protoMOMxx AMReX bridge](#the-mom6--protomomxx-amrex-bridge)),
+`--infra FMS2` builds FMS. Switching backends
 in an existing build directory is safe — the flag is always passed to CMake
 explicitly, so a previous choice never sticks in the cache.
 
 turbo-stack supplies both as submodules, and every one-command builder builds
 the one `--infra` selects — from the submodule, or from an `FMS_ROOT` /
-`TIM_ROOT` source tree. A prebuilt install of your own is used only in the
-explicit flow, the same way as for tier 1.5: skip `turbo_build_fms` /
-`turbo_build_tim` and put its install prefix on `CMAKE_PREFIX_PATH`.
+`TIM_ROOT` (and `PROTOMOMXX_ROOT`) source tree. A prebuilt install of your own is
+used only in the explicit flow, the same way as for tier 1.5: skip
+`turbo_build_fms`, or `turbo_build_tim` and `turbo_build_protomomxx`, and put
+the install prefix on `CMAKE_PREFIX_PATH`.
 
 > [!WARNING]
-> `FMS_ROOT`, `TIM_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
+> `FMS_ROOT`, `TIM_ROOT`, `PROTOMOMXX_ROOT`, `AMREX_ROOT` and `PFUNIT_ROOT` are **not** install
 > prefixes — each names a *source tree* for turbo-stack to build. See
 > [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
 
@@ -223,8 +227,8 @@ process and its own build directory, and builds + `ctest`s turbo-stack for both
 FMS2 and TIM. `-h` / `--help` lists their options; the common ones are
 `--only FMS2|TIM` to build one backend instead of both, `--clean` to rebuild
 from scratch, and `--parallel N`. All four honor the
-`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` source overrides described below (the
-container driver mounts each tree into the container); `AMREX_ROOT` /
+`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT` source overrides described below
+(the container driver mounts each tree into the container); `AMREX_ROOT` /
 `PFUNIT_ROOT` only the two from-source ones, since `test_turbo_stack_locally.sh`
 and `test_turbo_stack_with_container.sh` take AMReX and pFUnit prebuilt from a
 Spack environment.
@@ -232,7 +236,7 @@ Spack environment.
 Two different things get printed, and they are easy to conflate:
 
 - a **testing matrix** at the start (`turbo_print_matrix`) — the commit and branch
-  of turbo-stack, MOM6, TIM and FMS, each marked `(override)` or `(submodule)`.
+  of turbo-stack, MOM6, TIM, FMS and protoMOMxx, each marked `(override)` or `(submodule)`.
   AMReX and pFUnit are *not* in it, even where `AMREX_ROOT` and `PFUNIT_ROOT`
   apply; `build_dep` announces those as it resolves them instead.
 - a **build summary** at the end (`turbo_verdict`) — `PASS` / `FAIL` / `SKIPPED`
@@ -300,7 +304,7 @@ scripts/build_local_with_spack_env.sh --clean            # clean rebuild from sc
 scripts/build_local_with_spack_env.sh --infra FMS2       # FMS2 backend instead of the default TIM
 ```
 
-`build_local_with_spack_env.sh` runs all stages. It builds the selected backend via `turbo_build_fms`/`turbo_build_tim` after sourcing `setup_environment/spack_local_environment.sh` — spack provides pFUnit/AMReX but neither FMS nor TIM.
+`build_local_with_spack_env.sh` runs all stages. It builds the selected backend via `turbo_build_fms`, or `turbo_build_tim` then `turbo_build_protomomxx`, after sourcing `setup_environment/spack_local_environment.sh` — spack provides pFUnit/AMReX but not FMS, TIM or protoMOMxx.
 
 ### One-command (from-source local — bring your own toolchain)
 
@@ -315,7 +319,8 @@ The closest replacement for the old `build.sh` on a laptop / workstation: you
 bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` —
 system packages, Homebrew, an OS module system, or an already-activated
 Spack/Conda env), and turbo-stack builds **all** of its upstream submodule deps
-from source — pFUnit + AMReX (Tier 1.5) and FMS/TIM (Tier 2) — then builds
+from source — pFUnit + AMReX (Tier 1.5) and FMS/TIM, plus protoMOMxx for TIM
+(Tier 2) — then builds
 turbo-stack itself (Tier 3). Nothing is fetched; everything comes from
 `submodules/`. It sources `setup_environment/local_toolchain_on_path.sh` (which
 only *verifies* the toolchain is present — it builds nothing), then the
@@ -437,8 +442,9 @@ source scripts/setup_environment/spack_local_environment.sh    # env setup: tool
 deps="$TURBO_STACK_ROOT/deps/default"
 turbo_build_fms "$deps/build" "$deps/install"                  # env setup: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
 scripts/build_turbo_stack.sh --infra FMS2                      # build turbo-stack (Tier 3; add --tests to build + run ctest)
-# TIM backend instead:
+# TIM backend instead (protoMOMxx after TIM, into the same prefix):
 turbo_build_tim "$deps/build" "$deps/install"
+turbo_build_protomomxx "$deps/build" "$deps/install"
 scripts/build_turbo_stack.sh --infra TIM
 ```
 
@@ -447,7 +453,7 @@ On a modules machine, swap the toolchain step for
 machine whose toolchain is already on `PATH`, swap it for
 `source scripts/setup_environment/local_toolchain_on_path.sh`. In both cases the
 toolchain provides no upstream deps, so also build the Tier-1.5 deps yourself
-(`turbo_build_pfunit`, `turbo_build_amrex`) alongside FMS/TIM.
+(`turbo_build_pfunit`, `turbo_build_amrex`) alongside FMS/TIM/protoMOMxx.
 
 ---
 
@@ -477,6 +483,7 @@ Cmake args go after `--` (mirrors `cmake --build dir -- ...` and `build_turbo_st
    | `pfunit` | `$TURBO_STACK_ROOT/submodules/pFUnit` |
    | `amrex`  | `$TURBO_STACK_ROOT/submodules/amrex` |
    | `tim`    | `$TURBO_STACK_ROOT/submodules/infra/TIM` |
+   | `protomomxx` | `$TURBO_STACK_ROOT/submodules/protoMOMxx` |
 
 **Sentinel**: `<build-dir>/.installed` is a small KV file recording the source SHA, source path, install prefix, and a sha256 of the (sorted) cmake args. Skip-on-rerun fires only when all four match. Flipping a cmake flag (e.g. `-DAMReX_GPU_BACKEND=CUDA`) triggers a rebuild.
 
@@ -495,6 +502,7 @@ single-backend build scripts:
 export MOM6_ROOT=/path/to/your/MOM6
 export TIM_ROOT=/path/to/your/TIM
 export FMS_ROOT=/path/to/your/FMS
+export PROTOMOMXX_ROOT=/path/to/your/protoMOMxx
 
 # the high-level tester: builds and ctests both backends
 ./test_turbo_stack_locally.sh
@@ -503,10 +511,12 @@ export FMS_ROOT=/path/to/your/FMS
 scripts/build_local_with_spack_env.sh --infra TIM
 ```
 
-`MOM6_ROOT`, `FMS_ROOT` and `TIM_ROOT` are the co-developed ones, and they work
-with every build script and tester (the container scripts mount each tree into the
-container), and with the explicit flow's `turbo_build_*` wrappers. A bare `build_turbo_stack.sh` reads only `MOM6_ROOT`: it builds no
-backend, so it finds FMS or TIM installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
+`MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` and `PROTOMOMXX_ROOT` are the co-developed
+ones, and they work with every build script and tester (the container scripts mount
+each tree into the container), and with the explicit flow's `turbo_build_*` wrappers
+(`PROTOMOMXX_ROOT` only for the TIM backend). A bare `build_turbo_stack.sh` reads
+only `MOM6_ROOT`: it builds no backend, so it finds FMS, or TIM and protoMOMxx,
+installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
 and `PFUNIT_ROOT` work the same way, but only where the builder actually builds
 tier 1.5 from submodule — the from-source builders
 (`build_local_with_system_toolchain.sh`, `build_on_derecho.sh`, and their
@@ -630,33 +640,46 @@ The end-to-end test drivers always pass `--tests` to the builder they run.
 
 ---
 
-## The MOM6 ↔ TIM AMReX bridge
+## The MOM6 ↔ protoMOMxx AMReX bridge
 
-`turbo_build_tim` passes `-DTIM_ENABLE_MOM_BRIDGE=ON`, which builds
-`TIM::mom_bridge` — the C++ side of the AMReX kernels MOM6 calls from the
-`#ifdef _TIM` branches in `src/core/MOM_continuity_PPM.F90`.
+The C++ side of the AMReX kernels MOM6 calls from the `#ifdef _TIM` branches in
+`src/core/MOM_continuity_PPM.F90` lives in protoMOMxx, under `src/mom_kernels/`. It
+builds as two targets: `protoMOMxx::mom_kernels` (the kernels, AMReX only) and
+`protoMOMxx::mom_bridge` (the `extern "C"` `turbotmp_*_bridge` functions, which link
+`mom_kernels` and `TIM::tim`). These used to be TIM's `mom/cpp`, built behind a
+TIM CMake option that `turbo_build_tim` always turned on. TIM no longer has that
+code or that option.
 
-Whether those branches are *compiled and linked* is decided entirely in MOM6, by
-two gates that between them need no flag from turbo-stack and no CI plumbing:
+For the TIM backend, Stage 1 runs `turbo_build_protomomxx` right after
+`turbo_build_tim`, into the same install prefix. It configures protoMOMxx with
+`-DPROTOMOM_KERNELS_ONLY=ON -DPROTOMOM_INSTALL=ON`, so it builds only the two
+targets, uses the TIM just installed (through `find_package(TIM)`), and installs
+`lib/cmake/protoMOMxx`. `build_dep` already puts that prefix on
+`CMAKE_PREFIX_PATH`, so Stage 2 needs nothing extra. FMS2 builds never build
+protoMOMxx.
+
+Whether the `#ifdef _TIM` branches are *compiled and linked* is decided entirely in
+MOM6, by two gates that between them need no flag from turbo-stack and no CI
+plumbing:
 
 | Gate | Mechanism | Effect |
 |---|---|---|
 | **Branch** | the CMake block exists only on `dev/turbo-debug` | the pinned `dev/turbo` cells have no such block; nothing to switch off |
-| **Backend** | `if(MOM6_INFRA STREQUAL "TIM")` in `src/CMakeLists.txt` | FMS2 stays compiled out — it cannot provide `turbotmp_*_bridge` |
+| **Backend** | `if(MOM6_INFRA STREQUAL "TIM")` in `src/CMakeLists.txt`, which runs `find_package(protoMOMxx REQUIRED COMPONENTS MOM_BRIDGE)` | FMS2 stays compiled out — it cannot provide `turbotmp_*_bridge` |
 
 So the four CI cells resolve themselves:
 
-| MOM6 source | backend | `_TIM` | links `TIM::mom_bridge` |
+| MOM6 source | backend | `_TIM` | links `protoMOMxx::mom_bridge` |
 |---|---|---|---|
 | pinned (`dev/turbo`) | FMS2 | no | no |
 | pinned (`dev/turbo`) | TIM | no | no |
 | `dev/turbo-debug` | FMS2 | no | no |
 | `dev/turbo-debug` | TIM | **yes** | **yes** |
 
-**Why the flag here is unconditional.** Because Stage 1 cannot know whether the
-bridge is needed. Only the MOM6 source knows whether it carries the `#ifdef _TIM`
-call sites, and Stage 1 never sees that source — `MOM6_ROOT` is Stage 2's input.
-The three ways to find out are all worse than not asking:
+**Why protoMOMxx is built for every TIM build.** Because Stage 1 cannot know whether
+the bridge is needed. Only the MOM6 source knows whether it carries the
+`#ifdef _TIM` call sites, and Stage 1 never sees that source — `MOM6_ROOT` is
+Stage 2's input. The three ways to find out are all worse than not asking:
 
 | | |
 |---|---|
@@ -664,19 +687,17 @@ The three ways to find out are all worse than not asking:
 | grep the MOM6 source for `_TIM` | couples a dep builder to MOM6's internals |
 | read the branch name | does not work — CI builds a detached ref, and detached HEAD is a submodule's normal state |
 
-It also keeps `turbo_build_tim` the same shape as its siblings: every
+It also keeps `turbo_build_protomomxx` the same shape as its siblings: every
 `turbo_build_*` wrapper takes a build dir and an install prefix and nothing else.
-A condition here would make TIM's builder the only one that knows MOM6 exists,
-inverting the tier contract above.
+A condition here would make it the only builder that knows MOM6 exists, inverting
+the tier contract above. Its cmake args are fixed, so a shared `--build_dir` never
+rebuilds it just because the MOM6 source changed.
 
-The cost is one 3-TU C++ compile — ~3 s, a 55 KB archive — in the cells that do not
-use it, and **nothing on their link lines**: `mom_bridge` is a separate archive that
-only MOM6 pulls in. Worth revisiting if the bridge grows substantially, since that
-cost scales with the number of kernels; the link-side cost does not.
-
-(A shared `--build_dir` is the one case where varying the flag would also cost
-rebuilds, since `build_dep` folds cmake args into its sentinel hash. That is a
-local-iteration concern only — each CI job is a fresh container.)
+The cost, in the TIM cells that do not use it, is one protoMOMxx configure and five
+C++ translation units (the two kernels, the two bridges and `turbotmp_helper`), and
+**nothing on their link lines**: the bridge is a separate archive that only MOM6
+pulls in. Worth revisiting if the kernels grow substantially, since that cost scales
+with the number of kernels; the link-side cost does not.
 
 **This buys compile + link coverage, not kernel correctness.** The guards wrap one
 arm of a runtime dispatch (`ZONAL_EDGE_THICKNESS_MODE` and five siblings, each
@@ -685,24 +706,34 @@ executing it.
 
 Exactly what it catches, on every build:
 
-- the C++ bridge sources **compile**. Before this they reached nothing a library
-  build produced — `mom/cpp` was wired only into `test_mom` — so they could rot
-  unnoticed.
+- the C++ kernel and bridge sources **compile**, as protoMOMxx installs them. Before
+  the bridge was built for MOM6 they reached nothing a library build produced —
+  TIM's `mom/cpp` was wired only into `test_mom` — so they could rot unnoticed.
 - a missing or renamed export becomes a **link error**.
 
 What it does **not** catch: signature or struct-layout drift. MOM6 declares the
 bridge as `bind(C)` interface blocks, so the Fortran compiler checks each call site
 against MOM6's *own* declaration, and the linker then matches `turbotmp_*_bridge`
-by symbol name alone — `extern "C"` encodes no signature. `RealArray_C` and `Box_C`
-are hand-maintained on both sides with no `static_assert` or generated header
-between them, so a divergence in arity, type or layout links cleanly and misbehaves
-at runtime. Closing that needs a real cross-check (offset assertions, or generating
-the Fortran interfaces from the C header) and is follow-on work.
+by symbol name alone — `extern "C"` encodes no signature. The C-interop types
+(`RealArray_C`, `IntArray_C`, `LogicalArray_C`, `Box_C`) are defined twice in TIM,
+by the Fortran module `tim/fortran/turbotmp_bridge_c_types.F90` and the C header
+`tim/cpp/turbotmp_bridge_c_types.h`. These are hand-maintained with no
+`static_assert` or generated header between them, so a divergence in arity, type or
+layout links cleanly and misbehaves at runtime. Closing that needs a real
+cross-check (offset assertions, or generating the Fortran interfaces from the C
+header) and is follow-on work.
+
+**The legacy lane.** `build.sh` compiles the same `src/mom_kernels` (including
+`turbotmp/`) into `libTIM.a`, for the TIM backend only, in the same `list_paths`
+call as the TIM tree. It compiles none of protoMOMxx's driver, tests or
+`extern/TIM`.
 
 **Ordering.** MOM6 hard-errors at configure when `MOM6_INFRA=TIM` and
-`TIM::mom_bridge` is absent, naming the TIM rebuild flag. Since the
-`dev/turbo-debug` CI cells track that branch's tip, TIM and this flag must be in
-place *before* MOM6's side merges, or the cell goes red in between.
+`protoMOMxx::mom_bridge` is absent. MOM6's switch to protoMOMxx and turbo-stack's
+switch (protoMOMxx submodule, TIM bump, `turbo_build_protomomxx`) only work
+together: with either one alone, the `dev/turbo-debug` × TIM cell fails to
+configure. So they merge as a pair. Validate the pair first, merge the MOM6 side,
+then merge turbo-stack straight away.
 
 ---
 
@@ -764,7 +795,7 @@ per family and `FATAL_ERROR`s on anything else.
 Optional, for testing against local dev trees (see
 [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch)):
 
-- `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` — hot-swap a co-developed repo's source
+- `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT`, `PROTOMOMXX_ROOT` — hot-swap a co-developed repo's source
   (default: the pinned submodule). The container scripts mount each one that is set.
 - `AMREX_ROOT`, `PFUNIT_ROOT` — the same, for the from-source builders only.
 - `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").
