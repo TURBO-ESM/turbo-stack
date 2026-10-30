@@ -108,8 +108,8 @@ configure — see [Environment](#environment).
 
 > You do not have to assemble tier 1 by hand. A [Spack environment](#getting-tiers-1-and-15-from-spack)
 > supplies it, and so does the `turbo-ci` container image used by CI, which ships tiers 1 and 1.5
-> prebuilt — today you pull it and drive the build yourself, as
-> [`docker/README.md`](../docker/README.md) shows. Scripts that wrap that in one command are on the way.
+> prebuilt. [`build_with_container.sh`](#in-a-container-a-ready-made-environment) builds inside that
+> image, so all you need on your machine is a container engine.
 
 ### Tier 1.5 — Prerequisites, but we supply the source via a submodule
 
@@ -202,11 +202,13 @@ scripts/
   build_local_with_spack_env.sh               # ORCHESTRATOR — stage 1 via spack
   build_local_with_system_toolchain.sh        # ORCHESTRATOR — stage 1 via bring your own toolchain
   build_on_derecho.sh                         # ORCHESTRATOR — stage 1 via Derecho's Lmod modules
+  build_with_container.sh                     # WRAPPER — stage 1 via the CI container image: runs build_local_with_spack_env.sh inside it
 
 # (repo top level) — high level end-to-end drivers, wraps orchestrators automate building and testing BOTH backends:
 test_turbo_stack_locally.sh                   # local (spack)
 test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
+test_turbo_stack_with_container.sh            # in a container (the image CI uses)
 ```
 
 ---
@@ -217,16 +219,19 @@ test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ./test_turbo_stack_locally.sh                  # local (spack)
 ./test_turbo_stack_with_system_toolchain.sh    # local (bring-your-own toolchain on PATH)
 ./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
+./test_turbo_stack_with_container.sh           # in the CI container image (no toolchain needed)
 ```
 
 Each runs the real single-backend builder once per backend, each in its own
 process and its own build directory, and builds + `ctest`s turbo-stack for both
 FMS2 and TIM. `-h` / `--help` lists their options; the common ones are
 `--only FMS2|TIM` to build one backend instead of both, `--clean` to rebuild
-from scratch, and `--parallel N`. All three honor the
-`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT` source overrides described below;
-`AMREX_ROOT` / `PFUNIT_ROOT` only the two from-source ones, since
-`test_turbo_stack_locally.sh` takes AMReX and pFUnit prebuilt from Spack.
+from scratch, and `--parallel N`. All four honor the
+`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT` source overrides described below
+(the container driver mounts each tree into the container); `AMREX_ROOT` /
+`PFUNIT_ROOT` only the two from-source ones, since `test_turbo_stack_locally.sh`
+and `test_turbo_stack_with_container.sh` take AMReX and pFUnit prebuilt from a
+Spack environment.
 
 Two different things get printed, and they are easy to conflate:
 
@@ -250,6 +255,12 @@ $TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/d
 `--clean` removes that whole directory first. With the default location, no
 build artifact is written into `$TURBO_STACK_ROOT` — only a Derecho batch job's
 PBS log, when you submit from there (see below).
+
+The container driver defaults `$TURBO_BUILD_SYSTEM_TEST_DIR` elsewhere, to
+`${TMPDIR:-/tmp}/turbo_ci_container_test/<checkout>-<hash>`, keyed on the
+checkout's full path. A CMake build directory remembers the compiler and the
+source tree it was configured with, so container and host builds, and builds of
+different checkouts, each get their own.
 
 ### Submitting the Derecho driver as a batch job
 
@@ -337,6 +348,88 @@ Its Stage-1 recipe (`setup_environment/derecho_cpu_gcc_openmpi.sh`) runs
 modules you loaded yourself beforehand are discarded.
 
 
+### In a container (a ready-made environment)
+
+The `turbo-ci` image that CI uses ships the compiler and the Tier 1 + Tier 1.5
+dependencies (MPI, NetCDF, CMake, pFUnit, AMReX) already installed in a Spack env,
+so there is no toolchain to set up. `build_with_container.sh` runs
+`build_local_with_spack_env.sh` inside it, which builds the Tier-2 backend and then
+turbo-stack, against the sources you point it at:
+
+```bash
+scripts/build_with_container.sh --infra TIM --tests                     # pinned sources
+MOM6_ROOT=~/projects/MOM6 \
+    scripts/build_with_container.sh --infra TIM --tests                 # your MOM6, as checked out
+scripts/build_with_container.sh --shell                                 # interactive shell, Spack env active
+```
+
+For both backends plus a verdict, use `./test_turbo_stack_with_container.sh`; see
+[Build and test both backends, one command](#build-and-test-both-backends-one-command).
+
+On the host you need a container engine (Docker, or Podman through
+`TURBO_CONTAINER_ENGINE`) and read access to the image. The image is private, so a
+pull needs a one-time `docker login ghcr.io`, as
+[`docker/README.md`](../docker/README.md#pulling-it-locally) shows. It is built
+for x86-64 (`linux/amd64`) only, so on an Arm machine such as an Apple Silicon Mac
+it can only run under emulation. It also needs AVX2 (`x86_64_v3`: Intel Haswell
+2013+, AMD Zen 2017+); on an older CPU its prebuilt tools can die with an illegal
+instruction, and [`docker/README.md`](../docker/README.md#why-the-image-pins-a-spack-target)
+shows how to build an image for a lower baseline. It has not been tried on a host with SELinux
+enforcing (Fedora, RHEL). There the bind mounts keep their host labels and the
+container is denied access to them, and the script does not relabel your trees.
+With Podman, turning label separation off for your own containers gets past this:
+`label = false` under `[containers]` in `~/.config/containers/containers.conf`.
+
+Sources are swapped [the usual way](#building-against-a-development-tree-or-a-branch):
+export `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` or `PROTOMOMXX_ROOT` and that tree is
+mounted at its own path, forwarded into the container, and built; **whatever branch it is checked out
+on is what gets built**, so to test several branches, switch branches there and run
+again. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be
+initialized — MOM6's CMakeLists hard-fails without them, and the script checks up
+front rather than 20 minutes in. `PFUNIT_ROOT` / `AMREX_ROOT` are not forwarded:
+the image supplies pFUnit and AMReX from its Spack env, so an override there would
+have no effect.
+
+This is the container member of the builder/tester families — the same axis as
+the Spack, bring-your-own-toolchain and Derecho scripts, differing only in who
+supplies the toolchain and the upstream deps. Here the image does, which is why
+nothing but a container engine is needed on the host.
+
+The image is also the one CI uses and the commands match, so a failure in
+`.github/workflows/cmake-build.yaml` will often reproduce here — useful, but not
+a guarantee. The known divergence: CI checks a MOM6 branch out fresh beside the
+workspace, where this builds the tree you hand it.
+
+It runs the other way too: `.github/workflows/container-driver-scripts.yaml` runs
+`./test_turbo_stack_with_container.sh` on the runner host — the only lane that
+executes these scripts, since the CMake lane's `container:` job bypasses the wrapper.
+
+`build_with_container.sh` takes the usual builder flags and forwards them to
+`build_local_with_spack_env.sh` *inside* the container, adding what the workflow
+adds (`CMAKE_BUILD_PARALLEL_LEVEL`, the PRRTE oversubscribe policy,
+`safe.directory '*'` — set through the environment, so nothing is written to
+`HOME` — and the workflow's two guardrails —
+assert the prebaked `turbo_stack` env, warn when the image's baked `spack.yaml` lags
+the checkout) plus any `<NAME>_ROOT` you set. It mounts your checkout at its own
+path, so `TURBO_STACK_ROOT` resolves identically inside and out; no host
+`SPACK_ROOT` is needed or forwarded. Submodules are not fetched — initialize them
+first, as CI's checkout does. The container runs as **you**, not as root (CI's job
+container does run as root; the build needs no privilege either way), so the
+artifacts it writes are yours as they are written — nothing to chown back, and
+nothing undeletable left behind by a run you killed. On a rootless engine `--user`
+is skipped, since container-root is already mapped to your uid there. One
+consequence of the non-root uid: Spack cannot read the package cache baked into the
+image's `/root`, so a small host directory is mounted as `HOME` to hold it
+(`TURBO_CI_HOME`, default `${XDG_CACHE_HOME:-~/.cache}/turbo-ci-home`); the first
+run fills it, later runs start instantly. Without `--build_dir` the artifacts land
+where the other builders put them, inside the checkout (see
+[Where the build lands](#where-the-build-lands)). Each build dir records the image
+that built it. The next run cleans it first when the image has changed (the
+default tag refreshed, or `--image` names another) or when it holds artifacts with
+no record (a host builder's, say), since `build_dep` would otherwise reuse deps
+built with a different compiler. See `--help` and
+[`docker/README.md`](../docker/README.md).
+
 ### Explicit, iterative (any flavor)
 
 Environment setup is a two-part phase: source the toolchain once per shell, then
@@ -419,15 +512,17 @@ scripts/build_local_with_spack_env.sh --infra TIM
 ```
 
 `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` and `PROTOMOMXX_ROOT` are the co-developed
-ones, and they work with every build script and tester, and with the explicit
-flow's `turbo_build_*` wrappers (`PROTOMOMXX_ROOT` only for the TIM backend). A
-bare `build_turbo_stack.sh` reads only `MOM6_ROOT`: it builds no backend, so it
-finds FMS, or TIM and protoMOMxx, installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
+ones, and they work with every build script and tester (the container scripts mount
+each tree into the container), and with the explicit flow's `turbo_build_*` wrappers
+(`PROTOMOMXX_ROOT` only for the TIM backend). A bare `build_turbo_stack.sh` reads
+only `MOM6_ROOT`: it builds no backend, so it finds FMS, or TIM and protoMOMxx,
+installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
 and `PFUNIT_ROOT` work the same way, but only where the builder actually builds
 tier 1.5 from submodule — the from-source builders
 (`build_local_with_system_toolchain.sh`, `build_on_derecho.sh`, and their
-testers). The Spack flavor shown above takes AMReX and pFUnit prebuilt from the
-Spack environment and never consults those two variables; to build against your
+testers). The Spack flavor shown above, which the container scripts also run,
+takes AMReX and pFUnit prebuilt from a Spack environment and never consults those
+two variables; to build against your
 own there, use the explicit flow described under
 [tier 1.5](#tier-15--prerequisites-but-we-supply-the-source-via-a-submodule).
 
@@ -491,7 +586,7 @@ checkout you ran it from:
 | `build/default/mom6_build/config_src/drivers/solo_driver/MOM6` | the standalone MOM6 executable |
 | `deps/default/build/`, `deps/default/install/` | the dependencies built from `submodules/` |
 
-Passing `--build_dir DIR` moves both, the same way for all three builders: the
+Passing `--build_dir DIR` moves both, the same way for all four builders: the
 build tree to `DIR` and the dependencies to `DIR/deps/{build,install}/`. Both
 locations are outside `bin/`, so a CMake build and a legacy mkmf build can
 coexist.
@@ -701,6 +796,16 @@ Optional, for testing against local dev trees (see
 [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch)):
 
 - `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT`, `PROTOMOMXX_ROOT` — hot-swap a co-developed repo's source
-  (default: the pinned submodule).
+  (default: the pinned submodule). The container scripts mount each one that is set.
 - `AMREX_ROOT`, `PFUNIT_ROOT` — the same, for the from-source builders only.
 - `CMAKE_BUILD_PARALLEL_LEVEL` — default parallelism for every `cmake --build` in the pipeline (see "Parallel build jobs").
+
+For the container scripts (see
+[In a container](#in-a-container-a-ready-made-environment)):
+
+- `TURBO_CI_IMAGE` — the image to run (default: the tag CI consumes). Naming one
+  also turns off the refresh the default image gets on every run.
+- `TURBO_CONTAINER_ENGINE` — the container CLI (default: `docker`).
+- `TURBO_CI_HOME` — host directory mounted as the container's `HOME`, which keeps
+  Spack's package cache between runs (default:
+  `${XDG_CACHE_HOME:-~/.cache}/turbo-ci-home`).

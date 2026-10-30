@@ -1,0 +1,103 @@
+# The only lane that executes scripts/build_with_container.sh.
+#
+# The sibling lane (turbo-cmake-container-tests.yaml) reaches the same image by
+# declaring `container:` on the job, so GitHub pulls it and the wrapper never runs --
+# leaving its mounts, its rootless/--user decision, the HOME cache, the image refresh
+# and the submodule preflight covered by nothing. A change there can break every
+# developer's run while every box on the PR stays green.
+#
+# Runs `./test_turbo_stack_with_container.sh` with no flags and no env, so the
+# driver's own defaults are part of what is tested. Narrow on purpose: pinned
+# submodules only (MOM6's tip is the sibling lane's question), and rootful docker
+# only -- hosted runners take the --user path, the rootless path is hand-verified on
+# podman 4.9.3. A red box here means the scripts broke and nothing else.
+#
+# Fork PRs fail at the login step, because the image is private. Same as the sibling
+# lane; a property of the package, not of this workflow.
+name: turbo-stack container scripts (host)
+
+# Both `paths` lists must stay in sync -- Actions does not support YAML anchors.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "test_turbo_stack_with_container.sh"
+      - "scripts/build_with_container.sh"
+      - "scripts/build_local_with_spack_env.sh"
+      - "scripts/build_turbo_stack.sh"
+      - "scripts/lib/**"
+      - ".github/workflows/container-driver-scripts.yaml"
+  pull_request:
+    branches: ["main"]
+    # ~20 min the sibling lane already spent on the same commit, so charge it only to
+    # PRs that can invalidate it. Don't make this a required check while the filter
+    # is here: a required check that never queues blocks the merge button forever.
+    paths:
+      - "test_turbo_stack_with_container.sh"
+      - "scripts/build_with_container.sh"
+      - "scripts/build_local_with_spack_env.sh"
+      - "scripts/build_turbo_stack.sh"
+      - "scripts/lib/**"
+      - ".github/workflows/container-driver-scripts.yaml"
+
+permissions:
+  contents: read
+  packages: read
+
+# Superseded PR commits shouldn't keep a 20-minute lane running. Not on `main`,
+# where cancelling would leave a merge's status cancelled when two land close together.
+concurrency:
+  group: container-scripts-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  driver:
+    name: test_turbo_stack_with_container.sh (FMS2 + TIM)
+    runs-on: ubuntu-latest
+    # Sequential by design: the second backend reusing the first's Spack cache is part
+    # of what we want to see work. ~25 min healthy; the cap is for a hung MPI test.
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
+    steps:
+      # The container fetches nothing, and the wrapper's preflight refuses to start
+      # without MOM6 (plus its nested pkg/*), MARBL and the selected backend.
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      # The wrapper pulls the image but cannot log in -- that is one-time host setup
+      # (docker/README.md), not a build script's job. So log the host in first, the
+      # way a developer's machine already is.
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Disk is the one resource this lane can run out of, and "no space left on
+      # device" mid-compile does not name its own cause. The rootless grep reads the
+      # same text the wrapper keys its --user decision on.
+      - name: Runner facts
+        run: |
+          docker info 2>/dev/null | grep -iE 'server version|rootless' || true
+          echo "nproc: $(nproc)"
+          df -h /
+
+      # No env, no flags: the point is that the defaults work. tee'd because the
+      # driver's per-backend logs land under a temp path this job never names, and its
+      # stdout is a superset of them.
+      - name: Run the container driver
+        run: ./test_turbo_stack_with_container.sh 2>&1 | tee container-driver.log
+
+      - name: Upload the driver log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-driver-log
+          path: container-driver.log
+          if-no-files-found: warn
