@@ -22,7 +22,7 @@
 #       turbo_resolve_stack_root
 #       turbo_require_submodule ...                            # guard the deps it builds
 #       <source the machine's Stage-1 toolchain env script>   # builds nothing
-#       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim)   # Stage 1: build deps (Tier 1.5 + Tier 2)
+#       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim/protomomxx)  # Stage 1: build deps (Tier 1.5 + Tier 2)
 #       build_turbo_stack.sh --infra X                         # Stage 2: build turbo-stack (Tier 3; defaults MOM6_ROOT)
 #   * end-to-end test driver (test_turbo_stack_locally.sh / _on_derecho.sh):
 #       turbo_resolve_stack_root
@@ -98,7 +98,7 @@ turbo_print_header_usage() {
 #      spool): PBS_O_WORKDIR, then the qsub'd script's directory.
 #
 # To point turbo-stack at a local dev tree of a co-developed *dependency*, use
-# the submodule overrides (MOM6_ROOT / FMS_ROOT / TIM_ROOT).
+# the submodule overrides (MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT).
 turbo_resolve_stack_root() {
     local marker="scripts/lib/common.sh"
     local self=""
@@ -234,6 +234,7 @@ turbo_print_matrix() {
     _turbo_print_source "MOM6" "${MOM6_ROOT:-}" "$TURBO_STACK_ROOT/submodules/MOM6"
     _turbo_print_source "TIM"  "${TIM_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/TIM"
     _turbo_print_source "FMS"  "${FMS_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/FMS2"
+    _turbo_print_source "protoMOMxx" "${PROTOMOMXX_ROOT:-}" "$TURBO_STACK_ROOT/submodules/protoMOMxx"
     echo "================================================================"
 }
 
@@ -262,7 +263,7 @@ turbo_require_submodule() {
 # ── MOM6 source default ──────────────────────────────────────────────────────
 # MOM6 is consumed as source by turbo-stack's CMake (read via MOM6_ROOT) and has
 # NO build_dep fallback, unlike FMS/TIM.  Default it to the in-tree submodule
-# when unset.  (FMS_ROOT/TIM_ROOT are intentionally left alone: build_dep falls
+# when unset.  (FMS_ROOT/TIM_ROOT/PROTOMOMXX_ROOT are intentionally left alone: build_dep falls
 # back to their submodules on its own, and leaving them unset keeps the matrix's
 # override/submodule labelling truthful.)
 turbo_default_mom6_root() {
@@ -304,21 +305,31 @@ turbo_build_amrex() {
 
 turbo_build_tim() {
     _turbo_ensure_build_dep
-    # TIM_ENABLE_MOM_BRIDGE builds TIM::mom_bridge, the C++ side of the AMReX
-    # kernels MOM6 calls from its `#ifdef _TIM` branches.
-    #
-    # Unconditional, because this layer cannot know whether it is needed: only the
-    # MOM6 source knows whether it carries the call sites, and Stage 1 never sees
-    # that source (MOM6_ROOT is Stage 2's input).  Asking the caller would put a
-    # per-lane conditional back into CI, and neither sniffing the source nor
-    # reading the branch name works -- CI builds a detached ref.  So TIM always
-    # *provides* the bridge and MOM6's own CMake decides whether to link it.
-    #
-    # Costs one 3-TU C++ compile (~3 s, 55 KB archive) in the cells that do not use
-    # it, and nothing on their link lines: mom_bridge is a separate archive that
-    # only MOM6 pulls in.  See scripts/README.md.
     build_dep tim --build-dir "$1/tim" --install-prefix "$2" \
-        -- -D64BIT=ON -D32BIT=OFF -DTIM_ENABLE_MOM_BRIDGE=ON
+        -- -D64BIT=ON -D32BIT=OFF
+}
+
+turbo_build_protomomxx() {
+    _turbo_ensure_build_dep
+    # protoMOMxx provides protoMOMxx::mom_bridge, the C++ side of the AMReX
+    # kernels MOM6 calls from its `#ifdef _TIM` branches.  Build it after
+    # turbo_build_tim into the same install prefix: protoMOMxx then uses that TIM
+    # through find_package(TIM) rather than building its bundled extern/TIM, and
+    # PROTOMOM_INSTALL=ON fails at configure time if it could not.  AMReX comes
+    # from the same prefix, or from CMAKE_PREFIX_PATH in the environment when the
+    # toolchain (spack) supplies it.  KERNELS_ONLY skips protoMOMxx's solo driver.
+    #
+    # Built for every TIM build, because this layer cannot know whether it is
+    # needed: only the MOM6 source knows whether it carries the call sites, and
+    # Stage 1 never sees that source (MOM6_ROOT is Stage 2's input).  Asking the
+    # caller would put a per-lane conditional back into CI, and neither sniffing
+    # the source nor reading the branch name works -- CI builds a detached ref.
+    # So Stage 1 always *provides* the bridge and MOM6's own CMake decides whether
+    # to find and link it (find_package(protoMOMxx COMPONENTS MOM_BRIDGE)).  FMS2
+    # builds never call this: MOM6 under FMS2 is pure Fortran.
+    build_dep protomomxx --build-dir "$1/protomomxx" --install-prefix "$2" \
+        -- -DPROTOMOM_KERNELS_ONLY=ON -DPROTOMOM_INSTALL=ON \
+           -DCMAKE_PREFIX_PATH="$2"
 }
 
 # ── Single-backend builder core (Stage 1 + Stage 2; machine-independent) ──────
@@ -377,6 +388,7 @@ turbo_guard_builder_submodules() {
     fi
     if [[ "$TURBO_B_INFRA" == "TIM" ]]; then
         turbo_require_submodule submodules/infra/TIM TIM TIM_ROOT
+        turbo_require_submodule submodules/protoMOMxx protoMOMxx PROTOMOMXX_ROOT
     else
         turbo_require_submodule submodules/infra/FMS2 FMS FMS_ROOT
     fi
@@ -384,7 +396,8 @@ turbo_guard_builder_submodules() {
 
 # Build, from <deps_build_root>/{build,install}, the submodule dep tiers this
 # flavor doesn't get prebuilt.  Tier 1.5 = pFUnit (only with --tests) + AMReX
-# (only for TIM); Tier 2 = the selected backend (FMS for FMS2, TIM for TIM).
+# (only for TIM); Tier 2 = the selected backend (FMS for FMS2, TIM then the
+# protoMOMxx bridge for TIM).
 turbo_build_builder_dep_tiers() {
     local deps_build_root="$1" from_tier="$2"
     local b="$deps_build_root/build" p="$deps_build_root/install"
@@ -394,6 +407,7 @@ turbo_build_builder_dep_tiers() {
     fi
     if [[ "$TURBO_B_INFRA" == "TIM" ]]; then
         turbo_build_tim "$b" "$p"
+        turbo_build_protomomxx "$b" "$p"
     else
         turbo_build_fms "$b" "$p"
     fi

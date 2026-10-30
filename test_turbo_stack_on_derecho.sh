@@ -8,7 +8,7 @@
 
 # NOTE: intentionally no `#PBS -V`.  The job must be self-contained so it tests
 # the *pinned submodules* (see below), not whatever TURBO_STACK_ROOT / MOM6_ROOT
-# / FMS_ROOT / TIM_ROOT or modules happen to be set in the submit shell.  The
+# / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT or modules happen to be set in the submit shell.  The
 # driver re-establishes the Stage-1 toolchain and self-locates TURBO_STACK_ROOT
 # via PBS_O_WORKDIR (which PBS sets regardless of -V), so nothing from the login
 # environment is needed.  Use `qsub -v VAR=...` for an explicit, per-submission
@@ -26,7 +26,7 @@
 # identical except for their toolchain and builder.  See docs/build_test_orchestration_prompt.md
 # and docs/dependency_tiers_prompt.md.
 #
-# Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules; the builder
+# Tests the MOM6 / TIM / FMS / protoMOMxx sources turbo-stack pins as submodules; the builder
 # guards them.  Nothing is written into $TURBO_STACK_ROOT.
 #
 # Options:
@@ -39,7 +39,7 @@
 # Configuration (env vars):
 #   TURBO_STACK_ROOT             turbo-stack clone (optional; self-located)
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Artifact root (default: $TMPDIR/turbo_build_system_test)
-#   MOM6_ROOT / TIM_ROOT / FMS_ROOT      Out-of-tree source overrides
+#   MOM6_ROOT / TIM_ROOT / FMS_ROOT / PROTOMOMXX_ROOT      Out-of-tree source overrides
 
 set -euo pipefail
 

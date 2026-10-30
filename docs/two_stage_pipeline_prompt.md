@@ -52,8 +52,10 @@ weighted edges, all feeding one outputs box:
   `NetCDF install`, `HDF5 install` (`#bcd4ec`). These are Tier 1 (external, not submodules; supplied
   by modules/spack).
 - Sub-cluster **"submodules"** (white fill): cylinders `FMS install`, `pFUnit install`,
-  `AMReX install`, `TIM install` (`#bcd4ec`). These are the deps turbo-stack can build from its
-  submodules (AMReX/pFUnit = Tier 1.5, FMS/TIM = Tier 2).
+  `AMReX install`, `TIM install`, `protoMOMxx install` (`#bcd4ec`). These are the deps turbo-stack
+  can build from its submodules (AMReX/pFUnit = Tier 1.5, FMS/TIM/protoMOMxx = Tier 2). protoMOMxx
+  (the MOM6 C++ bridge, `protoMOMxx::mom_bridge`) is built only for the TIM backend and installs into
+  TIM's prefix; it is still drawn as its own cylinder.
 - `stage1_outputs` box (green `#c8e6c9`):
   `"Expected environment  (shell state)\nPATH · CC, CXX, FC  ·  CMAKE_PREFIX_PATH  ·  PFUNIT_DIR"`.
 - Edges into `stage1_outputs` (each via `xlabel=`):

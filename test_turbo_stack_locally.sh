@@ -11,7 +11,7 @@
 # (bring-your-own toolchain on PATH), are identical except for their toolchain and builder.  See
 # docs/build_test_orchestration_prompt.md and docs/dependency_tiers_prompt.md.
 #
-# Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules; the builder
+# Tests the MOM6 / TIM / FMS / protoMOMxx sources turbo-stack pins as submodules; the builder
 # guards them.  Nothing is written into $TURBO_STACK_ROOT.
 #
 # Options:
@@ -25,7 +25,7 @@
 #   SPACK_ROOT                   Spack installation (required)
 #   TURBO_STACK_ROOT             turbo-stack clone (optional; self-located)
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Artifact root (default: $TMPDIR/turbo_build_system_test)
-#   MOM6_ROOT / FMS_ROOT / TIM_ROOT      Out-of-tree source overrides (dev trees)
+#   MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT      Out-of-tree source overrides (dev trees)
 
 set -euo pipefail
 

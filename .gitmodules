@@ -19,3 +19,6 @@
 [submodule "submodules/pFUnit"]
 	path = submodules/pFUnit
 	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
+[submodule "submodules/protoMOMxx"]
+	path = submodules/protoMOMxx
+	url = https://github.com/TURBO-ESM/protoMOMxx.git

@@ -34,7 +34,15 @@ Generate a Graphviz dot file at `docs/cmake_dependency_dag.dot` showing the buil
 - `FMS::fms_r8` → NetCDF_C, NetCDF_Fortran, MPI
 
 **TIM repo (TIM_ROOT)** — orange fill (`#fde8d8`):
-- `TIM::tim_r8` → AMReX, NetCDF_C, NetCDF_Fortran, MPI
+- `TIM::tim_r8` → AMReX, NetCDF_C, NetCDF_Fortran, MPI, `TIM::tim`
+- `TIM::tim` (the C++ layer, `tim/cpp`) → AMReX
+
+**protoMOMxx repo (PROTOMOMXX_ROOT)** — light orange fill (`#fff0e0`), nodes `#ffe0b2`:
+Built by turbo-stack only for the TIM backend, with only its kernel and bridge targets
+(`PROTOMOM_KERNELS_ONLY`), and found by MOM6 with `find_package(protoMOMxx COMPONENTS MOM_BRIDGE)`.
+- `protoMOMxx::mom_bridge` (the `extern "C"` `turbotmp_*_bridge` functions) → `protoMOMxx::mom_kernels`,
+  `TIM::tim` (for `turbotmp_bridge_c_types.h`), AMReX
+- `protoMOMxx::mom_kernels` (the AMReX kernels) → AMReX
 
 **TURBO::infra_r8** — diamond, green fill (`#c8e6c9`):
 - Hot-swap wrapper: dashed edge to `FMS::fms_r8` labelled `MOM6_INFRA=FMS2`
@@ -63,6 +71,8 @@ sources that depend on model modules compile straight into `ocean`.
 - `MOM6::infra` → TURBO::infra_r8, MPI, NetCDF_Fortran (all public)
 - `MOM6::framework` → infra (public)
 - `MOM6::ocean` → framework, CVMix, GSW, MARBL::marbl (all public)  (darker green `#52c452`)
+  - plus a dashed edge to `protoMOMxx::mom_bridge`, xlabel `MOM6_INFRA=TIM\n(dev/turbo-debug)`: only
+    MOM6's `dev/turbo-debug` branch links the bridge, and only under the TIM backend.
 - `MOM6 (executable)` ellipse → ocean (private)  (dark green `#2e8b57`, white font)
 
 **turbo-stack tests/** — tan fill (`#f0e8d8`):

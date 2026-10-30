@@ -28,7 +28,7 @@
 #                             cloned yourself)
 #   2. Submodule fallback     per-name table inside this script
 #
-# Valid <name> values: fms, pfunit, amrex, tim.
+# Valid <name> values: fms, pfunit, amrex, tim, protomomxx.
 #
 # Required environment:
 #   TURBO_STACK_ROOT  Path to your turbo-stack repository clone (used by the
@@ -134,8 +134,9 @@ build_dep() {
         pfunit) _root_var="PFUNIT_ROOT" ;;
         amrex)  _root_var="AMREX_ROOT" ;;
         tim)    _root_var="TIM_ROOT" ;;
+        protomomxx) _root_var="PROTOMOMXX_ROOT" ;;
         *)
-            echo "Error: build_dep: unknown dep '$_name' (valid: fms, pfunit, amrex, tim)" >&2
+            echo "Error: build_dep: unknown dep '$_name' (valid: fms, pfunit, amrex, tim, protomomxx)" >&2
             return 1
             ;;
     esac
@@ -147,6 +148,7 @@ build_dep() {
         pfunit) _submodule_path="$TURBO_STACK_ROOT/submodules/pFUnit" ;;
         amrex)  _submodule_path="$TURBO_STACK_ROOT/submodules/amrex" ;;
         tim)    _submodule_path="$TURBO_STACK_ROOT/submodules/infra/TIM" ;;
+        protomomxx) _submodule_path="$TURBO_STACK_ROOT/submodules/protoMOMxx" ;;
     esac
 
     # --- Resolve source -------------------------------------------------

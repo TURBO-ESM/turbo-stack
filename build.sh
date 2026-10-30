@@ -7,6 +7,7 @@ TEMPLATE_DIR=${ROOTDIR}/build-utils/makefile-templates
 MOM_ROOT=${ROOTDIR}/submodules/MOM6
 AMREX_ROOT=${ROOTDIR}/submodules/amrex
 INFRA_ROOT=${ROOTDIR}/submodules/infra/TIM
+PROTOMOM_KERNELS_ROOT=${ROOTDIR}/submodules/protoMOMxx/src/mom_kernels
 PFUNIT_ROOT=${ROOTDIR}/submodules/pFUnit
 UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
 UNIT_TEST_ROOT=${ROOTDIR}/tests-legacy
@@ -334,12 +335,27 @@ fi
 if [[ "${INFRA}" == "TIM" ]]; then
   INFRA_INCLUDE_FLAGS="${AMREX_INCLUDE_FLAGS} ${PIO_INCLUDE_FLAGS}"
   INFRA_LINKING_FLAGS="${AMREX_LINK_FLAGS} ${PIO_LINK_FLAGS}"
+
+  # The MOM C++ kernels and the turbotmp_*_bridge functions MOM6 calls under
+  # -D_TIM live in protoMOMxx. Compile only its src/mom_kernels (which includes
+  # turbotmp/) into libTIM.a. The protoMOMxx root would also pull in its
+  # driver, tests and extern/TIM.
+  if [[ ! -d "${PROTOMOM_KERNELS_ROOT}" ]]; then
+    echo "ERROR: ${PROTOMOM_KERNELS_ROOT} does not exist."
+    echo "The TIM build needs the protoMOMxx submodule. Initialize it with:"
+    echo "  git submodule update --init --recursive"
+    exit 1
+  fi
+  INFRA_EXTRA_PATHS="${PROTOMOM_KERNELS_ROOT}"
 fi
 
 cd ${BLD_PATH}
 mkdir -p ${INFRA}
 cd ${INFRA}
-${MKMF_ROOT}/list_paths ${INFRA_ROOT}
+# One list_paths call: each call overwrites path_names. list_paths also keeps
+# only the first file with a given basename, so a file in INFRA_EXTRA_PATHS
+# with the same name as one in INFRA_ROOT is silently dropped.
+${MKMF_ROOT}/list_paths ${INFRA_ROOT} ${INFRA_EXTRA_PATHS}
 ${MKMF_ROOT}/mkmf -t ${TEMPLATE} -p lib${INFRA}.a -o "${INFRA_INCLUDE_FLAGS}" -l "${INFRA_LINKING_FLAGS}" -c "-Duse_libMPI -Duse_netCDF -DSPMD" path_names
 make -j${JOBS} DEBUG=${DEBUG} CODECOV=${CODECOV} OFFLOAD=${OFFLOAD} lib${INFRA}.a
 

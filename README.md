@@ -78,7 +78,7 @@ modules provide only Tier 1, so this builder builds Tier 1.5 (pFUnit/AMReX) and
 Tier 2 (FMS/TIM) from the submodules, then builds turbo-stack (Tier 3).
 
 Optional environment variables (hot-swap a dep's source; default = submodule):
-  MOM6_ROOT / FMS_ROOT / TIM_ROOT   out-of-tree source overrides
+  MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT   out-of-tree source overrides
 
 Options:
   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
@@ -185,7 +185,7 @@ There are high level drivers at the repo root that build **and** `ctest` both ba
 ./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ```
 
-`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM and FMS, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
+`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM, FMS and protoMOMxx, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
 
 See [Build and test both backends, one command](scripts/README.md#build-and-test-both-backends-one-command)
 in the `scripts/` README for the full reference on each of these.
