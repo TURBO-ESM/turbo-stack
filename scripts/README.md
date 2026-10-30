@@ -572,12 +572,12 @@ plumbing:
 | **Branch** | the CMake block exists only on `dev/turbo-debug` | the pinned `dev/turbo` cells have no such block; nothing to switch off |
 | **Backend** | `if(MOM6_INFRA STREQUAL "TIM")` in `src/CMakeLists.txt`, which runs `find_package(protoMOMxx REQUIRED COMPONENTS MOM_BRIDGE)` | FMS2 stays compiled out — it cannot provide `turbotmp_*_bridge` |
 
-So the four CI cells resolve themselves:
+So the six CI cells resolve themselves:
 
 | MOM6 source | backend | `_TIM` | links `protoMOMxx::mom_bridge` |
 |---|---|---|---|
-| pinned (`dev/turbo`) | FMS2 | no | no |
-| pinned (`dev/turbo`) | TIM | no | no |
+| pinned (`dev/turbo`), gcc and LLVM | FMS2 | no | no |
+| pinned (`dev/turbo`), gcc and LLVM | TIM | no | no |
 | `dev/turbo-debug` | FMS2 | no | no |
 | `dev/turbo-debug` | TIM | **yes** | **yes** |
 

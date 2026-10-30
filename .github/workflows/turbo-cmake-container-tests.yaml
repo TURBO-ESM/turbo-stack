@@ -2,20 +2,23 @@
 # about. All the build logic lives once in cmake-build.yaml; this file only says
 # *which* MOM6 sources get tested.
 #
-# Two calls, deliberately separate jobs rather than a second matrix axis:
+# Three calls, deliberately separate jobs rather than more matrix axes:
 #
-#     MOM6 pinned submodule ─┬── build+test (TIM)
-#                            └── build+test (FMS2)
+#     MOM6 pinned submodule ─┬── build+test (TIM, gcc-openmpi)
+#                            └── build+test (FMS2, gcc-openmpi)
 #
-#     MOM6 dev/turbo-debug ──┬── build+test (TIM)
-#                            └── build+test (FMS2)
+#     MOM6 dev/turbo-debug ──┬── build+test (TIM, gcc-openmpi)
+#                            └── build+test (FMS2, gcc-openmpi)
+#
+#     MOM6 pinned, LLVM ─────┬── build+test (TIM, llvm-openmpi)    non-blocking
+#                            └── build+test (FMS2, llvm-openmpi)
 #
 # They mean different things -- one is a deterministic gate on the commit
-# turbo-stack pins, the other tracks the tip of a branch in another repository
-# that moves independently of this one. Rendering them as one 4-cell matrix
-# implies they are the same kind of check. As separate nodes in the run graph, a
-# red box names which MOM6 source broke, and either group can later be given a
-# different trigger or failure policy without touching the other.
+# turbo-stack pins, one tracks the tip of a branch in another repository that
+# moves independently of this one, and one tries a second compiler. Rendering
+# them as one matrix implies they are the same kind of check. As separate nodes
+# in the run graph, a red box names which MOM6 source or compiler broke, and each
+# group has its own failure policy.
 #
 # No edge between them: they share nothing and neither gates the other.
 #
@@ -69,12 +72,24 @@ jobs:
   # another repository -- a push to MOM6 can redden a turbo-stack PR that had
   # nothing to do with it. Accepted for now: the two are co-developed by the same
   # team and catching integration breakage immediately is worth more than an
-  # always-green gate. If that stops being true, it can be made non-blocking with
-  # `continue-on-error` on the job inside cmake-build.yaml -- not on this job:
-  # GitHub rejects `continue-on-error` on a job that calls a reusable workflow.
+  # always-green gate. If that stops being true, pass `allow_failure: true`, as
+  # the llvm job below does.
   turbo-debug:
     name: MOM6 dev/turbo-debug
     uses: ./.github/workflows/cmake-build.yaml
     with:
       mom6_ref: dev/turbo-debug
       mom6_label: dev/turbo-debug
+
+  # The pinned commit again, built with LLVM (clang + flang) in the llvm-openmpi
+  # image. Non-blocking while turbo-stack does not build with flang: that needs
+  # TIM#42 and FMS#7 fixed and the submodule pins moved. Make it blocking then by
+  # dropping `allow_failure`.
+  llvm:
+    name: MOM6 pinned, LLVM
+    uses: ./.github/workflows/cmake-build.yaml
+    with:
+      mom6_ref: ""
+      mom6_label: pinned submodule
+      flavor: llvm-openmpi
+      allow_failure: true
