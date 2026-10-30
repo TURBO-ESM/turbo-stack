@@ -14,11 +14,11 @@
 # docker/README.md, docs/build_test_orchestration_prompt.md and
 # docs/dependency_tiers_prompt.md.
 #
-# Tests the MOM6 / TIM / FMS sources turbo-stack pins as submodules -- the container
-# fetches nothing, so initialize them first (the wrapper guards them).  Export
-# MOM6_ROOT / FMS_ROOT / TIM_ROOT to build your own trees instead: each is mounted and
-# forwarded to both per-backend runs, and the matrix reports the component as
-# (override).  Nothing is written into $TURBO_STACK_ROOT -- each backend builds under
+# Tests the MOM6 / TIM / FMS / protoMOMxx sources turbo-stack pins as submodules --
+# the container fetches nothing, so initialize them first (the wrapper guards them).
+# Export MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT to build your own trees
+# instead: each is mounted and forwarded to both per-backend runs, and the matrix
+# reports the component as (override).  Nothing is written into $TURBO_STACK_ROOT -- each backend builds under
 # $TURBO_BUILD_SYSTEM_TEST_DIR, as you rather than as root, and those artifacts
 # outlive the container.  To re-enter one, name it:
 #
@@ -45,7 +45,7 @@
 #                                keyed on the checkout's full path, so no two
 #                                checkouts ever share a build dir)
 #   MOM6_ROOT / FMS_ROOT /       Build these trees instead of the submodules; each
-#   TIM_ROOT                     is mounted into every container.
+#   TIM_ROOT / PROTOMOMXX_ROOT   is mounted into every container.
 #
 # SPACK_ROOT is NOT required: the image brings its own spack (/opt/spack) with the
 # repo's env baked in.  A host SPACK_ROOT / TURBO_STACK_ROOT is never passed in.

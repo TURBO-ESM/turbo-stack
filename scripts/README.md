@@ -381,8 +381,8 @@ With Podman, turning label separation off for your own containers gets past this
 `label = false` under `[containers]` in `~/.config/containers/containers.conf`.
 
 Sources are swapped [the usual way](#building-against-a-development-tree-or-a-branch):
-export `MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own
-path, forwarded into the container, and built; **whatever branch it is checked out
+export `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` or `PROTOMOMXX_ROOT` and that tree is
+mounted at its own path, forwarded into the container, and built; **whatever branch it is checked out
 on is what gets built**, so to test several branches, switch branches there and run
 again. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be
 initialized — MOM6's CMakeLists hard-fails without them, and the script checks up

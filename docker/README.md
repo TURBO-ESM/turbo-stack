@@ -159,7 +159,7 @@ scripts/build_with_container.sh --shell                # interactive shell, Spac
 ```
 
 Swapping a source works the same way it does everywhere else in the repo: export
-`MOM6_ROOT`, `FMS_ROOT` or `TIM_ROOT` and that tree is mounted at its own path,
+`MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` or `PROTOMOMXX_ROOT` and that tree is mounted at its own path,
 forwarded into the container, and built on whatever branch it is checked out on —
 so testing several branches means switching branches there and running again. A
 MOM6 tree needs its nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`)

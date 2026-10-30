@@ -21,8 +21,9 @@
 # (CI checks its MOM6 branch out fresh; this builds the tree you hand it).  For both
 # backends plus a verdict, use ./test_turbo_stack_with_container.sh.
 #
-# Swap a source the repo-wide way: export MOM6_ROOT, FMS_ROOT or TIM_ROOT and that
-# tree is mounted at its own path and built, on whatever branch it is checked out on.
+# Swap a source the repo-wide way: export MOM6_ROOT, FMS_ROOT, TIM_ROOT or
+# PROTOMOMXX_ROOT and that tree is mounted at its own path and built, on whatever
+# branch it is checked out on.
 # Everything else comes from the submodules, which the container does NOT fetch --
 # initialize them first, as CI's checkout does.
 #
@@ -71,7 +72,8 @@
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
-#   MOM6_ROOT / FMS_ROOT / TIM_ROOT   Build these trees instead of the submodules
+#   MOM6_ROOT / FMS_ROOT / TIM_ROOT / Build these trees instead of the submodules
+#   PROTOMOMXX_ROOT
 #   TURBO_CI_IMAGE                    Default image (overrides the built-in default)
 #   TURBO_CONTAINER_ENGINE            Container CLI (default: docker)
 #   TURBO_CI_HOME                     Host dir mounted as the container's HOME, to
@@ -182,11 +184,11 @@ _mount_git_dir() {   # <checkout>
     # .git/modules/..., say): a second read-only bind would shadow a writable one.
     [[ "$git_dir" != "$TURBO_STACK_ROOT" && "$git_dir" != "$TURBO_STACK_ROOT"/* ]] || return 0
     _mounts+=(-v "$git_dir:$git_dir:ro")
-    _notes+=("$(printf '%-9s = %s' "git dir" "$git_dir") (read-only; $1 is a worktree)")
+    _notes+=("$(printf '%-10s = %s' "git dir" "$git_dir") (read-only; $1 is a worktree)")
 }
 _mount_git_dir "$TURBO_STACK_ROOT"
 
-# --- source overrides: build YOUR MOM6 / FMS / TIM, not the pinned submodule ----
+# --- source overrides: build YOUR trees, not the pinned submodules -------------
 # <NAME>_ROOT is the repo-wide way to swap a component's source: build_dep resolves
 # it and the submodule guards stand down.  All that is needed here is visibility --
 # mount the tree at its own path (read-write: git may refresh its index) and forward
@@ -195,7 +197,7 @@ _mount_git_dir "$TURBO_STACK_ROOT"
 # PFUNIT_ROOT / AMREX_ROOT are NOT forwarded: the image supplies pFUnit and AMReX
 # from its Spack env, so an override would silently have no effect.
 _env=()
-for _var in MOM6_ROOT FMS_ROOT TIM_ROOT; do
+for _var in MOM6_ROOT FMS_ROOT TIM_ROOT PROTOMOMXX_ROOT; do
     _dir="${!_var}"
     [[ -n "$_dir" ]] || continue
     [[ -d "$_dir" ]] || {
@@ -212,7 +214,7 @@ for _var in MOM6_ROOT FMS_ROOT TIM_ROOT; do
         _mounts+=(-v "$_dir:$_dir")
     fi
     _mount_git_dir "$_dir"
-    _notes+=("$(printf '%-9s = %s (%s)' "${_var%_ROOT}" "$_dir" \
+    _notes+=("$(printf '%-10s = %s (%s)' "${_var%_ROOT}" "$_dir" \
         "$(git -C "$_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'not a git tree')")")
 done
 
@@ -300,7 +302,7 @@ if [[ ${#_user[@]} -gt 0 ]]; then
     _ci_home=$(cd -P -- "$_ci_home" && pwd)
     _mounts+=(-v "$_ci_home:$_ci_home")
     _home_env=(-e "HOME=$_ci_home")
-    _notes+=("$(printf '%-9s = %s' "home" "$_ci_home") (Spack package cache, persists between runs)")
+    _notes+=("$(printf '%-10s = %s' "home" "$_ci_home") (Spack package cache, persists between runs)")
 fi
 
 # --- preflight: the submodules the container consumes but cannot fetch ---------
