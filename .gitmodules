@@ -15,10 +15,10 @@
 	url = https://github.com/AMReX-Codes/amrex.git
 [submodule "submodules/TIM"]
 	path = submodules/infra/TIM
-	url = https://github.com/mwaxmonsky/TIM.git
+	url = https://github.com/TURBO-ESM/TIM.git
 [submodule "submodules/pFUnit"]
 	path = submodules/pFUnit
 	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
 [submodule "submodules/protoMOMxx"]
 	path = submodules/protoMOMxx
-	url = https://github.com/mwaxmonsky/protoMOMxx.git
+	url = https://github.com/TURBO-ESM/protoMOMxx.git
