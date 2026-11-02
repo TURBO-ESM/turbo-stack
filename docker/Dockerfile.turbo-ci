@@ -93,9 +93,11 @@ ARG SPACK_TARGET=x86_64_v3
 # Expensive layer: concretize + install the whole dependency stack from source.
 # Kept as its own RUN so it caches independently of the best-effort cleanup below
 # (a cleanup change must not force a full dependency rebuild).
-# TURBO_SPACK_COMPILER makes the flavor's compiler a hard requirement, so Spack
-# cannot quietly build part of the stack with some other compiler it finds.
-RUN TURBO_SPACK_TARGET="${SPACK_TARGET}" TURBO_SPACK_COMPILER="${COMPILER}" \
+# TURBO_SPACK_COMPILER makes the flavor's compiler, at the version
+# install_compiler.sh linked, a hard requirement, so Spack cannot quietly build
+# part of the stack with some other compiler it finds.
+RUN TURBO_SPACK_TARGET="${SPACK_TARGET}" \
+    TURBO_SPACK_COMPILER="$(cat /opt/turbo-compiler/spack-spec)" \
     bash /opt/turbo-spack/create_spack_environment.sh turbo_stack /opt/turbo-spack/spack.yaml
 
 # Best-effort cache trimming. `spack clean -a` can abort on a symlink
@@ -124,18 +126,20 @@ ENV CC=/opt/turbo-compiler/bin/cc \
 # in create_spack_environment.sh; this is the check that a partially-installed env
 # cannot slip through.
 #
-# Then assert every compiled package was built by the flavor's compiler: `none`
-# is a package with nothing to compile, anything else must be %${COMPILER}@...
-# At least one must match, so the check cannot pass by checking nothing.
+# Then assert every compiled package was built by exactly that compiler: `none`
+# is a package with nothing to compile, anything else must be %<spec>[/<hash>],
+# <spec> being install_compiler.sh's (e.g. gcc@13.3.0). At least one must match,
+# so the check cannot pass by checking nothing.
 RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
+    && spec=$(cat /opt/turbo-compiler/spack-spec) \
     && spack env list | grep -qw turbo_stack \
     && spack -e turbo_stack find --no-groups \
     && ! spack -e turbo_stack find --no-groups | grep -q '^ *- ' \
     && spack -e turbo_stack find --no-groups --format '{name} {%compiler}' > /tmp/compilers \
-    && if grep -v -E " (none|%${COMPILER}@.*)$" /tmp/compilers; then \
-           echo "ERROR: the packages above were not built with ${COMPILER}" >&2; exit 1; \
+    && if grep -v -E " (none|%${spec}(/[a-z0-9]+)?)$" /tmp/compilers; then \
+           echo "ERROR: the packages above were not built with ${spec}" >&2; exit 1; \
        fi \
-    && grep -q " %${COMPILER}@" /tmp/compilers \
+    && grep -q -E " %${spec}(/[a-z0-9]+)?$" /tmp/compilers \
     && rm /tmp/compilers \
     && "$CC" --version && "$CXX" --version && "$FC" --version
 

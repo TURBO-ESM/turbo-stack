@@ -42,9 +42,11 @@ from the distribution's packages and registers it with Spack. MPI is OpenMPI in
 every flavor for now, because `spack/spack.yaml` requires it.
 
 The flavor's compiler builds both halves of the stack. The Spack env is created
-with `TURBO_SPACK_COMPILER=<compiler>`, a hard requirement on every package, and
-the image build fails if any package was built by anything else. turbo-stack
-itself is built with `CC`, `CXX` and `FC`, which the image sets to
+with `TURBO_SPACK_COMPILER` set to that exact compiler (e.g. `gcc@13.3.0`, as
+`install_compiler.sh` records it), a hard requirement on every package, and the
+image build fails if any package was built by anything else, including another
+version of the same compiler.
+turbo-stack itself is built with `CC`, `CXX` and `FC`, which the image sets to
 `/opt/turbo-compiler/bin/{cc,c++,fc}` — symlinks to the flavor's compiler. CMake
 reads the compilers from those variables (see
 [Environment](../scripts/README.md#environment)); unset, it takes whatever `cc` /

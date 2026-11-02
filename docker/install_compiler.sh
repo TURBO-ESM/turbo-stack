@@ -9,16 +9,19 @@
 #      ever built from source);
 #   2. points /opt/turbo-compiler/bin/{cc,c++,fc} at it. The Dockerfile sets
 #      CC/CXX/FC to those fixed paths, so the ENV is the same for every flavor;
-#   3. registers it with Spack, searching only that compiler's directory.
+#   3. registers it with Spack, searching only that compiler's directory, and
+#      writes its exact Spack spec (e.g. gcc@13.3.0) to
+#      /opt/turbo-compiler/spack-spec, which the Dockerfile requires for every
+#      package.
 #
-# FAMILY is the Spack package name of the compiler, since the Dockerfile also
-# passes it to create_spack_environment.sh as TURBO_SPACK_COMPILER.
+# FAMILY is the Spack package name of the compiler.
 #
 # Supported:
 #   gcc    the distribution's default gcc/g++/gfortran
 #
-# Adding a family is one case below: install it, then set cc/cxx/fc/bindir and
-# the string its Fortran `--version` output must contain.
+# Adding a family is one case below: install it, then set cc/cxx/fc/bindir, the
+# string its Fortran `--version` output must contain, and its version as Spack
+# reports it.
 
 set -euo pipefail
 
@@ -34,6 +37,7 @@ case "$family" in
         bindir=/usr/bin
         cc=$bindir/gcc cxx=$bindir/g++ fc=$bindir/gfortran
         fc_banner="GNU Fortran"
+        version=$("$fc" -dumpfullversion)   # how Spack reads a GCC's version
         ;;
     *)
         die "unsupported compiler family '$family' (supported: gcc)"
@@ -55,3 +59,10 @@ grep -q "$fc_banner" <<< "$(/opt/turbo-compiler/bin/fc --version)" \
 . "$SPACK_ROOT/share/spack/setup-env.sh"
 spack compiler find "$bindir"
 spack compiler list
+
+# The family alone is not enough: `spack compiler find` registers every compiler
+# in $bindir, and Spack prefers the newest, so with a second GCC in /usr/bin it
+# would build the stack with that one while CC/CXX/FC point here.
+spec="$family@$version"
+grep -qx "$spec" <<< "$(spack compiler list)" || die "Spack did not register $spec"
+echo "$spec" > /opt/turbo-compiler/spack-spec
