@@ -101,8 +101,11 @@ fi
 # of where the environment is built (one image flavor), not of the spec.
 if [[ -n "${TURBO_SPACK_COMPILER:-}" ]]; then
     echo "Requiring compiler $TURBO_SPACK_COMPILER (TURBO_SPACK_COMPILER) ..."
+    # A YAML double-quoted string, so a version union or range (gcc@12,13,
+    # gcc@12:13) stays one spec instead of splitting the list.
+    _spec=${TURBO_SPACK_COMPILER//\"/\\\"}
     for _lang in c cxx fortran; do
-        spack config add "packages:${_lang}:require:[${TURBO_SPACK_COMPILER}]"
+        spack config add "packages:${_lang}:require:[\"${_spec}\"]"
     done
 fi
 

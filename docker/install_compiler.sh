@@ -20,8 +20,8 @@
 #   gcc    the distribution's default gcc/g++/gfortran
 #
 # Adding a family is one case below: install it, then set cc/cxx/fc/bindir, the
-# string its Fortran `--version` output must contain, and its version as Spack
-# reports it.
+# string its Fortran `--version` output must contain, and the flag that prints its
+# version the way Spack reports it.
 
 set -euo pipefail
 
@@ -37,7 +37,7 @@ case "$family" in
         bindir=/usr/bin
         cc=$bindir/gcc cxx=$bindir/g++ fc=$bindir/gfortran
         fc_banner="GNU Fortran"
-        version=$("$fc" -dumpfullversion)   # how Spack reads a GCC's version
+        version_flag=-dumpfullversion   # how Spack reads a GCC's version
         ;;
     *)
         die "unsupported compiler family '$family' (supported: gcc)"
@@ -54,6 +54,14 @@ ln -sfn "$fc"  /opt/turbo-compiler/bin/fc
 # can SIGPIPE the writer and fail the check even though it matched.
 grep -q "$fc_banner" <<< "$(/opt/turbo-compiler/bin/fc --version)" \
     || die "/opt/turbo-compiler/bin/fc -> $fc does not report '$fc_banner'"
+
+# All three drivers must be one version, the one recorded for Spack below.
+# Otherwise CMake could compile C/C++ with a different version than Spack used.
+version=$("$fc" "$version_flag")
+for drv in "$cc" "$cxx"; do
+    [[ $("$drv" "$version_flag") == "$version" ]] \
+        || die "$drv is not version $version, like $fc"
+done
 
 # shellcheck source=/dev/null
 . "$SPACK_ROOT/share/spack/setup-env.sh"
