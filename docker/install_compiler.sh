@@ -63,6 +63,7 @@ case "$family" in
         bindir=/usr/lib/llvm-$version/bin
         cc=$bindir/clang cxx=$bindir/clang++ fc=$bindir/flang
         fc_banner="flang version"
+        version_flag=-dumpversion       # flang rejects -dumpfullversion
         ;;
     *)
         die "unsupported compiler family '$family' (supported: gcc, llvm)"
