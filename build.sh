@@ -13,7 +13,7 @@ UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
 UNIT_TEST_ROOT=${ROOTDIR}/tests-legacy
 
 # Default values for CLI arguments
-COMPILER="intel"
+COMPILER="gnu"
 MACHINE="ncar"
 INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
