@@ -188,7 +188,7 @@ There are high level drivers at the repo root that build **and** `ctest` both ba
 ./test_turbo_stack_with_container.sh            # the CI container image
 ```
 
-`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM, FMS and protoMOMxx, and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
+`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM, FMS and protoMOMxx (plus the image, for the container driver), and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
 
 See [Build and test both backends, one command](scripts/README.md#build-and-test-both-backends-one-command)
 in the `scripts/` README for the full reference on each of these.

@@ -238,7 +238,8 @@ Two different things get printed, and they are easy to conflate:
 - a **testing matrix** at the start (`turbo_print_matrix`) — the commit and branch
   of turbo-stack, MOM6, TIM, FMS and protoMOMxx, each marked `(override)` or `(submodule)`.
   AMReX and pFUnit are *not* in it, even where `AMREX_ROOT` and `PFUNIT_ROOT`
-  apply; `build_dep` announces those as it resolves them instead.
+  apply; `build_dep` announces those as it resolves them instead. The container
+  driver adds the image, which both of its backends build in.
 - a **build summary** at the end (`turbo_verdict`) — `PASS` / `FAIL` / `SKIPPED`
   per backend.
 

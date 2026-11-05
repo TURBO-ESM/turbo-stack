@@ -235,6 +235,8 @@ turbo_print_matrix() {
     _turbo_print_source "TIM"  "${TIM_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/TIM"
     _turbo_print_source "FMS"  "${FMS_ROOT:-}"  "$TURBO_STACK_ROOT/submodules/infra/FMS2"
     _turbo_print_source "protoMOMxx" "${PROTOMOMXX_ROOT:-}" "$TURBO_STACK_ROOT/submodules/protoMOMxx"
+    # Set by a driver that builds in a container image (test_turbo_stack_with_container.sh).
+    [[ -n "${TURBO_MATRIX_IMAGE:-}" ]] && printf "  %-12s @ %s\n" "image" "$TURBO_MATRIX_IMAGE"
     echo "================================================================"
 }
 

@@ -37,7 +37,9 @@
 #
 # Configuration (env vars):
 #   TURBO_CI_IMAGE               Image to run (default: the tag CI consumes --
-#                                ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi)
+#                                ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi).
+#                                Resolved once per run, so every backend builds in
+#                                the same image; the matrix shows which.
 #   TURBO_CONTAINER_ENGINE       Container CLI (default: docker)
 #   TURBO_STACK_ROOT             turbo-stack clone (optional; self-located)
 #   TURBO_BUILD_SYSTEM_TEST_DIR  Artifact root (default:
@@ -82,5 +84,18 @@ _ckt=$(printf '%s' "$TURBO_STACK_ROOT" | (sha256sum 2>/dev/null || shasum -a 256
 : "${TURBO_BUILD_SYSTEM_TEST_DIR:=${TMPDIR:-/tmp}/turbo_ci_container_test/$(basename -- "$TURBO_STACK_ROOT")-$_ckt}"
 export TURBO_BUILD_SYSTEM_TEST_DIR
 echo "[ci-container] artifacts under $TURBO_BUILD_SYSTEM_TEST_DIR"
+
+# One image for every backend.  Each backend is its own run of the wrapper, and each
+# would refresh the default tag on its own, so a tag pushed between the FMS2 and TIM
+# runs would build the two in different images.  Instead the wrapper resolves the
+# image once, after the preflight the first backend's run would do, and every run gets
+# its ID through TURBO_CI_IMAGE, which a run uses as-is.  The matrix names it.
+_first=FMS2
+[[ "$TURBO_RUN_FMS2" == true ]] || _first=TIM
+_resolved=$(bash "$_runner" --infra "$_first" --resolve-image) || exit 1
+read -r _image_id _image <<<"$_resolved"
+export TURBO_CI_IMAGE="$_image_id"
+_image_id=${_image_id#sha256:}   # docker prints the prefix, podman does not
+TURBO_MATRIX_IMAGE="${_image_id:0:12}  ($_image)"
 
 turbo_run_test_driver "$_runner"

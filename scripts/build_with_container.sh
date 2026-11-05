@@ -69,6 +69,10 @@
 #                       already present.
 #   --shell             Start an interactive shell in the container, Spack env
 #                       activated, instead of building.  Same mounts and environment.
+#   --resolve-image     Do the preflight and image refresh a build would, print the
+#                       image's ID and name on stdout, and exit without building.
+#                       test_turbo_stack_with_container.sh uses it to run every
+#                       backend on one image.
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
@@ -114,6 +118,7 @@ _engine="${TURBO_CONTAINER_ENGINE:-docker}"
 _pull=""
 [[ -n "${TURBO_CI_IMAGE:-}" ]] && _pull=false
 _shell=false
+_resolve=false
 _args=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -122,10 +127,16 @@ while [[ $# -gt 0 ]]; do
         --pull)          _pull=true; shift ;;
         --no-pull)       _pull=false; shift ;;
         --shell)         _shell=true; shift ;;
+        --resolve-image) _resolve=true; shift ;;
         *)               _args+=("$1"); shift ;;
     esac
 done
 : "${_pull:=true}"   # no --pull/--no-pull and no named image: refresh
+
+# --resolve-image answers in one line on stdout, for the caller to capture, while
+# everything else this run prints (the pull's progress included) still reaches the
+# terminal.  So stdout goes to stderr from here on, and fd 3 keeps the original.
+[[ "$_resolve" == true ]] && exec 3>&1 1>&2
 
 # Everything else is the standard builder vocabulary (--infra/--tests/--build_dir/
 # --debug/--clean/--ninja/--parallel/--help), validated once, in one place, and
@@ -318,6 +329,17 @@ if [[ -z "$MOM6_ROOT" ]]; then
     _check_mom6_tree "$TURBO_STACK_ROOT/submodules/MOM6"
 fi
 _ensure_image || exit 1
+_engine_id=$("$_engine" image inspect --format '{{.Id}}' "$_image" 2>/dev/null) || _engine_id=""
+
+# --resolve-image stops here, after the preflight and refresh a build gets, with what
+# a build would launch: "<image ID> <image>".  The driver passes that ID to every
+# backend's run (as TURBO_CI_IMAGE, so none refreshes), and all of them build in one
+# image even if the tag moves in between.
+if [[ "$_resolve" == true ]]; then
+    [[ -n "$_engine_id" ]] || { echo "Error: cannot read the ID of image '$_image'." >&2; exit 1; }
+    printf '%s %s\n' "$_engine_id" "$_image" >&3
+    exit 0
+fi
 
 # --- artifacts left by a different image ---------------------------------------
 # build_dep reuses an installed dep when its source, CMake args and install prefix
@@ -339,7 +361,6 @@ else
     _deps_root="$TURBO_STACK_ROOT/deps/default"; _cmake_dir="$TURBO_STACK_ROOT/build/default"
 fi
 _record="$_deps_root/.turbo-ci-image"
-_engine_id=$("$_engine" image inspect --format '{{.Id}}' "$_image" 2>/dev/null) || _engine_id=""
 _image_id="${_engine_id#sha256:}"   # docker prints the prefix, podman does not
 _built_by="" _built_by_ref=""
 if [[ -f "$_record" ]]; then

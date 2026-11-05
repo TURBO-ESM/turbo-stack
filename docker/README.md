@@ -180,7 +180,8 @@ covers the rest. `scripts/build_with_container.sh` takes `--image` to pin an ima
 (which also stops the default refresh), `--pull` / `--no-pull` to force it either
 way, and `--build_dir`. The driver takes none of these: it reads the image from
 `TURBO_CI_IMAGE` (naming one stops the refresh there too) and the artifact root
-from `TURBO_BUILD_SYSTEM_TEST_DIR`.
+from `TURBO_BUILD_SYSTEM_TEST_DIR`. It resolves the image once and builds both
+backends in it, so a tag pushed mid-run cannot split them; the matrix shows which.
 
 Artifacts outlive the container, so after a failure
 `scripts/build_with_container.sh --shell` drops you back in and
