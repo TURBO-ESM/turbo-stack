@@ -72,5 +72,8 @@ spack compiler list
 # in $bindir, and Spack prefers the newest, so with a second GCC in /usr/bin it
 # would build the stack with that one while CC/CXX/FC point here.
 spec="$family@$version"
+# Spack v1.2.2's `spack compiler list`, piped, prints one bare spec per line (e.g.
+# gcc@13.3.0), with no header or marker, and -x matches the whole line. A SPACK_REF
+# bump that decorates those lines makes this die even though the compiler registered.
 grep -qx "$spec" <<< "$(spack compiler list)" || die "Spack did not register $spec"
 echo "$spec" > /opt/turbo-compiler/spack-spec

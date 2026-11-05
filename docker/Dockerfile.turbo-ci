@@ -59,6 +59,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # --- 2) Spack, pinned to a stable release for reproducibility ------------------
+# Bumping it: two checks parse Spack's output, `spack compiler list` in
+# install_compiler.sh and `{%compiler}` in step 6, and a release that prints either
+# differently fails the build there. Compare the output first.
 ARG SPACK_REF=v1.2.2
 ENV SPACK_ROOT=/opt/spack
 RUN git clone --depth=1 --branch "${SPACK_REF}" https://github.com/spack/spack.git "${SPACK_ROOT}" \
@@ -129,7 +132,10 @@ ENV CC=/opt/turbo-compiler/bin/cc \
 # Then assert every compiled package was built by exactly that compiler: `none`
 # is a package with nothing to compile, anything else must be %<spec>[/<hash>],
 # <spec> being install_compiler.sh's (e.g. gcc@13.3.0). At least one must match,
-# so the check cannot pass by checking nothing.
+# so the check cannot pass by checking nothing. That is the shape Spack v1.2.2
+# prints for `{%compiler}` (`amrex %gcc@13.3.0/jt2squ5...`, `autoconf none`); a
+# SPACK_REF bump that prints it differently fails here with "not built with" even
+# though the compiler is right, so check the format first.
 RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
     && spec=$(cat /opt/turbo-compiler/spack-spec) \
     && spack env list | grep -qw turbo_stack \
