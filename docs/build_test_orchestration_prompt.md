@@ -26,6 +26,11 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
   backends) → a **single-backend builder** (does Stage 1: environment setup — toolchain + deps) → the
   **shared `build_turbo_stack.sh`** (Stage 2) → verdict.  The driver does NOT re-implement the stages
   — it runs the real builder a user would run, once per backend, each in its own process.
+- A fourth driver, **`test_turbo_stack_with_container.sh`**, loops a **container wrapper** instead:
+  `build_with_container.sh` sets up no toolchain of its own.  It enters the `turbo-ci` image (whose
+  Spack env supplies Tier 1 + Tier 1.5 prebuilt), mounting the checkout and any `*_ROOT` tree, and
+  runs `build_local_with_spack_env.sh` inside it.  So its edge goes into **Path A's** first step,
+  not to a Stage 2 of its own: the container path reuses Path A.
 - **Script ownership must be legible:**
   - The **test driver** does: parse args · loop backends · print verdict (put these in its label).
   - The **builder** box contains its Stage 1 (environment setup) steps: source the toolchain env
@@ -47,16 +52,17 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 - Test-driver ellipses `#fffacd`.
 - Path A (local · spack) builder cluster fill `#e7eff8`; Path B (Derecho · Lmod modules) builder
   cluster fill `#fbeee6`; Path C (local · system toolchain already on PATH) builder cluster fill
-  `#efe9f6`.  Cluster label = the builder script name + "(run once per backend)", `labeljust=l`.
+  `#efe9f6`; container-wrapper cluster fill `#e3f1ea`.  Cluster label = the builder script name +
+  "(run once per backend)", `labeljust=l`.
 - Stage-1 toolchain box `#bcd4ec`; Stage-1 deps box `#c8e6c9`; shared Stage-2 ellipse `#90ee90`; verdict box `#c8e6c9`.
 - `common.sh` note: `shape=note` `#dce8f5`.  Overrides note: `shape=note` `#fff2cc`.
 - `rankdir=TB`, `splines=ortho`, `compound=true`, `newrank=true`.  Edge text via `xlabel=`.  Point
   edges at specific nodes (never `lhead=cluster_*`).
 
 ### Nodes & flow
-- Three **test-driver** ellipses at `{rank=same}`: `test_turbo_stack_locally.sh`,
-  `test_turbo_stack_on_derecho.sh (qsub / bash)`, and `test_turbo_stack_with_system_toolchain.sh`,
-  each labelled with "parse args · loop backends · print verdict".
+- Four **test-driver** ellipses at `{rank=same}`: `test_turbo_stack_locally.sh`,
+  `test_turbo_stack_on_derecho.sh (qsub / bash)`, `test_turbo_stack_with_system_toolchain.sh` and
+  `test_turbo_stack_with_container.sh`, each labelled with "parse args · loop backends · print verdict".
 - Three **builder clusters** (the boxes ARE the builder scripts), each containing a Stage-1 toolchain
   box → Stage-1 deps box:
   - `build_local_with_spack_env.sh`: toolchain = source `spack_local_environment.sh` (builds nothing
@@ -72,12 +78,18 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
   - protoMOMxx is built only for the TIM backend, right after TIM, into the same prefix. It provides
     `protoMOMxx::mom_bridge`, which MOM6 `dev/turbo-debug` links under TIM. The deps labels list it
     as one more `turbo_build_*` call; don't add a separate node for it.
-- Each driver → its builder's Stage-1 toolchain node (xlabel "loop: --infra FMS2, then TIM").
+- A **container-wrapper cluster**, `build_with_container.sh`, holding one node: "enter the turbo-ci
+  image, as you · mount the checkout + any *_ROOT tree (its Spack env supplies Tier 1 + Tier 1.5
+  prebuilt)", in the Stage-1 toolchain color.
+- Each driver → its builder's Stage-1 toolchain node (xlabel "loop: --infra FMS2, then TIM"); the
+  container driver → the container-wrapper node instead, and that node → Path A's Stage-1 toolchain
+  node (xlabel "runs build_local_with_spack_env.sh inside the container").
 - Each builder's Stage-1 deps node → the shared **`build_turbo_stack.sh`** ellipse (xlabel "exec"); its
   label notes "exec'd by each builder" + "Stage 2: cmake configure/build → ctest (Tier 3)".  Unit tests
   are opt-in (`--tests`); the test drivers pass it, so ctest runs in the driven pipeline.
 - Shared `build_turbo_stack.sh` → **verdict** box ("testing matrix + per-backend verdict … printed by
   the test driver").
 - **`common.sh` note** → each driver, dashed (`color="#5b7aa6"`, `arrowhead=odot`, `constraint=false`).
+- The overrides note's text also says the container wrapper mounts each `*_ROOT` into the image.
 - **Overrides note** → each builder's Stage-1 deps box (xlabel "FMS_ROOT / TIM_ROOT /\nPROTOMOMXX_ROOT") and → the shared
   Stage-2 ellipse (xlabel "MOM6_ROOT"), dashed (`color="#a06000"`, `arrowhead=odot`, `constraint=false`).
