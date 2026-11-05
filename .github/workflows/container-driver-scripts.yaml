@@ -17,6 +17,7 @@
 name: turbo-stack container scripts (host)
 
 # Both `paths` lists must stay in sync -- Actions does not support YAML anchors.
+# Each names every script the driver runs, on the host and inside the container.
 on:
   workflow_dispatch:
   push:
@@ -25,6 +26,7 @@ on:
       - "test_turbo_stack_with_container.sh"
       - "scripts/build_with_container.sh"
       - "scripts/build_local_with_spack_env.sh"
+      - "scripts/setup_environment/spack_local_environment.sh"
       - "scripts/build_turbo_stack.sh"
       - "scripts/lib/**"
       - ".github/workflows/container-driver-scripts.yaml"
@@ -37,6 +39,7 @@ on:
       - "test_turbo_stack_with_container.sh"
       - "scripts/build_with_container.sh"
       - "scripts/build_local_with_spack_env.sh"
+      - "scripts/setup_environment/spack_local_environment.sh"
       - "scripts/build_turbo_stack.sh"
       - "scripts/lib/**"
       - ".github/workflows/container-driver-scripts.yaml"
@@ -56,7 +59,7 @@ jobs:
     name: test_turbo_stack_with_container.sh (FMS2 + TIM)
     runs-on: ubuntu-latest
     # Sequential by design: the second backend reusing the first's Spack cache is part
-    # of what we want to see work. ~25 min healthy; the cap is for a hung MPI test.
+    # of what we want to see work. ~20 min healthy; the cap is for a hung MPI test.
     timeout-minutes: 90
     defaults:
       run:
