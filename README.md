@@ -218,7 +218,7 @@ CI covers both build systems in separate lanes and separate containers:
 | legacy | `build-tests.yaml`, `build-tests-iturbo.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | `./build.sh` in the NCAR CISL dev containers |
 
 The CMake lane runs four cells: the pinned MOM6 submodule and the tip of MOM6's
-`dev/turbo-debug` branch, each against both backends. Refreshing the CI image
+`iturbo` branch, each against both backends. Refreshing the CI image
 after a `spack/spack.yaml` change is a manual step — see
 [`docker/README.md`](docker/README.md).
 

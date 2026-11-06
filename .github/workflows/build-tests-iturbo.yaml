@@ -37,12 +37,12 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
-      - name: Switch MOM6 to dev/turbo-debug
+      - name: Switch MOM6 to iturbo
         run: |
           cd submodules/MOM6/
           git fetch origin
-          git checkout --recurse-submodules dev/turbo-debug
-          echo "Head of dev/turbo-debug is this commit:"
+          git checkout --recurse-submodules iturbo
+          echo "Head of iturbo is this commit:"
           git log -1 --decorate
           cd ../..
 
