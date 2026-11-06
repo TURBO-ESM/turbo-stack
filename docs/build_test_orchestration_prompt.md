@@ -70,7 +70,7 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
     only, builds nothing → Tier 1); deps = the same conditional set as Derecho (all from submodule) —
     the bring-your-own-toolchain local path (no spack, no modules).
   - protoMOMxx is built only for the TIM backend, right after TIM, into the same prefix. It provides
-    `protoMOMxx::mom_bridge`, which MOM6 `dev/turbo-debug` links under TIM. The deps labels list it
+    `protoMOMxx::mom_bridge`, which MOM6 `iturbo` links under TIM. The deps labels list it
     as one more `turbo_build_*` call; don't add a separate node for it.
 - Each driver → its builder's Stage-1 toolchain node (xlabel "loop: --infra FMS2, then TIM").
 - Each builder's Stage-1 deps node → the shared **`build_turbo_stack.sh`** ellipse (xlabel "exec"); its

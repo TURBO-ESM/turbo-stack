@@ -104,8 +104,8 @@ digraph turbo_stack_deps {
     ocean   -> cvmix;
     ocean   -> gsw;
     ocean   -> mom6_marbl;
-    // Only MOM6 dev/turbo-debug has this link, and only under MOM6_INFRA=TIM.
-    ocean   -> mom_bridge [style=dashed, xlabel="MOM6_INFRA=TIM\n(dev/turbo-debug)"];
+    // Only MOM6 iturbo has this link, and only under MOM6_INFRA=TIM.
+    ocean   -> mom_bridge [style=dashed, xlabel="MOM6_INFRA=TIM\n(iturbo)"];
     mom6_exe -> ocean;
 
     // ── turbo-stack tests ─────────────────────────────────────────────────────
