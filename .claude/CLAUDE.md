@@ -28,6 +28,26 @@ The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is w
 
 Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict. `test_turbo_stack_with_system_toolchain.sh` is the same for a bring-your-own toolchain already on `PATH` (no spack).
 
+### Build and test in a container (a ready-made environment)
+
+```bash
+scripts/build_with_container.sh --infra TIM --tests                        # pinned sources, one backend
+MOM6_ROOT=~/MOM6 scripts/build_with_container.sh --infra TIM --tests       # your MOM6, as checked out
+./test_turbo_stack_with_container.sh                                  # both backends, matrix + verdict
+scripts/build_with_container.sh --shell                                    # interactive shell, Spack env active
+```
+
+No host toolchain needed: the image ships the compiler plus Tier 1 + 1.5 (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack env, so the container builds only Tier 2 (the selected backend, from its submodule) and Tier 3. Export `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` or `PROTOMOMXX_ROOT` and that tree is mounted at its own path and forwarded; **the branch it is checked out on is what gets built** — switch branches there and re-run to test another. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized. `PFUNIT_ROOT`/`AMREX_ROOT` are not forwarded: the image supplies pFUnit and AMReX from its Spack env, so an override would have no effect.
+
+It runs `build_local_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the CMake lane's environment and guardrails. [`scripts/README.md`](../scripts/README.md#in-a-container-a-ready-made-environment) explains how (the mounts, running as you, the `HOME` cache), and `--help` lists the options: the builder flags plus `--image`, `--pull`, `--no-pull` and `--shell`, with the engine from `$TURBO_CONTAINER_ENGINE` (default docker). What trips people up, and what not to undo:
+
+- **It builds the checkout you run it from.** No host `SPACK_ROOT` is used. An exported `TURBO_STACK_ROOT` that names a *different* checkout is a hard error, the first thing you hit from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched.
+- **The driver builds somewhere else.** `build_with_container.sh` alone builds in `$TURBO_STACK_ROOT/build/default`. The driver passes `--build_dir`, under `$TMPDIR/turbo_ci_container_test/<checkout>-<hash>`, so a bare `--shell` does *not* re-enter a driver build.
+- **The default image is refreshed on every run**, since `gcc-openmpi` is a mutable tag; naming one (`--image`, `TURBO_CI_IMAGE`) turns that off. Pulls pass `--platform linux/amd64`, the only platform the image is built for. The driver resolves the image once (`--resolve-image`) and hands every backend its ID, so a tag pushed mid-run cannot split them; its matrix names the image.
+- **Each build dir records the image that built it** (`deps/.turbo-ci-image`). A different image, or artifacts with no record, makes the next run clean first. The record is written inside the container after the builder, and only on success when the run replaces another image's artifacts; the container is launched by the inspected ID, not the tag. The comments in `build_with_container.sh` say why each rule is needed — read them before simplifying.
+- **`safe.directory` is set through `GIT_CONFIG_*` env vars**, not `git config --global`, which would write the shared `HOME`'s `.gitconfig` on every run.
+- **Ctrl-C may not stop the container.** bash holds the signal until `docker run` returns, and the build inside can outlive it (`docker ps`, `docker rm -f`).
+
 ### Local build (spack flavor, one command)
 
 ```bash
@@ -72,8 +92,9 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 | Script | Role | How invoked |
 |---|---|---|
 | `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
-| `test_turbo_stack_locally.sh`, `test_turbo_stack_on_derecho.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
+| `test_turbo_stack_locally.sh`, `test_turbo_stack_with_system_toolchain.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
 | `scripts/build_local_with_spack_env.sh`, `build_local_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
+| `scripts/build_with_container.sh` | Wrapper — runs `build_local_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
@@ -218,6 +239,7 @@ separate lanes, in different containers:
 |---|---|---|
 | `build-tests*.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | legacy mkmf `./build.sh` | `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`, activated via `/container/config_env.sh` |
 | `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
+| `container-driver-scripts.yaml` | **CMake, via the host-side wrapper** (`./test_turbo_stack_with_container.sh`) | same image, but pulled and entered by `scripts/build_with_container.sh` on the runner host rather than by `container:` |
 
 The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
 libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
@@ -239,11 +261,25 @@ so the pFUnit suite has to run against it too — possible at all only because
 MOM6's CMake build system now lives on both branches, the same CMakeLists tree
 having been ported to `dev/turbo-debug`.
 
+`container-driver-scripts.yaml` asks a different question: it is the only lane that
+executes `scripts/build_with_container.sh`. The four cells above declare `container:`
+on the job, so the wrapper never runs — its mounts, rootless/`--user` decision, `HOME`
+cache and preflight guards would be covered by nothing. Runs the driver with no flags
+(FMS2 then TIM, pinned), path-filtered so it does not add ~20 min to every PR.
+
 The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
 (`turbo_stack`) so CI does not rebuild dependencies each run. It is **private**,
 and a `spack.yaml` change does not reach CI until the producer workflow is
 re-run manually (`gh workflow run build-turbo-ci-container.yaml`) — see
 [`docker/README.md`](../docker/README.md).
+
+That same image is what `build_with_container.sh` / `test_turbo_stack_with_container.sh`
+build in, so much of this lane can be exercised without pushing a branch: `scripts/build_with_container.sh --infra TIM
+--tests` (one backend), `./test_turbo_stack_with_container.sh` (both), `--shell`
+to debug inside it, and `MOM6_ROOT`/`FMS_ROOT`/`TIM_ROOT`/`PROTOMOMXX_ROOT` to build trees of your
+own instead of the pinned commits. Reproducing CI is a consequence of sharing the image, not the
+purpose of those scripts, and not a guarantee: CI checks its MOM6 branch out fresh
+beside the workspace, where the local runner builds the tree you point it at. See "Build and test in a container" above.
 
 Branches that trigger CI: `main` for the CMake lane; `main` plus the legacy
 `ci-tests` / `container-ci` branches for the mkmf lane. Any workflow can also be
