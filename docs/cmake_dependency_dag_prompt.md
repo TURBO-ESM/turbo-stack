@@ -71,8 +71,8 @@ sources that depend on model modules compile straight into `ocean`.
 - `MOM6::infra` → TURBO::infra_r8, MPI, NetCDF_Fortran (all public)
 - `MOM6::framework` → infra (public)
 - `MOM6::ocean` → framework, CVMix, GSW, MARBL::marbl (all public)  (darker green `#52c452`)
-  - plus a dashed edge to `protoMOMxx::mom_bridge`, xlabel `MOM6_INFRA=TIM\n(dev/turbo-debug)`: only
-    MOM6's `dev/turbo-debug` branch links the bridge, and only under the TIM backend.
+  - plus a dashed edge to `protoMOMxx::mom_bridge`, xlabel `MOM6_INFRA=TIM\n(iturbo)`: only
+    MOM6's `iturbo` branch links the bridge, and only under the TIM backend.
 - `MOM6 (executable)` ellipse → ocean (private)  (dark green `#2e8b57`, white font)
 
 **turbo-stack tests/** — tan fill (`#f0e8d8`):

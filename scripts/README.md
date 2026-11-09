@@ -444,14 +444,14 @@ What gets *reported* differs between the two entry points:
 
 ### Building a MOM6 branch you don't have checked out
 
-`MOM6_ROOT` needs a tree you already have. To build MOM6's `dev/turbo-debug`
+`MOM6_ROOT` needs a tree you already have. To build MOM6's `iturbo`
 development branch instead of the pinned commit, there are two ways and neither
 needs a flag:
 
 **Move the submodule onto the branch.** Simplest, and `MOM6_ROOT` stays unset:
 
 ```bash
-git -C submodules/MOM6 checkout dev/turbo-debug
+git -C submodules/MOM6 checkout iturbo
 ./test_turbo_stack_locally.sh
 git -C submodules/MOM6 checkout -          # put it back when done
 ```
@@ -461,7 +461,7 @@ interrupted run cannot strand it on another ref:
 
 ```bash
 git clone --depth 1 --recurse-submodules --shallow-submodules \
-    -b dev/turbo-debug https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
+    -b iturbo https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
 MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_locally.sh
 ```
 
@@ -473,7 +473,7 @@ either way -- its top-level `CMakeLists.txt` hard-fails without them.
 CI does the second of these, but through `actions/checkout` (`submodules:
 recursive`, `fetch-depth: 1`) rather than the commands above -- no workflow
 shells out to `git clone`, so there is no copy of this recipe to keep in sync.
-The `MOM6 dev/turbo-debug` group checks the branch out into a sibling directory
+The `MOM6 iturbo` group checks the branch out into a sibling directory
 and points `MOM6_ROOT` there, so the build scripts see nothing unusual. The
 testing matrix then reports MOM6 as an override at the real SHA, so a log says
 exactly which commit was tested.
@@ -569,17 +569,17 @@ plumbing:
 
 | Gate | Mechanism | Effect |
 |---|---|---|
-| **Branch** | the CMake block exists only on `dev/turbo-debug` | the pinned `dev/turbo` cells have no such block; nothing to switch off |
+| **Branch** | the CMake block exists only on `iturbo` | the pinned `turbo` cells have no such block; nothing to switch off |
 | **Backend** | `if(MOM6_INFRA STREQUAL "TIM")` in `src/CMakeLists.txt`, which runs `find_package(protoMOMxx REQUIRED COMPONENTS MOM_BRIDGE)` | FMS2 stays compiled out — it cannot provide `turbotmp_*_bridge` |
 
 So the four CI cells resolve themselves:
 
 | MOM6 source | backend | `_TIM` | links `protoMOMxx::mom_bridge` |
 |---|---|---|---|
-| pinned (`dev/turbo`) | FMS2 | no | no |
-| pinned (`dev/turbo`) | TIM | no | no |
-| `dev/turbo-debug` | FMS2 | no | no |
-| `dev/turbo-debug` | TIM | **yes** | **yes** |
+| pinned (`turbo`) | FMS2 | no | no |
+| pinned (`turbo`) | TIM | no | no |
+| `iturbo` | FMS2 | no | no |
+| `iturbo` | TIM | **yes** | **yes** |
 
 **Why protoMOMxx is built for every TIM build.** Because Stage 1 cannot know whether
 the bridge is needed. Only the MOM6 source knows whether it carries the
@@ -636,7 +636,7 @@ call as the TIM tree. It compiles none of protoMOMxx's driver, tests or
 **Ordering.** MOM6 hard-errors at configure when `MOM6_INFRA=TIM` and
 `protoMOMxx::mom_bridge` is absent. MOM6's switch to protoMOMxx and turbo-stack's
 switch (protoMOMxx submodule, TIM bump, `turbo_build_protomomxx`) only work
-together: with either one alone, the `dev/turbo-debug` × TIM cell fails to
+together: with either one alone, the `iturbo` × TIM cell fails to
 configure. So they merge as a pair. Validate the pair first, merge the MOM6 side,
 then merge turbo-stack straight away.
 

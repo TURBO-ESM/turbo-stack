@@ -7,7 +7,7 @@
 #     MOM6 pinned submodule ─┬── build+test (TIM)
 #                            └── build+test (FMS2)
 #
-#     MOM6 dev/turbo-debug ──┬── build+test (TIM)
+#     MOM6 iturbo ───────────┬── build+test (TIM)
 #                            └── build+test (FMS2)
 #
 # They mean different things -- one is a deterministic gate on the commit
@@ -25,11 +25,11 @@
 #
 #     ./test_turbo_stack_locally.sh                        # the pinned group
 #
-#     git -C submodules/MOM6 checkout dev/turbo-debug      # simplest
+#     git -C submodules/MOM6 checkout iturbo               # simplest
 #     ./test_turbo_stack_locally.sh
 #     git -C submodules/MOM6 checkout -                    # put it back
 #
-#     git clone --depth 1 -b dev/turbo-debug \
+#     git clone --depth 1 -b iturbo \
 #         https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
 #     git -C /tmp/mom6-debug submodule update --init --recursive --depth 1
 #     MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_locally.sh
@@ -61,7 +61,7 @@ jobs:
       mom6_ref: ""
       mom6_label: pinned submodule
 
-  # The tip of MOM6's dev/turbo-debug, which is what issue #251 asked for: TURBO
+  # The tip of MOM6's iturbo, which is what issue #251 asked for: TURBO
   # development happens on that branch, so the pFUnit suite has to run against it
   # and not only against the pin.
   #
@@ -71,9 +71,9 @@ jobs:
   # team and catching integration breakage immediately is worth more than an
   # always-green gate. If that stops being true, `continue-on-error: true` here
   # downgrades it to a warning without touching anything else.
-  turbo-debug:
-    name: MOM6 dev/turbo-debug
+  iturbo:
+    name: MOM6 iturbo
     uses: ./.github/workflows/cmake-build.yaml
     with:
-      mom6_ref: dev/turbo-debug
-      mom6_label: dev/turbo-debug
+      mom6_ref: iturbo
+      mom6_label: iturbo

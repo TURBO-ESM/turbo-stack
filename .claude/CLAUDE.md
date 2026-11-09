@@ -106,7 +106,7 @@ Two ways, neither needing a flag. Move the submodule onto the branch and leave
 `MOM6_ROOT` unset:
 
 ```bash
-git -C submodules/MOM6 checkout dev/turbo-debug
+git -C submodules/MOM6 checkout iturbo
 ./test_turbo_stack_locally.sh
 git -C submodules/MOM6 checkout -
 ```
@@ -128,7 +128,7 @@ prefix, built against that TIM. FMS2 builds never build it. There is no
 `-DTIM_ENABLE_MOM_BRIDGE` flag any more: TIM no longer contains the kernels.
 
 Whether MOM6 compiles and links the bridge is decided in MOM6, not here: the CMake
-block lives only on `dev/turbo-debug`. Inside `if(MOM6_INFRA STREQUAL "TIM")`, its
+block lives only on `iturbo`. Inside `if(MOM6_INFRA STREQUAL "TIM")`, its
 `src/CMakeLists.txt` runs `find_package(protoMOMxx REQUIRED COMPONENTS MOM_BRIDGE)`,
 which finds the install through `CMAKE_PREFIX_PATH`. **Do not add a flag or a CI
 conditional for this.** Stage 1 cannot know whether the bridge is needed — only
@@ -229,15 +229,15 @@ MOM6 source, and each call fans out over the infra backends (TIM, FMS2).
 | Group | MOM6 source | Character |
 |---|---|---|
 | `MOM6 pinned` | the submodule commit | deterministic gate |
-| `MOM6 dev/turbo-debug` | tip of that branch, via `MOM6_ROOT` | tracks a moving external branch |
+| `MOM6 iturbo` | tip of that branch, via `MOM6_ROOT` | tracks a moving external branch |
 
 Two jobs rather than a second matrix axis because they mean different things: a
 red box then names which MOM6 source broke, and either group can be given a
 different trigger or failure policy without touching the other. The
-`dev/turbo-debug` group exists because TURBO development happens on that branch,
+`iturbo` group exists because TURBO development happens on that branch,
 so the pFUnit suite has to run against it too — possible at all only because
 MOM6's CMake build system now lives on both branches, the same CMakeLists tree
-having been ported to `dev/turbo-debug`.
+having been ported to `iturbo`.
 
 The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
 (`turbo_stack`) so CI does not rebuild dependencies each run. It is **private**,
