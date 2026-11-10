@@ -100,7 +100,8 @@ set -eo pipefail
 # shellcheck source=/dev/null
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
-# Must match `container.image` in .github/workflows/cmake-build.yaml.
+# Must match `container.image` in .github/workflows/cmake-build.yaml at its
+# default `flavor` input (gcc-openmpi).
 _default_image="ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi"
 
 # --- container-only options ----------------------------------------------------
