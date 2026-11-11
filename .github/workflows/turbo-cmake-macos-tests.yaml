@@ -1,0 +1,192 @@
+# Builds turbo-stack and runs the same unit tests as the Linux CMake lane
+# (turbo-cmake-container-tests.yaml) on GitHub-hosted macOS runners: Apple
+# Silicon, one job per macOS version GitHub hosts.
+#
+# It runs the scripts a Mac user runs. spack/create_spack_environment.sh builds
+# the Tier 1 + 1.5 dependencies from spack/spack.yaml, then
+# test_turbo_stack_locally.sh builds both backends (FMS2, TIM) and runs the
+# pFUnit suite under ctest: the same builder, with the same --tests, that
+# cmake-build.yaml runs for each backend. MOM6 is the pinned submodule.
+#
+# Homebrew supplies only gfortran. Spack's macOS defaults take C/C++ from Apple
+# clang and Fortran from gcc, and turbo-stack's own build has to use the same
+# three compilers (FC/CC/CXX below). Apple clang links C++ against libc++ and
+# Homebrew's g++ against libstdc++, so AMReX (built by Spack) and TIM/protoMOMxx
+# (built by CMake) must both be built with Apple clang. TURBO_SPACK_COMPILER
+# stays unset: it pins one compiler for C, C++ and Fortran together.
+name: turbo-stack CMake build (macOS)
+
+# Every PR to main, every push to main, and by hand, like the Linux CMake lane.
+# Every PR because almost any change can break a Mac build, including the
+# MOM6/TIM/FMS pin bumps that a filter on build files would skip.
+#
+# No schedule. PR runs restore the shared Spack cache, which keeps it from
+# expiring (GitHub drops caches unused for 7 days). When a runner-image or
+# Homebrew update changes the cache key, PRs build the Spack environment from
+# scratch (~1 h) until a run on main saves a new one; dispatching this workflow
+# on main does that sooner:
+#     gh workflow run turbo-cmake-macos-tests.yaml --repo TURBO-ESM/turbo-stack --ref main
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  macos:
+    name: macOS ${{ matrix.macos }} (Apple Silicon)
+    runs-on: macos-${{ matrix.macos }}
+    # A cold Spack environment is ~1 h; the build and unit tests ~30 min (a guess
+    # until the first runs measure it).
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        # The macOS versions GitHub hosts (macos-14 was retired 2026-11-02), all on
+        # M1 runners with 3 cores and 7 GB. M1 is the oldest Apple chip and every
+        # machine builds the stack for its own CPU, so a pass here covers newer chips.
+        macos: ["15", "26"]
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
+    env:
+      SPACK_ROOT: /Users/runner/spack
+      SPACK_REF: v1.2.2              # the Spack the turbo-ci image uses
+      TURBO_BUILD_SYSTEM_TEST_DIR: /Users/runner/turbo
+      # Runner constraint, as in cmake-build.yaml: the suites start 4 ranks on 3 cores.
+      PRTE_MCA_rmaps_default_mapping_policy: ":oversubscribe"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      # A stock Mac runs the scripts' `#!/bin/bash` and their inner `bash` calls
+      # with bash 3.2; make the runner do the same, whatever bash its image puts
+      # first on PATH. Later steps' shells resolve `bash` through PATH too.
+      - name: Use macOS's stock bash 3.2
+        run: |
+          mkdir -p "$RUNNER_TEMP/stock-bash"
+          ln -sf /bin/bash "$RUNNER_TEMP/stock-bash/bash"
+          echo "$RUNNER_TEMP/stock-bash" >> "$GITHUB_PATH"
+
+      - name: Install gfortran
+        run: brew install gcc
+
+      - name: Record the runner and toolchain
+        run: |
+          {
+            echo "| | |"
+            echo "|---|---|"
+            echo "| macOS | $(sw_vers -productVersion) ($(uname -m)) |"
+            echo "| Chip | $(sysctl -n machdep.cpu.brand_string), $(sysctl -n hw.ncpu) cores |"
+            echo "| Xcode | $(xcodebuild -version | head -1) |"
+            echo "| C/C++ | $(clang --version | head -1) |"
+            echo "| Fortran | $(gfortran --version | head -1) |"
+            echo "| bash | $BASH_VERSION |"
+            echo "| Spack | $SPACK_REF |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The key changes whenever anything the environment is built from changes, so
+      # a new Apple clang or Homebrew gcc means one rebuild, not a mismatched cache.
+      - name: Cache key
+        id: key
+        run: |
+          tc="macos$(sw_vers -productVersion | cut -d. -f1)-$(uname -m)-clang$(clang -dumpversion)-gfortran$(gfortran -dumpfullversion)-$SPACK_REF"
+          echo "tc=$tc" >> "$GITHUB_OUTPUT"
+          echo "key=spack-$tc-${{ hashFiles('spack/spack.yaml', 'spack/create_spack_environment.sh') }}" >> "$GITHUB_OUTPUT"
+
+      # Every restore and save below uses the same `path` list: the cache version
+      # is derived from it, so a restore with a different list finds nothing.
+      # Spack's download cache is left out.
+      - name: Restore the Spack environment
+        id: cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SPACK_ROOT }}
+            !${{ env.SPACK_ROOT }}/var/spack/cache
+            ~/.spack
+          key: ${{ steps.key.outputs.key }}
+          restore-keys: spack-${{ steps.key.outputs.tc }}-
+
+      # Exact hit: create_spack_environment.sh finds the environment and builds
+      # nothing. Partial hit (an older spack.yaml, or a build that stopped
+      # partway): drop the restored environment and recreate it from the
+      # checkout; Spack reuses what is installed and builds the rest.
+      - name: Spack environment
+        id: env
+        run: |
+          [ -d "$SPACK_ROOT/.git" ] || git clone --depth=1 -b "$SPACK_REF" https://github.com/spack/spack.git "$SPACK_ROOT"
+          . "$SPACK_ROOT/share/spack/setup-env.sh"
+          # A here-string, not a pipe: under pipefail, grep -q exiting early can
+          # SIGPIPE the writer and flip the test.
+          if [ "${{ steps.cache.outputs.cache-hit }}" != true ] && grep -qw turbo_stack <<<"$(spack env list)"; then
+            spack env rm -y turbo_stack
+          fi
+          TURBO_STACK_ROOT=$PWD bash spack/create_spack_environment.sh
+          spack clean -sd
+          # FC must be the gfortran Spack built the environment with, or every `use`
+          # of a Spack-built Fortran module fails. gcc-runtime carries that version.
+          rt=$(spack -e turbo_stack find --format '{version}' gcc-runtime | head -1 || true)
+          if [ -n "$rt" ] && [ "$rt" != "$(gfortran -dumpfullversion)" ]; then
+            echo "::error::Spack built Fortran with gcc $rt, but gfortran is $(gfortran -dumpfullversion)"
+            exit 1
+          fi
+
+      # Saves from main (pushes and dispatches) are what PRs restore. A PR's own
+      # save stays scoped to that PR, and fork PRs get a read-only cache token.
+      - name: Save the Spack environment
+        if: steps.cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.SPACK_ROOT }}
+            !${{ env.SPACK_ROOT }}/var/spack/cache
+            ~/.spack
+          key: ${{ steps.key.outputs.key }}
+
+      # If the environment build stopped partway, keep what it finished: the next
+      # run restores it through restore-keys and builds only the rest.
+      - name: Save a partial Spack environment
+        if: failure() && steps.env.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.SPACK_ROOT }}
+            !${{ env.SPACK_ROOT }}/var/spack/cache
+            ~/.spack
+          key: ${{ steps.key.outputs.key }}-partial-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Build + unit tests (FMS2, TIM)
+        env:
+          FC: gfortran
+          CC: clang
+          CXX: clang++
+        run: ./test_turbo_stack_locally.sh -j 3
+
+      - name: Summarize the unit tests
+        if: always()
+        run: |
+          for b in FMS2 TIM; do
+            log="$TURBO_BUILD_SYSTEM_TEST_DIR/logs/turbo-stack-with-$b.log"
+            line=$(grep -h "tests passed" "$log" 2>/dev/null | tail -1 || true)
+            echo "- $b: ${line:-no ctest summary (see the log)}"
+          done >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.macos }}-logs
+          path: ${{ env.TURBO_BUILD_SYSTEM_TEST_DIR }}/logs
+          if-no-files-found: warn
