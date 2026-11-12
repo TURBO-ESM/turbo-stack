@@ -21,11 +21,11 @@
 # group can later be given a different trigger or failure policy without
 # touching the others.
 #
-# No edge between them: they share nothing and neither gates the other.
+# No edges between them: they share nothing, and none gates another.
 #
 # Reproducible locally without pushing a branch. The pinned group is just the
-# default; for the other, either move the submodule onto the branch, or point
-# MOM6_ROOT at a separate clone:
+# default; for dev/turbo-debug, either move the submodule onto the branch, or
+# point MOM6_ROOT at a separate clone; the LLVM group runs in its image:
 #
 #     ./test_turbo_stack_locally.sh                        # the pinned group
 #
@@ -37,6 +37,14 @@
 #         https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
 #     git -C /tmp/mom6-debug submodule update --init --recursive --depth 1
 #     MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_locally.sh
+#
+#     # The LLVM group. A named image is not refreshed, so pull it first, and give
+#     # it its own artifact dir: the driver's default is shared with its gcc runs,
+#     # and a run in another image rebuilds it from scratch.
+#     img=ghcr.io/turbo-esm/turbo-stack/turbo-ci:llvm-openmpi
+#     docker pull --platform linux/amd64 "$img"
+#     TURBO_CI_IMAGE=$img TURBO_BUILD_SYSTEM_TEST_DIR=/tmp/turbo-llvm \
+#         ./test_turbo_stack_with_container.sh
 name: turbo-stack CMake build (container)
 
 # Only main + PRs. The sibling workflows (build-tests.yaml, unit-tests.yaml) also
