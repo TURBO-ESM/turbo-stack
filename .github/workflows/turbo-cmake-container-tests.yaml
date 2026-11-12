@@ -2,26 +2,30 @@
 # about. All the build logic lives once in cmake-build.yaml; this file only says
 # *which* MOM6 sources get tested.
 #
-# Two calls, deliberately separate jobs rather than a second matrix axis:
+# Three calls, deliberately separate jobs rather than more matrix axes:
 #
-#     MOM6 pinned submodule ─┬── build+test (TIM)
-#                            └── build+test (FMS2)
+#     MOM6 pinned submodule ─┬── build+test (TIM, gcc-openmpi)
+#                            └── build+test (FMS2, gcc-openmpi)
 #
-#     MOM6 dev/turbo-debug ──┬── build+test (TIM)
-#                            └── build+test (FMS2)
+#     MOM6 dev/turbo-debug ──┬── build+test (TIM, gcc-openmpi)
+#                            └── build+test (FMS2, gcc-openmpi)
+#
+#     MOM6 pinned, LLVM ─────┬── build+test (TIM, llvm-openmpi)
+#                            └── build+test (FMS2, llvm-openmpi)
 #
 # They mean different things -- one is a deterministic gate on the commit
-# turbo-stack pins, the other tracks the tip of a branch in another repository
-# that moves independently of this one. Rendering them as one 4-cell matrix
-# implies they are the same kind of check. As separate nodes in the run graph, a
-# red box names which MOM6 source broke, and either group can later be given a
-# different trigger or failure policy without touching the other.
+# turbo-stack pins, one tracks the tip of a branch in another repository that
+# moves independently of this one, and one tries a second compiler. Rendering
+# them as one matrix implies they are the same kind of check. As separate nodes
+# in the run graph, a red box names which MOM6 source or compiler broke, and any
+# group can later be given a different trigger or failure policy without
+# touching the others.
 #
-# No edge between them: they share nothing and neither gates the other.
+# No edges between them: they share nothing, and none gates another.
 #
 # Reproducible locally without pushing a branch. The pinned group is just the
-# default; for the other, either move the submodule onto the branch, or point
-# MOM6_ROOT at a separate clone:
+# default; for dev/turbo-debug, either move the submodule onto the branch, or
+# point MOM6_ROOT at a separate clone; the LLVM group runs in its image:
 #
 #     ./test_turbo_stack_locally.sh                        # the pinned group
 #
@@ -33,6 +37,14 @@
 #         https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
 #     git -C /tmp/mom6-debug submodule update --init --recursive --depth 1
 #     MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_locally.sh
+#
+#     # The LLVM group. A named image is not refreshed, so pull it first, and give
+#     # it its own artifact dir: the driver's default is shared with its gcc runs,
+#     # and a run in another image rebuilds it from scratch.
+#     img=ghcr.io/turbo-esm/turbo-stack/turbo-ci:llvm-openmpi
+#     docker pull --platform linux/amd64 "$img"
+#     TURBO_CI_IMAGE=$img TURBO_BUILD_SYSTEM_TEST_DIR=/tmp/turbo-llvm \
+#         ./test_turbo_stack_with_container.sh
 name: turbo-stack CMake build (container)
 
 # Only main + PRs. The sibling workflows (build-tests.yaml, unit-tests.yaml) also
@@ -79,3 +91,13 @@ jobs:
     with:
       mom6_ref: dev/turbo-debug
       mom6_label: dev/turbo-debug
+
+  # The pinned commit again, built with LLVM (clang + flang) in the llvm-openmpi
+  # image. Blocking, like the gcc groups.
+  llvm:
+    name: MOM6 pinned, LLVM
+    uses: ./.github/workflows/cmake-build.yaml
+    with:
+      mom6_ref: ""
+      mom6_label: pinned submodule
+      flavor: llvm-openmpi
