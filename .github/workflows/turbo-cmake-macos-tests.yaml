@@ -52,7 +52,8 @@ jobs:
       matrix:
         # The macOS versions GitHub hosts (macos-14 was retired 2026-11-02), all on
         # M1 runners with 3 cores and 7 GB. M1 is the oldest Apple chip and every
-        # machine builds the stack for its own CPU, so a pass here covers newer chips.
+        # machine builds the stack for its own CPU, so a pass here is the conservative
+        # evidence for newer chips.
         macos: ["15", "26"]
     defaults:
       run:
@@ -67,15 +68,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
-
-      # A stock Mac runs the scripts' `#!/bin/bash` and their inner `bash` calls
-      # with bash 3.2; make the runner do the same, whatever bash its image puts
-      # first on PATH. Later steps' shells resolve `bash` through PATH too.
-      - name: Use macOS's stock bash 3.2
-        run: |
-          mkdir -p "$RUNNER_TEMP/stock-bash"
-          ln -sf /bin/bash "$RUNNER_TEMP/stock-bash/bash"
-          echo "$RUNNER_TEMP/stock-bash" >> "$GITHUB_PATH"
 
       - name: Install gfortran
         run: brew install gcc
@@ -186,11 +178,3 @@ jobs:
             line=$(grep -h "tests passed" "$log" 2>/dev/null | tail -1 || true)
             echo "- $b: ${line:-no ctest summary (see the log)}"
           done >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload the logs
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: macos-${{ matrix.macos }}-logs
-          path: ${{ env.TURBO_BUILD_SYSTEM_TEST_DIR }}/logs
-          if-no-files-found: warn
