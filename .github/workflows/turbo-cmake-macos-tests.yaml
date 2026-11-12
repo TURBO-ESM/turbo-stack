@@ -23,7 +23,7 @@ name: turbo-stack CMake build (macOS)
 # No schedule. PR runs restore the shared Spack cache, which keeps it from
 # expiring (GitHub drops caches unused for 7 days). When a runner-image or
 # Homebrew update changes the cache key, PRs build the Spack environment from
-# scratch (~1 h) until a run on main saves a new one; dispatching this workflow
+# scratch (~1.5 h) until a run on main saves a new one; dispatching this workflow
 # on main does that sooner:
 #     gh workflow run turbo-cmake-macos-tests.yaml --repo TURBO-ESM/turbo-stack --ref main
 on:
@@ -44,8 +44,8 @@ jobs:
   macos:
     name: macOS ${{ matrix.macos }} (Apple Silicon)
     runs-on: macos-${{ matrix.macos }}
-    # A cold Spack environment is ~1 h; the build and unit tests ~30 min (a guess
-    # until the first runs measure it).
+    # A cold Spack environment takes ~1.5 h and the build and unit tests ~30 min
+    # (measured on the first runs), so a cold job is ~2 h.
     timeout-minutes: 240
     strategy:
       fail-fast: false
@@ -133,8 +133,8 @@ jobs:
           fi
           TURBO_STACK_ROOT=$PWD bash spack/create_spack_environment.sh
           spack clean -sd
-          # FC must be the gfortran Spack built the environment with, or every `use`
-          # of a Spack-built Fortran module fails. gcc-runtime carries that version.
+          # FC must be the gfortran Spack built the environment with: another gfortran
+          # may not read the Spack-built Fortran modules. gcc-runtime carries that version.
           rt=$(spack -e turbo_stack find --format '{version}' gcc-runtime | head -1 || true)
           if [ -n "$rt" ] && [ "$rt" != "$(gfortran -dumpfullversion)" ]; then
             echo "::error::Spack built Fortran with gcc $rt, but gfortran is $(gfortran -dumpfullversion)"
