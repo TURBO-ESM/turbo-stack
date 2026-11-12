@@ -66,6 +66,8 @@ scripts/build_with_container.sh                # the CI container image supplies
 
 The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. The container script needs only Docker or Podman and a one-time login to the private image, and the image is x86-64 only; see [In a container](scripts/README.md#in-a-container-a-ready-made-environment).
 
+On an Apple Silicon Mac, use the Spack script with Apple clang and Homebrew's gfortran, the setup CI tests on macOS 15 and 26; [Build on a Mac](scripts/README.md#build-on-a-mac-apple-silicon) has the steps.
+
 ### Build options
 
 All four scripts take the same options and `-h` or `--help` on any of them prints them. Note `build_local_with_spack_env.sh` adds the option `--recreate-spack-env`, and `build_with_container.sh` adds `--image`, `--pull`, `--no-pull` and `--shell`. The output for `build_on_derecho.sh`:
@@ -213,11 +215,12 @@ in the `scripts/` README.
 
 ## Continuous integration
 
-CI covers both build systems in separate lanes and separate containers:
+CI covers both build systems in separate lanes:
 
 | Lane | Workflows | Build system |
 |---|---|---|
 | CMake | `turbo-cmake-container-tests.yaml` (via the reusable `cmake-build.yaml`) | `scripts/build_local_with_spack_env.sh` in the prebuilt `turbo-ci` image |
+| CMake on macOS | `turbo-cmake-macos-tests.yaml` | `./test_turbo_stack_locally.sh` on GitHub's Apple Silicon runners (macOS 15 and 26), with a Spack environment built on the runner and cached |
 | legacy | `build-tests.yaml`, `build-tests-iturbo.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | `./build.sh` in the NCAR CISL dev containers |
 
 The CMake lane runs four cells: the pinned MOM6 submodule and the tip of MOM6's

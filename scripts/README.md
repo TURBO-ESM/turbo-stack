@@ -348,6 +348,40 @@ Its Stage-1 recipe (`setup_environment/derecho_cpu_gcc_openmpi.sh`) runs
 `module purge` before loading `gcc cmake openmpi netcdf parallelio`, so any
 modules you loaded yourself beforehand are discarded.
 
+### Build on a Mac (Apple Silicon)
+
+The Spack flavor works on Apple Silicon Macs, and CI builds and unit-tests both
+backends this way on macOS 15 and 26
+([`turbo-cmake-macos-tests.yaml`](../.github/workflows/turbo-cmake-macos-tests.yaml)).
+Spack builds tiers 1 and 1.5 with Apple clang for C and C++ and Homebrew's
+gfortran for Fortran, so turbo-stack is built with those three compilers too:
+
+```bash
+brew install gcc                  # gfortran; Apple clang comes with the Xcode Command Line Tools
+git clone --depth=1 -b v1.2.2 https://github.com/spack/spack.git ~/spack   # the Spack version CI uses
+export SPACK_ROOT=~/spack
+export FC=gfortran CC=clang CXX=clang++
+./test_turbo_stack_locally.sh -j "$(sysctl -n hw.ncpu)"   # both backends + unit tests
+```
+
+The first run creates the `turbo_stack` Spack environment, building its packages
+from source, which took about an hour and a half on CI's 3-core runners. Later
+runs reuse it. To build a single backend instead, run
+`scripts/build_local_with_spack_env.sh` in the same shell (see
+[One-command (spack flavor)](#one-command-spack-flavor)). Spack builds MPI,
+NetCDF, CMake and the rest itself, and the scripts run under macOS's own bash 3.2.
+
+- **C++ has to be Apple clang**, not Homebrew's `g++-NN`. AMReX is built with Apple
+  clang and links against its libc++, while g++ uses libstdc++, and the TIM backend
+  does not link with the two mixed. Leave `TURBO_SPACK_COMPILER` unset for the same
+  reason: it would make Spack build C, C++ and Fortran with a single compiler.
+- **Fortran has to be the gfortran the environment was built with.** If Homebrew
+  upgrades gcc to a new major version, the new gfortran may not read the module
+  files the old one wrote, so recreate the environment:
+  `"$SPACK_ROOT/bin/spack" env rm -y turbo_stack`, and the next run builds it again.
+- **Set `FC`, `CC` and `CXX` before the first build.** CMake reads them only on a
+  build directory's first configure, so changing them later needs `--clean`; see
+  [Environment](#environment).
 
 ### In a container (a ready-made environment)
 
@@ -372,7 +406,8 @@ On the host you need a container engine (Docker, or Podman through
 pull needs a one-time `docker login ghcr.io`, as
 [`docker/README.md`](../docker/README.md#pulling-it-locally) shows. It is built
 for x86-64 (`linux/amd64`) only, so on an Arm machine such as an Apple Silicon Mac
-it can only run under emulation. It also needs AVX2 (`x86_64_v3`: Intel Haswell
+it can only run under emulation; on a Mac, [build with Spack](#build-on-a-mac-apple-silicon)
+instead. It also needs AVX2 (`x86_64_v3`: Intel Haswell
 2013+, AMD Zen 2017+); on an older CPU its prebuilt tools can die with an illegal
 instruction, and [`docker/README.md`](../docker/README.md#why-the-image-pins-a-spack-target)
 shows how to build an image for a lower baseline. It has not been tried on a host with SELinux
