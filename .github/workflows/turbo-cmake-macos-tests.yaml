@@ -185,7 +185,7 @@ jobs:
 
       - name: Upload the logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-${{ matrix.macos }}-logs
           path: ${{ env.TURBO_BUILD_SYSTEM_TEST_DIR }}/logs
