@@ -94,8 +94,12 @@ jobs:
             echo "| Spack | $SPACK_REF |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # The key changes whenever anything the environment is built from changes, so
-      # a new Apple clang or Homebrew gcc means one rebuild, not a mismatched cache.
+      # The key covers what the environment is built from: the macOS major version,
+      # the Apple clang and gfortran versions, Spack, and the spack/ files. So a new
+      # clang or gfortran version means one rebuild, not a mismatched cache. It takes
+      # clang's version, not Apple's build number: an Xcode update that keeps the
+      # version reuses the cache, since libc++'s ABI doesn't change between those
+      # builds and turbo-stack itself is always built with the runner's current clang.
       - name: Cache key
         id: key
         run: |
