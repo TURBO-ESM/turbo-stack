@@ -233,13 +233,14 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 ## CI/CD
 
 GitHub Actions workflows (`.github/workflows/`) cover the two build systems in
-separate lanes, in different containers:
+separate lanes:
 
 | Lane | Build system | Container |
 |---|---|---|
 | `build-tests*.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | legacy mkmf `./build.sh` | `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`, activated via `/container/config_env.sh` |
 | `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:<compiler>-<mpi>` (only `gcc-openmpi` so far; `cmake-build.yaml`'s `flavor` input picks it), built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
 | `container-driver-scripts.yaml` | **CMake, via the host-side wrapper** (`./test_turbo_stack_with_container.sh`) | same image, but pulled and entered by `scripts/build_with_container.sh` on the runner host rather than by `container:` |
+| `turbo-cmake-macos-tests.yaml` | **CMake** (`./test_turbo_stack_locally.sh`, spack flavor, both backends in one job) | none: GitHub-hosted `macos-15` and `macos-26` runners (Apple Silicon M1, 3 cores); the Spack env is built on the runner and cached |
 
 The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
 libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
@@ -282,6 +283,22 @@ to debug inside it, and `MOM6_ROOT`/`FMS_ROOT`/`TIM_ROOT`/`PROTOMOMXX_ROOT` to b
 own instead of the pinned commits. Reproducing CI is a consequence of sharing the image, not the
 purpose of those scripts, and not a guarantee: CI checks its MOM6 branch out fresh
 beside the workspace, where the local runner builds the tree you point it at. See "Build and test in a container" above.
+
+`turbo-cmake-macos-tests.yaml` runs the pinned MOM6 against both backends on Apple
+Silicon, one job per hosted macOS version (`macos-15`, `macos-26`: the free M1
+runners, not the paid M2 `-xlarge` ones), on every PR. It runs the scripts as a Mac
+user would: `spack/create_spack_environment.sh` builds the env with Spack `v1.2.2`
+(the image's version) and Spack's macOS defaults, Apple clang for C/C++ and
+Homebrew's gfortran for Fortran; then `./test_turbo_stack_locally.sh` builds and
+ctests both backends with `FC=gfortran CC=clang CXX=clang++`. Those have to match
+the env's compilers: AMReX links C++ against Apple clang's libc++, which Homebrew
+g++'s libstdc++ can't mix with, so `TURBO_SPACK_COMPILER` (one compiler for all
+three languages) stays unset. The env is cached with `actions/cache`, keyed on the
+macOS major version, the clang and gfortran versions, the Spack version and a hash
+of `spack.yaml` + `create_spack_environment.sh`: a cold job takes ~2 h, a cached
+one ~30 min. Unlike the image, the lane follows a `spack.yaml` change by itself:
+the key changes, the env is recreated from the checkout, and Spack reuses what is
+installed and builds the rest. Caches saved by runs on `main` are what PRs restore.
 
 Branches that trigger CI: `main` for the CMake lane; `main` plus the legacy
 `ci-tests` / `container-ci` branches for the mkmf lane. Any workflow can also be
