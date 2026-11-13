@@ -22,6 +22,10 @@
 # takes one (see docker/install_compiler.sh); MPI is always OpenMPI for now,
 # because spack/spack.yaml requires it.
 #
+# It builds for whichever architecture buildx targets, linux/amd64 or
+# linux/arm64 (step 4 picks the Spack target to match). The producer builds both
+# natively and publishes them under one multi-arch tag per flavor.
+#
 # Build context is the repo root (so spack/ and docker/ are available to COPY).
 # --load puts the tag in the local image store: redundant on the default `docker`
 # driver, required with a `docker-container` builder, which otherwise discards
@@ -87,23 +91,40 @@ COPY spack/create_spack_environment.sh /opt/turbo-spack/create_spack_environment
 # Build for a portable baseline rather than for the machine doing the build.
 # Spack's default target is the microarchitecture it detects while concretizing,
 # which is correct locally and wrong here: this image is produced on one hosted
-# runner and consumed on a *different* one, from a fleet mixing CPU generations.
-# Unpinned, the 2026-08-06 image concretized to x86_64_v4 (AVX-512) because that
-# producer drew a runner with AVX-512, and consumer jobs on runners without it
-# died in Spack's own cmake with "Illegal instruction (core dumped)".
+# runner and consumed on *different* machines -- other runners, from a fleet
+# mixing CPU generations, and developers' laptops. Unpinned, the 2026-08-06 image
+# concretized to x86_64_v4 (AVX-512) because that producer drew a runner with
+# AVX-512, and consumer jobs on runners without it died in Spack's own cmake with
+# "Illegal instruction (core dumped)".
 #
-# x86_64_v3 is the AVX2 baseline (Haswell 2013+, Zen 2017+) that every hosted
-# runner satisfies. It lives here, not in spack.yaml, because that spec is shared
-# with local builds -- an x86 level hard-coded there fails concretization on an
-# Apple Silicon laptop. See docker/README.md.
-ARG SPACK_TARGET=x86_64_v3
+# The baseline depends on the architecture being built, which BuildKit passes in
+# TARGETARCH:
+#   amd64  x86_64_v3  the AVX2 baseline (Haswell 2013+, Zen 2017+) that every
+#                     hosted runner satisfies
+#   arm64  aarch64    generic ARMv8. The arm64 producer runner is a server core,
+#                     and an image built for it could use instructions an Apple
+#                     Silicon Mac lacks: the same failure, on another architecture.
+# SPACK_TARGET overrides the default. The pin lives here, not in spack.yaml,
+# because that spec is shared with local builds, where a hard-coded target fails
+# concretization on any other architecture. See docker/README.md.
+ARG TARGETARCH
+ARG SPACK_TARGET=
 # Expensive layer: concretize + install the whole dependency stack from source.
 # Kept as its own RUN so it caches independently of the best-effort cleanup below
 # (a cleanup change must not force a full dependency rebuild).
 # TURBO_SPACK_COMPILER makes the flavor's compiler, at the version
 # install_compiler.sh linked, a hard requirement, so Spack cannot quietly build
 # part of the stack with some other compiler it finds.
-RUN TURBO_SPACK_TARGET="${SPACK_TARGET}" \
+RUN target="${SPACK_TARGET}"; \
+    if [ -z "$target" ]; then \
+        case "${TARGETARCH}" in \
+            amd64) target=x86_64_v3 ;; \
+            arm64) target=aarch64 ;; \
+            *) echo "No default Spack target for TARGETARCH='${TARGETARCH}';" \
+                    "pass --build-arg SPACK_TARGET=<target>." >&2; exit 1 ;; \
+        esac; \
+    fi; \
+    TURBO_SPACK_TARGET="$target" \
     TURBO_SPACK_COMPILER="$(cat /opt/turbo-compiler/spack-spec)" \
     bash /opt/turbo-spack/create_spack_environment.sh turbo_stack /opt/turbo-spack/spack.yaml
 
