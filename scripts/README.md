@@ -377,8 +377,10 @@ NetCDF, CMake and the rest itself, and the scripts run under macOS's own bash 3.
   reason: it would make Spack build C, C++ and Fortran with a single compiler.
 - **Fortran has to be the gfortran the environment was built with.** If Homebrew
   upgrades gcc to a new major version, the new gfortran may not read the module
-  files the old one wrote, so recreate the environment:
-  `"$SPACK_ROOT/bin/spack" env rm -y turbo_stack`, and the next run builds it again.
+  files the old one wrote, so rebuild everything: remove the environment with
+  `"$SPACK_ROOT/bin/spack" env rm -y turbo_stack`, then run the next build with
+  `--clean`. Without `--clean`, the scripts reuse the backend and turbo-stack
+  builds the old gfortran made, since they don't check the compiler version.
 - **Set `FC`, `CC` and `CXX` before the first build.** CMake reads them only on a
   build directory's first configure, so changing them later needs `--clean`; see
   [Environment](#environment).
