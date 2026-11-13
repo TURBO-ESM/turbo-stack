@@ -64,7 +64,7 @@ scripts/build_local_with_system_toolchain.sh   # you already have all of it on P
 scripts/build_with_container.sh                # the CI container image supplies all of it
 ```
 
-The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. The container script needs only Docker or Podman and a one-time login to the private image, and the image is x86-64 only; see [In a container](scripts/README.md#in-a-container-a-ready-made-environment).
+The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. The container script needs only Docker or Podman and a one-time login to the private image, and it runs the image's x86-64 build, even on an Arm machine; see [In a container](scripts/README.md#in-a-container-a-ready-made-environment).
 
 ### Build options
 

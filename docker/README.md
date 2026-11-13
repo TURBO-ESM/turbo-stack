@@ -10,7 +10,9 @@ turbo-stack build + full pFUnit suite for one backend takes ~8–9 minutes.
 
 The Dockerfile builds one image per **image flavor**, named `<compiler>-<mpi>`
 after the toolchain inside it: `gcc-openmpi`, and `llvm-openmpi` for clang and
-flang — see [Image flavors](#image-flavors).
+flang — see [Image flavors](#image-flavors). Each flavor's tag holds a build for
+`linux/amd64` and one for `linux/arm64`, and a pull gets the one for the machine
+doing it — see [Architectures](#architectures).
 
 ```
 ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
@@ -20,13 +22,13 @@ ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
 |---|---|
 | `<flavor>`, e.g. `gcc-openmpi` | **Mutable** — what CI consumes. Published only from `main` |
 | `<flavor>-<short-sha>` | Immutable — always published; pin this to reproduce or bisect an image regression |
-| `buildcache-<flavor>` | BuildKit layer cache, not a runnable image |
+| `buildcache-<flavor>-<arch>` | BuildKit layer cache, one per flavor and architecture; not a runnable image |
 
 ## The workflows
 
 | Workflow | Role |
 |---|---|
-| `.github/workflows/build-turbo-ci-container.yaml` | **Producer** — builds the image and pushes it to GHCR. Manual only (`workflow_dispatch`), so a merge never waits on a 1-hour build. |
+| `.github/workflows/build-turbo-ci-container.yaml` | **Producer** — builds each flavor for amd64 and arm64 and pushes them to GHCR under one tag. Manual only (`workflow_dispatch`), so a merge never waits on a 1-hour build. |
 | `.github/workflows/turbo-cmake-container-tests.yaml` | **Consumer** — runs `scripts/build_local_with_spack_env.sh --infra {TIM,FMS2} --tests` inside the image, on pushes to `main` and on PRs. |
 | `.github/workflows/container-driver-scripts.yaml` | **Script check** — runs `./test_turbo_stack_with_container.sh` on the runner *host*, so the wrapper that pulls, mounts and enters the image is itself under test. The consumer above enters the image via `container:`, which bypasses that wrapper entirely. Path-filtered to the scripts it covers. |
 
@@ -59,7 +61,7 @@ holds a single compiler.
 
 Adding a flavor is a case in `install_compiler.sh`, plus an entry in the
 `FLAVORS` list of the producer's `select` job and an option for its `flavor`
-input. Each flavor has its own tags, cache tag and concurrency group, so flavors
+input. Each flavor has its own tags, cache tags and concurrency groups, so flavors
 neither wait on nor evict each other. A caller of `cmake-build.yaml` selects one
 with its `flavor` input (default `gcc-openmpi`).
 
@@ -71,6 +73,29 @@ gh workflow run build-turbo-ci-container.yaml -f flavor=<flavor>
 ```
 
 Until then, CI jobs that use it fail to pull the image.
+
+## Architectures
+
+Every flavor is built for `linux/amd64` and `linux/arm64`, and its tags name a
+multi-arch image: `docker pull` and a CI job's `container:` get the build for the
+machine doing the pulling. arm64 is what an Apple Silicon Mac runs, inside the
+Linux VM that Docker Desktop, Colima or Podman starts there.
+
+The producer builds each architecture natively, on `ubuntu-latest` and
+`ubuntu-26.04-arm`, rather than emulating arm64 with QEMU, which would stretch the
+1-hour Spack build to many hours. Each build is pushed untagged, by digest, and a
+`publish` job then tags the pair. A flavor whose two builds did not both succeed in
+the same run publishes nothing, so its tags never pair a new build for one
+architecture with an old one for the other.
+
+Each architecture gets its own Spack target (see
+[Why the image pins a Spack target](#why-the-image-pins-a-spack-target)) and its
+own layer cache, `buildcache-<flavor>-<arch>`. GHCR lists the per-architecture
+images as untagged versions, but the tagged image is made of them: a cleanup that
+deletes untagged versions breaks it.
+
+`scripts/build_with_container.sh` and `test_turbo_stack_with_container.sh` still
+pull the amd64 build on every machine, Arm ones included.
 
 ## Refreshing the image after a dependency change
 
@@ -103,15 +128,17 @@ the flavor verbatim as the image tag.
 
 ### Why the image pins a Spack target
 
-`Dockerfile.turbo-ci` sets `TURBO_SPACK_TARGET=x86_64_v3` (via `ARG
-SPACK_TARGET`) when it runs `create_spack_environment.sh`. Do not remove it.
+`Dockerfile.turbo-ci` sets `TURBO_SPACK_TARGET` when it runs
+`create_spack_environment.sh`: `x86_64_v3` for amd64 and `aarch64` for arm64,
+picked from the `TARGETARCH` that BuildKit passes in (the `SPACK_TARGET` build arg
+overrides it). Do not remove it.
 
 Spack's default is to concretize for the microarchitecture of whatever machine
 runs `spack concretize`, and to compile everything with flags for it. That is
 right on a workstation and wrong for a container image, which is built on one
 machine and run on another — here, produced on a hosted GitHub runner and
 consumed on a *different* hosted runner, from a fleet that mixes CPU
-generations.
+generations, and on developers' machines.
 
 **The pin lives in the Dockerfile, not in `spack/spack.yaml`.** That spec is
 shared with local builds (`scripts/setup_environment/spack_local_environment.sh`
@@ -135,7 +162,11 @@ SIGILL'd in another. It is not flaky; it is a portability bug that reappears on
 every producer rebuild until the target is stated.
 
 `x86_64_v3` is the AVX2 baseline (Intel Haswell 2013+, AMD Zen 2017+), which
-every hosted runner satisfies. To build the image for a different baseline:
+every hosted runner satisfies. On arm64 the target is generic `aarch64` (ARMv8),
+not the core of the runner that builds it: GitHub's arm64 runners are server
+cores, and an image built for one could use instructions an Apple Silicon Mac
+lacks, which is the AVX-512 failure above on another architecture. To build the
+image for a different baseline:
 
 ```bash
 docker build --build-arg SPACK_TARGET=x86_64_v2 -f docker/Dockerfile.turbo-ci .
@@ -183,9 +214,13 @@ you have a `docker-container` builder active (`docker buildx create --use`) —
 without it that driver discards the result and `docker run` fails with "Unable to
 find image".
 
+It builds for your machine's architecture, amd64 or arm64.
+
 Overridable build args: `BASE_IMAGE` (default `ubuntu:24.04`), `SPACK_REF`
-(default `v1.2.2`, pinned for reproducibility), and `COMPILER` (default `gcc`)
-and `COMPILER_VERSION` (default empty; see [Image flavors](#image-flavors)).
+(default `v1.2.2`, pinned for reproducibility), `COMPILER` (default `gcc`)
+and `COMPILER_VERSION` (default empty; see [Image flavors](#image-flavors)), and
+`SPACK_TARGET` (default: by architecture; see
+[Why the image pins a Spack target](#why-the-image-pins-a-spack-target)).
 
 ## Building locally in this image
 

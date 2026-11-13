@@ -160,9 +160,10 @@ _ensure_image() {
     "$_engine" image inspect "$_image" >/dev/null 2>&1 && have=true
     [[ "$_pull" == true || "$have" == false ]] || return 0
     echo "[ci-container] pulling $_image"
-    # The image is published for linux/amd64 only.  Without --platform an Arm host
-    # (an Apple Silicon Mac) asks for an arm64 manifest, finds none, and fails
-    # before emulation is ever tried.  Drop this once an arm64 image exists.
+    # The amd64 build on every host, Arm ones included, for now.  The image also
+    # has an arm64 build, but using it here takes more than dropping this flag:
+    # older tags have no arm64 build, and under Docker's containerd image store
+    # both builds share one image ID, which the record below keys on.
     "$_engine" pull --platform linux/amd64 "$_image" && return 0
     if [[ "$have" == true ]]; then
         echo "[ci-container] pull failed; continuing with the local copy of $_image" >&2
