@@ -1,0 +1,91 @@
+#override SAVE_INITIAL_CONDS = False
+CALCULATE_APE = False
+KH_VEL_SCALE = 0.00286
+AH_VEL_SCALE = 0.02
+AH = 0.0
+USE_LEITHY = True
+LEITHY_CK = 0.0
+LEITH_BI_CONST = 75.0
+SMOOTH_AH = True
+BBL_EFFIC = 0.01
+DT_TRACER_ADVECT = 900
+#override DT_THERM = 1800
+#override DT = 450.0
+AUTO_MASKTABLE = True
+TARGET_IO_PES = 4
+RESTART_CONTROL = 3
+#override ENERGYSAVEDAYS = 1.0
+CFL_TRUNCATE_RAMP_TIME = 7200.0
+#override CDRAG = 0.003
+#override MAXTRUNC = 1000000
+U_TRUNC_FILE = "U_velocity_truncations"
+V_TRUNC_FILE = "V_velocity_truncations"
+TOPO_EDITS_FILE = "TopoEdit_tx1_12v1_GEBCO_2025_04.03.2026.nc"
+CHANNEL_CONFIG = "list"
+CHANNEL_LIST_FILE = "Channels_tx1_12v1_GEBCO_2025_12.19.2025.txt"
+Z_INIT_REMAP_GENERAL = True
+Z_INIT_REMAP_FULL_COLUMN = True
+
+!!! ---------------------------------------------------------------------------------------------
+!!! Standalone (solo-driver) settings for turbo-stack; the lines above are the CESM case's
+!!! user_nl_mom overrides (gmarques' production settings).
+!!! Forcing: the solo driver has no bulk-flux capability, so the C_JRA data
+!!! atmosphere is replaced by prescribed daily fluxes on the model grid, read with MOM6's own
+!!! "file" forcing exactly as examples/cesm_t232 does (no FMS data_override, so the same example
+!!! runs under both the FMS2 and the TIM backend).  INPUT/ocean_forcing_daily.nc holds one record
+!!! per model day of the run window (nearest-wet-cell regrid of the cesm_t232 tx2_3v2 forcing;
+!!! precipitation/runoff are monthly values repeated daily) -- see the README in INPUT/.
+#override INPUTDIR = "INPUT"
+WIND_CONFIG = "file"
+BUOY_CONFIG = "file"
+ARCHAIC_OMIP_FORCING_FILE = False
+WIND_FILE = "ocean_forcing_daily.nc"
+WINDSTRESS_X_VAR = "taux"
+WINDSTRESS_Y_VAR = "tauy"
+WIND_FILE_DAYS_PER_RECORD = 1
+LONGWAVE_FILE = "ocean_forcing_daily.nc"
+LONGWAVE_FILE_DAYS_PER_RECORD = 1
+SHORTWAVE_FILE = "ocean_forcing_daily.nc"
+EVAPORATION_FILE = "ocean_forcing_daily.nc"
+LATENTHEAT_FILE = "ocean_forcing_daily.nc"
+SENSIBLEHEAT_FILE = "ocean_forcing_daily.nc"
+RAIN_FILE = "ocean_forcing_daily.nc"
+SNOW_FILE = "ocean_forcing_daily.nc"
+RUNOFF_FILE = "ocean_forcing_daily.nc"
+RUNOFF_FILE_DAYS_PER_RECORD = 1  ! NB: in MOM6 this parameter is (mis)read into the shortwave
+                                 ! days-per-record, so it must match LONGWAVE_FILE_DAYS_PER_RECORD;
+                                 ! runoff itself is read from record 1 for the whole run.
+DT_FORCING = 1800.0
+! Log CPU time to CPU_stats every forcing step (30 min), so per-day throughput is visible. The
+! solo driver tests MOD(ns, WRITE_CPU_STEPS) on a dynamic-step counter ns = 1, 5, 9, ... (DT_FORCING/DT
+! = 4), so any even value never fires (48 gave nothing in job 8079739); 1 always fires. Diagnostic only.
+WRITE_CPU_STEPS = 1
+RESTOREBUOY = False
+! SSTRESTORE_FILE / SALINITYRESTORE_FILE are required by the solo driver even with
+! RESTOREBUOY = False (fail_if_missing); they are never read in that case, so point them
+! at the forcing file, which exists. Its lack of SST/SSS variables only triggers a warning.
+SSTRESTORE_FILE = "ocean_forcing_daily.nc"
+SALINITYRESTORE_FILE = "ocean_forcing_daily.nc"
+! The CESM config takes surface-band Stokes drift from the wave coupler (SURFBAND_SOURCE =
+! "COUPLER"), which the solo driver rejects. "INPUT" keeps the wave code paths (Stokes VF/PGF/DDT,
+! KPP Langmuir terms) live at the same cost, with zero drift in all three bands. CESM also starts
+! from zeroed Stokes arrays; LANGMUIR_STOKES_BACKGROUND guards the Langmuir number.
+#override SURFBAND_SOURCE = "INPUT"
+SURFBAND_NB = 3
+SURFBAND_STOKES_X = 0.0, 0.0, 0.0
+SURFBAND_STOKES_Y = 0.0, 0.0, 0.0
+! FPMIX (vertFPmix) and STOKES_MOST (KPP) read Waves%UStk_Hb / omega_w2x, which only the
+! coupled-wave path allocates; with SURFBAND_SOURCE = "INPUT" they segfault on the first step.
+! Off in solo mode. Stokes VF/PGF/DDT and the KPP Langmuir terms stay on.
+#override FPMIX = False
+! STOKES_MOST is a KPP-block parameter; outside the block MOM6 ignores it.
+KPP%
+#override STOKES_MOST = False
+%KPP
+!!! Explicit PE layout + mask table instead of AUTO_MASKTABLE: MOM_mask_table is the table gmarques'
+!!! CESM case auto-generated for 7680 ranks (108 x 108 domains, 3984 masked). Pinning the table makes
+!!! the PE layout explicit and identical to his run (AUTO_MASKTABLE would recompute it from the rank count).
+#override AUTO_MASKTABLE = False
+MASKTABLE = "MOM_mask_table"
+LAYOUT = 108, 108
+IO_LAYOUT = 2, 2

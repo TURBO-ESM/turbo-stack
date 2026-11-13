@@ -1,0 +1,44 @@
+!!! ---------------------------------------------------------------------------------------------
+!!! Standalone (solo-driver) settings for turbo-stack (the CESM case had no MOM_override entries).
+!!! Forcing: the solo driver has no bulk-flux capability, so the C_JRA data
+!!! atmosphere is replaced by prescribed daily fluxes on the model grid, read with MOM6's own
+!!! "file" forcing exactly as examples/cesm_t232 does (no FMS data_override, so the same example
+!!! runs under both the FMS2 and the TIM backend).  INPUT/ocean_forcing_daily.nc holds one record
+!!! per model day of the run window (nearest-wet-cell regrid of the cesm_t232 tx2_3v2 forcing;
+!!! precipitation/runoff are monthly values repeated daily). See the README in INPUT/.
+
+#override INPUTDIR = "INPUT"
+WIND_CONFIG = "file"
+BUOY_CONFIG = "file"
+ARCHAIC_OMIP_FORCING_FILE = False
+WIND_FILE = "ocean_forcing_daily.nc"
+WINDSTRESS_X_VAR = "taux"
+WINDSTRESS_Y_VAR = "tauy"
+WIND_FILE_DAYS_PER_RECORD = 1
+LONGWAVE_FILE = "ocean_forcing_daily.nc"
+LONGWAVE_FILE_DAYS_PER_RECORD = 1
+SHORTWAVE_FILE = "ocean_forcing_daily.nc"
+EVAPORATION_FILE = "ocean_forcing_daily.nc"
+LATENTHEAT_FILE = "ocean_forcing_daily.nc"
+SENSIBLEHEAT_FILE = "ocean_forcing_daily.nc"
+RAIN_FILE = "ocean_forcing_daily.nc"
+SNOW_FILE = "ocean_forcing_daily.nc"
+RUNOFF_FILE = "ocean_forcing_daily.nc"
+RUNOFF_FILE_DAYS_PER_RECORD = 1  ! NB: in MOM6 this parameter is (mis)read into the shortwave
+                                 ! days-per-record, so it must match LONGWAVE_FILE_DAYS_PER_RECORD;
+                                 ! runoff itself is read from record 1 for the whole run.
+DT_FORCING = 3600.0              ! = DT_THERM (CESM OCN_NCPL=24); the solo driver requires DT_THERM <= DT_FORCING
+RESTOREBUOY = False
+! SSTRESTORE_FILE / SALINITYRESTORE_FILE are required by the solo driver even with
+! RESTOREBUOY = False (fail_if_missing); they are never read in that case, so point them
+! at the forcing file, which exists. Its lack of SST/SSS variables only triggers a warning.
+SSTRESTORE_FILE = "ocean_forcing_daily.nc"
+SALINITYRESTORE_FILE = "ocean_forcing_daily.nc"
+!!! Explicit PE layout + mask table instead of AUTO_MASKTABLE: MOM_mask_table is the table the
+!!! CESM aux_mom baseline run (SMS.T62_t025, 2026-10-23) auto-generated for 896 ranks
+!!! (46 x 24 domains, 208 masked). Pinning the table makes the PE layout explicit and identical to
+!!! the CESM run for perf comparisons (AUTO_MASKTABLE would recompute it from the rank count).
+#override AUTO_MASKTABLE = False
+MASKTABLE = "MOM_mask_table"
+LAYOUT = 46, 24
+#override IO_LAYOUT = 2, 3

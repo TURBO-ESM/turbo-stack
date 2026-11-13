@@ -1,0 +1,199 @@
+"MOM6 diagnostic fields table (standalone cesm_t1_12, 5-day run; from CESM case turbo_perf.C_JRA.TL319_t1_12)"
+1 1 1 0 0 0
+### Section-1: File List
+#========================
+"h.daily%4yr-%2mo-%2dy",  1, "days", 1, "days", "time", 1, "days"
+"h.5day%4yr-%2mo-%2dy",   5, "days", 1, "days", "time", 5, "days"
+"h.snap%4yr-%2mo-%2dy",   5, "days", 1, "days", "time", 5, "days"
+"h.static",              -1, "days", 1, "days", "time"
+
+### Section-2: Fields List
+#=========================
+
+# h.daily: the CESM daily surface file (h.sfc), unchanged apart from the file name
+"ocean_model", "tos",          "tos",          "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tos",          "tos_min",      "h.daily%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "tos",          "tos_max",      "h.daily%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "sos",          "sos",          "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "sos",          "sos_min",      "h.daily%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "sos",          "sos_max",      "h.daily%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "SSU",          "uos",          "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "SSV",          "vos",          "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "opottempmint", "opottempmint", "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "somint",       "somint",       "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "Rd_dx",        "Rd_dx",        "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "speed",        "speed",        "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst",       "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst_min",   "h.daily%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "mlotst",       "mlotst_max",   "h.daily%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "zos",          "zos",          "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "zossq",        "zossq",        "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml",          "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_min",      "h.daily%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_max",      "h.daily%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "tossq",        "tossq",        "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "rsdo",         "rsdo",         "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_adx_2d",     "T_adx_2d",     "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_ady_2d",     "T_ady_2d",     "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "t20d",         "t20d",         "h.daily%4yr-%2mo-%2dy", "all", "mean", "none", 2
+
+# h.5day: the CESM monthly native-grid file (h.native) as a single 5-day mean
+"ocean_model", "soga",         "soga",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "thetaoga",     "thetaoga",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "uh",           "uh",           "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "vh",           "vh",           "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "vhbt",         "vhbt",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "uhbt",         "uhbt",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "rsdo",         "rsdo",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "agessc",       "agessc",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_ady_2d",     "T_ady_2d",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_adx_2d",     "T_adx_2d",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_diffy_2d",   "T_diffy_2d",   "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_diffx_2d",   "T_diffx_2d",   "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_hbd_diffx_2d","T_hbd_diffx_2d","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "T_hbd_diffy_2d","T_hbd_diffy_2d","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "diftrelo",     "diftrelo",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "diftrblo",     "diftrblo",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "difmxybo",     "difmxybo",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "difmxylo",     "difmxylo",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "volcello",     "volcello",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "vmo",          "vmo",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "vhGM",         "vhGM",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "vhml",         "vhml",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "umo",          "umo",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "uhGM",         "uhGM",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "uhml",         "uhml",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "uo",           "uo",           "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "vo",           "vo",           "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "h",            "h",            "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "e",            "e",            "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "thetao",       "thetao",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "so",           "so",           "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "KE",           "KE",           "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "MEKE",         "MEKE",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "rhopot0",      "rhopot0",      "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "rhopot2",      "rhopot2",      "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "difvho",       "difvho",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "difvso",       "difvso",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "Kv_u",         "Kv_u",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "Kv_v",         "Kv_v",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "taux_bot",     "taux_bot",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tauy_bot",     "tauy_bot",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_min",      "h.5day%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_max",      "h.5day%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "tauuo",        "tauuo",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tauvo",        "tauvo",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "friver",       "friver",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "prsn",         "prsn",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "prlq",         "prlq",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "evs",          "evs",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "hfsso",        "hfsso",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "rlntds",       "rlntds",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "hfsnthermds",  "hfsnthermds",  "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "sfdsi",        "sfdsi",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "rsntds",       "rsntds",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "hfds",         "hfds",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "ustar",        "ustar",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "hfsifrazil",   "hfsifrazil",   "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "wfo",          "wfo",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "ficeberg",     "ficeberg",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "fsitherm",     "fsitherm",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "hflso",        "hflso",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "pso",          "pso",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "seaice_melt_heat","seaice_melt_heat","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "Heat_PmE",     "Heat_PmE",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "heat_content_lrunoff","hfrunoffds",   "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "heat_content_frunoff","heat_content_frunoff","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "heat_content_lprec","hfrainds",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "heat_content_fprec","heat_content_fprec","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "heat_content_cond","heat_content_cond","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "heat_content_evap","hfevapds",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tos",          "tos",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tos",          "tos_min",      "h.5day%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "tos",          "tos_max",      "h.5day%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "sos",          "sos",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "sos",          "sos_min",      "h.5day%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "sos",          "sos_max",      "h.5day%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "SSU",          "uos",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "SSV",          "vos",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "opottempmint", "opottempmint", "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "somint",       "somint",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "Rd_dx",        "Rd_dx",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "speed",        "speed",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst",       "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst_min",   "h.5day%4yr-%2mo-%2dy", "all", "min", "none", 2
+"ocean_model", "mlotst",       "mlotst_max",   "h.5day%4yr-%2mo-%2dy", "all", "max", "none", 2
+"ocean_model", "tosga",        "tosga",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "sosga",        "sosga",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "SSH",          "SSH",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "mass_wt",      "mass_wt",      "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "dispkexyfo",   "dispkexyfo",   "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "hfibthermds",  "hfibthermds",  "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "masso",        "masso",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "mlotstsq",     "mlotstsq",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "pbo",          "pbo",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "S_adx_2d",     "S_adx_2d",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "S_ady_2d",     "S_ady_2d",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "sob",          "sob",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "sossq",        "sossq",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "t17d",         "t17d",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "t20d",         "t20d",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tnkebto",      "tnkebto",      "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tob",          "tob",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "tossq",        "tossq",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "volo",         "volo",         "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "zos",          "zos",          "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "zossq",        "zossq",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "BS_coeff_h",   "BS_coeff_h",   "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "skeb_amp",     "skeb_amp",     "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "heat_content_vprec","heat_content_vprec","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "vprec",        "vprec",        "h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+"ocean_model", "salt_flux_added","salt_flux_added","h.5day%4yr-%2mo-%2dy", "all", "mean", "none", 2
+
+# h.snap: instantaneous state at day 5 (no CESM counterpart)
+"ocean_model", "thetao", "thetao", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "so", "so", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "uo", "uo", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "vo", "vo", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "h", "h", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "volcello", "volcello", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "e", "e", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "zos", "zos", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "tos", "tos", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+"ocean_model", "sos", "sos", "h.snap%4yr-%2mo-%2dy", "all", "none", "none", 2
+
+# h.static: unchanged
+"ocean_model", "geolon",      "geolon",      "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat",      "geolat",      "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolon_c",    "geolon_c",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat_c",    "geolat_c",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolon_u",    "geolon_u",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat_u",    "geolat_u",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolon_v",    "geolon_v",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat_v",    "geolat_v",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "deptho",      "deptho",      "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet",         "wet",         "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet_c",       "wet_c",       "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet_u",       "wet_u",       "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet_v",       "wet_v",       "h.static", "all", ".false.", "none", 2
+"ocean_model", "Coriolis",    "Coriolis",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello",   "areacello",   "h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello_cu","areacello_cu","h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello_cv","areacello_cv","h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello_bu","areacello_bu","h.static", "all", ".false.", "none", 2
+"ocean_model", "sin_rot",     "sin_rot",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "cos_rot",     "cos_rot",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "cpocean",     "cpocean",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "rhozero",     "rhozero",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "skeb_taper_v","skeb_taper_v","h.static", "all", ".false.", "none", 2
+"ocean_model", "skeb_taper_u","skeb_taper_u","h.static", "all", ".false.", "none", 2
+"ocean_model", "dxt",         "dxto",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dxCu",        "dxuo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dxCv",        "dxvo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dyt",         "dyto",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dyCu",        "dyuo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dyCv",        "dyvo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "sftof",       "sftof",       "h.static", "all", ".false.", "none", 2
+
+# Dropped from the CESM table: h.rho2 and h.z (monthly means on remapped vertical coordinates)

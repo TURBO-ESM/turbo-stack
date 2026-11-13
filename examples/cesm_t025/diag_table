@@ -1,0 +1,233 @@
+"MOM6 diagnostic fields table (standalone cesm_t025, from CESM case turbo_perf.C_JRA.T62_t025)"
+1 1 1 0 0 0
+### Section-1: File List
+#========================
+"h.rho2%4yr-%2mo",      1,  "months", 1, "days",   "time", 1, "months"
+"h.native%4yr-%2mo",    1,  "months", 1, "days",   "time", 1, "months"
+"h.z%4yr-%2mo",         1,  "months", 1, "days",   "time", 1, "months"
+"h.sfc%4yr-%2mo",       1,  "days",   1, "days",   "time", 1, "months"
+"h.static",             -1, "days",   1, "days",   "time"
+
+### Section-2: Fields List
+#=========================
+# "h.rho2%4yr-%2mo"
+"ocean_model_rho2", "volcello","volcello","h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "vmo",     "vmo",     "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "vhGM",    "vhGM",    "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "vhml",    "vhml",    "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "umo",     "umo",     "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "uhGM",    "uhGM",    "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "uhml",    "uhml",    "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "thetao",  "thetao",  "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "so",      "so",      "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "agessc",  "agessc",  "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_rho2", "e",       "e",       "h.rho2%4yr-%2mo", "all", "mean", "none", 2
+
+# "h.native%4yr-%2mo"
+"ocean_model", "soga",         "soga",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "thetaoga",     "thetaoga",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "uh",           "uh",           "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "vh",           "vh",           "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "vhbt",         "vhbt",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "uhbt",         "uhbt",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "rsdo",         "rsdo",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "agessc",       "agessc",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_ady_2d",     "T_ady_2d",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_adx_2d",     "T_adx_2d",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_diffy_2d",   "T_diffy_2d",   "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_diffx_2d",   "T_diffx_2d",   "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_hbd_diffx_2d","T_hbd_diffx_2d","h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_hbd_diffy_2d","T_hbd_diffy_2d","h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "diftrelo",     "diftrelo",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "diftrblo",     "diftrblo",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "difmxybo",     "difmxybo",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "difmxylo",     "difmxylo",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "volcello",     "volcello",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "vmo",          "vmo",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "vhGM",         "vhGM",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "vhml",         "vhml",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "umo",          "umo",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "uhGM",         "uhGM",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "uhml",         "uhml",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "uo",           "uo",           "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "vo",           "vo",           "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "h",            "h",            "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "e",            "e",            "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "thetao",       "thetao",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "so",           "so",           "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "KE",           "KE",           "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "MEKE",         "MEKE",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "rhopot0",      "rhopot0",      "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "rhopot2",      "rhopot2",      "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "difvho",       "difvho",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "difvso",       "difvso",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "Kv_u",         "Kv_u",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "Kv_v",         "Kv_v",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "taux_bot",     "taux_bot",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tauy_bot",     "tauy_bot",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_min",      "h.native%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_max",      "h.native%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "tauuo",        "tauuo",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tauvo",        "tauvo",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "friver",       "friver",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "prsn",         "prsn",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "prlq",         "prlq",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "evs",          "evs",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "hfsso",        "hfsso",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "rlntds",       "rlntds",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "hfsnthermds",  "hfsnthermds",  "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "sfdsi",        "sfdsi",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "rsntds",       "rsntds",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "hfds",         "hfds",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "ustar",        "ustar",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "hfsifrazil",   "hfsifrazil",   "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "wfo",          "wfo",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "ficeberg",     "ficeberg",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "fsitherm",     "fsitherm",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "hflso",        "hflso",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "pso",          "pso",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "seaice_melt_heat","seaice_melt_heat","h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "Heat_PmE",     "Heat_PmE",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "heat_content_lrunoff","hfrunoffds",   "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "heat_content_frunoff","heat_content_frunoff","h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "heat_content_lprec","hfrainds",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "heat_content_fprec","heat_content_fprec","h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "heat_content_cond","heat_content_cond","h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "heat_content_evap","hfevapds",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tos",          "tos",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tos",          "tos_min",      "h.native%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "tos",          "tos_max",      "h.native%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "sos",          "sos",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "sos",          "sos_min",      "h.native%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "sos",          "sos_max",      "h.native%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "SSU",          "uos",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "SSV",          "vos",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "opottempmint", "opottempmint", "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "somint",       "somint",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "Rd_dx",        "Rd_dx",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "speed",        "speed",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst",       "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst_min",   "h.native%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "mlotst",       "mlotst_max",   "h.native%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "tosga",        "tosga",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "sosga",        "sosga",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "SSH",          "SSH",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "mass_wt",      "mass_wt",      "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "dispkexyfo",   "dispkexyfo",   "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "hfibthermds",  "hfibthermds",  "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "masso",        "masso",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "mlotstsq",     "mlotstsq",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "pbo",          "pbo",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "S_adx_2d",     "S_adx_2d",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "S_ady_2d",     "S_ady_2d",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "sob",          "sob",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "sossq",        "sossq",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "t17d",         "t17d",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "t20d",         "t20d",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tnkebto",      "tnkebto",      "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tob",          "tob",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tossq",        "tossq",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "volo",         "volo",         "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "zos",          "zos",          "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "zossq",        "zossq",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "BS_coeff_h",   "BS_coeff_h",   "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "skeb_amp",     "skeb_amp",     "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "heat_content_vprec","heat_content_vprec","h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "vprec",        "vprec",        "h.native%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "salt_flux_added","salt_flux_added","h.native%4yr-%2mo", "all", "mean", "none", 2
+
+# "h.z%4yr-%2mo"
+"ocean_model_z", "uo",           "uo",           "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "vo",           "vo",           "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "h",            "h",            "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "thetao",       "thetao",       "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "so",           "so",           "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "agessc",       "agessc",       "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "rhopot0",      "rhopot0",      "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "obvfsq",       "obvfsq",       "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "rhopot2",      "rhopot2",      "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "difvho",       "difvho",       "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "difvso",       "difvso",       "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "Kv_u",         "Kv_u",         "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "Kv_v",         "Kv_v",         "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "volcello",     "volcello",     "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "vmo",          "vmo",          "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "vhGM",         "vhGM",         "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "vhml",         "vhml",         "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "umo",          "umo",          "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "uhGM",         "uhGM",         "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "uhml",         "uhml",         "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "diftrelo",     "diftrelo",     "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "diftrblo",     "diftrblo",     "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "difmxybo",     "difmxybo",     "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "difmxylo",     "difmxylo",     "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "opottempdiff", "opottempdiff", "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "T_advection_xy","T_advection_xy","h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "opottemptend", "opottemptend", "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "osaltdiff",    "osaltdiff",    "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "S_advection_xy","S_advection_xy","h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "osalttend",    "osalttend",    "h.z%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model_z", "rsdoabsorb",   "rsdoabsorb",   "h.z%4yr-%2mo", "all", "mean", "none", 2
+
+# "h.sfc%4yr-%2mo"
+"ocean_model", "tos",          "tos",          "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "tos",          "tos_min",      "h.sfc%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "tos",          "tos_max",      "h.sfc%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "sos",          "sos",          "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "sos",          "sos_min",      "h.sfc%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "sos",          "sos_max",      "h.sfc%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "SSU",          "uos",          "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "SSV",          "vos",          "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "opottempmint", "opottempmint", "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "somint",       "somint",       "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "Rd_dx",        "Rd_dx",        "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "speed",        "speed",        "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst",       "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "mlotst",       "mlotst_min",   "h.sfc%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "mlotst",       "mlotst_max",   "h.sfc%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "zos",          "zos",          "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "zossq",        "zossq",        "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml",          "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_min",      "h.sfc%4yr-%2mo", "all", "min", "none", 2
+"ocean_model", "KPP_OBLdepth", "oml_max",      "h.sfc%4yr-%2mo", "all", "max", "none", 2
+"ocean_model", "tossq",        "tossq",        "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "rsdo",         "rsdo",         "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_adx_2d",     "T_adx_2d",     "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "T_ady_2d",     "T_ady_2d",     "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+"ocean_model", "t20d",         "t20d",         "h.sfc%4yr-%2mo", "all", "mean", "none", 2
+
+# "h.static"
+"ocean_model", "geolon",      "geolon",      "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat",      "geolat",      "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolon_c",    "geolon_c",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat_c",    "geolat_c",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolon_u",    "geolon_u",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat_u",    "geolat_u",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolon_v",    "geolon_v",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "geolat_v",    "geolat_v",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "deptho",      "deptho",      "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet",         "wet",         "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet_c",       "wet_c",       "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet_u",       "wet_u",       "h.static", "all", ".false.", "none", 2
+"ocean_model", "wet_v",       "wet_v",       "h.static", "all", ".false.", "none", 2
+"ocean_model", "Coriolis",    "Coriolis",    "h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello",   "areacello",   "h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello_cu","areacello_cu","h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello_cv","areacello_cv","h.static", "all", ".false.", "none", 2
+"ocean_model", "areacello_bu","areacello_bu","h.static", "all", ".false.", "none", 2
+"ocean_model", "sin_rot",     "sin_rot",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "cos_rot",     "cos_rot",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "cpocean",     "cpocean",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "rhozero",     "rhozero",     "h.static", "all", ".false.", "none", 2
+"ocean_model", "skeb_taper_v","skeb_taper_v","h.static", "all", ".false.", "none", 2
+"ocean_model", "skeb_taper_u","skeb_taper_u","h.static", "all", ".false.", "none", 2
+"ocean_model", "dxt",         "dxto",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dxCu",        "dxuo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dxCv",        "dxvo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dyt",         "dyto",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dyCu",        "dyuo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "dyCv",        "dyvo",        "h.static", "all", ".false.", "none", 2
+"ocean_model", "sftof",       "sftof",       "h.static", "all", ".false.", "none", 2
+"ocean_model", "hfgeou",      "hfgeou",      "h.static", "all", ".false.", "none", 2
+
