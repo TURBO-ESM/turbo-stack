@@ -43,7 +43,7 @@ It runs `build_local_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-
 
 - **It builds the checkout you run it from.** No host `SPACK_ROOT` is used. An exported `TURBO_STACK_ROOT` that names a *different* checkout is a hard error, the first thing you hit from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched.
 - **The driver builds somewhere else.** `build_with_container.sh` alone builds in `$TURBO_STACK_ROOT/build/default`. The driver passes `--build_dir`, under `$TMPDIR/turbo_ci_container_test/<checkout>-<hash>`, so a bare `--shell` does *not* re-enter a driver build.
-- **The default image is refreshed on every run**, since `gcc-openmpi` is a mutable tag; naming one (`--image`, `TURBO_CI_IMAGE`) turns that off. Pulls pass `--platform linux/amd64`, the only platform the image is built for. The driver resolves the image once (`--resolve-image`) and hands every backend its ID, so a tag pushed mid-run cannot split them; its matrix names the image.
+- **The default image is refreshed on every run**, since `gcc-openmpi` is a mutable tag; naming one (`--image`, `TURBO_CI_IMAGE`) turns that off. Pulls pass `--platform linux/amd64`: the image also has an arm64 build, which the scripts do not use yet. The driver resolves the image once (`--resolve-image`) and hands every backend its ID, so a tag pushed mid-run cannot split them; its matrix names the image.
 - **Each build dir records the image that built it** (`deps/.turbo-ci-image`). A different image, or artifacts with no record, makes the next run clean first. The record is written inside the container after the builder, and only on success when the run replaces another image's artifacts; the container is launched by the inspected ID, not the tag. The comments in `build_with_container.sh` say why each rule is needed — read them before simplifying.
 - **`safe.directory` is set through `GIT_CONFIG_*` env vars**, not `git config --global`, which would write the shared `HOME`'s `.gitconfig` on every run.
 - **Ctrl-C may not stop the container.** bash holds the signal until `docker run` returns, and the build inside can outlive it (`docker ps`, `docker rm -f`).
@@ -271,7 +271,9 @@ cache and preflight guards would be covered by nothing. Runs the driver with no 
 The `turbo-ci` image bakes the repo's `spack/spack.yaml` environment
 (`turbo_stack`) so CI does not rebuild dependencies each run. There is one image
 per `<compiler>-<mpi>` flavor, all from the same Dockerfile, and each builds its
-Spack stack with that compiler and sets `FC`/`CC`/`CXX` to it. The images are
+Spack stack with that compiler and sets `FC`/`CC`/`CXX` to it. Each flavor's tag
+holds an amd64 and an arm64 build, built natively on separate runners; the hosted
+CI runners pull the amd64 one. The images are
 **private**, and a `spack.yaml` change does not reach CI until the producer
 workflow is re-run manually (`gh workflow run build-turbo-ci-container.yaml`) —
 see [`docker/README.md`](../docker/README.md).

@@ -370,10 +370,11 @@ For both backends plus a verdict, use `./test_turbo_stack_with_container.sh`; se
 On the host you need a container engine (Docker, or Podman through
 `TURBO_CONTAINER_ENGINE`) and read access to the image. The image is private, so a
 pull needs a one-time `docker login ghcr.io`, as
-[`docker/README.md`](../docker/README.md#pulling-it-locally) shows. It is built
-for x86-64 (`linux/amd64`) only, so on an Arm machine such as an Apple Silicon Mac
-it can only run under emulation. It also needs AVX2 (`x86_64_v3`: Intel Haswell
-2013+, AMD Zen 2017+); on an older CPU its prebuilt tools can die with an illegal
+[`docker/README.md`](../docker/README.md#pulling-it-locally) shows. The scripts
+use its x86-64 (`linux/amd64`) build on every machine for now, so on an Arm machine
+such as an Apple Silicon Mac it runs under emulation. That build needs AVX2
+(`x86_64_v3`: Intel Haswell 2013+, AMD Zen 2017+); on an older CPU its prebuilt
+tools can die with an illegal
 instruction, and [`docker/README.md`](../docker/README.md#why-the-image-pins-a-spack-target)
 shows how to build an image for a lower baseline. It has not been tried on a host with SELinux
 enforcing (Fedora, RHEL). There the bind mounts keep their host labels and the
