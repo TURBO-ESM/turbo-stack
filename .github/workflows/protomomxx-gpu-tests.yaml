@@ -89,12 +89,12 @@ jobs:
         with:
           submodules: false
 
+      - name: Allow git operations on the checkout (root container)
+        run: git config --global --add safe.directory '*'
+
       - name: Initialize amrex + protoMOMxx submodules
         run: |
           git submodule update --init --recursive -- submodules/amrex submodules/protoMOMxx
-
-      - name: Allow git operations on the checkout (root container)
-        run: git config --global --add safe.directory '*'
 
       - name: Runner / GPU / toolchain facts
         run: |
