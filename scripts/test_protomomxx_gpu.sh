@@ -101,15 +101,25 @@ build_dep amrex --build-dir "$BUILD_DIR/amrex" --install-prefix "$INSTALL_PREFIX
     -DCMAKE_Fortran_FLAGS="-noacc"
 
 echo "[gpu-smoketest] Building protoMOMxx (CUDA backend, full solo driver)..."
-build_dep protomomxx --build-dir "$BUILD_DIR/protomomxx" --install-prefix "$INSTALL_PREFIX" \
-    "${PARALLEL_ARGS[@]}" -- \
+# Not build_dep: that helper always finishes with `cmake --build --target
+# install`, but protoMOMxx's own CMakeLists only emits an install() rule
+# at all when -DPROTOMOM_INSTALL=ON -- and that option hard-errors unless
+# TIM::tim is an *installed* (find_package'd) target, which conflicts with
+# the bundled extern/TIM submodule this script builds against (no installed
+# TIM exists to point it at). So there is no "install" target to run here;
+# build the executable in place instead, the same way this was verified by
+# hand on Casper.
+PROTOMOMXX_SRC="${PROTOMOMXX_ROOT:-$TURBO_STACK_ROOT/submodules/protoMOMxx}"
+PROTOMOMXX_BUILD_DIR="$BUILD_DIR/protomomxx"
+cmake -S "$PROTOMOMXX_SRC" -B "$PROTOMOMXX_BUILD_DIR" \
+    -DCMAKE_BUILD_TYPE=Release \
     -DPROTOMOM_CUDA=ON \
     -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" \
     -DCMAKE_CUDA_HOST_COMPILER="$NVCXX" \
     -DCMAKE_CUDA_FLAGS="$MPI_CUDA_FLAGS"
+cmake --build "$PROTOMOMXX_BUILD_DIR" "${PARALLEL_ARGS[@]}"
 
-PROTOMOMXX_SRC="${PROTOMOMXX_ROOT:-$TURBO_STACK_ROOT/submodules/protoMOMxx}"
-PROTOMOMXX_BIN="$BUILD_DIR/protomomxx/protoMOMxx"
+PROTOMOMXX_BIN="$PROTOMOMXX_BUILD_DIR/protoMOMxx"
 RUN_DIR="$BUILD_DIR/double_gyre_run"
 
 echo "[gpu-smoketest] Setting up double_gyre run directory..."
