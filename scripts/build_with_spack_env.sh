@@ -18,7 +18,7 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean                 Clean rebuild from scratch.  Removes the Stage-1
+#   --from-scratch                 Clean rebuild from scratch.  Removes the Stage-1
 #                           upstream dep builds/installs AND passes cmake --fresh
 #                           --clean-first to the Stage-2 turbo-stack build.
 #   --ninja                 Use Ninja generator (passed through)
@@ -46,7 +46,7 @@
 #   build_with_spack_env.sh                       # TIM backend, build the executable
 #   build_with_spack_env.sh --tests               # also build + run the unit tests
 #   build_with_spack_env.sh --infra FMS2          # FMS2 backend instead of TIM
-#   build_with_spack_env.sh --debug --clean       # clean Debug rebuild (deps + turbo-stack)
+#   build_with_spack_env.sh --debug --from-scratch       # clean Debug rebuild (deps + turbo-stack)
 #   build_with_spack_env.sh --recreate-spack-env  # recreate the spack env, then build
 
 set -eo pipefail
@@ -79,5 +79,5 @@ turbo_flavor_setup_toolchain() {
 
 # Spack supplies Tier 1 + Tier 1.5, so build only Tier 2 (FMS for FMS2, TIM for
 # TIM) from the submodule.  turbo_run_backend_builder (scripts/lib/common.sh)
-# does the rest: arg parsing, --clean, submodule guards, the dep build, Stage 2.
+# does the rest: arg parsing, --from-scratch, submodule guards, the dep build, Stage 2.
 turbo_run_backend_builder --build-deps-from-tier 2 "${_args[@]}"

@@ -86,7 +86,7 @@ Optional environment variables (hot-swap a dep's source; default = submodule):
 
 Options:
   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-  --clean                 Clean rebuild from scratch.  Removes the Stage-1
+  --from-scratch                 Clean rebuild from scratch.  Removes the Stage-1
                           upstream dep builds/installs AND passes cmake --fresh
                           --clean-first to the Stage-2 turbo-stack build.
   --ninja                 Use Ninja generator (passed through)
@@ -113,7 +113,7 @@ Examples:
   build_on_derecho.sh                        # TIM backend, build the executable
   build_on_derecho.sh --tests                # also build + run the unit tests
   build_on_derecho.sh --infra FMS2           # FMS2 backend instead of TIM
-  build_on_derecho.sh --debug --clean        # clean Debug rebuild (deps + turbo-stack)
+  build_on_derecho.sh --debug --from-scratch        # clean Debug rebuild (deps + turbo-stack)
 ```
 
 If we add, remove, or change options we will try to keep the above list up to date. But each script's own `--help` is authoritative if this copy ever falls behind it.
@@ -190,7 +190,7 @@ There are high level drivers at the repo root that build **and** `ctest` both ba
 ./test_turbo_stack_with_container.sh            # the CI container image
 ```
 
-`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM, FMS and protoMOMxx (plus the image, for the container driver), and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
+`--only FMS2|TIM` narrows to one backend; `--from-scratch` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM, FMS and protoMOMxx (plus the image, for the container driver), and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
 
 See [Build and test both backends, one command](scripts/README.md#build-and-test-both-backends-one-command)
 in the `scripts/` README for the full reference on each of these.

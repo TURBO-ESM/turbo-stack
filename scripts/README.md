@@ -225,7 +225,7 @@ test_turbo_stack_with_container.sh            # in a container (the image CI use
 Each runs the real single-backend builder once per backend, each in its own
 process and its own build directory, and builds + `ctest`s turbo-stack for both
 FMS2 and TIM. `-h` / `--help` lists their options; the common ones are
-`--only FMS2|TIM` to build one backend instead of both, `--clean` to rebuild
+`--only FMS2|TIM` to build one backend instead of both, `--from-scratch` to rebuild
 from scratch, and `--parallel N`. All four honor the
 `MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT` source overrides described below
 (the container driver mounts each tree into the container); `AMREX_ROOT` /
@@ -253,7 +253,7 @@ executables end up at:
 $TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-{TIM,FMS2}/mom6_build/config_src/drivers/solo_driver/MOM6
 ```
 
-`--clean` removes that whole directory first. With the default location, no
+`--from-scratch` removes that whole directory first. With the default location, no
 build artifact is written into `$TURBO_STACK_ROOT` — only a Derecho batch job's
 PBS log, when you submit from there (see below).
 
@@ -301,7 +301,7 @@ Scripts that run through Stage 1 and Stage 2 for a single backend.
 scripts/build_with_spack_env.sh                    # configure + build (default backend: TIM)
 scripts/build_with_spack_env.sh --tests            # also build + run the pFUnit unit tests
 scripts/build_with_spack_env.sh --debug            # incremental Debug build
-scripts/build_with_spack_env.sh --clean            # clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_spack_env.sh --from-scratch            # clean rebuild from scratch (deps + turbo-stack)
 scripts/build_with_spack_env.sh --infra FMS2       # FMS2 backend instead of the default TIM
 ```
 
@@ -313,7 +313,7 @@ scripts/build_with_spack_env.sh --infra FMS2       # FMS2 backend instead of the
 scripts/build_with_system_toolchain.sh                 # configure + build (default backend: TIM)
 scripts/build_with_system_toolchain.sh --tests         # also build + run the pFUnit unit tests
 scripts/build_with_system_toolchain.sh --infra FMS2    # FMS2 backend instead of the default TIM
-scripts/build_with_system_toolchain.sh --clean         # clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_system_toolchain.sh --from-scratch         # clean rebuild from scratch (deps + turbo-stack)
 ```
 
 The closest replacement for the old `build.sh` on a laptop / workstation: you
@@ -342,7 +342,7 @@ qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
 build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 ```
 
-The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
+The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--from-scratch` to rebuild everything from scratch.
 
 Its Stage-1 recipe (`setup_environment/derecho_cpu_gcc_openmpi.sh`) runs
 `module purge` before loading `gcc cmake openmpi netcdf parallelio`, so any
@@ -379,10 +379,10 @@ NetCDF, CMake and the rest itself, and the scripts need only macOS's own bash 3.
   upgrades gcc to a new major version, the new gfortran may not read the module
   files the old one wrote, so rebuild everything: remove the environment with
   `"$SPACK_ROOT/bin/spack" env rm -y turbo_stack`, then run the next build with
-  `--clean`. Without `--clean`, the scripts reuse the backend and turbo-stack
+  `--from-scratch`. Without `--from-scratch`, the scripts reuse the backend and turbo-stack
   builds the old gfortran made, since they don't check the compiler version.
 - **Set `FC`, `CC` and `CXX` before the first build.** CMake reads them only on a
-  build directory's first configure, so changing them later needs `--clean`; see
+  build directory's first configure, so changing them later needs `--from-scratch`; see
   [Environment](#environment).
 
 ### In a container (a ready-made environment)
@@ -813,7 +813,7 @@ each dependency's canonical flags down from the `turbo_build_*` wrappers, and
 > [!IMPORTANT]
 > `FC`, `CC`, `CXX` and the `*FLAGS` are read **only on the first configure** of a
 > build directory — CMake caches them. To change a compiler or a flag in a build
-> directory you have already configured, rebuild with `--clean`, which passes
+> directory you have already configured, rebuild with `--from-scratch`, which passes
 > `cmake --fresh`.
 
 The Fortran compiler must be one CMake identifies as GNU, Intel/IntelLLVM,

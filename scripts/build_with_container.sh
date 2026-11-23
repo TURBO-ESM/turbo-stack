@@ -39,7 +39,7 @@
 #
 # Each build dir also records the image that built it (deps/.turbo-ci-image).  When
 # the image changes -- the default tag refreshes, or --image names another -- the next
-# run cleans first, as --clean does: the old deps and CMake cache point at the old
+# run cleans first, as --from-scratch does: the old deps and CMake cache point at the old
 # image's compiler and Spack stack.
 #
 # Options:
@@ -51,7 +51,7 @@
 #                       the checkout is mounted in as well -- prefer one, so the
 #                       container never writes into your clone.
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean             Clean rebuild from scratch (passed through: wipes the Stage-1
+#   --from-scratch             Clean rebuild from scratch (passed through: wipes the Stage-1
 #                       dep builds/installs, plus cmake --fresh).  Implied when the
 #                       image changed since the build dir was built (above).
 #   --ninja             Use the Ninja generator (passed through)
@@ -140,7 +140,7 @@ done
 [[ "$_resolve" == true ]] && exec 3>&1 1>&2
 
 # Everything else is the standard builder vocabulary (--infra/--tests/--build_dir/
-# --debug/--clean/--ninja/--parallel/--help), validated once, in one place, and
+# --debug/--from-scratch/--ninja/--parallel/--help), validated once, in one place, and
 # forwarded verbatim to the builder inside the container.
 turbo_parse_builder_args "${_args[@]}"
 turbo_resolve_stack_root
@@ -351,11 +351,11 @@ fi
 # build that quietly mixes two toolchains.  Each
 # build dir records the image that built it; when that differs, or a dir with
 # artifacts has no record (built outside the container, or before this check),
-# clean first, exactly as --clean does.
+# clean first, exactly as --from-scratch does.
 #
 # The two locations mirror turbo_run_backend_builder (deps) and build_turbo_stack.sh
 # (the CMake build dir).  The record lives under deps/, so every entry point's
-# --clean, which removes that dir, removes the record with it.
+# --from-scratch, which removes that dir, removes the record with it.
 if [[ -n "$_build_dir" ]]; then
     _deps_root="$_build_dir/deps";               _cmake_dir="$_build_dir"
 else
@@ -378,10 +378,10 @@ if [[ -n "$_image_id" && "$_built_by" != "$_image_id" ]] &&
     fi
     if [[ "$_shell" == true ]]; then
         echo "[ci-container] warning: the build in $_cmake_dir $_stale_why;" >&2
-        echo "[ci-container]          pass --clean to the builder before reusing it." >&2
+        echo "[ci-container]          pass --from-scratch to the builder before reusing it." >&2
     elif [[ "$TURBO_B_CLEAN" != true ]]; then
         echo "[ci-container] the build in $_cmake_dir $_stale_why;"
-        echo "[ci-container] rebuilding from scratch (--clean)"
+        echo "[ci-container] rebuilding from scratch (--from-scratch)"
         TURBO_B_CLEAN=true
     fi
 fi
@@ -418,7 +418,7 @@ fi
 # build and the turbo-stack build.
 _build_args=()
 [[ "$TURBO_B_DEBUG" == true ]] && _build_args+=(--debug)
-[[ "$TURBO_B_CLEAN" == true ]] && _build_args+=(--clean)
+[[ "$TURBO_B_CLEAN" == true ]] && _build_args+=(--from-scratch)
 [[ "$TURBO_B_NINJA" == true ]] && _build_args+=(--ninja)
 _build_args+=(--infra "$TURBO_B_INFRA")
 [[ "$TURBO_B_TESTS" == true ]] && _build_args+=(--tests)
@@ -437,11 +437,11 @@ exec bash"
 else
     _final=$(printf '%q ' scripts/build_with_spack_env.sh "${_build_args[@]}")
     # Then record the image beside what it built (see "artifacts left by a
-    # different image").  After the builder, not before: its --clean would remove an
+    # different image").  After the builder, not before: its --from-scratch would remove an
     # earlier record.  Inside the container: a run that never reached the builder
     # (an engine error, the env check below) must not vouch for artifacts it never
     # touched.  And when this run replaces another image's artifacts, only on
-    # success: --clean resets them in steps (the deps first, the CMake cache when
+    # success: --from-scratch resets them in steps (the deps first, the CMake cache when
     # Stage 2 configures, the objects at --clean-first), and only a finished build
     # proves every step ran.  Until then each run cleans again.  Any other run
     # started from this image's artifacts alone, so a failure is recorded too and

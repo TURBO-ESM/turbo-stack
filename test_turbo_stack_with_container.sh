@@ -31,7 +31,7 @@
 # Options:
 #   --only FMS2|TIM     Run only the named backend (default: both, as CI's matrix)
 #   --parallel N, -j N  Parallel build jobs (default: nproc; CI uses 4)
-#   --clean             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
+#   --from-scratch             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
 #                       clears deps + turbo-stack build, same as the orchestrators)
 #   -h, --help          Print this usage text and exit.
 #

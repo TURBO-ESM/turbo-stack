@@ -18,7 +18,7 @@
 # Options:
 #   --only FMS2|TIM     Run only the named flavor (default: both)
 #   --parallel N, -j N  Parallel build jobs (default: nproc)
-#   --clean             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
+#   --from-scratch             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
 #                       clears deps + turbo-stack build, same as the orchestrators)
 #   -h, --help          Print this usage text and exit.
 #

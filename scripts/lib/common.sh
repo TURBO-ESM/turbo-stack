@@ -170,7 +170,7 @@ turbo_parse_driver_args() {
         case "$1" in
             --only)        _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_ONLY="$2"; shift 2 ;;
             --parallel|-j) _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_JOBS="$2"; shift 2 ;;
-            --clean)       TURBO_CLEAN=true; shift ;;
+            --from-scratch)       TURBO_CLEAN=true; shift ;;
             -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1'" >&2; return 1 ;;
         esac
@@ -186,7 +186,7 @@ turbo_parse_driver_args() {
     return 0
 }
 
-# ── --clean safety guard ─────────────────────────────────────────────────────
+# ── --from-scratch safety guard ─────────────────────────────────────────────────────
 # Refuse to rm -rf an obviously-too-broad path (empty, /, or $HOME) before a
 # driver wipes its artifact directories.
 turbo_validate_clean_paths() {
@@ -357,7 +357,7 @@ turbo_parse_builder_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --debug)       TURBO_B_DEBUG=true; shift ;;
-            --clean)       TURBO_B_CLEAN=true; shift ;;
+            --from-scratch)       TURBO_B_CLEAN=true; shift ;;
             --ninja)       TURBO_B_NINJA=true; shift ;;
             --infra)       _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_INFRA="$2"; shift 2 ;;
             --tests)       TURBO_B_TESTS=true; shift ;;
@@ -456,11 +456,11 @@ turbo_run_backend_builder() {
         deps_build_root="$TURBO_STACK_ROOT/deps/default"
     fi
 
-    # --clean covers Stage-1 deps as well as the Stage-2 build: wipe the dep
-    # builds/installs here, and forward --clean to build_turbo_stack.sh below.
+    # --from-scratch covers Stage-1 deps as well as the Stage-2 build: wipe the dep
+    # builds/installs here, and forward --from-scratch to build_turbo_stack.sh below.
     if [[ "$TURBO_B_CLEAN" == true ]]; then
         turbo_validate_clean_paths "$deps_build_root" || return 1
-        echo "[--clean] removing upstream dep artifacts under $deps_build_root"
+        echo "[--from-scratch] removing upstream dep artifacts under $deps_build_root"
         rm -rf "$deps_build_root"
     fi
 
@@ -475,7 +475,7 @@ turbo_run_backend_builder() {
     # --- Stage 2 · build turbo-stack (Tier 3): configure + build + test ------
     local build_args=()
     [[ "$TURBO_B_DEBUG" == true ]] && build_args+=(--debug)
-    [[ "$TURBO_B_CLEAN" == true ]] && build_args+=(--clean)
+    [[ "$TURBO_B_CLEAN" == true ]] && build_args+=(--from-scratch)
     [[ "$TURBO_B_NINJA" == true ]] && build_args+=(--ninja)
     [[ -n "$TURBO_B_INFRA" ]]      && build_args+=(--infra "$TURBO_B_INFRA")
     [[ "$TURBO_B_TESTS" == true ]] && build_args+=(--tests)
@@ -528,7 +528,7 @@ turbo_verdict() {
 
 # ── Run the end-to-end test driver for one machine ───────────────────────────
 # The full driver body shared by both end-to-end test drivers: derive the
-# artifact layout from $TURBO_BUILD_SYSTEM_TEST_DIR, honor --clean, print the
+# artifact layout from $TURBO_BUILD_SYSTEM_TEST_DIR, honor --from-scratch, print the
 # provenance matrix, then run the single-backend
 # <builder> once per selected backend (TURBO_RUN_FMS2 / TURBO_RUN_TIM) in its own
 # process under <test_dir>/turbo-stack-with-<backend>, and print a verdict.
@@ -540,11 +540,11 @@ turbo_run_test_driver() {
     export TURBO_BUILD_SYSTEM_TEST_DIR
     local log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 
-    # --clean here wipes the whole artifact dir, which holds BOTH the Stage-1 dep
+    # --from-scratch here wipes the whole artifact dir, which holds BOTH the Stage-1 dep
     # builds/installs (under each backend's deps/) and the Stage-2 turbo-stack
-    # build.  That is the same thing --clean means in the single-backend
+    # build.  That is the same thing --from-scratch means in the single-backend
     # orchestrators (build_on_derecho.sh / build_with_spack_env.sh), which
-    # remove their deps dir and pass --clean to build_turbo_stack.sh for the
+    # remove their deps dir and pass --from-scratch to build_turbo_stack.sh for the
     # turbo-stack build.  One definition of "clean" across every entry point:
     # Stage-1 deps + Stage-2 build.
     if [[ "${TURBO_CLEAN:-false}" == true ]]; then
@@ -555,10 +555,10 @@ turbo_run_test_driver() {
         _td=$(cd -P -- "$TURBO_BUILD_SYSTEM_TEST_DIR" 2>/dev/null && pwd) || _td="$TURBO_BUILD_SYSTEM_TEST_DIR"
         _sr=$(cd -P -- "$TURBO_STACK_ROOT" 2>/dev/null && pwd) || _sr="$TURBO_STACK_ROOT"
         if [[ "$_td" == "$_sr" || "$_sr" == "$_td"/* ]]; then
-            echo "Refusing --clean: TURBO_BUILD_SYSTEM_TEST_DIR ($_td) is or contains the repo root ($_sr)." >&2
+            echo "Refusing --from-scratch: TURBO_BUILD_SYSTEM_TEST_DIR ($_td) is or contains the repo root ($_sr)." >&2
             return 1
         fi
-        echo "[--clean] removing all artifacts (deps + turbo-stack build) under $TURBO_BUILD_SYSTEM_TEST_DIR"
+        echo "[--from-scratch] removing all artifacts (deps + turbo-stack build) under $TURBO_BUILD_SYSTEM_TEST_DIR"
         rm -rf "$TURBO_BUILD_SYSTEM_TEST_DIR"
     fi
     mkdir -p "$log_dir"

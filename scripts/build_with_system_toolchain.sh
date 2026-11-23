@@ -30,7 +30,7 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean                 Clean rebuild from scratch.  Removes the Stage-1
+#   --from-scratch                 Clean rebuild from scratch.  Removes the Stage-1
 #                           upstream dep builds/installs AND passes cmake --fresh
 #                           --clean-first to the Stage-2 turbo-stack build.
 #   --ninja                 Use Ninja generator (passed through)
@@ -57,7 +57,7 @@
 #   build_with_system_toolchain.sh                        # TIM backend, build the executable
 #   build_with_system_toolchain.sh --tests                # also build + run the unit tests
 #   build_with_system_toolchain.sh --infra FMS2           # FMS2 backend instead of TIM
-#   build_with_system_toolchain.sh --debug --clean        # clean Debug rebuild (deps + turbo-stack)
+#   build_with_system_toolchain.sh --debug --from-scratch        # clean Debug rebuild (deps + turbo-stack)
 
 set -eo pipefail
 
@@ -77,5 +77,5 @@ turbo_flavor_setup_toolchain() {
 # The on-PATH toolchain provides only Tier 1, so build Tier 1.5 (pFUnit/AMReX)
 # and Tier 2 (FMS/TIM) from the submodules -- same policy as build_on_derecho.sh.
 # turbo_run_backend_builder (scripts/lib/common.sh) does the rest: arg parsing,
-# --clean, submodule guards, the tiered dep builds, and Stage 2.
+# --from-scratch, submodule guards, the tiered dep builds, and Stage 2.
 turbo_run_backend_builder --build-deps-from-tier 1.5 "$@"

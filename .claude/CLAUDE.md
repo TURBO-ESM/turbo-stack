@@ -23,7 +23,7 @@ The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is w
 
 ```bash
 ./test_turbo_stack_with_spack_env.sh                      # spack; builds + ctests FMS2 and TIM
-./test_turbo_stack_with_spack_env.sh --only TIM --clean   # one backend, from scratch
+./test_turbo_stack_with_spack_env.sh --only TIM --from-scratch   # one backend, from scratch
 ```
 
 Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict. `test_turbo_stack_with_system_toolchain.sh` is the same for a bring-your-own toolchain already on `PATH` (no spack).
@@ -53,13 +53,13 @@ It runs `build_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-esm/tu
 ```bash
 scripts/build_with_spack_env.sh                              # build (default backend infra TIM, Release)
 scripts/build_with_spack_env.sh --debug                      # Debug build
-scripts/build_with_spack_env.sh --clean                      # Clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_spack_env.sh --from-scratch                      # Clean rebuild from scratch (deps + turbo-stack)
 scripts/build_with_spack_env.sh --tests                      # also build + run the pFUnit unit tests
 scripts/build_with_spack_env.sh --infra FMS2                 # FMS2 backend instead of the default TIM
-scripts/build_with_spack_env.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
+scripts/build_with_spack_env.sh --recreate-spack-env --from-scratch # nuke + recreate the spack env, then clean rebuild
 ```
 
-`build_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
+`build_with_spack_env.sh` options: `--debug`, `--from-scratch`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
 
 ### Local build (from source, one command)
 
@@ -69,10 +69,10 @@ The closest replacement for the old `build.sh` on a laptop/workstation: bring yo
 scripts/build_with_system_toolchain.sh                    # build (default backend infra TIM, Release)
 scripts/build_with_system_toolchain.sh --tests            # also build + run the pFUnit unit tests
 scripts/build_with_system_toolchain.sh --infra FMS2       # FMS2 backend instead of the default TIM
-scripts/build_with_system_toolchain.sh --clean            # clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_system_toolchain.sh --from-scratch            # clean rebuild from scratch (deps + turbo-stack)
 ```
 
-`build_with_system_toolchain.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`. It sources `setup_environment/system_toolchain.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
+`build_with_system_toolchain.sh` options: `--debug`, `--from-scratch`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`. It sources `setup_environment/system_toolchain.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
 
 ### Explicit, iterative (any flavor; faster iteration)
 
@@ -99,7 +99,7 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
 
-`build_turbo_stack.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`.
+`build_turbo_stack.sh` options: `--debug`, `--from-scratch`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`.
 
 Unit tests are **opt-in**: pass `--tests` to any orchestrator (or `build_turbo_stack.sh`) to build pFUnit + the suite and run `ctest`; a plain build produces just the executable. The end-to-end `test_turbo_stack_*.sh` drivers always force them on.
 
