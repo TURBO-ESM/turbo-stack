@@ -183,8 +183,8 @@ recipe and the lowest dependency LAYER it must build from submodule (the first t
 toolchain does NOT provide prebuilt — see docs/dependency_layers.png):
 
   build_with_spack_env.sh                toolchain = spack env     (provides Layers 1 + 2) → build from Layer 3
-  build_with_system_toolchain.sh         toolchain = your PATH     (provides Layer 1)       → build from Layer 2
-  build_on_derecho.sh                    toolchain = Lmod modules  (provides Layer 1)       → build from Layer 2
+  build_with_system_toolchain.sh         toolchain = your PATH     (provides Layer 1)      → build from Layer 2
+  build_on_derecho.sh                    toolchain = Lmod modules  (provides Layer 1)      → build from Layer 2
       │
       └─→ turbo_run_backend_builder (lib/common.sh) — the shared Stage-1+Stage-2 body:
             ├─→ turbo_flavor_setup_toolchain          Stage 1: source the toolchain recipe (builds nothing)
@@ -221,7 +221,7 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 
 ### Infrastructure Backends
 
-- **TIM** — TURBO Infrastructure for MOM; AMReX-backed layer. The **default** backend (orchestrators use it when `--infra` is unset).
+- **TIM** — TURBO Infrastructure for MOM; backed by AMReX. The **default** backend (orchestrators use it when `--infra` is unset).
 - **FMS2** — traditional Flexible Modeling System; the reference backend, selected with `--infra FMS2`.
 
 ### Language Split

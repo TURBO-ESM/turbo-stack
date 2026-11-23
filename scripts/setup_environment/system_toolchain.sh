@@ -25,7 +25,7 @@
 #
 # Usage:  source scripts/setup_environment/system_toolchain.sh
 
-# --- Toolchain (Stage 1 env setup; Layer 1) -- verify only, build nothing ------
+# --- Toolchain (Stage 1 env setup; Layer 1) -- verify only, build nothing -----
 # turbo-stack + every from-source dep (FMS, TIM, AMReX, pFUnit) build MPI-parallel
 # Fortran / C / C++, so the MPI compiler wrappers and cmake are the hard
 # requirements; NetCDF is checked but only warned about (CMake's FindNetCDF can

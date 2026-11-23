@@ -67,9 +67,9 @@ digraph turbo_stack_layers { rankdir=TB; compound=true;
     // bottom).  One invisible edge per boundary sets the order;
     // rank=same above keeps each layer a single horizontal band.  The spine is
     // anchored on each band's RIGHTMOST node so it stays a straight vertical line.
-    l4_mom6   -> l3_fms    [style=invis, weight=10];
-    l3_fms    -> l2_amrex [style=invis, weight=10];
-    l2_amrex -> l1_hdf5   [style=invis, weight=10];
+    l4_mom6  -> l3_fms   [style=invis, weight=10];
+    l3_fms   -> l2_amrex [style=invis, weight=10];
+    l2_amrex -> l1_hdf5  [style=invis, weight=10];
 
     // Hot-swap cross-cut: the co-developed TURBO-ESM repos (NOT a layer).
     // constraint=false so these annotations do not perturb the banded layout.

@@ -301,7 +301,7 @@ turbo_build_protomomxx() {
     # from the same prefix, or from CMAKE_PREFIX_PATH in the environment when the
     # toolchain (spack) supplies it.  KERNELS_ONLY skips protoMOMxx's solo driver.
     #
-    # Built for every TIM build, because this layer cannot know whether it is
+    # Built for every TIM build, because Stage 1 cannot know whether it is
     # needed: only the MOM6 source knows whether it carries the call sites, and
     # Stage 1 never sees that source (MOM6_ROOT is Stage 2's input).  Asking the
     # caller would put a per-lane conditional back into CI, and neither sniffing
@@ -324,8 +324,8 @@ turbo_build_protomomxx() {
 #      (--build-deps-from-layer) -- i.e. the first layer the toolchain does NOT
 #      hand you prebuilt.  See docs/dependency_layers.png:
 #        spack   provides Layers 1 + 2 (cmake/MPI/NetCDF + pFUnit/AMReX) -> build from Layer 3
-#        modules provides Layer 1 only                                    -> build from Layer 2
-#        on-PATH provides Layer 1 only (user sets it up)                  -> build from Layer 2
+#        modules provides Layer 1 only                                   -> build from Layer 2
+#        on-PATH provides Layer 1 only (user sets it up)                 -> build from Layer 2
 # Layer 3 (FMS/TIM) is always built from submodule (no flavor packages it); Layer 4
 # (turbo-stack/MOM6/MARBL) is built in Stage 2 by build_turbo_stack.sh.
 
@@ -352,8 +352,8 @@ turbo_parse_builder_args() {
     fi
 }
 
-# The buildable submodule layers are 1.5 and 2; a flavor builds "from" the lowest
-# one its toolchain didn't supply.  Only "from 1.5" includes Layer 2; Layer 3 is
+# The buildable submodule layers are 2 and 3; a flavor builds "from" the lowest
+# one its toolchain didn't supply.  Only "from 2" includes Layer 2; Layer 3 is
 # always built, so it needs no predicate.
 _turbo_builds_layer_2() { [[ "$1" == "2" ]]; }
 

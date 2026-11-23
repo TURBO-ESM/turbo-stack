@@ -7,7 +7,7 @@ does. The quick start is in the
 
 ## How the build is put together
 
-turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent executables, boxes are libraries we link against, the diamond represents a switch keyed on the option that selects a backend, and the colored boxes in the background show which repository the source code comes from. 
+turbo-stack holds unit tests for the infrastructure backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent executables, boxes are libraries we link against, the diamond represents a switch keyed on the option that selects a backend, and the colored boxes in the background show which repository the source code comes from.
 
 > Note MARBL is a little bit of an outlier here: we make it a library we can link against in CMake, but we do that from inside the turbo-stack repository. We will probably move the CMake build into MARBL later, so that it can be a normal "External" in the box at the bottom.
 
@@ -33,9 +33,12 @@ and the common unix / linux command line tools our scripts call.
 | Layer | Policy | Members |
 |------|--------|---------|
 | **1 — External, not a submodule** | turbo-stack *never* gets or builds these; you supply them prebuilt (modules / spack / OS packages / hand-compiled) | compilers, MPI, NetCDF, CMake ≥ 3.24, make/ninja, HDF5 |
-| **1.5 — External, a submodule** | turbo-stack *can* build these from their submodule (`build_dep` → `find_package`) OR you supply a prebuilt install on `CMAKE_PREFIX_PATH` | AMReX, pFUnit |
-| **2 — Internal (we develop), a submodule** | turbo-stack *can* build these from their submodule (or a `*_ROOT` source override) OR you supply a prebuilt install | FMS, TIM, protoMOMxx |
-| **3 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`); only the SOURCE can be swapped | turbo-stack, MOM6, MARBL |
+| **2 — External, a submodule** | turbo-stack *can* build these from their submodule (`build_dep` → `find_package`) OR you supply a prebuilt install on `CMAKE_PREFIX_PATH` | AMReX, pFUnit |
+| **3 — Internal (we develop), a submodule** | turbo-stack *can* build these from their submodule (or a `*_ROOT` source override) OR you supply a prebuilt install | FMS, TIM, protoMOMxx |
+| **4 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`); only the SOURCE can be swapped | turbo-stack, MOM6, MARBL |
+
+Older issues and PRs call these *tiers*, numbered 1, 1.5, 2 and 3: Tier 1.5 is now
+Layer 2, Tier 2 is Layer 3, and Tier 3 is Layer 4.
 
 Layers 2 and 3 share the same build policy (build-from-submodule or supply-prebuilt);
 they differ by *source*. Which option is taken is fixed per builder, not chosen
@@ -139,7 +142,7 @@ Modeling System tracked in a [TURBO-ESM fork](https://github.com/TURBO-ESM/FMS).
 MOM6 is built against exactly one of them, chosen with `--infra`:
 
 - **`TIM`** — Turbo Infrastructure for MOM, backed by AMReX. **The default.**
-- **`FMS2`** — the traditional Flexible Modeling System layer; the reference backend.
+- **`FMS2`** — the traditional Flexible Modeling System; the reference backend.
 
 The two are mutually exclusive, and the choice decides which dependency gets
 built: `--infra TIM` builds TIM and then protoMOMxx (see
