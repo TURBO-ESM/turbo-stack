@@ -10,7 +10,7 @@
 # -- and prints a per-backend matrix/verdict.  Its siblings,
 # test_turbo_stack_with_spack_env.sh (spack toolchain) and test_turbo_stack_on_derecho.sh
 # (Lmod modules), are identical except for their toolchain and builder.  See
-# docs/build_test_orchestration_prompt.md and docs/dependency_tiers_prompt.md.
+# docs/build_test_orchestration_prompt.md and docs/dependency_layers_prompt.md.
 #
 # Unlike the spack driver, this one installs NOTHING for you: your compiler /
 # MPI / NetCDF / CMake must already be on PATH (system packages, Homebrew, an OS

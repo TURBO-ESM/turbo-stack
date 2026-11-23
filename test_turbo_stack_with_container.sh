@@ -12,7 +12,7 @@
 # nothing but a container engine is needed on the host.  It is the image CI uses, so
 # this will often reproduce a CI failure without pushing a branch.  See
 # docker/README.md, docs/build_test_orchestration_prompt.md and
-# docs/dependency_tiers_prompt.md.
+# docs/dependency_layers_prompt.md.
 #
 # Tests the MOM6 / TIM / FMS / protoMOMxx sources turbo-stack pins as submodules --
 # the container fetches nothing, so initialize them first (the wrapper guards them).

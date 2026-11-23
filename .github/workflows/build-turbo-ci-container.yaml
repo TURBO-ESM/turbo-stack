@@ -6,7 +6,7 @@
 # docker/install_compiler.sh.
 #
 # The image bakes the repo's own Spack environment (spack/spack.yaml, env name
-# "turbo_stack") so that CI does not rebuild Tier-1/Tier-1.5 dependencies
+# "turbo_stack") so that CI does not rebuild Layer-1/Layer-2 dependencies
 # (cmake, openmpi, netcdf, parallelio, pfunit, amrex) on every run. It is
 # consumed by .github/workflows/turbo-cmake-container-tests.yaml.
 #

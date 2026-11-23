@@ -64,7 +64,7 @@ scripts/build_with_system_toolchain.sh         # you already have all of it on P
 scripts/build_with_container.sh                # the CI container image supplies all of it
 ```
 
-The Spack script needs only a compiler and a Spack clone; see [Getting tiers 1 and 1.5 from Spack](scripts/README.md#getting-tiers-1-and-15-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Tier 1](scripts/README.md#tier-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. The container script needs only Docker or Podman and a one-time login to the private image, and the image is x86-64 only; see [In a container](scripts/README.md#in-a-container-a-ready-made-environment).
+The Spack script needs only a compiler and a Spack clone; see [Getting layers 1 and 2 from Spack](scripts/README.md#getting-layers-1-and-2-from-spack). The system-toolchain script checks that `mpicc`, `mpifort` (or `mpif90`), `mpicxx` (or `mpic++`) and `cmake` are on `PATH`, and stops before building anything if one is missing; [Layer 1](scripts/README.md#layer-1--prerequisites-no-source-supplied-via-submodules) in the `scripts/` README lists what each prerequisite needs. The container script needs only Docker or Podman and a one-time login to the private image, and the image is x86-64 only; see [In a container](scripts/README.md#in-a-container-a-ready-made-environment).
 
 On an Apple Silicon Mac, use the Spack script with Apple clang and Homebrew's gfortran, the setup CI tests on macOS 15 and 26; [Build on a Mac](scripts/README.md#build-on-a-mac-apple-silicon) has the steps.
 
@@ -77,9 +77,9 @@ $ scripts/build_on_derecho.sh --help
 Usage: ./scripts/build_on_derecho.sh [options]
 
 `TURBO_STACK_ROOT` is self-located from this script (build the checkout you run
-from). See scripts/README.md for the dependency tier model.  Derecho's Lmod
-modules provide only Tier 1, so this builder builds Tier 1.5 (pFUnit/AMReX) and
-Tier 2 (FMS/TIM) from the submodules, then builds turbo-stack (Tier 3).
+from). See scripts/README.md for the dependency layer model.  Derecho's Lmod
+modules provide only Layer 1, so this builder builds Layer 2 (pFUnit/AMReX) and
+Layer 3 (FMS/TIM) from the submodules, then builds turbo-stack (Layer 4).
 
 Optional environment variables (hot-swap a dep's source; default = submodule):
   MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT   out-of-tree source overrides
@@ -122,7 +122,7 @@ If we add, remove, or change options we will try to keep the above list up to da
 
 MOM6 is built against one infrastructure backend, picked with `--infra`: `TIM`
 (the default, backed by AMReX) or `FMS2`. See
-[Tier 2 — Infrastructure backend](scripts/README.md#tier-2--infrastructure-backend)
+[Layer 3 — Infrastructure backend](scripts/README.md#layer-3--infrastructure-backend)
 in the `scripts/` README for how the choice works.
 
 ### Where the build lands
@@ -236,7 +236,7 @@ scripts.
 
 | Document | What it covers |
 |---|---|
-| [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — how the build is put together, the dependency tiers and what you supply for each, the two-stage pipeline, `build_dep`, building against a development tree, parallelism, every environment variable |
+| [`scripts/README.md`](scripts/README.md) | **The full build-system reference** — how the build is put together, the dependency layers and what you supply for each, the two-stage pipeline, `build_dep`, building against a development tree, parallelism, every environment variable |
 | [`docs/legacy_build_system.md`](docs/legacy_build_system.md) | The original mkmf `build.sh` build system |
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
 | [`docker/README.md`](docker/README.md) | The CI container images, building in them locally, and the workflows that build and consume them |

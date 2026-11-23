@@ -2,9 +2,9 @@
 # Usage: ./scripts/build_on_derecho.sh [options]
 #
 # `TURBO_STACK_ROOT` is self-located from this script (build the checkout you run
-# from). See scripts/README.md for the dependency tier model.  Derecho's Lmod
-# modules provide only Tier 1, so this builder builds Tier 1.5 (pFUnit/AMReX) and
-# Tier 2 (FMS/TIM) from the submodules, then builds turbo-stack (Tier 3).
+# from). See scripts/README.md for the dependency layer model.  Derecho's Lmod
+# modules provide only Layer 1, so this builder builds Layer 2 (pFUnit/AMReX) and
+# Layer 3 (FMS/TIM) from the submodules, then builds turbo-stack (Layer 4).
 #
 # Optional environment variables (hot-swap a dep's source; default = submodule):
 #   MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT   out-of-tree source overrides
@@ -54,8 +54,8 @@ turbo_flavor_setup_toolchain() {
     source "$TURBO_STACK_ROOT/scripts/setup_environment/derecho_cpu_gcc_openmpi.sh"
 }
 
-# Derecho's modules provide only Tier 1, so build Tier 1.5 (pFUnit/AMReX) and
-# Tier 2 (FMS/TIM) from the submodules.  turbo_run_backend_builder
+# Derecho's modules provide only Layer 1, so build Layer 2 (pFUnit/AMReX) and
+# Layer 3 (FMS/TIM) from the submodules.  turbo_run_backend_builder
 # (scripts/lib/common.sh) does the rest: arg parsing, --from-scratch, submodule guards,
-# the tiered dep builds, and Stage 2.
-turbo_run_backend_builder --build-deps-from-tier 1.5 "$@"
+# the layered dep builds, and Stage 2.
+turbo_run_backend_builder --build-deps-from-layer 2 "$@"

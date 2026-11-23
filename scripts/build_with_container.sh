@@ -13,9 +13,9 @@
 #   build_with_container.sh               the container image  (this file)
 #
 # Here the image does: ghcr.io/turbo-esm/turbo-stack/turbo-ci ships the compiler and
-# the Tier 1 + Tier 1.5 deps (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack
+# the Layer 1 + Layer 2 deps (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack
 # env.  It mounts your checkout and runs build_with_spack_env.sh inside the
-# image, which activates that env, builds the Tier-2 backend, then configures, builds
+# image, which activates that env, builds the Layer-3 backend, then configures, builds
 # and tests turbo-stack.  CI uses the same image and the same command, so a red box in
 # cmake-build.yaml will often reproduce here -- a useful consequence, not a contract
 # (CI checks its MOM6 branch out fresh; this builds the tree you hand it).  For both
@@ -318,7 +318,7 @@ if [[ ${#_user[@]} -gt 0 ]]; then
 fi
 
 # --- preflight: the submodules the container consumes but cannot fetch ---------
-# Spack supplies Tier 1 + 1.5, so this is the same guard set as
+# Spack supplies Layers 1 + 2, so this is the same guard set as
 # build_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
 # guard stands down for a component whose <NAME>_ROOT is set above.
 turbo_guard_builder_submodules 2

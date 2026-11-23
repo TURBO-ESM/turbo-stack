@@ -49,11 +49,11 @@ Put all the toolchain + install nodes on ONE rank (`rank=same`), ordered left→
 weighted edges, all feeding one outputs box:
 - Sub-cluster **"Tools"** (white fill): boxes `Compilers`, `CMake`, `make or ninja` — all `#bcd4ec`.
 - **External prebuilt installs** (a bare subgraph, no visible box): cylinders `MPI install`,
-  `NetCDF install`, `HDF5 install` (`#bcd4ec`). These are Tier 1 (external, not submodules; supplied
+  `NetCDF install`, `HDF5 install` (`#bcd4ec`). These are Layer 1 (external, not submodules; supplied
   by modules/spack).
 - Sub-cluster **"submodules"** (white fill): cylinders `FMS install`, `pFUnit install`,
   `AMReX install`, `TIM install`, `protoMOMxx install` (`#bcd4ec`). These are the deps turbo-stack
-  can build from its submodules (AMReX/pFUnit = Tier 1.5, FMS/TIM/protoMOMxx = Tier 2). protoMOMxx
+  can build from its submodules (AMReX/pFUnit = Layer 2, FMS/TIM/protoMOMxx = Layer 3). protoMOMxx
   (the MOM6 C++ bridge, `protoMOMxx::mom_bridge`) is built only for the TIM backend and installs into
   TIM's prefix; it is still drawn as its own cylinder.
 - `stage1_outputs` box (green `#c8e6c9`):
