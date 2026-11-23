@@ -68,7 +68,7 @@ for _a in "$@"; do
 done
 
 # --- Stage 1 (env setup) · toolchain (machine-specific) ------------------------
-# Activate the Spack env, which supplies Tier 1 (cmake/MPI/NetCDF) AND Tier 1.5
+# Activate the Spack env, which supplies Layer 1 (cmake/MPI/NetCDF) AND Layer 2
 # (pFUnit/AMReX).  FMS/TIM are intentionally not in spack.yaml.
 turbo_flavor_setup_toolchain() {
     local env_args=()
@@ -77,7 +77,7 @@ turbo_flavor_setup_toolchain() {
     source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_env.sh" "${env_args[@]}"
 }
 
-# Spack supplies Tier 1 + Tier 1.5, so build only Tier 2 (FMS for FMS2, TIM for
+# Spack supplies Layer 1 + Layer 2, so build only Layer 3 (FMS for FMS2, TIM for
 # TIM) from the submodule.  turbo_run_backend_builder (scripts/lib/common.sh)
 # does the rest: arg parsing, --from-scratch, submodule guards, the dep build, Stage 2.
-turbo_run_backend_builder --build-deps-from-tier 2 "${_args[@]}"
+turbo_run_backend_builder --build-deps-from-layer 3 "${_args[@]}"

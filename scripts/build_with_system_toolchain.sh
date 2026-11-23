@@ -6,8 +6,8 @@
 # own toolchain (compilers, MPI, NetCDF, CMake already on PATH -- system
 # packages, Homebrew, an OS module system, or an already-activated Spack/Conda
 # env), and turbo-stack builds ALL of its upstream submodule deps from source --
-# pFUnit + AMReX (Tier 1.5) and FMS/TIM (Tier 2) -- then builds turbo-stack
-# itself (Tier 3).  Nothing is fetched; everything comes from `submodules/`.
+# pFUnit + AMReX (Layer 2) and FMS/TIM (Layer 3) -- then builds turbo-stack
+# itself (Layer 4).  Nothing is fetched; everything comes from `submodules/`.
 #
 # This is the bring-your-own-toolchain sibling of the other builders; they
 # differ only in Stage-1 (environment setup):
@@ -23,7 +23,7 @@
 # build_with_spack_env.sh instead.
 #
 # `TURBO_STACK_ROOT` is self-located from this script (build the checkout you run
-# from).  See scripts/README.md for the dependency tier model.
+# from).  See scripts/README.md for the dependency layer model.
 #
 # Optional environment variables (hot-swap a dep's source; default = submodule):
 #   MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT   out-of-tree source overrides
@@ -74,8 +74,8 @@ turbo_flavor_setup_toolchain() {
     source "$TURBO_STACK_ROOT/scripts/setup_environment/system_toolchain.sh"
 }
 
-# The on-PATH toolchain provides only Tier 1, so build Tier 1.5 (pFUnit/AMReX)
-# and Tier 2 (FMS/TIM) from the submodules -- same policy as build_on_derecho.sh.
+# The on-PATH toolchain provides only Layer 1, so build Layer 2 (pFUnit/AMReX)
+# and Layer 3 (FMS/TIM) from the submodules -- same policy as build_on_derecho.sh.
 # turbo_run_backend_builder (scripts/lib/common.sh) does the rest: arg parsing,
-# --from-scratch, submodule guards, the tiered dep builds, and Stage 2.
-turbo_run_backend_builder --build-deps-from-tier 1.5 "$@"
+# --from-scratch, submodule guards, the layered dep builds, and Stage 2.
+turbo_run_backend_builder --build-deps-from-layer 2 "$@"

@@ -8,9 +8,9 @@ Render with: `dot -Tpng -o docs/build_test_orchestration.png docs/build_test_orc
 This is the canonical pipeline figure. `local_spack_pipeline` and the old
 `test_new_build_system_on_derecho` figures were retired in favour of it; `two_stage_pipeline` is kept as
 a more detailed companion. Both use the same two stages: **Stage 1 — environment setup** (source the
-toolchain, then build the upstream deps) and **Stage 2 — build turbo-stack**. The dependency *tiers*
-(1 / 1.5 / 2 / 3) are a separate classification (see `dependency_tiers_prompt.md`): Stage 1 satisfies
-Tiers 1, 1.5 and 2; Stage 2 builds Tier 3.
+toolchain, then build the upstream deps) and **Stage 2 — build turbo-stack**. The dependency *layers*
+(1 / 2 / 3 / 4) are a separate classification (see `dependency_layers_prompt.md`): Stage 1 satisfies
+Layers 1, 2 and 3; Stage 2 builds Layer 4.
 
 ---
 
@@ -28,15 +28,15 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
   — it runs the real builder a user would run, once per backend, each in its own process.
 - A fourth driver, **`test_turbo_stack_with_container.sh`**, loops a **container wrapper** instead:
   `build_with_container.sh` sets up no toolchain of its own.  It enters the `turbo-ci` image (whose
-  Spack env supplies Tier 1 + Tier 1.5 prebuilt), mounting the checkout and any `*_ROOT` tree, and
+  Spack env supplies Layer 1 + Layer 2 prebuilt), mounting the checkout and any `*_ROOT` tree, and
   runs `build_with_spack_env.sh` inside it.  So its edge goes into **Path A's** first step,
   not to a Stage 2 of its own: the container path reuses Path A.
 - **Script ownership must be legible:**
   - The **test driver** does: parse args · loop backends · print verdict (put these in its label).
   - The **builder** box contains its Stage 1 (environment setup) steps: source the toolchain env
-    (builds nothing → Tier 1) and build the upstream deps (`turbo_build_*` from submodule, or a
-    `*_ROOT` override — AMReX/pFUnit = Tier 1.5, FMS/TIM/protoMOMxx = Tier 2).
-  - **`build_turbo_stack.sh`** is Stage 2 (cmake configure/build → ctest; builds Tier 3), exec'd by
+    (builds nothing → Layer 1) and build the upstream deps (`turbo_build_*` from submodule, or a
+    `*_ROOT` override — AMReX/pFUnit = Layer 2, FMS/TIM/protoMOMxx = Layer 3).
+  - **`build_turbo_stack.sh`** is Stage 2 (cmake configure/build → ctest; builds Layer 4), exec'd by
     each builder, and is SHARED by both paths (a single node both paths converge on).
   - The verdict is printed by the test driver.
 - `scripts/lib/common.sh` is the shared-helpers substrate used by all scripts (NOT a flow step): show
@@ -45,7 +45,7 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 - Source overrides default to the pinned submodule: `*_ROOT` points at a local dev tree or a separate
   clone.  `FMS_ROOT`/`TIM_ROOT`/`PROTOMOMXX_ROOT` feed each builder's Stage-1 dep builds; `MOM6_ROOT`
   feeds Stage-2's CMake.  `AMREX_ROOT`/`PFUNIT_ROOT` exist too, but are read only by the two
-  from-source builders, which build Tier 1.5 from submodule — state that in the note rather than
+  from-source builders, which build Layer 2 from submodule — state that in the note rather than
   adding arrows for them: the spack flavor takes AMReX/pFUnit prebuilt and never consults those roots.
 
 ### Visual language
@@ -67,26 +67,26 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 - Three **builder clusters** (the boxes ARE the builder scripts), each containing a Stage-1 toolchain
   box → Stage-1 deps box:
   - `build_with_spack_env.sh`: toolchain = source `spack_env.sh` (builds nothing
-    → Tier 1); deps = the selected backend only — `turbo_build_fms` for FMS2, or `turbo_build_tim`
-    then `turbo_build_protomomxx` for TIM (mutually exclusive; all Tier 2); pFUnit / AMReX (Tier 1.5)
+    → Layer 1); deps = the selected backend only — `turbo_build_fms` for FMS2, or `turbo_build_tim`
+    then `turbo_build_protomomxx` for TIM (mutually exclusive; all Layer 3); pFUnit / AMReX (Layer 2)
     come from spack.  Label: `(per --infra): turbo_build_tim ; _protomomxx | turbo_build_fms`.
-  - `build_on_derecho.sh`: toolchain = source `derecho_cpu_gcc_openmpi.sh` (builds nothing → Tier 1);
+  - `build_on_derecho.sh`: toolchain = source `derecho_cpu_gcc_openmpi.sh` (builds nothing → Layer 1);
     deps = `turbo_build_pfunit` (only with `--tests`) plus, per `--infra`, `_amrex + _tim +
-    _protomomxx` or `_fms` (pFUnit/AMReX = Tier 1.5; FMS/TIM/protoMOMxx = Tier 2).
+    _protomomxx` or `_fms` (pFUnit/AMReX = Layer 2; FMS/TIM/protoMOMxx = Layer 3).
   - `build_with_system_toolchain.sh`: toolchain = source `system_toolchain.sh` (verify
-    only, builds nothing → Tier 1); deps = the same conditional set as Derecho (all from submodule) —
+    only, builds nothing → Layer 1); deps = the same conditional set as Derecho (all from submodule) —
     the bring-your-own-toolchain path (no spack, no modules).
   - protoMOMxx is built only for the TIM backend, right after TIM, into the same prefix. It provides
     `protoMOMxx::mom_bridge`, which MOM6 `dev/turbo-debug` links under TIM. The deps labels list it
     as one more `turbo_build_*` call; don't add a separate node for it.
 - A **container-wrapper cluster**, `build_with_container.sh`, holding one node: "enter the turbo-ci
-  image, as you · mount the checkout + any *_ROOT tree (its Spack env supplies Tier 1 + Tier 1.5
+  image, as you · mount the checkout + any *_ROOT tree (its Spack env supplies Layer 1 + Layer 2
   prebuilt)", in the Stage-1 toolchain color.
 - Each driver → its builder's Stage-1 toolchain node (xlabel "loop: --infra FMS2, then TIM"); the
   container driver → the container-wrapper node instead, and that node → Path A's Stage-1 toolchain
   node (xlabel "runs build_with_spack_env.sh inside the container").
 - Each builder's Stage-1 deps node → the shared **`build_turbo_stack.sh`** ellipse (xlabel "exec"); its
-  label notes "exec'd by each builder" + "Stage 2: cmake configure/build → ctest (Tier 3)".  Unit tests
+  label notes "exec'd by each builder" + "Stage 2: cmake configure/build → ctest (Layer 4)".  Unit tests
   are opt-in (`--tests`); the test drivers pass it, so ctest runs in the driven pipeline.
 - Shared `build_turbo_stack.sh` → **verdict** box ("testing matrix + per-backend verdict … printed by
   the test driver").

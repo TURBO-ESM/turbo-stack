@@ -10,7 +10,7 @@
 # test_turbo_stack_on_derecho.sh (Lmod modules) and test_turbo_stack_with_system_toolchain.sh
 # (bring-your-own toolchain on PATH), are identical except for their toolchain and builder;
 # test_turbo_stack_with_container.sh runs this same spack flavor inside the CI container.  See
-# docs/build_test_orchestration_prompt.md and docs/dependency_tiers_prompt.md.
+# docs/build_test_orchestration_prompt.md and docs/dependency_layers_prompt.md.
 #
 # Tests the MOM6 / TIM / FMS / protoMOMxx sources turbo-stack pins as submodules; the builder
 # guards them.  Nothing is written into $TURBO_STACK_ROOT.

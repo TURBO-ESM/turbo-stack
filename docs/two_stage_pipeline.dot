@@ -63,12 +63,12 @@ digraph two_stage_pipeline {
                         fillcolor="#c8e6c9", style=filled];
     }
 
-    // External non-submodule installs (Tier 1): MPI / NetCDF / HDF5
+    // External non-submodule installs (Layer 1): MPI / NetCDF / HDF5
     mpi_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     netcdf_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     hdf5_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
 
-    // Submodule dep installs (Tier 1.5: AMReX/pFUnit; Tier 2: FMS/TIM/protoMOMxx)
+    // Submodule dep installs (Layer 2: AMReX/pFUnit; Layer 3: FMS/TIM/protoMOMxx)
     fms_install    -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];
     pfunit_install -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH and PFUNIT_DIR"];
     amrex_install  -> stage1_outputs [xlabel="CMAKE_PREFIX_PATH"];

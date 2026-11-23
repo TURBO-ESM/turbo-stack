@@ -3,7 +3,7 @@
 # Silicon, one job per macOS version GitHub hosts.
 #
 # It runs the scripts a Mac user runs. spack/create_spack_environment.sh builds
-# the Tier 1 + 1.5 dependencies from spack/spack.yaml, then
+# the Layers 1 + 2 dependencies from spack/spack.yaml, then
 # test_turbo_stack_with_spack_env.sh builds both backends (FMS2, TIM) and runs the
 # pFUnit suite under ctest: the same builder, with the same --tests, that
 # cmake-build.yaml runs for each backend. MOM6 is the pinned submodule.

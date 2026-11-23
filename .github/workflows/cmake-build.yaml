@@ -9,7 +9,7 @@
 # Runs scripts/build_with_spack_env.sh inside ghcr.io/.../turbo-ci (built
 # by build-turbo-ci-container.yaml). The image already has SPACK_ROOT set and the
 # "turbo_stack" Spack env installed, so the script activates that env (no
-# reinstall), builds only the selected Tier-2 backend from its submodule, then
+# reinstall), builds only the selected Layer-3 backend from its submodule, then
 # cmake-configures/builds turbo-stack and runs ctest (unit tests are opt-in via
 # --tests; ctest uses --no-tests=error).
 name: turbo-stack CMake build (reusable)

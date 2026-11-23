@@ -7,7 +7,7 @@ does. The quick start is in the
 
 ## How the build is put together
 
-turbo-stack holds unit tests for the infrastructure layer backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent executables, boxes are libraries we link against, the diamond represents a switch keyed on the option that selects a backend, and the colored boxes in the background show which repository the source code comes from. 
+turbo-stack holds unit tests for the infrastructure backends, TIM and FMS2. They are **linked** against MOM6: every test links `TURBO::infra_r8` (the backend itself) plus the MOM6 library under test — usually `MOM6::infra`, which is MOM6's own wrapper over the backend, sometimes `MOM6::framework`. So MOM6's libraries have to be built, but the MOM6 executable is not involved in running the pFUnit tests. An overview of how things are put together is shown in the figure below. Ovals represent executables, boxes are libraries we link against, the diamond represents a switch keyed on the option that selects a backend, and the colored boxes in the background show which repository the source code comes from.
 
 > Note MARBL is a little bit of an outlier here: we make it a library we can link against in CMake, but we do that from inside the turbo-stack repository. We will probably move the CMake build into MARBL later, so that it can be a normal "External" in the box at the bottom.
 
@@ -17,78 +17,81 @@ Building and running the pFUnit tests in [`tests/`](../tests/) is this
 repository's main job, alongside producing a standalone MOM6 executable. The
 real work gets done in [`build_turbo_stack.sh`](build_turbo_stack.sh), but a
 number of things (compilers, tools, libraries...) have to be set up before that
-script can run. The dependency tiers below classify them, and the
+script can run. The dependency layers below classify them, and the
 [pipeline](#pipeline-environment-setup--build-turbo-stack) is how a machine sets
 them up.
 
-## Dependency contract (tiers)
+## Dependency contract (layers)
 
 turbo-stack classifies every dependency by **its build policy**, shown below
-(`docs/dependency_tiers_prompt.md` says how to regenerate the figure). The
+(`docs/dependency_layers_prompt.md` says how to regenerate the figure). The
 diagram is incomplete but shows the major pieces; you will also need bash, git,
 and the common unix / linux command line tools our scripts call.
 
-[![turbo-stack dependency tiers](../docs/dependency_tiers.png)](../docs/dependency_tiers.png)
+[![turbo-stack dependency layers](../docs/dependency_layers.png)](../docs/dependency_layers.png)
 
-| Tier | Policy | Members |
+| Layer | Policy | Members |
 |------|--------|---------|
 | **1 — External, not a submodule** | turbo-stack *never* gets or builds these; you supply them prebuilt (modules / spack / OS packages / hand-compiled) | compilers, MPI, NetCDF, CMake ≥ 3.24, make/ninja, HDF5 |
-| **1.5 — External, a submodule** | turbo-stack *can* build these from their submodule (`build_dep` → `find_package`) OR you supply a prebuilt install on `CMAKE_PREFIX_PATH` | AMReX, pFUnit |
-| **2 — Internal (we develop), a submodule** | turbo-stack *can* build these from their submodule (or a `*_ROOT` source override) OR you supply a prebuilt install | FMS, TIM, protoMOMxx |
-| **3 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`); only the SOURCE can be swapped | turbo-stack, MOM6, MARBL |
+| **2 — External, a submodule** | turbo-stack *can* build these from their submodule (`build_dep` → `find_package`) OR you supply a prebuilt install on `CMAKE_PREFIX_PATH` | AMReX, pFUnit |
+| **3 — Internal (we develop), a submodule** | turbo-stack *can* build these from their submodule (or a `*_ROOT` source override) OR you supply a prebuilt install | FMS, TIM, protoMOMxx |
+| **4 — Always built inline** | turbo-stack *always* builds these (`add_subdirectory`); only the SOURCE can be swapped | turbo-stack, MOM6, MARBL |
 
-Tiers 1.5 and 2 share the same build policy (build-from-submodule or supply-prebuilt);
+Older issues and PRs call these *tiers*, numbered 1, 1.5, 2 and 3: Tier 1.5 is now
+Layer 2, Tier 2 is Layer 3, and Tier 3 is Layer 4.
+
+Layers 2 and 3 share the same build policy (build-from-submodule or supply-prebuilt);
 they differ by *source*. Which option is taken is fixed per builder, not chosen
-by you: every one-command builder builds its Tier 2 backend (and, for TIM, the
+by you: every one-command builder builds its Layer 3 backend (and, for TIM, the
 protoMOMxx bridge) from source, and
-Tier 1.5 is taken prebuilt from the Spack env by the Spack flavor and built from
+Layer 2 is taken prebuilt from the Spack env by the Spack flavor and built from
 source by the other two. A prebuilt install of your own is used only in the
 [explicit flow](#explicit-iterative-any-flavor).
 
-"Our code" is not a tier: the repos we co-develop —
-**FMS, TIM, protoMOMxx** (Tier 2) and **MOM6** (Tier 3) — are the ones the drivers treat as
+"Our code" is not a layer: the repos we co-develop —
+**FMS, TIM, protoMOMxx** (Layer 3) and **MOM6** (Layer 4) — are the ones the drivers treat as
 first-class hot-swaps, reporting each as `(override)` or `(submodule)` in the
 testing matrix. Every `build_dep` dep in fact honors a `*_ROOT` source override
-— AMReX/pFUnit (Tier 1.5) via `AMREX_ROOT` / `PFUNIT_ROOT` — it just goes
+— AMReX/pFUnit (Layer 2) via `AMREX_ROOT` / `PFUNIT_ROOT` — it just goes
 unreported in the matrix, and it applies only where a builder builds them, which
-the Spack flavor never does. MARBL is pinned-submodule-only -- it currently rides along in Tier 3 as a MOM6
-dependency; pushing it down into Tier 1.5 as an external library is a possible
+the Spack flavor never does. MARBL is pinned-submodule-only -- it currently rides along in Layer 4 as a MOM6
+dependency; pushing it down into Layer 2 as an external library is a possible
 future move.
 
 ## Pipeline (environment setup → build turbo-stack)
 
-The dependency tiers above are a *classification*; the pipeline is what a machine
+The dependency layers above are a *classification*; the pipeline is what a machine
 actually runs. It has **two stages**, shown below; `docs/build_test_orchestration.png`
 shows the same two stages as the scripts drive them:
 
 [![two stage pipeline](../docs/two_stage_pipeline.png)](../docs/two_stage_pipeline.png)
 
-1. **Stage 1 — environment setup** *(machine-specific)* — make Tiers 1, 1.5 and 2
+1. **Stage 1 — environment setup** *(machine-specific)* — make Layers 1, 2 and 3
    available before turbo-stack is built:
    - source a `setup_environment/<flavor>.sh` recipe to put the toolchain
-     (Tier 1: compiler / MPI / NetCDF / CMake) on `PATH`. **These recipes build
+     (Layer 1: compiler / MPI / NetCDF / CMake) on `PATH`. **These recipes build
      nothing** — they only prepare the shell.
    - obtain the upstream submodule deps the toolchain didn't already provide —
-     AMReX/pFUnit (Tier 1.5) and FMS/TIM, plus protoMOMxx for TIM (Tier 2) — via the `turbo_build_*`
+     AMReX/pFUnit (Layer 2) and FMS/TIM, plus protoMOMxx for TIM (Layer 3) — via the `turbo_build_*`
      wrappers in `lib/common.sh` (the canonical per-dep cmake flags live there,
      once). *Which* deps need building is the machine-specific part: e.g. spack
      supplies pFUnit/AMReX prebuilt so you build only FMS/TIM, while
      Derecho's modules provide neither so you build all four.
 2. **Stage 2 — build turbo-stack** *(same across machines)* — `build_turbo_stack.sh` runs cmake
    configure + build (and `ctest` when `--tests` is given; unit tests are opt-in),
-   compiling Tier 3 (turbo-stack, MOM6, MARBL) against the prepared environment.
+   compiling Layer 4 (turbo-stack, MOM6, MARBL) against the prepared environment.
 
 Only Stage 1 differs between machines; Stage 2 is always the same. The
 single-backend builders (`build_*`) run both stages; the end-to-end test drivers
 run a builder once per backend via the shared core in `lib/common.sh`.
 
-## What you supply, tier by tier
+## What you supply, layer by layer
 
-Everything in tiers 1, 1.5 and 2 has to be in place before Stage 2
-(`build_turbo_stack.sh`) runs, and Stage 2 builds tier 3. The sections below
-cover what you have to supply for each tier, and how.
+Everything in layers 1, 2 and 3 has to be in place before Stage 2
+(`build_turbo_stack.sh`) runs, and Stage 2 builds layer 4. The sections below
+cover what you have to supply for each layer, and how.
 
-### Tier 1 — Prerequisites (no source supplied via submodules)
+### Layer 1 — Prerequisites (no source supplied via submodules)
 
 turbo-stack does not supply the source code of these as submodules and will not build them for you. You are expected to supply them in the environment. You can build them from source but these are typically available via a package manager, e.g. Lmod modules on HPC systems, Spack, Homebrew on macOS, apt-get on Debian, etc. None of these scripts take `cmake -D…` configure options on their command line, so each requirement below is picked up from the environment instead:
 
@@ -106,20 +109,20 @@ Compiler flags are the same story: CMake seeds them from `FFLAGS` / `CFLAGS` /
 them. Like the compilers, they are read only on a build directory's first
 configure — see [Environment](#environment).
 
-> You do not have to assemble tier 1 by hand. A [Spack environment](#getting-tiers-1-and-15-from-spack)
-> supplies it, and so does the `turbo-ci` container image used by CI, which ships tiers 1 and 1.5
+> You do not have to assemble layer 1 by hand. A [Spack environment](#getting-layers-1-and-2-from-spack)
+> supplies it, and so does the `turbo-ci` container image used by CI, which ships layers 1 and 2
 > prebuilt. [`build_with_container.sh`](#in-a-container-a-ready-made-environment) builds inside that
 > image, so all you need on your machine is a container engine.
 
-### Tier 1.5 — Prerequisites, but we supply the source via a submodule
+### Layer 2 — Prerequisites, but we supply the source via a submodule
 
 AMReX and pFUnit are external libraries. The source code is provided via submodules, and which build script you run decides where they come from: the Spack flavor takes both prebuilt from its Spack environment, and the from-source builders always build them from the submodule (or from an `AMREX_ROOT` / `PFUNIT_ROOT` source tree). None of the one-command builders will pick up an install of your own. To use one, take the [explicit flow](#explicit-iterative-any-flavor): source a toolchain recipe, skip `turbo_build_amrex` / `turbo_build_pfunit`, prepend your install prefix to `CMAKE_PREFIX_PATH`, then run `build_turbo_stack.sh`. pFUnit needs one extra step: it installs into a versioned `PFUNIT-X.Y/` subdirectory that `find_package` will not find by default, so point `PFUNIT_DIR` at `<prefix>/PFUNIT-X.Y/cmake`.
 
-#### Getting tiers 1 and 1.5 from Spack
+#### Getting layers 1 and 2 from Spack
 
 [`spack/spack.yaml`](../spack/spack.yaml) supplies CMake, `make`/`ninja`, MPI,
-NetCDF, ParallelIO, pFUnit and AMReX — everything in tier 1 except a base
-compiler, plus both of tier 1.5. So all you need is a compiler and `SPACK_ROOT`
+NetCDF, ParallelIO, pFUnit and AMReX — everything in layer 1 except a base
+compiler, plus both of layer 2. So all you need is a compiler and `SPACK_ROOT`
 pointing at a [Spack](https://github.com/spack/spack) clone. If you already
 source Spack's `share/spack/setup-env.sh` (from your shell profile, say), it
 exports `SPACK_ROOT` for you and there is nothing to set. Otherwise export it by
@@ -132,14 +135,14 @@ export SPACK_ROOT=/path/to/where/you/pulled/spack
 The `turbo_stack` environment is created on first use by
 [`build_with_spack_env.sh`](build_with_spack_env.sh).
 
-### Tier 2 — Infrastructure backend
+### Layer 3 — Infrastructure backend
 FMS and TIM are the two backends MOM6's infrastructure layer sits on, and the two
 we co-develop: TIM is TURBO's own AMReX-based layer, while FMS is GFDL's Flexible
 Modeling System tracked in a [TURBO-ESM fork](https://github.com/TURBO-ESM/FMS).
 MOM6 is built against exactly one of them, chosen with `--infra`:
 
 - **`TIM`** — Turbo Infrastructure for MOM, backed by AMReX. **The default.**
-- **`FMS2`** — the traditional Flexible Modeling System layer; the reference backend.
+- **`FMS2`** — the traditional Flexible Modeling System; the reference backend.
 
 The two are mutually exclusive, and the choice decides which dependency gets
 built: `--infra TIM` builds TIM and then protoMOMxx (see
@@ -151,7 +154,7 @@ explicitly, so a previous choice never sticks in the cache.
 turbo-stack supplies both as submodules, and every one-command builder builds
 the one `--infra` selects — from the submodule, or from an `FMS_ROOT` /
 `TIM_ROOT` (and `PROTOMOMXX_ROOT`) source tree. A prebuilt install of your own is
-used only in the explicit flow, the same way as for tier 1.5: skip
+used only in the explicit flow, the same way as for layer 2: skip
 `turbo_build_fms`, or `turbo_build_tim` and `turbo_build_protomomxx`, and put
 the install prefix on `CMAKE_PREFIX_PATH`.
 
@@ -160,11 +163,11 @@ the install prefix on `CMAKE_PREFIX_PATH`.
 > prefixes — each names a *source tree* for turbo-stack to build. See
 > [Building against a development tree or a branch](#building-against-a-development-tree-or-a-branch).
 
-### Tier 3 — What turbo-stack always builds
+### Layer 4 — What turbo-stack always builds
 
 turbo-stack, MOM6 and MARBL are compiled inline on every build, pulled in with
 `add_subdirectory` from the top-level [`CMakeLists.txt`](../CMakeLists.txt). This is
-the tier Stage 2 exists to build. Unlike tiers 1.5 and 2 there is no
+the layer Stage 2 exists to build. Unlike layers 2 and 3 there is no
 bring-your-own-install option — nothing goes looking for a prebuilt MOM6 or
 MARBL, so here only the *source* can be swapped.
 
@@ -320,9 +323,9 @@ The closest replacement for the old `build.sh` on a laptop / workstation: you
 bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` —
 system packages, Homebrew, an OS module system, or an already-activated
 Spack/Conda env), and turbo-stack builds **all** of its upstream submodule deps
-from source — pFUnit + AMReX (Tier 1.5) and FMS/TIM, plus protoMOMxx for TIM
-(Tier 2) — then builds
-turbo-stack itself (Tier 3). Nothing is fetched; everything comes from
+from source — pFUnit + AMReX (Layer 2) and FMS/TIM, plus protoMOMxx for TIM
+(Layer 3) — then builds
+turbo-stack itself (Layer 4). Nothing is fetched; everything comes from
 `submodules/`. It sources `setup_environment/system_toolchain.sh` (which
 only *verifies* the toolchain is present — it builds nothing), then the
 `turbo_build_*` wrappers. Same shape as `build_on_derecho.sh`, minus the Lmod
@@ -353,7 +356,7 @@ modules you loaded yourself beforehand are discarded.
 The Spack flavor works on Apple Silicon Macs, and CI builds and unit-tests both
 backends this way on macOS 15 and 26
 ([`turbo-cmake-macos-tests.yaml`](../.github/workflows/turbo-cmake-macos-tests.yaml)).
-Spack builds tiers 1 and 1.5 with Apple clang for C and C++ and Homebrew's
+Spack builds layers 1 and 2 with Apple clang for C and C++ and Homebrew's
 gfortran for Fortran, so turbo-stack is built with those three compilers too:
 
 ```bash
@@ -387,10 +390,10 @@ NetCDF, CMake and the rest itself, and the scripts need only macOS's own bash 3.
 
 ### In a container (a ready-made environment)
 
-The `turbo-ci` image that CI uses ships the compiler and the Tier 1 + Tier 1.5
+The `turbo-ci` image that CI uses ships the compiler and the Layer 1 + Layer 2
 dependencies (MPI, NetCDF, CMake, pFUnit, AMReX) already installed in a Spack env,
 so there is no toolchain to set up. `build_with_container.sh` runs
-`build_with_spack_env.sh` inside it, which builds the Tier-2 backend and then
+`build_with_spack_env.sh` inside it, which builds the Layer-3 backend and then
 turbo-stack, against the sources you point it at:
 
 ```bash
@@ -478,8 +481,8 @@ explicitly build the upstream deps you need; after that run
 source scripts/lib/common.sh                                   # turbo_build_* wrappers + helpers
 source scripts/setup_environment/spack_env.sh                  # env setup: toolchain (spack); builds NOTHING
 deps="$TURBO_STACK_ROOT/deps/default"
-turbo_build_fms "$deps/build" "$deps/install"                  # env setup: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
-scripts/build_turbo_stack.sh --infra FMS2                      # build turbo-stack (Tier 3; add --tests to build + run ctest)
+turbo_build_fms "$deps/build" "$deps/install"                  # env setup: build FMS (Layer 3); spack supplies pFUnit/AMReX (Layer 2)
+scripts/build_turbo_stack.sh --infra FMS2                      # build turbo-stack (Layer 4; add --tests to build + run ctest)
 # TIM backend instead (protoMOMxx after TIM, into the same prefix):
 turbo_build_tim "$deps/build" "$deps/install"
 turbo_build_protomomxx "$deps/build" "$deps/install"
@@ -490,7 +493,7 @@ On a modules machine, swap the toolchain step for
 `source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh`; on any
 machine whose toolchain is already on `PATH`, swap it for
 `source scripts/setup_environment/system_toolchain.sh`. In both cases the
-toolchain provides no upstream deps, so also build the Tier-1.5 deps yourself
+toolchain provides no upstream deps, so also build the Layer-2 deps yourself
 (`turbo_build_pfunit`, `turbo_build_amrex`) alongside FMS/TIM/protoMOMxx.
 
 ---
@@ -556,13 +559,13 @@ each tree into the container), and with the explicit flow's `turbo_build_*` wrap
 only `MOM6_ROOT`: it builds no backend, so it finds FMS, or TIM and protoMOMxx,
 installed on `CMAKE_PREFIX_PATH`. `AMREX_ROOT`
 and `PFUNIT_ROOT` work the same way, but only where the builder actually builds
-tier 1.5 from submodule — the from-source builders
+layer 2 from submodule — the from-source builders
 (`build_with_system_toolchain.sh`, `build_on_derecho.sh`, and their
 testers). The Spack flavor shown above, which the container scripts also run,
 takes AMReX and pFUnit prebuilt from a Spack environment and never consults those
 two variables; to build against your
 own there, use the explicit flow described under
-[tier 1.5](#tier-15--prerequisites-but-we-supply-the-source-via-a-submodule).
+[layer 2](#layer-2--prerequisites-but-we-supply-the-source-via-a-submodule).
 
 What gets *reported* differs between the two entry points:
 
@@ -728,7 +731,7 @@ Stage 2's input. The three ways to find out are all worse than not asking:
 It also keeps `turbo_build_protomomxx` the same shape as its siblings: every
 `turbo_build_*` wrapper takes a build dir and an install prefix and nothing else.
 A condition here would make it the only builder that knows MOM6 exists, inverting
-the tier contract above. Its cmake args are fixed, so a shared `--build_dir` never
+the layer contract above. Its cmake args are fixed, so a shared `--build_dir` never
 rebuilds it just because the MOM6 source changed.
 
 The cost, in the TIM cells that do not use it, is one protoMOMxx configure and five

@@ -31,7 +31,7 @@ digraph build_test_orchestration {
     subgraph cluster_cbld {
         label="build_with_container.sh  (run once per backend)"; labeljust=l;
         style=filled; color="#e3f1ea"; fontname="Helvetica-Bold";
-        c_run [label="enter the turbo-ci image, as you · mount the checkout + any *_ROOT tree\n(its Spack env supplies Tier 1 + Tier 1.5 prebuilt)", fillcolor="#bcd4ec", style=filled];
+        c_run [label="enter the turbo-ci image, as you · mount the checkout + any *_ROOT tree\n(its Spack env supplies Layer 1 + Layer 2 prebuilt)", fillcolor="#bcd4ec", style=filled];
     }
 
     // ── Path A builder: the box IS build_with_spack_env.sh.  Its steps are
@@ -39,8 +39,8 @@ digraph build_test_orchestration {
     subgraph cluster_lbld {
         label="build_with_spack_env.sh  (run once per backend)"; labeljust=l;
         style=filled; color="#e7eff8"; fontname="Helvetica-Bold";
-        l_env  [label="Stage 1 · toolchain: source spack_env.sh\n(builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
-        l_deps [label="Stage 1 · deps (per --infra): turbo_build_tim ; _protomomxx | turbo_build_fms\n(FMS/TIM/protoMOMxx = Tier 2; spack supplies pFUnit/AMReX = Tier 1.5)", fillcolor="#c8e6c9", style=filled];
+        l_env  [label="Stage 1 · toolchain: source spack_env.sh\n(builds nothing → Layer 1)", fillcolor="#bcd4ec", style=filled];
+        l_deps [label="Stage 1 · deps (per --infra): turbo_build_tim ; _protomomxx | turbo_build_fms\n(FMS/TIM/protoMOMxx = Layer 3; spack supplies pFUnit/AMReX = Layer 2)", fillcolor="#c8e6c9", style=filled];
         l_env -> l_deps;
     }
 
@@ -48,8 +48,8 @@ digraph build_test_orchestration {
     subgraph cluster_dbld {
         label="build_on_derecho.sh  (run once per backend)"; labeljust=l;
         style=filled; color="#fbeee6"; fontname="Helvetica-Bold";
-        d_env  [label="Stage 1 · toolchain: source derecho_cpu_gcc_openmpi.sh\n(builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
-        d_deps [label="Stage 1 · deps: turbo_build_pfunit (only with --tests) ;\nper --infra: _amrex + _tim + _protomomxx | _fms\n(pFUnit/AMReX = Tier 1.5; FMS/TIM/protoMOMxx = Tier 2)", fillcolor="#c8e6c9", style=filled];
+        d_env  [label="Stage 1 · toolchain: source derecho_cpu_gcc_openmpi.sh\n(builds nothing → Layer 1)", fillcolor="#bcd4ec", style=filled];
+        d_deps [label="Stage 1 · deps: turbo_build_pfunit (only with --tests) ;\nper --infra: _amrex + _tim + _protomomxx | _fms\n(pFUnit/AMReX = Layer 2; FMS/TIM/protoMOMxx = Layer 3)", fillcolor="#c8e6c9", style=filled];
         d_env -> d_deps;
     }
 
@@ -57,13 +57,13 @@ digraph build_test_orchestration {
     subgraph cluster_sbld {
         label="build_with_system_toolchain.sh  (run once per backend)"; labeljust=l;
         style=filled; color="#efe9f6"; fontname="Helvetica-Bold";
-        s_env  [label="Stage 1 · toolchain: source system_toolchain.sh\n(verify only, builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
-        s_deps [label="Stage 1 · deps: turbo_build_pfunit (only with --tests) ;\nper --infra: _amrex + _tim + _protomomxx | _fms\n(pFUnit/AMReX = Tier 1.5; FMS/TIM/protoMOMxx = Tier 2)", fillcolor="#c8e6c9", style=filled];
+        s_env  [label="Stage 1 · toolchain: source system_toolchain.sh\n(verify only, builds nothing → Layer 1)", fillcolor="#bcd4ec", style=filled];
+        s_deps [label="Stage 1 · deps: turbo_build_pfunit (only with --tests) ;\nper --infra: _amrex + _tim + _protomomxx | _fms\n(pFUnit/AMReX = Layer 2; FMS/TIM/protoMOMxx = Layer 3)", fillcolor="#c8e6c9", style=filled];
         s_env -> s_deps;
     }
 
     // ── Shared: both builders exec the same Stage-2 script ────────────────────
-    bld [label="build_turbo_stack.sh --infra X   (exec'd by each builder)\nStage 2: cmake configure/build -> ctest (Tier 3)",
+    bld [label="build_turbo_stack.sh --infra X   (exec'd by each builder)\nStage 2: cmake configure/build -> ctest (Layer 4)",
         shape=ellipse, fillcolor="#90ee90", style=filled];
     verdict [label="testing matrix + per-backend verdict (PASS / FAIL)\nprinted by the test driver", fillcolor="#c8e6c9", style=filled];
 
@@ -85,12 +85,12 @@ digraph build_test_orchestration {
     core -> c_drv [style=dashed, color="#5b7aa6", arrowhead=odot, constraint=false];
 
     // Overrides (default = pinned submodule).  A *_ROOT is read only where that
-    // dep is built from submodule: FMS/TIM/protoMOMxx (Tier 2) everywhere, MOM6
-    // (Tier 3) at Stage 2, and AMReX/pFUnit (Tier 1.5) only in the two
+    // dep is built from submodule: FMS/TIM/protoMOMxx (Layer 3) everywhere, MOM6
+    // (Layer 4) at Stage 2, and AMReX/pFUnit (Layer 2) only in the two
     // from-source builders -- the spack flavor takes those prebuilt and never
     // consults their roots.
     hotswap [shape=note, fillcolor="#fff2cc", style=filled, fontsize=10,
-             label="Overrides (default = pinned submodule):\n*_ROOT points at a dev tree or a separate clone\n(the container wrapper mounts each one into the image).\nTier 1.5 (AMREX_ROOT / PFUNIT_ROOT): the two from-source\nbuilders only -- the spack flavor takes those prebuilt."];
+             label="Overrides (default = pinned submodule):\n*_ROOT points at a dev tree or a separate clone\n(the container wrapper mounts each one into the image).\nLayer 2 (AMREX_ROOT / PFUNIT_ROOT): the two from-source\nbuilders only -- the spack flavor takes those prebuilt."];
     hotswap -> l_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT /\nPROTOMOMXX_ROOT"];
     hotswap -> s_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT /\nPROTOMOMXX_ROOT"];
     hotswap -> d_deps [style=dashed, color="#a06000", arrowhead=odot, constraint=false, xlabel="FMS_ROOT / TIM_ROOT /\nPROTOMOMXX_ROOT"];

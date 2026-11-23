@@ -9,7 +9,7 @@
 # toolchain step (spack vs Lmod modules); everything here is common.
 #
 # The dependency model these functions implement is documented in
-# docs/dependency_tiers_prompt.md (the build-policy contract) and the pipeline in
+# docs/dependency_layers_prompt.md (the build-policy contract) and the pipeline in
 # docs/build_test_orchestration_prompt.md.
 #
 # Source AFTER `set -euo pipefail` in the caller; every function is written to be
@@ -22,8 +22,8 @@
 #       turbo_resolve_stack_root
 #       turbo_require_submodule ...                            # guard the deps it builds
 #       <source the machine's Stage-1 toolchain env script>   # builds nothing
-#       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim/protomomxx)  # Stage 1: build deps (Tier 1.5 + Tier 2)
-#       build_turbo_stack.sh --infra X                         # Stage 2: build turbo-stack (Tier 3; defaults MOM6_ROOT)
+#       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim/protomomxx)  # Stage 1: build deps (Layer 2 + Layer 3)
+#       build_turbo_stack.sh --infra X                         # Stage 2: build turbo-stack (Layer 4; defaults MOM6_ROOT)
 #   * end-to-end test driver (test_turbo_stack_with_spack_env.sh / _on_derecho.sh):
 #       turbo_resolve_stack_root
 #       TURBO_JOBS=<default>; turbo_parse_driver_args "$@"
@@ -255,7 +255,7 @@ turbo_default_mom6_root() {
     fi
 }
 
-# ── Upstream-dep build wrappers (Stage 1; Tier 1.5 + Tier 2 canonical flags) ──
+# ── Upstream-dep build wrappers (Stage 1; Layer 2 + Layer 3 canonical flags) ──
 # Build an upstream dependency from its submodule (or its $<NAME>_ROOT
 # override, resolved inside build_dep).  Args: <build_root> <install_prefix>.
 # The per-dep cmake flags live here ONLY -- a flag change edits one place, not
@@ -301,7 +301,7 @@ turbo_build_protomomxx() {
     # from the same prefix, or from CMAKE_PREFIX_PATH in the environment when the
     # toolchain (spack) supplies it.  KERNELS_ONLY skips protoMOMxx's solo driver.
     #
-    # Built for every TIM build, because this layer cannot know whether it is
+    # Built for every TIM build, because Stage 1 cannot know whether it is
     # needed: only the MOM6 source knows whether it carries the call sites, and
     # Stage 1 never sees that source (MOM6_ROOT is Stage 2's input).  Asking the
     # caller would put a per-lane conditional back into CI, and neither sniffing
@@ -318,15 +318,15 @@ turbo_build_protomomxx() {
 # The shared body of every single-backend builder (build_with_spack_env.sh,
 # build_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
 # supplies only the two machine-specific facts:
-#   1. a turbo_flavor_setup_toolchain function that puts the Tier-1 toolchain on
+#   1. a turbo_flavor_setup_toolchain function that puts the Layer-1 toolchain on
 #      PATH (sourced; builds nothing), and
-#   2. the lowest dependency TIER it must build from submodule
-#      (--build-deps-from-tier) -- i.e. the first tier the toolchain does NOT
-#      hand you prebuilt.  See docs/dependency_tiers.png:
-#        spack   provides Tier 1 + 1.5 (cmake/MPI/NetCDF + pFUnit/AMReX) -> build from Tier 2
-#        modules provides Tier 1 only                                    -> build from Tier 1.5
-#        on-PATH provides Tier 1 only (user sets it up)                  -> build from Tier 1.5
-# Tier 2 (FMS/TIM) is always built from submodule (no flavor packages it); Tier 3
+#   2. the lowest dependency LAYER it must build from submodule
+#      (--build-deps-from-layer) -- i.e. the first layer the toolchain does NOT
+#      hand you prebuilt.  See docs/dependency_layers.png:
+#        spack   provides Layers 1 + 2 (cmake/MPI/NetCDF + pFUnit/AMReX) -> build from Layer 3
+#        modules provides Layer 1 only                                   -> build from Layer 2
+#        on-PATH provides Layer 1 only (user sets it up)                 -> build from Layer 2
+# Layer 3 (FMS/TIM) is always built from submodule (no flavor packages it); Layer 4
 # (turbo-stack/MOM6/MARBL) is built in Stage 2 by build_turbo_stack.sh.
 
 # Parse the flags common to every single-backend builder into TURBO_B_* globals.
@@ -352,19 +352,19 @@ turbo_parse_builder_args() {
     fi
 }
 
-# The buildable submodule tiers are 1.5 and 2; a flavor builds "from" the lowest
-# one its toolchain didn't supply.  Only "from 1.5" includes Tier 1.5; Tier 2 is
+# The buildable submodule layers are 2 and 3; a flavor builds "from" the lowest
+# one its toolchain didn't supply.  Only "from 2" includes Layer 2; Layer 3 is
 # always built, so it needs no predicate.
-_turbo_builds_tier_1_5() { [[ "$1" == "1.5" ]]; }
+_turbo_builds_layer_2() { [[ "$1" == "2" ]]; }
 
-# Guard the submodules this build consumes -- the always-inline Tier-3 sources
-# (MOM6/MARBL) plus the members of each tier being built from submodule.  Each
+# Guard the submodules this build consumes -- the always-inline Layer-4 sources
+# (MOM6/MARBL) plus the members of each layer being built from submodule.  Each
 # guard is skipped when the dep's *_ROOT override is set.  Reads TURBO_B_*.
 turbo_guard_builder_submodules() {
-    local from_tier="$1"
+    local from_layer="$1"
     turbo_require_submodule submodules/MOM6  MOM6  MOM6_ROOT
     turbo_require_submodule submodules/MARBL MARBL
-    if _turbo_builds_tier_1_5 "$from_tier"; then
+    if _turbo_builds_layer_2 "$from_layer"; then
         [[ "$TURBO_B_TESTS" == true ]] && turbo_require_submodule submodules/pFUnit pFUnit PFUNIT_ROOT
         [[ "$TURBO_B_INFRA" == "TIM" ]] && turbo_require_submodule submodules/amrex AMReX AMREX_ROOT
     fi
@@ -376,14 +376,14 @@ turbo_guard_builder_submodules() {
     fi
 }
 
-# Build, from <deps_build_root>/{build,install}, the submodule dep tiers this
-# flavor doesn't get prebuilt.  Tier 1.5 = pFUnit (only with --tests) + AMReX
-# (only for TIM); Tier 2 = the selected backend (FMS for FMS2, TIM then the
+# Build, from <deps_build_root>/{build,install}, the submodule dep layers this
+# flavor doesn't get prebuilt.  Layer 2 = pFUnit (only with --tests) + AMReX
+# (only for TIM); Layer 3 = the selected backend (FMS for FMS2, TIM then the
 # protoMOMxx bridge for TIM).
-turbo_build_builder_dep_tiers() {
-    local deps_build_root="$1" from_tier="$2"
+turbo_build_builder_dep_layers() {
+    local deps_build_root="$1" from_layer="$2"
     local b="$deps_build_root/build" p="$deps_build_root/install"
-    if _turbo_builds_tier_1_5 "$from_tier"; then
+    if _turbo_builds_layer_2 "$from_layer"; then
         [[ "$TURBO_B_TESTS" == true ]] && turbo_build_pfunit "$b" "$p"
         [[ "$TURBO_B_INFRA" == "TIM" ]] && turbo_build_amrex "$b" "$p"
     fi
@@ -397,21 +397,21 @@ turbo_build_builder_dep_tiers() {
 
 # The full single-backend builder body.  A flavor script defines
 # turbo_flavor_setup_toolchain, then calls:
-#   turbo_run_backend_builder --build-deps-from-tier {1.5|2} "$@"
+#   turbo_run_backend_builder --build-deps-from-layer {2|3} "$@"
 # ("$@" being the user's CLI args).  Runs Stage 1 (toolchain + submodule dep
-# tiers) then Stage 2 (build_turbo_stack.sh).
+# layers) then Stage 2 (build_turbo_stack.sh).
 turbo_run_backend_builder() {
-    local from_tier="1.5"
+    local from_layer="2"
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --build-deps-from-tier) from_tier="$2"; shift 2 ;;
+            --build-deps-from-layer) from_layer="$2"; shift 2 ;;
             --) shift; break ;;
             *) break ;;
         esac
     done
-    case "$from_tier" in
-        1.5|2) ;;
-        *) echo "Error: --build-deps-from-tier must be 1.5 or 2 (got '$from_tier')" >&2; return 1 ;;
+    case "$from_layer" in
+        2|3) ;;
+        *) echo "Error: --build-deps-from-layer must be 2 or 3 (got '$from_layer')" >&2; return 1 ;;
     esac
     if ! declare -F turbo_flavor_setup_toolchain >/dev/null 2>&1; then
         echo "Error: builder must define turbo_flavor_setup_toolchain before calling turbo_run_backend_builder" >&2
@@ -444,15 +444,15 @@ turbo_run_backend_builder() {
         rm -rf "$deps_build_root"
     fi
 
-    turbo_guard_builder_submodules "$from_tier"
+    turbo_guard_builder_submodules "$from_layer"
 
     # --- Stage 1 (env setup) · toolchain (flavor hook; sources a recipe) ------
     turbo_flavor_setup_toolchain
 
-    # --- Stage 1 (env setup) · build the submodule dep tiers -----------------
-    turbo_build_builder_dep_tiers "$deps_build_root" "$from_tier"
+    # --- Stage 1 (env setup) · build the submodule dep layers -----------------
+    turbo_build_builder_dep_layers "$deps_build_root" "$from_layer"
 
-    # --- Stage 2 · build turbo-stack (Tier 3): configure + build + test ------
+    # --- Stage 2 · build turbo-stack (Layer 4): configure + build + test ------
     local build_args=()
     [[ "$TURBO_B_DEBUG" == true ]] && build_args+=(--debug)
     [[ "$TURBO_B_CLEAN" == true ]] && build_args+=(--from-scratch)

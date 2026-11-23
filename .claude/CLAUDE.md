@@ -8,16 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Scripts self-locate `TURBO_STACK_ROOT` from their own location — you build the checkout you run from (`SPACK_ROOT` is needed for the spack flavor). To build against a local dev tree of a co-developed dependency, set its submodule override (`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT`). See [`scripts/README.md`](../scripts/README.md) for the full reference, including the **dependency tier contract** (`docs/dependency_tiers.png`).
+Scripts self-locate `TURBO_STACK_ROOT` from their own location — you build the checkout you run from (`SPACK_ROOT` is needed for the spack flavor). To build against a local dev tree of a co-developed dependency, set its submodule override (`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT`). See [`scripts/README.md`](../scripts/README.md) for the full reference, including the **dependency layer contract** (`docs/dependency_layers.png`).
 
 ### Two-stage pipeline
 
 ```
-Stage 1 — environment setup (machine-specific):  toolchain [Tier 1]  +  turbo_build_* deps [AMReX/pFUnit = Tier 1.5, FMS/TIM/protoMOMxx = Tier 2]
-Stage 2 — build turbo-stack (uniform):           build_turbo_stack.sh  →  Tier 3 (turbo-stack, MOM6, MARBL)
+Stage 1 — environment setup (machine-specific):  toolchain [Layer 1]  +  turbo_build_* deps [AMReX/pFUnit = Layer 2, FMS/TIM/protoMOMxx = Layer 3]
+Stage 2 — build turbo-stack (uniform):           build_turbo_stack.sh  →  Layer 4 (turbo-stack, MOM6, MARBL)
 ```
 
-The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is what a machine actually runs (contrast `docs/dependency_tiers.png` with `docs/build_test_orchestration.png`). Only Stage 1 differs between machines — the toolchain provider, and which upstream deps come prebuilt vs are built from the submodule (e.g. spack supplies AMReX/pFUnit, Derecho builds them). Stage 2 is always the same. The `setup_environment/` recipes are **toolchain-only** — they build no dependencies; the upstream deps are built explicitly via `turbo_build_*`. The single-backend builders run both stages; the end-to-end test drivers run a builder once per backend over the shared core in `scripts/lib/common.sh`.
+The dependency *layers* (1 / 2 / 3 / 4) are a classification; the pipeline is what a machine actually runs (contrast `docs/dependency_layers.png` with `docs/build_test_orchestration.png`). Only Stage 1 differs between machines — the toolchain provider, and which upstream deps come prebuilt vs are built from the submodule (e.g. spack supplies AMReX/pFUnit, Derecho builds them). Stage 2 is always the same. The `setup_environment/` recipes are **toolchain-only** — they build no dependencies; the upstream deps are built explicitly via `turbo_build_*`. The single-backend builders run both stages; the end-to-end test drivers run a builder once per backend over the shared core in `scripts/lib/common.sh`.
 
 ### Test both backends (end-to-end)
 
@@ -37,7 +37,7 @@ MOM6_ROOT=~/MOM6 scripts/build_with_container.sh --infra TIM --tests       # you
 scripts/build_with_container.sh --shell                                    # interactive shell, Spack env active
 ```
 
-No host toolchain needed: the image ships the compiler plus Tier 1 + 1.5 (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack env, so the container builds only Tier 2 (the selected backend, from its submodule) and Tier 3. Export `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` or `PROTOMOMXX_ROOT` and that tree is mounted at its own path and forwarded; **the branch it is checked out on is what gets built** — switch branches there and re-run to test another. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized. `PFUNIT_ROOT`/`AMREX_ROOT` are not forwarded: the image supplies pFUnit and AMReX from its Spack env, so an override would have no effect.
+No host toolchain needed: the image ships the compiler plus Layers 1 + 2 (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack env, so the container builds only Layer 3 (the selected backend, from its submodule) and Layer 4. Export `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` or `PROTOMOMXX_ROOT` and that tree is mounted at its own path and forwarded; **the branch it is checked out on is what gets built** — switch branches there and re-run to test another. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized. `PFUNIT_ROOT`/`AMREX_ROOT` are not forwarded: the image supplies pFUnit and AMReX from its Spack env, so an override would have no effect.
 
 It runs `build_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the CMake lane's environment and guardrails. [`scripts/README.md`](../scripts/README.md#in-a-container-a-ready-made-environment) explains how (the mounts, running as you, the `HOME` cache), and `--help` lists the options: the builder flags plus `--image`, `--pull`, `--no-pull` and `--shell`, with the engine from `$TURBO_CONTAINER_ENGINE` (default docker). What trips people up, and what not to undo:
 
@@ -78,20 +78,20 @@ scripts/build_with_system_toolchain.sh --from-scratch           # rebuild from s
 
 ```bash
 source scripts/lib/common.sh                                 # turbo_build_* + helpers
-source scripts/setup_environment/spack_env.sh                # Stage 1: toolchain (spack); builds nothing → Tier 1
+source scripts/setup_environment/spack_env.sh                # Stage 1: toolchain (spack); builds nothing → Layer 1
 deps="$TURBO_STACK_ROOT/deps/default"
-turbo_build_fms "$deps/build" "$deps/install"                # Stage 1: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
-scripts/build_turbo_stack.sh --infra FMS2                    # Stage 2: build turbo-stack (Tier 3); use --infra TIM after turbo_build_tim + turbo_build_protomomxx,
+turbo_build_fms "$deps/build" "$deps/install"                # Stage 1: build FMS (Layer 3); spack supplies pFUnit/AMReX (Layer 2)
+scripts/build_turbo_stack.sh --infra FMS2                    # Stage 2: build turbo-stack (Layer 4); use --infra TIM after turbo_build_tim + turbo_build_protomomxx,
                                                              # add --tests to also build + run ctest
 ```
 
-The `setup_environment/` recipes only set up the toolchain — build the upstream deps (Tier 1.5 + Tier 2) explicitly via the `turbo_build_*` wrappers (canonical flags live in `scripts/lib/common.sh`).
+The `setup_environment/` recipes only set up the toolchain — build the upstream deps (Layer 2 + Layer 3) explicitly via the `turbo_build_*` wrappers (canonical flags live in `scripts/lib/common.sh`).
 
 ### Script structure
 
 | Script | Role | How invoked |
 |---|---|---|
-| `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
+| `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Layer 2 + Layer 3 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
 | `test_turbo_stack_with_spack_env.sh`, `test_turbo_stack_with_system_toolchain.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
 | `scripts/build_with_spack_env.sh`, `build_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (Spack env / your own toolchain / Derecho modules) | exec'd |
 | `scripts/build_with_container.sh` | Wrapper — runs `build_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
@@ -179,16 +179,16 @@ Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, 
 ```
 Single-backend builders — thin wrappers.  Each defines turbo_flavor_setup_toolchain
 and calls turbo_run_backend_builder (lib/common.sh), differing only in the toolchain
-recipe and the lowest dependency TIER it must build from submodule (the first the
-toolchain does NOT provide prebuilt — see docs/dependency_tiers.png):
+recipe and the lowest dependency LAYER it must build from submodule (the first the
+toolchain does NOT provide prebuilt — see docs/dependency_layers.png):
 
-  build_with_spack_env.sh                toolchain = spack env     (provides Tier 1 + 1.5) → build from Tier 2
-  build_with_system_toolchain.sh         toolchain = your PATH     (provides Tier 1)       → build from Tier 1.5
-  build_on_derecho.sh                    toolchain = Lmod modules  (provides Tier 1)       → build from Tier 1.5
+  build_with_spack_env.sh                toolchain = spack env     (provides Layers 1 + 2) → build from Layer 3
+  build_with_system_toolchain.sh         toolchain = your PATH     (provides Layer 1)      → build from Layer 2
+  build_on_derecho.sh                    toolchain = Lmod modules  (provides Layer 1)      → build from Layer 2
       │
       └─→ turbo_run_backend_builder (lib/common.sh) — the shared Stage-1+Stage-2 body:
             ├─→ turbo_flavor_setup_toolchain          Stage 1: source the toolchain recipe (builds nothing)
-            ├─→ turbo_build_{pfunit,amrex,fms,tim,protomomxx}  Stage 1: build the submodule dep tiers not provided
+            ├─→ turbo_build_{pfunit,amrex,fms,tim,protomomxx}  Stage 1: build the submodule dep layers not provided
             └─→ build_turbo_stack.sh                  Stage 2: configure + build + ctest (exec'd)
                   ├─→ cmake configure (Unix Makefiles by default; --ninja for Ninja)
                   ├─→ cmake build
@@ -221,7 +221,7 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 
 ### Infrastructure Backends
 
-- **TIM** — TURBO Infrastructure for MOM; AMReX-backed layer. The **default** backend (orchestrators use it when `--infra` is unset).
+- **TIM** — TURBO Infrastructure for MOM; backed by AMReX. The **default** backend (orchestrators use it when `--infra` is unset).
 - **FMS2** — traditional Flexible Modeling System; the reference backend, selected with `--infra FMS2`.
 
 ### Language Split

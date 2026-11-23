@@ -190,7 +190,7 @@ and `COMPILER_VERSION` (default empty; see [Image flavors](#image-flavors)).
 ## Building locally in this image
 
 The image is a ready-made build environment, not just CI's: it ships the compiler
-and the Tier 1 + Tier 1.5 dependencies (MPI, NetCDF, CMake, pFUnit, AMReX)
+and the Layer 1 + Layer 2 dependencies (MPI, NetCDF, CMake, pFUnit, AMReX)
 installed in the `turbo_stack` Spack env, so nothing but a container engine is
 needed on the host. Two scripts drive it — same image, same commands and
 environment as the consumer workflow, against a checkout whose submodules are

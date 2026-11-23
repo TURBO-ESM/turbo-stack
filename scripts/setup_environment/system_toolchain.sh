@@ -8,9 +8,9 @@
 # or Conda env).  This recipe does NOT install or build anything; it only
 # VERIFIES that the toolchain is present and reports what it found, so a missing
 # compiler surfaces as one clear error here instead of a confusing failure deep
-# in a dependency build.  The upstream submodule deps (AMReX/pFUnit = Tier 1.5;
-# FMS/TIM = Tier 2) are built explicitly by the caller via the turbo_build_*
-# wrappers in scripts/lib/common.sh.  See docs/dependency_tiers_prompt.md.
+# in a dependency build.  The upstream submodule deps (AMReX/pFUnit = Layer 2;
+# FMS/TIM = Layer 3) are built explicitly by the caller via the turbo_build_*
+# wrappers in scripts/lib/common.sh.  See docs/dependency_layers_prompt.md.
 #
 # This is the toolchain counterpart to the other Stage-1 recipes:
 #   - spack_env.sh                 -- toolchain from a Spack env
@@ -25,7 +25,7 @@
 #
 # Usage:  source scripts/setup_environment/system_toolchain.sh
 
-# --- Toolchain (Stage 1 env setup; Tier 1) -- verify only, build nothing ------
+# --- Toolchain (Stage 1 env setup; Layer 1) -- verify only, build nothing -----
 # turbo-stack + every from-source dep (FMS, TIM, AMReX, pFUnit) build MPI-parallel
 # Fortran / C / C++, so the MPI compiler wrappers and cmake are the hard
 # requirements; NetCDF is checked but only warned about (CMake's FindNetCDF can
