@@ -6,7 +6,7 @@ Use the prompt below to regenerate `cmake_dependency_dag.dot` (and the PNG) with
 
 ## Prompt
 
-Generate a Graphviz dot file at `docs/cmake_dependency_dag.dot` showing the build-time dependencies of the turbo-stack project. Render it to `docs/cmake_dependency_dag.png` with `dot -Tpng`.
+Generate a Graphviz dot file at `docs/cmake_dependency_dag.dot` showing the build-time dependencies of the turbo-stack project. Render it to `docs/cmake_dependency_dag.png` with `dot -Tpng:cairo`.
 
 ### Layout rules
 - `rankdir=TB` — high-level consumers at the top, low-level libraries at the bottom.

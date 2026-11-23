@@ -4,7 +4,7 @@ Use the prompt below to regenerate `two_stage_pipeline.dot` (and the PNG) with C
 build's stage structure changes. It describes the two stages and their data flow, not the exact dot
 syntax.
 
-Render with: `dot -Tpng -o docs/two_stage_pipeline.png docs/two_stage_pipeline.dot`.
+Render with: `dot -Tpng:cairo -o docs/two_stage_pipeline.png docs/two_stage_pipeline.dot`.
 
 This is the conceptual companion to `build_test_orchestration` (which shows the driver/builder
 *script* flow across machines). This figure is deliberately flavor-agnostic: it shows only the two
@@ -15,7 +15,7 @@ stages and the shell-state boundary between them.
 ## Prompt
 
 Generate a Graphviz dot file at `docs/two_stage_pipeline.dot` showing the two-stage build pipeline of
-turbo-stack, and render it to `docs/two_stage_pipeline.png` with `dot -Tpng`.
+turbo-stack, and render it to `docs/two_stage_pipeline.png` with `dot -Tpng:cairo`.
 
 ### Narrative the figure must land
 - **Stage 1 — "Environment"**: prepare everything the build needs — the toolchain (compilers, CMake,
