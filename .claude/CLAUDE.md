@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Scripts self-locate `TURBO_STACK_ROOT` from their own location — you build the checkout you run from (`SPACK_ROOT` is needed for the spack flavor). To build against a local dev tree of a co-developed dependency, set its submodule override (`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT`). See [`scripts/README.md`](scripts/README.md) for the full reference, including the **dependency tier contract** (`docs/dependency_tiers.png`).
+Scripts self-locate `TURBO_STACK_ROOT` from their own location — you build the checkout you run from (`SPACK_ROOT` is needed for the spack flavor). To build against a local dev tree of a co-developed dependency, set its submodule override (`MOM6_ROOT` / `FMS_ROOT` / `TIM_ROOT` / `PROTOMOMXX_ROOT`). See [`scripts/README.md`](../scripts/README.md) for the full reference, including the **dependency tier contract** (`docs/dependency_tiers.png`).
 
 ### Two-stage pipeline
 
@@ -228,7 +228,7 @@ src/amrex_mini_app/ (C++ / CMake — separate build)
 
 - **Fortran** — MOM6, FMS, MARBL, unit tests under `tests/`
 - **C++20** — AMReX mini-app (`src/amrex_mini_app/`), GoogleTest-based tests there
-- **Bash** — build orchestration under `scripts/` (see [`scripts/README.md`](scripts/README.md))
+- **Bash** — build orchestration under `scripts/` (see [`scripts/README.md`](../scripts/README.md))
 
 ## CI/CD
 
