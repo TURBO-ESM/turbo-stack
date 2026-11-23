@@ -369,7 +369,7 @@ from source, which took about an hour and a half on CI's 3-core runners. Later
 runs reuse it. To build a single backend instead, run
 `scripts/build_local_with_spack_env.sh` in the same shell (see
 [One-command (spack flavor)](#one-command-spack-flavor)). Spack builds MPI,
-NetCDF, CMake and the rest itself, and the scripts run under macOS's own bash 3.2.
+NetCDF, CMake and the rest itself, and the scripts need only macOS's own bash 3.2.
 
 - **C++ has to be Apple clang**, not Homebrew's `g++-NN`. AMReX is built with Apple
   clang and links against its libc++, while g++ uses libstdc++, and the TIM backend

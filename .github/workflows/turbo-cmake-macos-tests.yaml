@@ -82,7 +82,7 @@ jobs:
             echo "| Xcode | $(xcodebuild -version | head -1) |"
             echo "| C/C++ | $(clang --version | head -1) |"
             echo "| Fortran | $(gfortran --version | head -1) |"
-            echo "| bash | $BASH_VERSION |"
+            echo "| bash | $BASH_VERSION ($BASH) |"
             echo "| Spack | $SPACK_REF |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -92,6 +92,10 @@ jobs:
       # clang's version, not Apple's build number: an Xcode update that keeps the
       # version reuses the cache, since libc++'s ABI doesn't change between those
       # builds and turbo-stack itself is always built with the runner's current clang.
+      # It leaves out Spack's package recipes. Spack clones them into ~/.spack from
+      # a spack-packages release branch, which can move, and the clone is cached: a
+      # cold build can get newer recipes than a cached run uses, so a green cached
+      # run doesn't show that a cold build still works.
       - name: Cache key
         id: key
         run: |
@@ -130,10 +134,13 @@ jobs:
           TURBO_STACK_ROOT=$PWD bash spack/create_spack_environment.sh
           spack clean -sd
           # FC must be the gfortran Spack built the environment with: another gfortran
-          # may not read the Spack-built Fortran modules. gcc-runtime carries that version.
-          rt=$(spack -e turbo_stack find --format '{version}' gcc-runtime | head -1 || true)
-          if [ -n "$rt" ] && [ "$rt" != "$(gfortran -dumpfullversion)" ]; then
-            echo "::error::Spack built Fortran with gcc $rt, but gfortran is $(gfortran -dumpfullversion)"
+          # may not read the Spack-built Fortran modules. gcc-runtime carries that
+          # version, so require exactly one gcc-runtime, at gfortran's version (spack
+          # find fails when there is none; `|| rt=` turns that into a failed check).
+          fc=$(gfortran -dumpfullversion)
+          rt=$(spack -e turbo_stack find --format '{version}' gcc-runtime | sort -u | xargs) || rt=
+          if [ "$rt" != "$fc" ]; then
+            echo "::error::gfortran is $fc, but the environment's gcc-runtime is ${rt:-missing}"
             exit 1
           fi
 
@@ -150,10 +157,12 @@ jobs:
             ~/.spack
           key: ${{ steps.key.outputs.key }}
 
-      # If the environment build stopped partway, keep what it finished: the next
-      # run restores it through restore-keys and builds only the rest.
+      # If the environment build stopped partway, because it failed or the run was
+      # cancelled (by a newer push to the PR, say), keep what it finished: the next
+      # run restores it through restore-keys and builds only the rest. always(), not
+      # failure(): failure() is false in a cancelled run.
       - name: Save a partial Spack environment
-        if: failure() && steps.env.outcome == 'failure'
+        if: always() && (steps.env.outcome == 'failure' || steps.env.outcome == 'cancelled')
         continue-on-error: true
         uses: actions/cache/save@v5
         with:
