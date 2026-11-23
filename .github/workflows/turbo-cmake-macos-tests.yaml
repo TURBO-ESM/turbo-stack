@@ -4,7 +4,7 @@
 #
 # It runs the scripts a Mac user runs. spack/create_spack_environment.sh builds
 # the Tier 1 + 1.5 dependencies from spack/spack.yaml, then
-# test_turbo_stack_locally.sh builds both backends (FMS2, TIM) and runs the
+# test_turbo_stack_with_spack_env.sh builds both backends (FMS2, TIM) and runs the
 # pFUnit suite under ctest: the same builder, with the same --tests, that
 # cmake-build.yaml runs for each backend. MOM6 is the pinned submodule.
 #
@@ -177,7 +177,7 @@ jobs:
           FC: gfortran
           CC: clang
           CXX: clang++
-        run: ./test_turbo_stack_locally.sh -j 3
+        run: ./test_turbo_stack_with_spack_env.sh -j 3
 
       - name: Summarize the unit tests
         if: always()

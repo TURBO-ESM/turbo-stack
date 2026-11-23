@@ -7,14 +7,14 @@
 # The container member of the single-backend builder family; the siblings differ
 # only in who supplies the toolchain and the upstream deps:
 #
-#   build_local_with_spack_env.sh         a Spack env you own
-#   build_local_with_system_toolchain.sh  whatever is on your PATH
+#   build_with_spack_env.sh               a Spack env you own
+#   build_with_system_toolchain.sh        whatever is on your PATH
 #   build_on_derecho.sh                   Derecho's Lmod modules
 #   build_with_container.sh               the container image  (this file)
 #
 # Here the image does: ghcr.io/turbo-esm/turbo-stack/turbo-ci ships the compiler and
 # the Tier 1 + Tier 1.5 deps (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack
-# env.  It mounts your checkout and runs build_local_with_spack_env.sh inside the
+# env.  It mounts your checkout and runs build_with_spack_env.sh inside the
 # image, which activates that env, builds the Tier-2 backend, then configures, builds
 # and tests turbo-stack.  CI uses the same image and the same command, so a red box in
 # cmake-build.yaml will often reproduce here -- a useful consequence, not a contract
@@ -39,7 +39,7 @@
 #
 # Each build dir also records the image that built it (deps/.turbo-ci-image).  When
 # the image changes -- the default tag refreshes, or --image names another -- the next
-# run cleans first, as --clean does: the old deps and CMake cache point at the old
+# run cleans first, as --from-scratch does: the old deps and CMake cache point at the old
 # image's compiler and Spack stack.
 #
 # Options:
@@ -51,8 +51,8 @@
 #                       the checkout is mounted in as well -- prefer one, so the
 #                       container never writes into your clone.
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean             Clean rebuild from scratch (passed through: wipes the Stage-1
-#                       dep builds/installs, plus cmake --fresh).  Implied when the
+#   --from-scratch      Delete the build's dependencies and turbo-stack build, then
+#                       build everything again (passed through).  Implied when the
 #                       image changed since the build dir was built (above).
 #   --ninja             Use the Ninja generator (passed through)
 #   --parallel N, -j N  Parallel build jobs, exported as CMAKE_BUILD_PARALLEL_LEVEL
@@ -107,7 +107,7 @@ _default_image="ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi"
 # --- container-only options ----------------------------------------------------
 # Pre-strip them before the common parser sees them (the shared
 # turbo_parse_builder_args rejects unknown flags, by design -- same idiom as
-# --recreate-spack-env in build_local_with_spack_env.sh).
+# --recreate-spack-env in build_with_spack_env.sh).
 _image="${TURBO_CI_IMAGE:-$_default_image}"
 _engine="${TURBO_CONTAINER_ENGINE:-docker}"
 # Refresh the default image by default: `gcc-openmpi` is a mutable tag, so a
@@ -140,7 +140,7 @@ done
 [[ "$_resolve" == true ]] && exec 3>&1 1>&2
 
 # Everything else is the standard builder vocabulary (--infra/--tests/--build_dir/
-# --debug/--clean/--ninja/--parallel/--help), validated once, in one place, and
+# --debug/--from-scratch/--ninja/--parallel/--help), validated once, in one place, and
 # forwarded verbatim to the builder inside the container.
 turbo_parse_builder_args "${_args[@]}"
 turbo_resolve_stack_root
@@ -319,7 +319,7 @@ fi
 
 # --- preflight: the submodules the container consumes but cannot fetch ---------
 # Spack supplies Tier 1 + 1.5, so this is the same guard set as
-# build_local_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
+# build_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
 # guard stands down for a component whose <NAME>_ROOT is set above.
 turbo_guard_builder_submodules 2
 # The pinned submodule needs the same check: the guard above proves only that
@@ -351,11 +351,11 @@ fi
 # build that quietly mixes two toolchains.  Each
 # build dir records the image that built it; when that differs, or a dir with
 # artifacts has no record (built outside the container, or before this check),
-# clean first, exactly as --clean does.
+# clean first, exactly as --from-scratch does.
 #
 # The two locations mirror turbo_run_backend_builder (deps) and build_turbo_stack.sh
 # (the CMake build dir).  The record lives under deps/, so every entry point's
-# --clean, which removes that dir, removes the record with it.
+# --from-scratch, which removes that dir, removes the record with it.
 if [[ -n "$_build_dir" ]]; then
     _deps_root="$_build_dir/deps";               _cmake_dir="$_build_dir"
 else
@@ -378,10 +378,10 @@ if [[ -n "$_image_id" && "$_built_by" != "$_image_id" ]] &&
     fi
     if [[ "$_shell" == true ]]; then
         echo "[ci-container] warning: the build in $_cmake_dir $_stale_why;" >&2
-        echo "[ci-container]          pass --clean to the builder before reusing it." >&2
+        echo "[ci-container]          pass --from-scratch to the builder before reusing it." >&2
     elif [[ "$TURBO_B_CLEAN" != true ]]; then
         echo "[ci-container] the build in $_cmake_dir $_stale_why;"
-        echo "[ci-container] rebuilding from scratch (--clean)"
+        echo "[ci-container] rebuilding from scratch, as --from-scratch would"
         TURBO_B_CLEAN=true
     fi
 fi
@@ -418,7 +418,7 @@ fi
 # build and the turbo-stack build.
 _build_args=()
 [[ "$TURBO_B_DEBUG" == true ]] && _build_args+=(--debug)
-[[ "$TURBO_B_CLEAN" == true ]] && _build_args+=(--clean)
+[[ "$TURBO_B_CLEAN" == true ]] && _build_args+=(--from-scratch)
 [[ "$TURBO_B_NINJA" == true ]] && _build_args+=(--ninja)
 _build_args+=(--infra "$TURBO_B_INFRA")
 [[ "$TURBO_B_TESTS" == true ]] && _build_args+=(--tests)
@@ -428,20 +428,20 @@ if [[ "$_shell" == true ]]; then
     # Not `bash -l`: a login shell re-reads /etc/profile and would undo the
     # activation we just did.  The hint is the build this run's flags describe
     # (--build_dir included), so following it rebuilds the tree being debugged.
-    _hint=$(printf '%q ' scripts/build_local_with_spack_env.sh "${_build_args[@]}")
+    _hint=$(printf '%q ' scripts/build_with_spack_env.sh "${_build_args[@]}")
     _hint=${_hint% }
     _final="spack env activate turbo_stack
 echo '[ci-container] Spack env turbo_stack is active.  Build with:'
 printf '    %s\n' $(printf '%q' "$_hint")
 exec bash"
 else
-    _final=$(printf '%q ' scripts/build_local_with_spack_env.sh "${_build_args[@]}")
+    _final=$(printf '%q ' scripts/build_with_spack_env.sh "${_build_args[@]}")
     # Then record the image beside what it built (see "artifacts left by a
-    # different image").  After the builder, not before: its --clean would remove an
+    # different image").  After the builder, not before: its --from-scratch would remove an
     # earlier record.  Inside the container: a run that never reached the builder
     # (an engine error, the env check below) must not vouch for artifacts it never
     # touched.  And when this run replaces another image's artifacts, only on
-    # success: --clean resets them in steps (the deps first, the CMake cache when
+    # success: --from-scratch resets them in steps (the deps first, the CMake cache when
     # Stage 2 configures, the objects at --clean-first), and only a finished build
     # proves every step ran.  Until then each run cleans again.  Any other run
     # started from this image's artifacts alone, so a failure is recorded too and
@@ -464,7 +464,7 @@ set -eo pipefail
 mkdir -p "\$HOME"
 
 # Assert the prebaked env, as the workflow's first step does.  Without it,
-# spack_local_environment.sh's default --create-if-missing applies and a wrong or
+# spack_env.sh's default --create-if-missing applies and a wrong or
 # stale image would not error -- it would silently start a ~1 h from-source
 # dependency build.  Fail in seconds instead.
 . "\$SPACK_ROOT/share/spack/setup-env.sh"

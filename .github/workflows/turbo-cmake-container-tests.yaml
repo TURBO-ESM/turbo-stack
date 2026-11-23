@@ -27,16 +27,16 @@
 # default; for dev/turbo-debug, either move the submodule onto the branch, or
 # point MOM6_ROOT at a separate clone; the LLVM group runs in its image:
 #
-#     ./test_turbo_stack_locally.sh                        # the pinned group
+#     ./test_turbo_stack_with_spack_env.sh                 # the pinned group
 #
 #     git -C submodules/MOM6 checkout dev/turbo-debug      # simplest
-#     ./test_turbo_stack_locally.sh
+#     ./test_turbo_stack_with_spack_env.sh
 #     git -C submodules/MOM6 checkout -                    # put it back
 #
 #     git clone --depth 1 -b dev/turbo-debug \
 #         https://github.com/TURBO-ESM/MOM6 /tmp/mom6-debug
 #     git -C /tmp/mom6-debug submodule update --init --recursive --depth 1
-#     MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_locally.sh
+#     MOM6_ROOT=/tmp/mom6-debug ./test_turbo_stack_with_spack_env.sh
 #
 #     # The LLVM group. A named image is not refreshed, so pull it first, and give
 #     # it its own artifact dir: the driver's default is shared with its gcc runs,

@@ -11,9 +11,9 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean                 Clean rebuild from scratch.  Removes the Stage-1
-#                           upstream dep builds/installs AND passes cmake --fresh
-#                           --clean-first to the Stage-2 turbo-stack build.
+#   --from-scratch          Delete this build's dependencies and turbo-stack
+#                           build, then build everything again.  Your toolchain
+#                           is kept.
 #   --ninja                 Use Ninja generator (passed through)
 #   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
 #                           through to build_turbo_stack.sh).
@@ -35,10 +35,10 @@
 #   -h, --help              Print this usage text and exit.
 #
 # Examples:
-#   build_on_derecho.sh                        # TIM backend, build the executable
-#   build_on_derecho.sh --tests                # also build + run the unit tests
-#   build_on_derecho.sh --infra FMS2           # FMS2 backend instead of TIM
-#   build_on_derecho.sh --debug --clean        # clean Debug rebuild (deps + turbo-stack)
+#   build_on_derecho.sh                               # TIM backend, build the executable
+#   build_on_derecho.sh --tests                       # also build + run the unit tests
+#   build_on_derecho.sh --infra FMS2                  # FMS2 backend instead of TIM
+#   build_on_derecho.sh --debug --from-scratch        # Debug build from scratch (deps + turbo-stack)
 
 set -eo pipefail
 
@@ -56,6 +56,6 @@ turbo_flavor_setup_toolchain() {
 
 # Derecho's modules provide only Tier 1, so build Tier 1.5 (pFUnit/AMReX) and
 # Tier 2 (FMS/TIM) from the submodules.  turbo_run_backend_builder
-# (scripts/lib/common.sh) does the rest: arg parsing, --clean, submodule guards,
+# (scripts/lib/common.sh) does the rest: arg parsing, --from-scratch, submodule guards,
 # the tiered dep builds, and Stage 2.
 turbo_run_backend_builder --build-deps-from-tier 1.5 "$@"

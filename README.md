@@ -35,8 +35,8 @@ One script takes you from a fresh clone to a MOM6 executable: it sets up the env
 | Your machine | Command |
 |---|---|
 | Derecho (NCAR), Lmod modules | `scripts/build_on_derecho.sh` |
-| Laptop / workstation, let Spack manage the toolchain | `scripts/build_local_with_spack_env.sh` |
-| Laptop / workstation, toolchain already on `PATH` | `scripts/build_local_with_system_toolchain.sh` |
+| Laptop / workstation, let Spack manage the toolchain | `scripts/build_with_spack_env.sh` |
+| Laptop / workstation, toolchain already on `PATH` | `scripts/build_with_system_toolchain.sh` |
 | Any x86-64 machine with AVX2 (Intel 2013+, AMD 2017+) and Docker or Podman, no toolchain at all | `scripts/build_with_container.sh` |
 
 Each builds MOM6 against one [infrastructure backend](#choosing-an-infrastructure-backend), TIM is the default but you can change it by passing `--infra FMS2`. To build and test both backends in one go, see [Build and test both backends in one command](#build-and-test-both-backends-in-one-command). [`scripts/README.md`](scripts/README.md) explains how the build is put together, and its [Workflows](scripts/README.md#workflows) section is the full reference for these scripts.
@@ -59,8 +59,8 @@ Once the build is complete, the executable is at `build/default/mom6_build/confi
 On a laptop or workstation, pick a script by where the toolchain — compilers, MPI, NetCDF and CMake — comes from:
 
 ```bash
-scripts/build_local_with_spack_env.sh          # Spack supplies MPI, NetCDF and CMake
-scripts/build_local_with_system_toolchain.sh   # you already have all of it on PATH
+scripts/build_with_spack_env.sh                # Spack supplies MPI, NetCDF and CMake
+scripts/build_with_system_toolchain.sh         # you already have all of it on PATH
 scripts/build_with_container.sh                # the CI container image supplies all of it
 ```
 
@@ -70,7 +70,7 @@ On an Apple Silicon Mac, use the Spack script with Apple clang and Homebrew's gf
 
 ### Build options
 
-All four scripts take the same options and `-h` or `--help` on any of them prints them. Note `build_local_with_spack_env.sh` adds the option `--recreate-spack-env`, and `build_with_container.sh` adds `--image`, `--pull`, `--no-pull` and `--shell`. The output for `build_on_derecho.sh`:
+All four scripts take the same options and `-h` or `--help` on any of them prints them. Note `build_with_spack_env.sh` adds the option `--recreate-spack-env`, and `build_with_container.sh` adds `--image`, `--pull`, `--no-pull` and `--shell`. The output for `build_on_derecho.sh`:
 
 ```text
 $ scripts/build_on_derecho.sh --help
@@ -86,9 +86,9 @@ Optional environment variables (hot-swap a dep's source; default = submodule):
 
 Options:
   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-  --clean                 Clean rebuild from scratch.  Removes the Stage-1
-                          upstream dep builds/installs AND passes cmake --fresh
-                          --clean-first to the Stage-2 turbo-stack build.
+  --from-scratch          Delete this build's dependencies and turbo-stack
+                          build, then build everything again.  Your toolchain
+                          is kept.
   --ninja                 Use Ninja generator (passed through)
   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
                           through to build_turbo_stack.sh).
@@ -110,10 +110,10 @@ Options:
   -h, --help              Print this usage text and exit.
 
 Examples:
-  build_on_derecho.sh                        # TIM backend, build the executable
-  build_on_derecho.sh --tests                # also build + run the unit tests
-  build_on_derecho.sh --infra FMS2           # FMS2 backend instead of TIM
-  build_on_derecho.sh --debug --clean        # clean Debug rebuild (deps + turbo-stack)
+  build_on_derecho.sh                               # TIM backend, build the executable
+  build_on_derecho.sh --tests                       # also build + run the unit tests
+  build_on_derecho.sh --infra FMS2                  # FMS2 backend instead of TIM
+  build_on_derecho.sh --debug --from-scratch        # Debug build from scratch (deps + turbo-stack)
 ```
 
 If we add, remove, or change options we will try to keep the above list up to date. But each script's own `--help` is authoritative if this copy ever falls behind it.
@@ -184,13 +184,13 @@ make clean
 There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. Artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`, and a directory of its own for the container driver), so with the default they write nothing into your checkout. However a Derecho batch job's PBS log is written in the directory where you launched the job:
 
 ```bash
-./test_turbo_stack_locally.sh                   # Spack toolchain
+./test_turbo_stack_with_spack_env.sh            # Spack toolchain
 ./test_turbo_stack_with_system_toolchain.sh     # your own toolchain on PATH
 ./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ./test_turbo_stack_with_container.sh            # the CI container image
 ```
 
-`--only FMS2|TIM` narrows to one backend; `--clean` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM, FMS and protoMOMxx (plus the image, for the container driver), and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
+`--only FMS2|TIM` narrows to one backend; `--from-scratch` wipes that artifact directory first. The matrix reports the commit and branch of turbo-stack, MOM6, TIM, FMS and protoMOMxx (plus the image, for the container driver), and whether each came from its pinned submodule or from an override, so a log says exactly what was tested. A build summary at the end of the run gives the PASS / FAIL verdict for each backend. 
 
 See [Build and test both backends, one command](scripts/README.md#build-and-test-both-backends-one-command)
 in the `scripts/` README for the full reference on each of these.
@@ -219,8 +219,8 @@ CI covers both build systems in separate lanes:
 
 | Lane | Workflows | Build system |
 |---|---|---|
-| CMake | `turbo-cmake-container-tests.yaml` (via the reusable `cmake-build.yaml`) | `scripts/build_local_with_spack_env.sh` in a prebuilt `turbo-ci` image |
-| CMake on macOS | `turbo-cmake-macos-tests.yaml` | `./test_turbo_stack_locally.sh` on GitHub's Apple Silicon runners (macOS 15 and 26), with a Spack environment built on the runner and cached |
+| CMake | `turbo-cmake-container-tests.yaml` (via the reusable `cmake-build.yaml`) | `scripts/build_with_spack_env.sh` in a prebuilt `turbo-ci` image |
+| CMake on macOS | `turbo-cmake-macos-tests.yaml` | `./test_turbo_stack_with_spack_env.sh` on GitHub's Apple Silicon runners (macOS 15 and 26), with a Spack environment built on the runner and cached |
 | legacy | `build-tests.yaml`, `build-tests-iturbo.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | `./build.sh` in the NCAR CISL dev containers |
 
 The CMake lane runs the pinned MOM6 submodule and the tip of MOM6's

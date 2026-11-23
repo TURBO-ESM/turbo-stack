@@ -1,8 +1,8 @@
 #!/bin/bash
-# Usage: ./scripts/build_local_with_spack_env.sh [options]
+# Usage: ./scripts/build_with_spack_env.sh [options]
 #
 # One-command build for the Spack flavor: sources
-# scripts/setup_environment/spack_local_environment.sh, builds the selected
+# scripts/setup_environment/spack_env.sh, builds the selected
 # infra backend (FMS for FMS2, TIM for --infra TIM) via the turbo_build_*
 # wrappers, then calls scripts/build_turbo_stack.sh to configure/build/test.  Spack
 # provides only cmake/MPI/NetCDF/pFUnit/AMReX; FMS is intentionally not in
@@ -18,9 +18,9 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --clean                 Clean rebuild from scratch.  Removes the Stage-1
-#                           upstream dep builds/installs AND passes cmake --fresh
-#                           --clean-first to the Stage-2 turbo-stack build.
+#   --from-scratch          Delete this build's dependencies and turbo-stack
+#                           build, then build everything again.  The Spack env
+#                           is kept; add --recreate-spack-env to rebuild it too.
 #   --ninja                 Use Ninja generator (passed through)
 #   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
 #                           through).  Builds the selected backend from source:
@@ -43,11 +43,11 @@
 #   -h, --help              Print this usage text and exit.
 #
 # Examples:
-#   build_local_with_spack_env.sh                       # TIM backend, build the executable
-#   build_local_with_spack_env.sh --tests               # also build + run the unit tests
-#   build_local_with_spack_env.sh --infra FMS2          # FMS2 backend instead of TIM
-#   build_local_with_spack_env.sh --debug --clean       # clean Debug rebuild (deps + turbo-stack)
-#   build_local_with_spack_env.sh --recreate-spack-env  # recreate the spack env, then build
+#   build_with_spack_env.sh                             # TIM backend, build the executable
+#   build_with_spack_env.sh --tests                     # also build + run the unit tests
+#   build_with_spack_env.sh --infra FMS2                # FMS2 backend instead of TIM
+#   build_with_spack_env.sh --debug --from-scratch      # Debug build from scratch (deps + turbo-stack)
+#   build_with_spack_env.sh --recreate-spack-env        # recreate the spack env, then build
 
 set -eo pipefail
 
@@ -74,10 +74,10 @@ turbo_flavor_setup_toolchain() {
     local env_args=()
     [[ "$_spack_recreate" == true ]] && env_args+=(--recreate)
     # shellcheck source=/dev/null
-    source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
+    source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_env.sh" "${env_args[@]}"
 }
 
 # Spack supplies Tier 1 + Tier 1.5, so build only Tier 2 (FMS for FMS2, TIM for
 # TIM) from the submodule.  turbo_run_backend_builder (scripts/lib/common.sh)
-# does the rest: arg parsing, --clean, submodule guards, the dep build, Stage 2.
+# does the rest: arg parsing, --from-scratch, submodule guards, the dep build, Stage 2.
 turbo_run_backend_builder --build-deps-from-tier 2 "${_args[@]}"

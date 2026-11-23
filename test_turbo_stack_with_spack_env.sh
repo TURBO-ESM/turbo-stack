@@ -1,10 +1,10 @@
 #!/bin/bash
-# test_turbo_stack_locally.sh
+# Usage: ./test_turbo_stack_with_spack_env.sh [options]
 #
-# End-to-end test driver (local / spack).  Thin wrapper: it parses the common
+# End-to-end test driver (Spack env).  Thin wrapper: it parses the common
 # driver args, then hands off to turbo_run_test_driver (scripts/lib/common.sh),
 # which builds + ctests each selected backend (FMS2, TIM) by running the real
-# single-backend builder scripts/build_local_with_spack_env.sh in its own process
+# single-backend builder scripts/build_with_spack_env.sh in its own process
 # -- a full, independent Stage-1 (env setup) -> Stage-2 (build turbo-stack) run
 # per backend -- and prints a per-backend matrix/verdict.  Its siblings,
 # test_turbo_stack_on_derecho.sh (Lmod modules) and test_turbo_stack_with_system_toolchain.sh
@@ -18,8 +18,8 @@
 # Options:
 #   --only FMS2|TIM     Run only the named flavor (default: both)
 #   --parallel N, -j N  Parallel build jobs (default: nproc)
-#   --clean             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
-#                       clears deps + turbo-stack build, same as the orchestrators)
+#   --from-scratch      rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (clears deps +
+#                       turbo-stack build, same as the orchestrators)
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):
@@ -46,4 +46,4 @@ TURBO_JOBS="$(command -v nproc >/dev/null 2>&1 && nproc || echo 4)"
 turbo_parse_driver_args "$@"
 turbo_resolve_stack_root
 
-turbo_run_test_driver "$TURBO_STACK_ROOT/scripts/build_local_with_spack_env.sh"
+turbo_run_test_driver "$TURBO_STACK_ROOT/scripts/build_with_spack_env.sh"

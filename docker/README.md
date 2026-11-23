@@ -27,7 +27,7 @@ ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi
 | Workflow | Role |
 |---|---|
 | `.github/workflows/build-turbo-ci-container.yaml` | **Producer** — builds the image and pushes it to GHCR. Manual only (`workflow_dispatch`), so a merge never waits on a 1-hour build. |
-| `.github/workflows/turbo-cmake-container-tests.yaml` | **Consumer** — runs `scripts/build_local_with_spack_env.sh --infra {TIM,FMS2} --tests` inside the image, on pushes to `main` and on PRs. |
+| `.github/workflows/turbo-cmake-container-tests.yaml` | **Consumer** — runs `scripts/build_with_spack_env.sh --infra {TIM,FMS2} --tests` inside the image, on pushes to `main` and on PRs. |
 | `.github/workflows/container-driver-scripts.yaml` | **Script check** — runs `./test_turbo_stack_with_container.sh` on the runner *host*, so the wrapper that pulls, mounts and enters the image is itself under test. The consumer above enters the image via `container:`, which bypasses that wrapper entirely. Path-filtered to the scripts it covers. |
 
 This is additive to the legacy `build-tests.yaml` / `unit-tests.yaml`, which
@@ -114,7 +114,7 @@ consumed on a *different* hosted runner, from a fleet that mixes CPU
 generations.
 
 **The pin lives in the Dockerfile, not in `spack/spack.yaml`.** That spec is
-shared with local builds (`scripts/setup_environment/spack_local_environment.sh`
+shared with local builds (`scripts/setup_environment/spack_env.sh`
 → the same `create_spack_environment.sh`), and an x86 level hard-coded there
 fails concretization outright on an Apple Silicon laptop — `require:` is a hard
 constraint, not a preference. Unset, `TURBO_SPACK_TARGET` leaves Spack's
@@ -244,7 +244,7 @@ underneath, to run by hand:
 docker run --rm -it -v "$PWD:/work" -w /work \
     turbo-ci:gcc-openmpi \
     bash -lc 'git config --global --add safe.directory "*" \
-              && scripts/build_local_with_spack_env.sh --infra TIM --tests'
+              && scripts/build_with_spack_env.sh --infra TIM --tests'
 ```
 
 Two caveats, if you do it by hand:

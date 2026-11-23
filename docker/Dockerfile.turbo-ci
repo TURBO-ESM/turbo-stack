@@ -7,15 +7,15 @@
 # amrex +fortran).
 #
 # It is consumed by .github/workflows/turbo-cmake-container-tests.yaml, which runs
-#     scripts/build_local_with_spack_env.sh --infra {TIM|FMS2} --tests
+#     scripts/build_with_spack_env.sh --infra {TIM|FMS2} --tests
 # inside this image. That script sources
-# scripts/setup_environment/spack_local_environment.sh, which finds the
+# scripts/setup_environment/spack_env.sh, which finds the
 # pre-baked "turbo_stack" env and *activates it without reinstalling* (Tier 1 +
 # Tier 1.5 come from Spack), then builds only the Tier-2 backend (FMS or TIM)
 # from the submodule and runs cmake configure/build + ctest.
 #
 # The env name MUST be "turbo_stack" so it matches the default env name in
-# scripts/setup_environment/spack_local_environment.sh.
+# scripts/setup_environment/spack_env.sh.
 #
 # One Dockerfile builds every image flavor, named <compiler>-<mpi>. The compiler
 # is chosen by the COMPILER build arg, plus COMPILER_VERSION for a family that
@@ -161,6 +161,6 @@ RUN . "${SPACK_ROOT}/share/spack/setup-env.sh" \
 ENV OMPI_ALLOW_RUN_AS_ROOT=1 \
     OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
-# SPACK_ROOT is exported (ENV above) so scripts/build_local_with_spack_env.sh
+# SPACK_ROOT is exported (ENV above) so scripts/build_with_spack_env.sh
 # finds it. The env is NOT auto-activated: the repo scripts own activation.
 CMD ["/bin/bash"]

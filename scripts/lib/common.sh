@@ -3,8 +3,8 @@
 #
 # SOURCED shared library for turbo-stack's build/test orchestration.  Holds the
 # machine-INDEPENDENT primitives shared by the end-to-end test drivers
-# (test_turbo_stack_locally.sh, test_turbo_stack_on_derecho.sh) and
-# the thinner entry points (build_turbo_stack.sh, build_local_with_spack_env.sh,
+# (test_turbo_stack_with_spack_env.sh, test_turbo_stack_on_derecho.sh) and
+# the thinner entry points (build_turbo_stack.sh, build_with_spack_env.sh,
 # build_on_derecho.sh).  Each driver supplies only its machine-specific Stage-1
 # toolchain step (spack vs Lmod modules); everything here is common.
 #
@@ -18,13 +18,13 @@
 # the whole point of keeping the toolchain out of "setup" and dep builds explicit).
 #
 # Two patterns compose these functions:
-#   * single-backend builder (build_local_with_spack_env.sh / build_on_derecho.sh):
+#   * single-backend builder (build_with_spack_env.sh / build_on_derecho.sh):
 #       turbo_resolve_stack_root
 #       turbo_require_submodule ...                            # guard the deps it builds
 #       <source the machine's Stage-1 toolchain env script>   # builds nothing
 #       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim/protomomxx)  # Stage 1: build deps (Tier 1.5 + Tier 2)
 #       build_turbo_stack.sh --infra X                         # Stage 2: build turbo-stack (Tier 3; defaults MOM6_ROOT)
-#   * end-to-end test driver (test_turbo_stack_locally.sh / _on_derecho.sh):
+#   * end-to-end test driver (test_turbo_stack_with_spack_env.sh / _on_derecho.sh):
 #       turbo_resolve_stack_root
 #       TURBO_JOBS=<default>; turbo_parse_driver_args "$@"
 #       turbo_run_test_driver <builder>                        # whole driver body (both backends)
@@ -34,51 +34,31 @@
 _TURBO_COMMON_SH=1
 
 # ── Usage / --help ───────────────────────────────────────────────────────────
-# Print a script's usage text from its header -- the comments and blank lines
-# above its first line of code, shebang skipped, leading "# " stripped.  Every
-# user-facing script keeps its usage there, so --help stays in sync from one
-# source of truth.
+# Print a script's usage text from its header: the comment block that starts at
+# its "# Usage:" line, leading "# " stripped.  Every user-facing script keeps its
+# usage there, so --help stays in sync from one source of truth.
 turbo_print_header_usage() {
-    local file="$1" line stripped
+    local file="$1" line stripped collecting=false
     [[ -r "$file" ]] || { echo "usage: (no header found for '$file')"; return 0; }
-    # Two candidates, gathered in one pass over the header:
-    #   usage_block  the comment block starting at a "# Usage:" line.  A
-    #                qsub-able driver carries #PBS directives above its usage
-    #                text with a blank line between, so its FIRST comment block
-    #                is the scheduler directives, not its usage.
-    #   first_block  the first comment block after the shebang -- the shape
-    #                every other script here uses (some have no "Usage:" line).
-    # The scan stops at the first line of code, so a "# Usage:" comment further
-    # down (inside a function, say) can never be taken for the usage text.
+    # The block is found by its "Usage:" line rather than taken as the first
+    # comment block, because a qsub-able driver carries #PBS directives above
+    # its usage text.  The scan stops at the first line of code, so a
+    # "# Usage:" comment further down (inside a function, say) can never be
+    # taken for the usage text.
     # Pure bash on purpose: a grep pipeline that matches nothing exits
     # non-zero, and the drivers run under `set -euo pipefail`, so that would
     # abort the script and print no usage at all.
-    local -a usage_block=() first_block=()
-    local shebang_seen=false first_done=false collecting_usage=false
     while IFS= read -r line; do
-        if [[ "$shebang_seen" == false && "$line" == '#!'* ]]; then
-            shebang_seen=true
-            continue
-        fi
         [[ "$line" == '#'* || "$line" =~ ^[[:space:]]*$ ]] || break   # end of header
-        stripped="${line#\#}"        # drop leading '#'
-        stripped="${stripped# }"     # drop one following space, keep indent
-        if [[ "$collecting_usage" == true ]]; then
-            [[ "$line" == '#'* ]] || break   # usage block complete; it wins
-            usage_block+=("$stripped")
-        elif [[ "$line" =~ ^#[[:space:]]*Usage: ]]; then
-            collecting_usage=true
-            usage_block+=("$stripped")
+        if [[ "$collecting" == false ]]; then
+            [[ "$line" =~ ^#[[:space:]]*Usage: ]] || continue
+            collecting=true
         fi
-        if [[ "$first_done" == false ]]; then
-            if [[ "$line" == '#'* ]]; then first_block+=("$stripped"); else first_done=true; fi
-        fi
+        [[ "$line" == '#'* ]] || break   # a blank line ends the usage block
+        stripped="${line#\#}"           # drop leading '#'
+        printf '%s\n' "${stripped# }"   # and one following space, keep indent
     done < "$file"
-    if [[ ${#usage_block[@]} -gt 0 ]]; then
-        printf '%s\n' "${usage_block[@]}"
-    elif [[ ${#first_block[@]} -gt 0 ]]; then
-        printf '%s\n' "${first_block[@]}"
-    fi
+    [[ "$collecting" == true ]] || echo "usage: (no '# Usage:' line in '$file')"
 }
 
 # ── Root resolution ──────────────────────────────────────────────────────────
@@ -168,10 +148,10 @@ turbo_parse_driver_args() {
     TURBO_CLEAN=false
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --only)        _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_ONLY="$2"; shift 2 ;;
-            --parallel|-j) _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_JOBS="$2"; shift 2 ;;
-            --clean)       TURBO_CLEAN=true; shift ;;
-            -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
+            --only)         _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_ONLY="$2"; shift 2 ;;
+            --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_JOBS="$2"; shift 2 ;;
+            --from-scratch) TURBO_CLEAN=true; shift ;;
+            -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1'" >&2; return 1 ;;
         esac
     done
@@ -186,7 +166,7 @@ turbo_parse_driver_args() {
     return 0
 }
 
-# ── --clean safety guard ─────────────────────────────────────────────────────
+# ── --from-scratch safety guard ──────────────────────────────────────────────
 # Refuse to rm -rf an obviously-too-broad path (empty, /, or $HOME) before a
 # driver wipes its artifact directories.
 turbo_validate_clean_paths() {
@@ -335,8 +315,8 @@ turbo_build_protomomxx() {
 }
 
 # ── Single-backend builder core (Stage 1 + Stage 2; machine-independent) ──────
-# The shared body of every single-backend builder (build_local_with_spack_env.sh,
-# build_local_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
+# The shared body of every single-backend builder (build_with_spack_env.sh,
+# build_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
 # supplies only the two machine-specific facts:
 #   1. a turbo_flavor_setup_toolchain function that puts the Tier-1 toolchain on
 #      PATH (sourced; builds nothing), and
@@ -356,14 +336,14 @@ turbo_parse_builder_args() {
     TURBO_B_INFRA="TIM"; TURBO_B_TESTS=false; TURBO_B_BUILD_DIR=""; TURBO_B_PARALLEL=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --debug)       TURBO_B_DEBUG=true; shift ;;
-            --clean)       TURBO_B_CLEAN=true; shift ;;
-            --ninja)       TURBO_B_NINJA=true; shift ;;
-            --infra)       _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_INFRA="$2"; shift 2 ;;
-            --tests)       TURBO_B_TESTS=true; shift ;;
-            --build_dir)   _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_BUILD_DIR="$2"; shift 2 ;;
-            --parallel|-j) _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_PARALLEL="$2"; shift 2 ;;
-            -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
+            --debug)        TURBO_B_DEBUG=true; shift ;;
+            --from-scratch) TURBO_B_CLEAN=true; shift ;;
+            --ninja)        TURBO_B_NINJA=true; shift ;;
+            --infra)        _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_INFRA="$2"; shift 2 ;;
+            --tests)        TURBO_B_TESTS=true; shift ;;
+            --build_dir)    _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_BUILD_DIR="$2"; shift 2 ;;
+            --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_PARALLEL="$2"; shift 2 ;;
+            -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1' to $(basename -- "$0")" >&2; exit 1 ;;
         esac
     done
@@ -456,11 +436,11 @@ turbo_run_backend_builder() {
         deps_build_root="$TURBO_STACK_ROOT/deps/default"
     fi
 
-    # --clean covers Stage-1 deps as well as the Stage-2 build: wipe the dep
-    # builds/installs here, and forward --clean to build_turbo_stack.sh below.
+    # --from-scratch covers Stage-1 deps as well as the Stage-2 build: wipe the dep
+    # builds/installs here, and forward --from-scratch to build_turbo_stack.sh below.
     if [[ "$TURBO_B_CLEAN" == true ]]; then
         turbo_validate_clean_paths "$deps_build_root" || return 1
-        echo "[--clean] removing upstream dep artifacts under $deps_build_root"
+        echo "[--from-scratch] removing upstream dep artifacts under $deps_build_root"
         rm -rf "$deps_build_root"
     fi
 
@@ -475,7 +455,7 @@ turbo_run_backend_builder() {
     # --- Stage 2 · build turbo-stack (Tier 3): configure + build + test ------
     local build_args=()
     [[ "$TURBO_B_DEBUG" == true ]] && build_args+=(--debug)
-    [[ "$TURBO_B_CLEAN" == true ]] && build_args+=(--clean)
+    [[ "$TURBO_B_CLEAN" == true ]] && build_args+=(--from-scratch)
     [[ "$TURBO_B_NINJA" == true ]] && build_args+=(--ninja)
     [[ -n "$TURBO_B_INFRA" ]]      && build_args+=(--infra "$TURBO_B_INFRA")
     [[ "$TURBO_B_TESTS" == true ]] && build_args+=(--tests)
@@ -485,7 +465,7 @@ turbo_run_backend_builder() {
 
 # ── Run one labeled command, tee'd, capturing its rc ─────────────────────────
 # Used by the end-to-end test drivers to invoke the real single-backend builder
-# (build_local_with_spack_env.sh / build_on_derecho.sh) once per backend, so each
+# (build_with_spack_env.sh / build_on_derecho.sh) once per backend, so each
 # backend is built + tested from scratch through the same code path a user runs.
 # The exit code is stashed in TURBO_LAST_RC (NOT returned) so the caller's
 # `set -e` can't abort between backends:
@@ -528,7 +508,7 @@ turbo_verdict() {
 
 # ── Run the end-to-end test driver for one machine ───────────────────────────
 # The full driver body shared by both end-to-end test drivers: derive the
-# artifact layout from $TURBO_BUILD_SYSTEM_TEST_DIR, honor --clean, print the
+# artifact layout from $TURBO_BUILD_SYSTEM_TEST_DIR, honor --from-scratch, print the
 # provenance matrix, then run the single-backend
 # <builder> once per selected backend (TURBO_RUN_FMS2 / TURBO_RUN_TIM) in its own
 # process under <test_dir>/turbo-stack-with-<backend>, and print a verdict.
@@ -540,11 +520,11 @@ turbo_run_test_driver() {
     export TURBO_BUILD_SYSTEM_TEST_DIR
     local log_dir="$TURBO_BUILD_SYSTEM_TEST_DIR/logs"
 
-    # --clean here wipes the whole artifact dir, which holds BOTH the Stage-1 dep
+    # --from-scratch here wipes the whole artifact dir, which holds BOTH the Stage-1 dep
     # builds/installs (under each backend's deps/) and the Stage-2 turbo-stack
-    # build.  That is the same thing --clean means in the single-backend
-    # orchestrators (build_on_derecho.sh / build_local_with_spack_env.sh), which
-    # remove their deps dir and pass --clean to build_turbo_stack.sh for the
+    # build.  That is the same thing --from-scratch means in the single-backend
+    # orchestrators (build_on_derecho.sh / build_with_spack_env.sh), which
+    # remove their deps dir and pass --from-scratch to build_turbo_stack.sh for the
     # turbo-stack build.  One definition of "clean" across every entry point:
     # Stage-1 deps + Stage-2 build.
     if [[ "${TURBO_CLEAN:-false}" == true ]]; then
@@ -555,10 +535,10 @@ turbo_run_test_driver() {
         _td=$(cd -P -- "$TURBO_BUILD_SYSTEM_TEST_DIR" 2>/dev/null && pwd) || _td="$TURBO_BUILD_SYSTEM_TEST_DIR"
         _sr=$(cd -P -- "$TURBO_STACK_ROOT" 2>/dev/null && pwd) || _sr="$TURBO_STACK_ROOT"
         if [[ "$_td" == "$_sr" || "$_sr" == "$_td"/* ]]; then
-            echo "Refusing --clean: TURBO_BUILD_SYSTEM_TEST_DIR ($_td) is or contains the repo root ($_sr)." >&2
+            echo "Refusing --from-scratch: TURBO_BUILD_SYSTEM_TEST_DIR ($_td) is or contains the repo root ($_sr)." >&2
             return 1
         fi
-        echo "[--clean] removing all artifacts (deps + turbo-stack build) under $TURBO_BUILD_SYSTEM_TEST_DIR"
+        echo "[--from-scratch] removing all artifacts (deps + turbo-stack build) under $TURBO_BUILD_SYSTEM_TEST_DIR"
         rm -rf "$TURBO_BUILD_SYSTEM_TEST_DIR"
     fi
     mkdir -p "$log_dir"
