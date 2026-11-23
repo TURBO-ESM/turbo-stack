@@ -4,7 +4,7 @@ Use the prompt below to regenerate `dependency_tiers.dot` (and the PNG) with Cla
 turbo-stack's dependency *policy* changes (a dep added/removed, or a dep's tier changes). The
 prompt describes the *classification*, not exact dot syntax, so it stays valid as members move.
 
-Render with: `dot -Tpng -o docs/dependency_tiers.png docs/dependency_tiers.dot`.
+Render with: `dot -Tpng:cairo -o docs/dependency_tiers.png docs/dependency_tiers.dot`.
 
 This figure is the **contract companion** to `cmake_dependency_dag.png`. The DAG shows build-time *link*
 relationships (what links what); this figure shows turbo-stack's *build policy* toward each
@@ -17,7 +17,7 @@ grouped differently.
 
 Generate a Graphviz dot file at `docs/dependency_tiers.dot` classifying every turbo-stack
 dependency by turbo-stack's BUILD POLICY (not by who owns or co-develops it). Render to
-`docs/dependency_tiers.png` with `dot -Tpng`.
+`docs/dependency_tiers.png` with `dot -Tpng:cairo`.
 
 ### Layout rules
 - `rankdir=TB`, `splines=ortho`, `compound=true`, `newrank=true`.

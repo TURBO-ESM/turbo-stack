@@ -3,7 +3,7 @@
 Use the prompt below to regenerate `build_test_orchestration.dot` (and the PNG) with Claude Code after
 the orchestration scripts change. It describes the structure and data flow, not exact dot syntax.
 
-Render with: `dot -Tpng -o docs/build_test_orchestration.png docs/build_test_orchestration.dot`.
+Render with: `dot -Tpng:cairo -o docs/build_test_orchestration.png docs/build_test_orchestration.dot`.
 
 This is the canonical pipeline figure. `local_spack_pipeline` and the old
 `test_new_build_system_on_derecho` figures were retired in favour of it; `two_stage_pipeline` is kept as
@@ -17,7 +17,7 @@ Tiers 1, 1.5 and 2; Stage 2 builds Tier 3.
 ## Prompt
 
 Generate a Graphviz dot file at `docs/build_test_orchestration.dot` showing the turbo-stack build/test
-orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng`.
+orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng:cairo`.
 
 ### Narrative the figure must land
 - **Every labelled box is a script; the steps inside it are what that script does.**  Put this idea

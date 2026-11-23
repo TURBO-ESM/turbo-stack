@@ -238,4 +238,4 @@ scripts.
 | [`tests/README.md`](tests/README.md) | Writing and adding pFUnit unit tests |
 | [`docker/README.md`](docker/README.md) | The CI container images, building in them locally, and the workflows that build and consume them |
 | [`examples/README.md`](examples/README.md) | Running and archiving the example experiments |
-| `docs/*.dot` | Sources for the build-system figures, which `scripts/README.md` uses. After editing one, re-render and commit the PNG: `dot -Tpng -o docs/<name>.png docs/<name>.dot`. Each figure's `*_prompt.md` records what it must show |
+| `docs/*.dot` | Sources for the build-system figures, which `scripts/README.md` uses. After editing one, re-render and commit the PNG: `dot -Tpng:cairo -o docs/<name>.png docs/<name>.dot`. With `:cairo`, Graphviz stops if it was built without cairo, instead of falling back to its gd renderer, which garbles `·` and `→` and cuts off labels. Each figure's `*_prompt.md` records what it must show |
