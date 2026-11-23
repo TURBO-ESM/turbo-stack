@@ -105,14 +105,16 @@ jobs:
 
       # Every restore and save below uses the same `path` list: the cache version
       # is derived from it, so a restore with a different list finds nothing.
-      # Spack's download cache is left out.
+      # Spack's download cache ($SPACK_ROOT/var/spack/cache) goes in with
+      # $SPACK_ROOT: actions/cache archives a listed directory whole, so a `!` line
+      # can't leave part of it out. A full save follows `spack clean -sd`, which
+      # empties it; a partial save keeps the downloaded sources for the resumed build.
       - name: Restore the Spack environment
         id: cache
         uses: actions/cache/restore@v5
         with:
           path: |
             ${{ env.SPACK_ROOT }}
-            !${{ env.SPACK_ROOT }}/var/spack/cache
             ~/.spack
           key: ${{ steps.key.outputs.key }}
           restore-keys: spack-${{ steps.key.outputs.tc }}-
@@ -153,7 +155,6 @@ jobs:
         with:
           path: |
             ${{ env.SPACK_ROOT }}
-            !${{ env.SPACK_ROOT }}/var/spack/cache
             ~/.spack
           key: ${{ steps.key.outputs.key }}
 
@@ -168,7 +169,6 @@ jobs:
         with:
           path: |
             ${{ env.SPACK_ROOT }}
-            !${{ env.SPACK_ROOT }}/var/spack/cache
             ~/.spack
           key: ${{ steps.key.outputs.key }}-partial-${{ github.run_id }}-${{ github.run_attempt }}
 
