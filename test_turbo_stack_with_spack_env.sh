@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_turbo_stack_with_spack_env.sh
+# Usage: ./test_turbo_stack_with_spack_env.sh [options]
 #
 # End-to-end test driver (Spack env).  Thin wrapper: it parses the common
 # driver args, then hands off to turbo_run_test_driver (scripts/lib/common.sh),

@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_turbo_stack_with_system_toolchain.sh
+# Usage: ./test_turbo_stack_with_system_toolchain.sh [options]
 #
 # End-to-end test driver (bring-your-own toolchain).  Thin wrapper: it
 # parses the common driver args, then hands off to turbo_run_test_driver
