@@ -7,8 +7,8 @@
 # The container member of the single-backend builder family; the siblings differ
 # only in who supplies the toolchain and the upstream deps:
 #
-#   build_with_spack_env.sh         a Spack env you own
-#   build_with_system_toolchain.sh  whatever is on your PATH
+#   build_with_spack_env.sh               a Spack env you own
+#   build_with_system_toolchain.sh        whatever is on your PATH
 #   build_on_derecho.sh                   Derecho's Lmod modules
 #   build_with_container.sh               the container image  (this file)
 #
@@ -51,8 +51,8 @@
 #                       the checkout is mounted in as well -- prefer one, so the
 #                       container never writes into your clone.
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --from-scratch             Clean rebuild from scratch (passed through: wipes the Stage-1
-#                       dep builds/installs, plus cmake --fresh).  Implied when the
+#   --from-scratch      Delete the build's dependencies and turbo-stack build, then
+#                       build everything again (passed through).  Implied when the
 #                       image changed since the build dir was built (above).
 #   --ninja             Use the Ninja generator (passed through)
 #   --parallel N, -j N  Parallel build jobs, exported as CMAKE_BUILD_PARALLEL_LEVEL
@@ -381,7 +381,7 @@ if [[ -n "$_image_id" && "$_built_by" != "$_image_id" ]] &&
         echo "[ci-container]          pass --from-scratch to the builder before reusing it." >&2
     elif [[ "$TURBO_B_CLEAN" != true ]]; then
         echo "[ci-container] the build in $_cmake_dir $_stale_why;"
-        echo "[ci-container] rebuilding from scratch (--from-scratch)"
+        echo "[ci-container] rebuilding from scratch, as --from-scratch would"
         TURBO_B_CLEAN=true
     fi
 fi

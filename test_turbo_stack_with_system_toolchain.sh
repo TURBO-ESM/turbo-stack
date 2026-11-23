@@ -1,7 +1,7 @@
 #!/bin/bash
 # test_turbo_stack_with_system_toolchain.sh
 #
-# End-to-end test driver (local / bring-your-own toolchain).  Thin wrapper: it
+# End-to-end test driver (bring-your-own toolchain).  Thin wrapper: it
 # parses the common driver args, then hands off to turbo_run_test_driver
 # (scripts/lib/common.sh), which builds + ctests each selected backend (FMS2,
 # TIM) by running the real single-backend builder
@@ -24,8 +24,8 @@
 # Options:
 #   --only FMS2|TIM     Run only the named flavor (default: both)
 #   --parallel N, -j N  Parallel build jobs (default: nproc)
-#   --from-scratch             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
-#                       clears deps + turbo-stack build, same as the orchestrators)
+#   --from-scratch      rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (clears deps +
+#                       turbo-stack build, same as the orchestrators)
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):

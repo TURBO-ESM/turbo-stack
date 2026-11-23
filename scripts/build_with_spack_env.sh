@@ -18,9 +18,9 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --from-scratch                 Clean rebuild from scratch.  Removes the Stage-1
-#                           upstream dep builds/installs AND passes cmake --fresh
-#                           --clean-first to the Stage-2 turbo-stack build.
+#   --from-scratch          Delete this build's dependencies and turbo-stack
+#                           build, then build everything again.  The Spack env
+#                           is kept; add --recreate-spack-env to rebuild it too.
 #   --ninja                 Use Ninja generator (passed through)
 #   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
 #                           through).  Builds the selected backend from source:
@@ -43,11 +43,11 @@
 #   -h, --help              Print this usage text and exit.
 #
 # Examples:
-#   build_with_spack_env.sh                       # TIM backend, build the executable
-#   build_with_spack_env.sh --tests               # also build + run the unit tests
-#   build_with_spack_env.sh --infra FMS2          # FMS2 backend instead of TIM
-#   build_with_spack_env.sh --debug --from-scratch       # clean Debug rebuild (deps + turbo-stack)
-#   build_with_spack_env.sh --recreate-spack-env  # recreate the spack env, then build
+#   build_with_spack_env.sh                             # TIM backend, build the executable
+#   build_with_spack_env.sh --tests                     # also build + run the unit tests
+#   build_with_spack_env.sh --infra FMS2                # FMS2 backend instead of TIM
+#   build_with_spack_env.sh --debug --from-scratch      # Debug build from scratch (deps + turbo-stack)
+#   build_with_spack_env.sh --recreate-spack-env        # recreate the spack env, then build
 
 set -eo pipefail
 

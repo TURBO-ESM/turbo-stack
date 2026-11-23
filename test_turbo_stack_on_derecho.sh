@@ -21,7 +21,7 @@
 # which builds + ctests each selected backend (FMS2, TIM) by running the real
 # single-backend builder scripts/build_on_derecho.sh in its own process -- a full,
 # independent Stage-1 (env setup) -> Stage-2 (build turbo-stack) run per backend --
-# and prints a per-backend matrix/verdict.  Its local siblings, test_turbo_stack_with_spack_env.sh
+# and prints a per-backend matrix/verdict.  Its siblings, test_turbo_stack_with_spack_env.sh
 # (spack) and test_turbo_stack_with_system_toolchain.sh (bring-your-own toolchain on PATH), are
 # identical except for their toolchain and builder.  See docs/build_test_orchestration_prompt.md
 # and docs/dependency_tiers_prompt.md.
@@ -32,8 +32,8 @@
 # Options:
 #   --only FMS2|TIM     Run only the named flavor (default: both)
 #   --parallel N, -j N  Parallel build jobs (default: 128 = one Derecho node)
-#   --from-scratch             rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (from scratch;
-#                       clears deps + turbo-stack build, same as the orchestrators)
+#   --from-scratch      rm -rf $TURBO_BUILD_SYSTEM_TEST_DIR first (clears deps +
+#                       turbo-stack build, same as the orchestrators)
 #   -h, --help          Print this usage text and exit.
 #
 # Configuration (env vars):

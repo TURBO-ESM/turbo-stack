@@ -11,7 +11,7 @@
 #
 # Options:
 #   --debug             Build with CMAKE_BUILD_TYPE=Debug 
-#   --from-scratch             Clean rebuild from scratch: cmake --fresh (wipe the
+#   --from-scratch      Rebuild from scratch: cmake --fresh (wipe the
 #                       configure cache) + --clean-first (clean build artifacts)
 #   --ninja             Use Ninja generator instead of the default (Unix Makefiles)
 #   --build_dir DIR     Build directory (default: $TURBO_STACK_ROOT/build/default)
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --build_dir)    _turbo_opt_needs_value "$1" "$#" || exit 1; build_dir="$2"; shift 2 ;;
         --debug)        debug=true; shift ;;
-        --from-scratch)        clean=true; shift ;;
+        --from-scratch) clean=true; shift ;;
         --ninja)        ninja=true; shift ;;
         --infra)        _turbo_opt_needs_value "$1" "$#" || exit 1; infra="$2"; shift 2 ;;
         --tests)        with_tests=true; shift ;;

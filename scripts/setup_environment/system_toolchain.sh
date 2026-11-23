@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/setup_environment/system_toolchain.sh
 #
-# SOURCED.  Stage-1 (environment setup) toolchain step for a generic local
+# SOURCED.  Stage-1 (environment setup) toolchain step for any
 # machine (laptop / workstation) where you bring your OWN toolchain: compilers,
 # MPI, NetCDF, and CMake are already on PATH -- installed however you like
 # (system packages / Homebrew / an OS module system / an already-activated Spack
@@ -13,9 +13,9 @@
 # wrappers in scripts/lib/common.sh.  See docs/dependency_tiers_prompt.md.
 #
 # This is the toolchain counterpart to the other Stage-1 recipes:
-#   - spack_env.sh   -- toolchain from a Spack env
+#   - spack_env.sh                 -- toolchain from a Spack env
 #   - derecho_cpu_gcc_openmpi.sh   -- toolchain from Lmod modules
-#   - system_toolchain.sh   -- toolchain already on PATH (this file)
+#   - system_toolchain.sh          -- toolchain already on PATH (this file)
 #
 # Prepare your toolchain BEFORE sourcing this (any one of):
 #   module load <compiler> <mpi> <netcdf> cmake     # an OS module system
@@ -51,7 +51,7 @@ command -v mpicc >/dev/null 2>&1 || _turbo_missing+=("mpicc")
 command -v cmake >/dev/null 2>&1 || _turbo_missing+=("cmake")
 
 if [[ ${#_turbo_missing[@]} -gt 0 ]]; then
-    echo "Error: your local toolchain is incomplete -- these are not on PATH:" >&2
+    echo "Error: your toolchain is incomplete -- these are not on PATH:" >&2
     for _m in "${_turbo_missing[@]}"; do echo "         - $_m" >&2; done
     echo "       Install or activate your toolchain first, then re-run.  Examples:" >&2
     echo "         module load <compiler> <mpi> <netcdf> cmake      # an OS module system" >&2
@@ -63,7 +63,7 @@ if [[ ${#_turbo_missing[@]} -gt 0 ]]; then
     return 1 2>/dev/null || exit 1
 fi
 
-echo "[local-toolchain] using the toolchain already on PATH (built nothing):"
+echo "[system-toolchain] using the toolchain already on PATH (built nothing):"
 printf '    %-9s %s\n' "cmake:"   "$(command -v cmake) ($(cmake --version 2>/dev/null | head -1))"
 printf '    %-9s %s\n' "Fortran:" "$(command -v "$_turbo_fc")"
 printf '    %-9s %s\n' "C:"       "$(command -v mpicc)"
@@ -73,7 +73,7 @@ if command -v nf-config >/dev/null 2>&1; then
 elif command -v nc-config >/dev/null 2>&1; then
     printf '    %-9s %s\n' "NetCDF:"  "$(command -v nc-config)"
 else
-    echo "[local-toolchain] warning: no nf-config / nc-config on PATH." >&2
+    echo "[system-toolchain] warning: no nf-config / nc-config on PATH." >&2
     echo "                  If find_package(NetCDF) fails during configure, put your" >&2
     echo "                  NetCDF install prefix on CMAKE_PREFIX_PATH and re-run." >&2
 fi

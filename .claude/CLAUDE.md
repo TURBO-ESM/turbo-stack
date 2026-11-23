@@ -19,10 +19,10 @@ Stage 2 — build turbo-stack (uniform):           build_turbo_stack.sh  →  Ti
 
 The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is what a machine actually runs (contrast `docs/dependency_tiers.png` with `docs/build_test_orchestration.png`). Only Stage 1 differs between machines — the toolchain provider, and which upstream deps come prebuilt vs are built from the submodule (e.g. spack supplies AMReX/pFUnit, Derecho builds them). Stage 2 is always the same. The `setup_environment/` recipes are **toolchain-only** — they build no dependencies; the upstream deps are built explicitly via `turbo_build_*`. The single-backend builders run both stages; the end-to-end test drivers run a builder once per backend over the shared core in `scripts/lib/common.sh`.
 
-### Local test, both backends (end-to-end)
+### Test both backends (end-to-end)
 
 ```bash
-./test_turbo_stack_with_spack_env.sh                      # spack; builds + ctests FMS2 and TIM
+./test_turbo_stack_with_spack_env.sh                             # spack; builds + ctests FMS2 and TIM
 ./test_turbo_stack_with_spack_env.sh --only TIM --from-scratch   # one backend, from scratch
 ```
 
@@ -48,28 +48,28 @@ It runs `build_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-esm/tu
 - **`safe.directory` is set through `GIT_CONFIG_*` env vars**, not `git config --global`, which would write the shared `HOME`'s `.gitconfig` on every run.
 - **Ctrl-C may not stop the container.** bash holds the signal until `docker run` returns, and the build inside can outlive it (`docker ps`, `docker rm -f`).
 
-### Local build (spack flavor, one command)
+### Build with a Spack env (one command)
 
 ```bash
-scripts/build_with_spack_env.sh                              # build (default backend infra TIM, Release)
-scripts/build_with_spack_env.sh --debug                      # Debug build
-scripts/build_with_spack_env.sh --from-scratch                      # Clean rebuild from scratch (deps + turbo-stack)
-scripts/build_with_spack_env.sh --tests                      # also build + run the pFUnit unit tests
-scripts/build_with_spack_env.sh --infra FMS2                 # FMS2 backend instead of the default TIM
-scripts/build_with_spack_env.sh --recreate-spack-env --from-scratch # nuke + recreate the spack env, then clean rebuild
+scripts/build_with_spack_env.sh                                     # build (default backend infra TIM, Release)
+scripts/build_with_spack_env.sh --debug                             # Debug build
+scripts/build_with_spack_env.sh --from-scratch                      # rebuild from scratch (deps + turbo-stack)
+scripts/build_with_spack_env.sh --tests                             # also build + run the pFUnit unit tests
+scripts/build_with_spack_env.sh --infra FMS2                        # FMS2 backend instead of the default TIM
+scripts/build_with_spack_env.sh --recreate-spack-env --from-scratch # nuke + recreate the spack env, then rebuild from scratch
 ```
 
 `build_with_spack_env.sh` options: `--debug`, `--from-scratch`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
 
-### Local build (from source, one command)
+### Build with your own toolchain (from source, one command)
 
 The closest replacement for the old `build.sh` on a laptop/workstation: bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` — system packages, Homebrew, an OS module system, or an already-activated Spack/Conda env) and turbo-stack builds **all** upstream submodule deps from source (pFUnit/AMReX + FMS/TIM, plus protoMOMxx for TIM), then builds turbo-stack. No spack, no modules; nothing is fetched — everything comes from `submodules/`.
 
 ```bash
-scripts/build_with_system_toolchain.sh                    # build (default backend infra TIM, Release)
-scripts/build_with_system_toolchain.sh --tests            # also build + run the pFUnit unit tests
-scripts/build_with_system_toolchain.sh --infra FMS2       # FMS2 backend instead of the default TIM
-scripts/build_with_system_toolchain.sh --from-scratch            # clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_system_toolchain.sh                          # build (default backend infra TIM, Release)
+scripts/build_with_system_toolchain.sh --tests                  # also build + run the pFUnit unit tests
+scripts/build_with_system_toolchain.sh --infra FMS2             # FMS2 backend instead of the default TIM
+scripts/build_with_system_toolchain.sh --from-scratch           # rebuild from scratch (deps + turbo-stack)
 ```
 
 `build_with_system_toolchain.sh` options: `--debug`, `--from-scratch`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`. It sources `setup_environment/system_toolchain.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
@@ -78,7 +78,7 @@ scripts/build_with_system_toolchain.sh --from-scratch            # clean rebuild
 
 ```bash
 source scripts/lib/common.sh                                 # turbo_build_* + helpers
-source scripts/setup_environment/spack_env.sh  # Stage 1: toolchain (spack); builds nothing → Tier 1
+source scripts/setup_environment/spack_env.sh                # Stage 1: toolchain (spack); builds nothing → Tier 1
 deps="$TURBO_STACK_ROOT/deps/default"
 turbo_build_fms "$deps/build" "$deps/install"                # Stage 1: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
 scripts/build_turbo_stack.sh --infra FMS2                    # Stage 2: build turbo-stack (Tier 3); use --infra TIM after turbo_build_tim + turbo_build_protomomxx,
@@ -93,7 +93,7 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 |---|---|---|
 | `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
 | `test_turbo_stack_with_spack_env.sh`, `test_turbo_stack_with_system_toolchain.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
-| `scripts/build_with_spack_env.sh`, `build_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
+| `scripts/build_with_spack_env.sh`, `build_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (Spack env / your own toolchain / Derecho modules) | exec'd |
 | `scripts/build_with_container.sh` | Wrapper — runs `build_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
@@ -182,8 +182,8 @@ and calls turbo_run_backend_builder (lib/common.sh), differing only in the toolc
 recipe and the lowest dependency TIER it must build from submodule (the first the
 toolchain does NOT provide prebuilt — see docs/dependency_tiers.png):
 
-  build_with_spack_env.sh          toolchain = spack env     (provides Tier 1 + 1.5) → build from Tier 2
-  build_with_system_toolchain.sh   toolchain = your PATH     (provides Tier 1)       → build from Tier 1.5
+  build_with_spack_env.sh                toolchain = spack env     (provides Tier 1 + 1.5) → build from Tier 2
+  build_with_system_toolchain.sh         toolchain = your PATH     (provides Tier 1)       → build from Tier 1.5
   build_on_derecho.sh                    toolchain = Lmod modules  (provides Tier 1)       → build from Tier 1.5
       │
       └─→ turbo_run_backend_builder (lib/common.sh) — the shared Stage-1+Stage-2 body:

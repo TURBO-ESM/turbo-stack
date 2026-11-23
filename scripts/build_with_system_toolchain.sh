@@ -1,7 +1,7 @@
 #!/bin/bash
 # Usage: ./scripts/build_with_system_toolchain.sh [options]
 #
-# One-command, build-everything-from-source local build.  This is the closest
+# One-command, build-everything-from-source build.  This is the closest
 # replacement for the old `build.sh` on a laptop / workstation: you bring your
 # own toolchain (compilers, MPI, NetCDF, CMake already on PATH -- system
 # packages, Homebrew, an OS module system, or an already-activated Spack/Conda
@@ -9,10 +9,10 @@
 # pFUnit + AMReX (Tier 1.5) and FMS/TIM (Tier 2) -- then builds turbo-stack
 # itself (Tier 3).  Nothing is fetched; everything comes from `submodules/`.
 #
-# This is the generic-local sibling of the other single-backend builders; they
+# This is the bring-your-own-toolchain sibling of the other builders; they
 # differ only in Stage-1 (environment setup):
-#   build_with_system_toolchain.sh  toolchain already on PATH; build all deps from submodule  (this file)
-#   build_with_spack_env.sh         Spack supplies the toolchain + pFUnit/AMReX; build FMS/TIM
+#   build_with_system_toolchain.sh        toolchain already on PATH; build all deps from submodule  (this file)
+#   build_with_spack_env.sh               Spack supplies the toolchain + pFUnit/AMReX; build FMS/TIM
 #   build_on_derecho.sh                   Lmod modules supply the toolchain; build all deps from submodule
 #
 # Prepare your toolchain BEFORE running (see system_toolchain.sh), e.g.:
@@ -30,9 +30,9 @@
 #
 # Options:
 #   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-#   --from-scratch                 Clean rebuild from scratch.  Removes the Stage-1
-#                           upstream dep builds/installs AND passes cmake --fresh
-#                           --clean-first to the Stage-2 turbo-stack build.
+#   --from-scratch          Delete this build's dependencies and turbo-stack
+#                           build, then build everything again.  Your toolchain
+#                           is kept.
 #   --ninja                 Use Ninja generator (passed through)
 #   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
 #                           through to build_turbo_stack.sh).
@@ -54,10 +54,10 @@
 #   -h, --help              Print this usage text and exit.
 #
 # Examples:
-#   build_with_system_toolchain.sh                        # TIM backend, build the executable
-#   build_with_system_toolchain.sh --tests                # also build + run the unit tests
-#   build_with_system_toolchain.sh --infra FMS2           # FMS2 backend instead of TIM
-#   build_with_system_toolchain.sh --debug --from-scratch        # clean Debug rebuild (deps + turbo-stack)
+#   build_with_system_toolchain.sh                               # TIM backend, build the executable
+#   build_with_system_toolchain.sh --tests                       # also build + run the unit tests
+#   build_with_system_toolchain.sh --infra FMS2                  # FMS2 backend instead of TIM
+#   build_with_system_toolchain.sh --debug --from-scratch        # Debug build from scratch (deps + turbo-stack)
 
 set -eo pipefail
 

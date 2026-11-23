@@ -59,8 +59,8 @@ Once the build is complete, the executable is at `build/default/mom6_build/confi
 On a laptop or workstation, pick a script by where the toolchain — compilers, MPI, NetCDF and CMake — comes from:
 
 ```bash
-scripts/build_with_spack_env.sh          # Spack supplies MPI, NetCDF and CMake
-scripts/build_with_system_toolchain.sh   # you already have all of it on PATH
+scripts/build_with_spack_env.sh                # Spack supplies MPI, NetCDF and CMake
+scripts/build_with_system_toolchain.sh         # you already have all of it on PATH
 scripts/build_with_container.sh                # the CI container image supplies all of it
 ```
 
@@ -86,9 +86,9 @@ Optional environment variables (hot-swap a dep's source; default = submodule):
 
 Options:
   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
-  --from-scratch                 Clean rebuild from scratch.  Removes the Stage-1
-                          upstream dep builds/installs AND passes cmake --fresh
-                          --clean-first to the Stage-2 turbo-stack build.
+  --from-scratch          Delete this build's dependencies and turbo-stack
+                          build, then build everything again.  Your toolchain
+                          is kept.
   --ninja                 Use Ninja generator (passed through)
   --infra FMS2|TIM        Infrastructure backend (default: TIM, passed
                           through to build_turbo_stack.sh).
@@ -110,10 +110,10 @@ Options:
   -h, --help              Print this usage text and exit.
 
 Examples:
-  build_on_derecho.sh                        # TIM backend, build the executable
-  build_on_derecho.sh --tests                # also build + run the unit tests
-  build_on_derecho.sh --infra FMS2           # FMS2 backend instead of TIM
-  build_on_derecho.sh --debug --from-scratch        # clean Debug rebuild (deps + turbo-stack)
+  build_on_derecho.sh                               # TIM backend, build the executable
+  build_on_derecho.sh --tests                       # also build + run the unit tests
+  build_on_derecho.sh --infra FMS2                  # FMS2 backend instead of TIM
+  build_on_derecho.sh --debug --from-scratch        # Debug build from scratch (deps + turbo-stack)
 ```
 
 If we add, remove, or change options we will try to keep the above list up to date. But each script's own `--help` is authoritative if this copy ever falls behind it.
@@ -184,7 +184,7 @@ make clean
 There are high level drivers at the repo root that build **and** `ctest` both backends (TIM and FMS2), each in its own build directory, and print a per-backend matrix and PASS/FAIL verdict. Artifacts go under `$TURBO_BUILD_SYSTEM_TEST_DIR` (default `${TMPDIR:-/tmp}/turbo_build_system_test`, and a directory of its own for the container driver), so with the default they write nothing into your checkout. However a Derecho batch job's PBS log is written in the directory where you launched the job:
 
 ```bash
-./test_turbo_stack_with_spack_env.sh                   # Spack toolchain
+./test_turbo_stack_with_spack_env.sh            # Spack toolchain
 ./test_turbo_stack_with_system_toolchain.sh     # your own toolchain on PATH
 ./test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 ./test_turbo_stack_with_container.sh            # the CI container image

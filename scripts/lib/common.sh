@@ -168,10 +168,10 @@ turbo_parse_driver_args() {
     TURBO_CLEAN=false
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --only)        _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_ONLY="$2"; shift 2 ;;
-            --parallel|-j) _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_JOBS="$2"; shift 2 ;;
-            --from-scratch)       TURBO_CLEAN=true; shift ;;
-            -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
+            --only)         _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_ONLY="$2"; shift 2 ;;
+            --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || return 1; TURBO_JOBS="$2"; shift 2 ;;
+            --from-scratch) TURBO_CLEAN=true; shift ;;
+            -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1'" >&2; return 1 ;;
         esac
     done
@@ -186,7 +186,7 @@ turbo_parse_driver_args() {
     return 0
 }
 
-# ── --from-scratch safety guard ─────────────────────────────────────────────────────
+# ── --from-scratch safety guard ──────────────────────────────────────────────
 # Refuse to rm -rf an obviously-too-broad path (empty, /, or $HOME) before a
 # driver wipes its artifact directories.
 turbo_validate_clean_paths() {
@@ -356,14 +356,14 @@ turbo_parse_builder_args() {
     TURBO_B_INFRA="TIM"; TURBO_B_TESTS=false; TURBO_B_BUILD_DIR=""; TURBO_B_PARALLEL=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --debug)       TURBO_B_DEBUG=true; shift ;;
-            --from-scratch)       TURBO_B_CLEAN=true; shift ;;
-            --ninja)       TURBO_B_NINJA=true; shift ;;
-            --infra)       _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_INFRA="$2"; shift 2 ;;
-            --tests)       TURBO_B_TESTS=true; shift ;;
-            --build_dir)   _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_BUILD_DIR="$2"; shift 2 ;;
-            --parallel|-j) _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_PARALLEL="$2"; shift 2 ;;
-            -h|--help)     turbo_print_header_usage "$0"; exit 0 ;;
+            --debug)        TURBO_B_DEBUG=true; shift ;;
+            --from-scratch) TURBO_B_CLEAN=true; shift ;;
+            --ninja)        TURBO_B_NINJA=true; shift ;;
+            --infra)        _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_INFRA="$2"; shift 2 ;;
+            --tests)        TURBO_B_TESTS=true; shift ;;
+            --build_dir)    _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_BUILD_DIR="$2"; shift 2 ;;
+            --parallel|-j)  _turbo_opt_needs_value "$1" "$#" || exit 1; TURBO_B_PARALLEL="$2"; shift 2 ;;
+            -h|--help)      turbo_print_header_usage "$0"; exit 0 ;;
             *) echo "Error: unknown option '$1' to $(basename -- "$0")" >&2; exit 1 ;;
         esac
     done

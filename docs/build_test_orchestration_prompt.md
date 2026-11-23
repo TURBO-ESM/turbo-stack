@@ -50,8 +50,8 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
 
 ### Visual language
 - Test-driver ellipses `#fffacd`.
-- Path A (local · spack) builder cluster fill `#e7eff8`; Path B (Derecho · Lmod modules) builder
-  cluster fill `#fbeee6`; Path C (local · system toolchain already on PATH) builder cluster fill
+- Path A (Spack env) builder cluster fill `#e7eff8`; Path B (Derecho · Lmod modules) builder
+  cluster fill `#fbeee6`; Path C (system toolchain already on PATH) builder cluster fill
   `#efe9f6`; container-wrapper cluster fill `#e3f1ea`.  Cluster label = the builder script name +
   "(run once per backend)", `labeljust=l`.
 - Stage-1 toolchain box `#bcd4ec`; Stage-1 deps box `#c8e6c9`; shared Stage-2 ellipse `#90ee90`; verdict box `#c8e6c9`.
@@ -74,7 +74,7 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
     _protomomxx` or `_fms` (pFUnit/AMReX = Tier 1.5; FMS/TIM/protoMOMxx = Tier 2).
   - `build_with_system_toolchain.sh`: toolchain = source `system_toolchain.sh` (verify
     only, builds nothing → Tier 1); deps = the same conditional set as Derecho (all from submodule) —
-    the bring-your-own-toolchain local path (no spack, no modules).
+    the bring-your-own-toolchain path (no spack, no modules).
   - protoMOMxx is built only for the TIM backend, right after TIM, into the same prefix. It provides
     `protoMOMxx::mom_bridge`, which MOM6 `dev/turbo-debug` links under TIM. The deps labels list it
     as one more `turbo_build_*` call; don't add a separate node for it.

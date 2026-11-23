@@ -72,7 +72,7 @@ shows the same two stages as the scripts drive them:
      AMReX/pFUnit (Tier 1.5) and FMS/TIM, plus protoMOMxx for TIM (Tier 2) — via the `turbo_build_*`
      wrappers in `lib/common.sh` (the canonical per-dep cmake flags live there,
      once). *Which* deps need building is the machine-specific part: e.g. spack
-     supplies pFUnit/AMReX prebuilt so locally you build only FMS/TIM, while
+     supplies pFUnit/AMReX prebuilt so you build only FMS/TIM, while
      Derecho's modules provide neither so you build all four.
 2. **Stage 2 — build turbo-stack** *(same across machines)* — `build_turbo_stack.sh` runs cmake
    configure + build (and `ctest` when `--tests` is given; unit tests are opt-in),
@@ -191,22 +191,22 @@ scripts/
 
   # STAGE 1 environment setup only - one file per flavor (sourced)
   setup_environment/
-    spack_env.sh                #   spack environment activation
-    system_toolchain.sh                #   generic — toolchain already on PATH (no spack/modules)
+    spack_env.sh                              #   spack environment activation
+    system_toolchain.sh                       #   generic — toolchain already on PATH (no spack/modules)
     derecho_cpu_gcc_openmpi.sh                #   Derecho via Lmod modules
 
   # STAGE 2 — build turbo-stack: cmake configure + build (+ ctest with --tests)
   build_turbo_stack.sh
 
   # Orchestrators - Do stage 1 and 2 for a single backend (TIM or FMS2)
-  build_with_spack_env.sh               # ORCHESTRATOR — stage 1 via spack
-  build_with_system_toolchain.sh        # ORCHESTRATOR — stage 1 via bring your own toolchain
+  build_with_spack_env.sh                     # ORCHESTRATOR — stage 1 via spack
+  build_with_system_toolchain.sh              # ORCHESTRATOR — stage 1 via bring your own toolchain
   build_on_derecho.sh                         # ORCHESTRATOR — stage 1 via Derecho's Lmod modules
   build_with_container.sh                     # WRAPPER — stage 1 via the CI container image: runs build_with_spack_env.sh inside it
 
 # (repo top level) — high level end-to-end drivers, wraps orchestrators automate building and testing BOTH backends:
-test_turbo_stack_with_spack_env.sh                   # local (spack)
-test_turbo_stack_with_system_toolchain.sh     # local (bring-your-own toolchain)
+test_turbo_stack_with_spack_env.sh            # Spack toolchain
+test_turbo_stack_with_system_toolchain.sh     # your own toolchain on PATH
 test_turbo_stack_on_derecho.sh                # Derecho (qsub or interactive)
 test_turbo_stack_with_container.sh            # in a container (the image CI uses)
 ```
@@ -216,8 +216,8 @@ test_turbo_stack_with_container.sh            # in a container (the image CI use
 ## Build and test both backends, one command
 
 ```bash
-./test_turbo_stack_with_spack_env.sh                  # local (spack)
-./test_turbo_stack_with_system_toolchain.sh    # local (bring-your-own toolchain on PATH)
+./test_turbo_stack_with_spack_env.sh           # Spack toolchain
+./test_turbo_stack_with_system_toolchain.sh    # your own toolchain on PATH
 ./test_turbo_stack_on_derecho.sh               # Derecho (qsub or interactive)
 ./test_turbo_stack_with_container.sh           # in the CI container image (no toolchain needed)
 ```
@@ -298,22 +298,22 @@ Scripts that run through Stage 1 and Stage 2 for a single backend.
 ### One-command (spack flavor)
 
 ```bash
-scripts/build_with_spack_env.sh                    # configure + build (default backend: TIM)
-scripts/build_with_spack_env.sh --tests            # also build + run the pFUnit unit tests
-scripts/build_with_spack_env.sh --debug            # incremental Debug build
-scripts/build_with_spack_env.sh --from-scratch            # clean rebuild from scratch (deps + turbo-stack)
-scripts/build_with_spack_env.sh --infra FMS2       # FMS2 backend instead of the default TIM
+scripts/build_with_spack_env.sh                          # configure + build (default backend: TIM)
+scripts/build_with_spack_env.sh --tests                  # also build + run the pFUnit unit tests
+scripts/build_with_spack_env.sh --debug                  # incremental Debug build
+scripts/build_with_spack_env.sh --from-scratch           # rebuild from scratch (deps + turbo-stack)
+scripts/build_with_spack_env.sh --infra FMS2             # FMS2 backend instead of the default TIM
 ```
 
 `build_with_spack_env.sh` runs all stages. It builds the selected backend via `turbo_build_fms`, or `turbo_build_tim` then `turbo_build_protomomxx`, after sourcing `setup_environment/spack_env.sh` — spack provides pFUnit/AMReX but not FMS, TIM or protoMOMxx.
 
-### One-command (from-source local — bring your own toolchain)
+### One-command (from source — bring your own toolchain)
 
 ```bash
-scripts/build_with_system_toolchain.sh                 # configure + build (default backend: TIM)
-scripts/build_with_system_toolchain.sh --tests         # also build + run the pFUnit unit tests
-scripts/build_with_system_toolchain.sh --infra FMS2    # FMS2 backend instead of the default TIM
-scripts/build_with_system_toolchain.sh --from-scratch         # clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_system_toolchain.sh                       # configure + build (default backend: TIM)
+scripts/build_with_system_toolchain.sh --tests               # also build + run the pFUnit unit tests
+scripts/build_with_system_toolchain.sh --infra FMS2          # FMS2 backend instead of the default TIM
+scripts/build_with_system_toolchain.sh --from-scratch        # rebuild from scratch (deps + turbo-stack)
 ```
 
 The closest replacement for the old `build.sh` on a laptop / workstation: you
@@ -476,7 +476,7 @@ explicitly build the upstream deps you need; after that run
 
 ```bash
 source scripts/lib/common.sh                                   # turbo_build_* wrappers + helpers
-source scripts/setup_environment/spack_env.sh    # env setup: toolchain (spack); builds NOTHING
+source scripts/setup_environment/spack_env.sh                  # env setup: toolchain (spack); builds NOTHING
 deps="$TURBO_STACK_ROOT/deps/default"
 turbo_build_fms "$deps/build" "$deps/install"                  # env setup: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
 scripts/build_turbo_stack.sh --infra FMS2                      # build turbo-stack (Tier 3; add --tests to build + run ctest)
@@ -487,7 +487,7 @@ scripts/build_turbo_stack.sh --infra TIM
 ```
 
 On a modules machine, swap the toolchain step for
-`source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh`; on a generic local
+`source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh`; on any
 machine whose toolchain is already on `PATH`, swap it for
 `source scripts/setup_environment/system_toolchain.sh`. In both cases the
 toolchain provides no upstream deps, so also build the Tier-1.5 deps yourself
@@ -781,7 +781,7 @@ then merge turbo-stack straight away.
 
 ```bash
 export CMAKE_BUILD_PARALLEL_LEVEL=32
-scripts/build_with_spack_env.sh                 # no --parallel needed
+scripts/build_with_spack_env.sh                       # no --parallel needed
 ```
 
 When neither is set, cmake's own defaults apply: 1 for Make, nproc for Ninja.

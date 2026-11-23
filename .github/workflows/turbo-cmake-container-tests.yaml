@@ -27,7 +27,7 @@
 # default; for dev/turbo-debug, either move the submodule onto the branch, or
 # point MOM6_ROOT at a separate clone; the LLVM group runs in its image:
 #
-#     ./test_turbo_stack_with_spack_env.sh                        # the pinned group
+#     ./test_turbo_stack_with_spack_env.sh                 # the pinned group
 #
 #     git -C submodules/MOM6 checkout dev/turbo-debug      # simplest
 #     ./test_turbo_stack_with_spack_env.sh
