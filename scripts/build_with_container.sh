@@ -321,7 +321,7 @@ fi
 # Spack supplies Layers 1 + 2, so this is the same guard set as
 # build_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
 # guard stands down for a component whose <NAME>_ROOT is set above.
-turbo_guard_builder_submodules 2
+turbo_guard_builder_submodules 3
 # The pinned submodule needs the same check: the guard above proves only that
 # submodules/MOM6 exists, and `submodule update --init` without --recursive leaves
 # pkg/* empty -- otherwise found a multi-GB pull and a dep build later.  After the
