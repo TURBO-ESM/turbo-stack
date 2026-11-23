@@ -56,7 +56,8 @@ orchestration, and render to `docs/build_test_orchestration.png` with `dot -Tpng
   "(run once per backend)", `labeljust=l`.
 - Stage-1 toolchain box `#bcd4ec`; Stage-1 deps box `#c8e6c9`; shared Stage-2 ellipse `#90ee90`; verdict box `#c8e6c9`.
 - `common.sh` note: `shape=note` `#dce8f5`.  Overrides note: `shape=note` `#fff2cc`.
-- `rankdir=TB`, `splines=ortho`, `compound=true`, `newrank=true`.  Edge text via `xlabel=`.  Point
+- `rankdir=TB`, `splines=ortho`, `compound=true`, `newrank=true`, `nodesep=0.4` (at the default
+  0.25 the edge labels between the drivers and Path A overlap).  Edge text via `xlabel=`.  Point
   edges at specific nodes (never `lhead=cluster_*`).
 
 ### Nodes & flow

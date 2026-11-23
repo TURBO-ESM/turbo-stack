@@ -5,6 +5,7 @@ digraph build_test_orchestration {
     node [shape=box, fontname="Helvetica", fontsize=11];
     edge [fontsize=9, fontname="Helvetica"];
     splines=ortho;
+    nodesep=0.4;   // the default 0.25 lets the edge labels in the middle overlap
 
     label="turbo-stack build/test pipeline — each labelled box is a script; the steps inside it are what that script does";
     labelloc=t; fontname="Helvetica-Bold"; fontsize=13;
