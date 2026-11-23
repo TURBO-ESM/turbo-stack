@@ -6,7 +6,7 @@
 # node in the run graph, so a failure names which MOM6 source (or compiler) broke
 # without anyone decoding matrix cell labels.
 #
-# Runs scripts/build_local_with_spack_env.sh inside ghcr.io/.../turbo-ci (built
+# Runs scripts/build_with_spack_env.sh inside ghcr.io/.../turbo-ci (built
 # by build-turbo-ci-container.yaml). The image already has SPACK_ROOT set and the
 # "turbo_stack" Spack env installed, so the script activates that env (no
 # reinstall), builds only the selected Tier-2 backend from its submodule, then
@@ -78,8 +78,8 @@ jobs:
       # executed rather than quoted.
       MOM6_REF: ${{ inputs.mom6_ref }}
     steps:
-      # Fail fast, BEFORE the (heavy, recursive) checkout. build_local_with_spack_env.sh
-      # calls spack_local_environment.sh without --no-create, so its default
+      # Fail fast, BEFORE the (heavy, recursive) checkout. build_with_spack_env.sh
+      # calls spack_env.sh without --no-create, so its default
       # --create-if-missing applies: a missing env would NOT error, it would start a
       # full ~1 h from-source dependency build and die on this job's timeout with no
       # explanation. Assert the prebaked env up front instead.
@@ -169,4 +169,4 @@ jobs:
         # Spack-flavor pipeline: activate env -> build backend -> cmake -> ctest.
         # Identical for every call: MOM6_ROOT (set above, or unset for the pinned
         # call) is what selects the MOM6 source.
-        run: scripts/build_local_with_spack_env.sh --infra ${{ matrix.infra }} --tests
+        run: scripts/build_with_spack_env.sh --infra ${{ matrix.infra }} --tests

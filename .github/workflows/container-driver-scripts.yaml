@@ -25,8 +25,8 @@ on:
     paths:
       - "test_turbo_stack_with_container.sh"
       - "scripts/build_with_container.sh"
-      - "scripts/build_local_with_spack_env.sh"
-      - "scripts/setup_environment/spack_local_environment.sh"
+      - "scripts/build_with_spack_env.sh"
+      - "scripts/setup_environment/spack_env.sh"
       - "scripts/build_turbo_stack.sh"
       - "scripts/lib/**"
       - ".github/workflows/container-driver-scripts.yaml"
@@ -38,8 +38,8 @@ on:
     paths:
       - "test_turbo_stack_with_container.sh"
       - "scripts/build_with_container.sh"
-      - "scripts/build_local_with_spack_env.sh"
-      - "scripts/setup_environment/spack_local_environment.sh"
+      - "scripts/build_with_spack_env.sh"
+      - "scripts/setup_environment/spack_env.sh"
       - "scripts/build_turbo_stack.sh"
       - "scripts/lib/**"
       - ".github/workflows/container-driver-scripts.yaml"

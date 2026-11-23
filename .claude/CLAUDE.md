@@ -22,8 +22,8 @@ The dependency *tiers* (1 / 1.5 / 2 / 3) are a classification; the pipeline is w
 ### Local test, both backends (end-to-end)
 
 ```bash
-./test_turbo_stack_locally.sh                      # spack; builds + ctests FMS2 and TIM
-./test_turbo_stack_locally.sh --only TIM --clean   # one backend, from scratch
+./test_turbo_stack_with_spack_env.sh                      # spack; builds + ctests FMS2 and TIM
+./test_turbo_stack_with_spack_env.sh --only TIM --clean   # one backend, from scratch
 ```
 
 Mirrors `test_turbo_stack_on_derecho.sh` (the Derecho driver); each runs the real single-backend builder once per backend and prints a per-backend matrix/verdict. `test_turbo_stack_with_system_toolchain.sh` is the same for a bring-your-own toolchain already on `PATH` (no spack).
@@ -39,7 +39,7 @@ scripts/build_with_container.sh --shell                                    # int
 
 No host toolchain needed: the image ships the compiler plus Tier 1 + 1.5 (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack env, so the container builds only Tier 2 (the selected backend, from its submodule) and Tier 3. Export `MOM6_ROOT`, `FMS_ROOT`, `TIM_ROOT` or `PROTOMOMXX_ROOT` and that tree is mounted at its own path and forwarded; **the branch it is checked out on is what gets built** — switch branches there and re-run to test another. A MOM6 tree's nested submodules (`pkg/CVMix-src`, `pkg/GSW-Fortran`) must be initialized. `PFUNIT_ROOT`/`AMREX_ROOT` are not forwarded: the image supplies pFUnit and AMReX from its Spack env, so an override would have no effect.
 
-It runs `build_local_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the CMake lane's environment and guardrails. [`scripts/README.md`](../scripts/README.md#in-a-container-a-ready-made-environment) explains how (the mounts, running as you, the `HOME` cache), and `--help` lists the options: the builder flags plus `--image`, `--pull`, `--no-pull` and `--shell`, with the engine from `$TURBO_CONTAINER_ENGINE` (default docker). What trips people up, and what not to undo:
+It runs `build_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi`, with the CMake lane's environment and guardrails. [`scripts/README.md`](../scripts/README.md#in-a-container-a-ready-made-environment) explains how (the mounts, running as you, the `HOME` cache), and `--help` lists the options: the builder flags plus `--image`, `--pull`, `--no-pull` and `--shell`, with the engine from `$TURBO_CONTAINER_ENGINE` (default docker). What trips people up, and what not to undo:
 
 - **It builds the checkout you run it from.** No host `SPACK_ROOT` is used. An exported `TURBO_STACK_ROOT` that names a *different* checkout is a hard error, the first thing you hit from a second worktree (`unset TURBO_STACK_ROOT`). Submodules are not fetched.
 - **The driver builds somewhere else.** `build_with_container.sh` alone builds in `$TURBO_STACK_ROOT/build/default`. The driver passes `--build_dir`, under `$TMPDIR/turbo_ci_container_test/<checkout>-<hash>`, so a bare `--shell` does *not* re-enter a driver build.
@@ -51,34 +51,34 @@ It runs `build_local_with_spack_env.sh --infra X --tests` inside `ghcr.io/turbo-
 ### Local build (spack flavor, one command)
 
 ```bash
-scripts/build_local_with_spack_env.sh                              # build (default backend infra TIM, Release)
-scripts/build_local_with_spack_env.sh --debug                      # Debug build
-scripts/build_local_with_spack_env.sh --clean                      # Clean rebuild from scratch (deps + turbo-stack)
-scripts/build_local_with_spack_env.sh --tests                      # also build + run the pFUnit unit tests
-scripts/build_local_with_spack_env.sh --infra FMS2                 # FMS2 backend instead of the default TIM
-scripts/build_local_with_spack_env.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
+scripts/build_with_spack_env.sh                              # build (default backend infra TIM, Release)
+scripts/build_with_spack_env.sh --debug                      # Debug build
+scripts/build_with_spack_env.sh --clean                      # Clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_spack_env.sh --tests                      # also build + run the pFUnit unit tests
+scripts/build_with_spack_env.sh --infra FMS2                 # FMS2 backend instead of the default TIM
+scripts/build_with_spack_env.sh --recreate-spack-env --clean # nuke + recreate the spack env, then clean rebuild
 ```
 
-`build_local_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
+`build_with_spack_env.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`, `--recreate-spack-env`.
 
 ### Local build (from source, one command)
 
 The closest replacement for the old `build.sh` on a laptop/workstation: bring your own toolchain (compilers, MPI, NetCDF, CMake already on `PATH` — system packages, Homebrew, an OS module system, or an already-activated Spack/Conda env) and turbo-stack builds **all** upstream submodule deps from source (pFUnit/AMReX + FMS/TIM, plus protoMOMxx for TIM), then builds turbo-stack. No spack, no modules; nothing is fetched — everything comes from `submodules/`.
 
 ```bash
-scripts/build_local_with_system_toolchain.sh                    # build (default backend infra TIM, Release)
-scripts/build_local_with_system_toolchain.sh --tests            # also build + run the pFUnit unit tests
-scripts/build_local_with_system_toolchain.sh --infra FMS2       # FMS2 backend instead of the default TIM
-scripts/build_local_with_system_toolchain.sh --clean            # clean rebuild from scratch (deps + turbo-stack)
+scripts/build_with_system_toolchain.sh                    # build (default backend infra TIM, Release)
+scripts/build_with_system_toolchain.sh --tests            # also build + run the pFUnit unit tests
+scripts/build_with_system_toolchain.sh --infra FMS2       # FMS2 backend instead of the default TIM
+scripts/build_with_system_toolchain.sh --clean            # clean rebuild from scratch (deps + turbo-stack)
 ```
 
-`build_local_with_system_toolchain.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`. It sources `setup_environment/local_toolchain_on_path.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
+`build_with_system_toolchain.sh` options: `--debug`, `--clean`, `--ninja`, `--build_dir DIR`, `--infra FMS2|TIM`, `--tests`, `--parallel N`. It sources `setup_environment/system_toolchain.sh` (verifies the toolchain is on `PATH`; builds nothing) — the same shape as `build_on_derecho.sh` minus the Lmod step.
 
 ### Explicit, iterative (any flavor; faster iteration)
 
 ```bash
 source scripts/lib/common.sh                                 # turbo_build_* + helpers
-source scripts/setup_environment/spack_local_environment.sh  # Stage 1: toolchain (spack); builds nothing → Tier 1
+source scripts/setup_environment/spack_env.sh  # Stage 1: toolchain (spack); builds nothing → Tier 1
 deps="$TURBO_STACK_ROOT/deps/default"
 turbo_build_fms "$deps/build" "$deps/install"                # Stage 1: build FMS (Tier 2); spack supplies pFUnit/AMReX (Tier 1.5)
 scripts/build_turbo_stack.sh --infra FMS2                    # Stage 2: build turbo-stack (Tier 3); use --infra TIM after turbo_build_tim + turbo_build_protomomxx,
@@ -92,9 +92,9 @@ The `setup_environment/` recipes only set up the toolchain — build the upstrea
 | Script | Role | How invoked |
 |---|---|---|
 | `scripts/lib/common.sh` | Shared core — root resolution, arg parsing, `turbo_build_*` (Tier 1.5 + Tier 2 dep-build flags), the single-backend builder core (`turbo_run_backend_builder`), matrix/verdict | sourced |
-| `test_turbo_stack_locally.sh`, `test_turbo_stack_with_system_toolchain.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
-| `scripts/build_local_with_spack_env.sh`, `build_local_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
-| `scripts/build_with_container.sh` | Wrapper — runs `build_local_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
+| `test_turbo_stack_with_spack_env.sh`, `test_turbo_stack_with_system_toolchain.sh`, `test_turbo_stack_on_derecho.sh`, `test_turbo_stack_with_container.sh` (repo root) | End-to-end drivers — run a single-backend builder per backend (shared core) | exec'd |
+| `scripts/build_with_spack_env.sh`, `build_with_system_toolchain.sh`, `build_on_derecho.sh` | Single-backend orchestrators (spack / from-source local / modules) | exec'd |
+| `scripts/build_with_container.sh` | Wrapper — runs `build_with_spack_env.sh` inside the CI container (single backend); speaks the same builder flags | exec'd |
 | `scripts/setup_environment/<flavor>.sh` | Stage 1 (env setup) — toolchain ONLY (no dep builds) | sourced |
 | `scripts/lib/build_dep.sh` | Library — defines `build_dep <name> ... -- [cmake args]` | sourced |
 | `scripts/build_turbo_stack.sh` | Stage 2 — cmake configure + build + ctest. No spack or infra knowledge. | exec'd |
@@ -118,7 +118,7 @@ The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{bu
 ```bash
 export MOM6_ROOT=$HOME/projects/MOM6
 export FMS_ROOT=$HOME/projects/FMS
-./test_turbo_stack_locally.sh    # matrix shows each component as (override) vs (submodule)
+./test_turbo_stack_with_spack_env.sh    # matrix shows each component as (override) vs (submodule)
 ```
 
 ### Building a MOM6 branch instead of the pinned commit
@@ -128,7 +128,7 @@ Two ways, neither needing a flag. Move the submodule onto the branch and leave
 
 ```bash
 git -C submodules/MOM6 checkout dev/turbo-debug
-./test_turbo_stack_locally.sh
+./test_turbo_stack_with_spack_env.sh
 git -C submodules/MOM6 checkout -
 ```
 
@@ -168,7 +168,7 @@ as a pair. See [`scripts/README.md`](../scripts/README.md).
 
 ### Spack environment
 
-Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS, TIM and protoMOMxx are intentionally not in spack: `build_local_with_spack_env.sh` builds the selected backend via `turbo_build_fms`, or `turbo_build_tim` then `turbo_build_protomomxx` (in `scripts/lib/common.sh`), from the local source tree (`$FMS_ROOT`/`$TIM_ROOT`/`$PROTOMOMXX_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
+Defined in `spack/spack.yaml`. Default env name: `turbo_stack`. Provides cmake, gmake, ninja, MPI (OpenMPI), NetCDF, pFUnit, AMReX. FMS, TIM and protoMOMxx are intentionally not in spack: `build_with_spack_env.sh` builds the selected backend via `turbo_build_fms`, or `turbo_build_tim` then `turbo_build_protomomxx` (in `scripts/lib/common.sh`), from the local source tree (`$FMS_ROOT`/`$TIM_ROOT`/`$PROTOMOMXX_ROOT` or the submodule fallback). Turbo-stack tracks features ahead of the released FMS package, so linking against spack's FMS would risk quietly using a stale version.
 
 **AMReX mini-app tests** are built with CMake separately (see `src/amrex_mini_app/CMakeLists.txt`). They use GoogleTest (C++) and require HDF5.
 
@@ -182,8 +182,8 @@ and calls turbo_run_backend_builder (lib/common.sh), differing only in the toolc
 recipe and the lowest dependency TIER it must build from submodule (the first the
 toolchain does NOT provide prebuilt — see docs/dependency_tiers.png):
 
-  build_local_with_spack_env.sh          toolchain = spack env     (provides Tier 1 + 1.5) → build from Tier 2
-  build_local_with_system_toolchain.sh   toolchain = your PATH     (provides Tier 1)       → build from Tier 1.5
+  build_with_spack_env.sh          toolchain = spack env     (provides Tier 1 + 1.5) → build from Tier 2
+  build_with_system_toolchain.sh   toolchain = your PATH     (provides Tier 1)       → build from Tier 1.5
   build_on_derecho.sh                    toolchain = Lmod modules  (provides Tier 1)       → build from Tier 1.5
       │
       └─→ turbo_run_backend_builder (lib/common.sh) — the shared Stage-1+Stage-2 body:
@@ -238,9 +238,9 @@ separate lanes:
 | Lane | Build system | Container |
 |---|---|---|
 | `build-tests*.yaml`, `unit-tests.yaml`, `matrix-compiler-smoketest.yaml`, `code-coverage-reports.yaml` | legacy mkmf `./build.sh` | `ncarcisl/cisldev-x86_64-almalinux9-[compiler]-[mpi]`, activated via `/container/config_env.sh` |
-| `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_local_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:<compiler>-<mpi>` (`gcc-openmpi`, and `llvm-openmpi` for the LLVM group; `cmake-build.yaml`'s `flavor` input picks it), built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
+| `turbo-cmake-container-tests.yaml` | **CMake** (`scripts/build_with_spack_env.sh`, spack flavor) | `ghcr.io/turbo-esm/turbo-stack/turbo-ci:<compiler>-<mpi>` (`gcc-openmpi`, and `llvm-openmpi` for the LLVM group; `cmake-build.yaml`'s `flavor` input picks it), built by `build-turbo-ci-container.yaml` from `docker/Dockerfile.turbo-ci` |
 | `container-driver-scripts.yaml` | **CMake, via the host-side wrapper** (`./test_turbo_stack_with_container.sh`) | the same `gcc-openmpi` image, but pulled and entered by `scripts/build_with_container.sh` on the runner host rather than by `container:` |
-| `turbo-cmake-macos-tests.yaml` | **CMake** (`./test_turbo_stack_locally.sh`, spack flavor, both backends in one job) | none: GitHub-hosted `macos-15` and `macos-26` runners (Apple Silicon M1, 3 cores); the Spack env is built on the runner and cached |
+| `turbo-cmake-macos-tests.yaml` | **CMake** (`./test_turbo_stack_with_spack_env.sh`, spack flavor, both backends in one job) | none: GitHub-hosted `macos-15` and `macos-26` runners (Apple Silicon M1, 3 cores); the Spack env is built on the runner and cached |
 
 The legacy lane runs a matrix of compilers (oneapi, gcc14, nvhpc, clang) and MPI
 libraries (MPICH, OpenMPI) across `ubuntu-latest` and the custom
@@ -290,7 +290,7 @@ Silicon, one job per hosted macOS version (`macos-15`, `macos-26`: the free M1
 runners, not the paid M2 `-xlarge` ones), on every PR. It runs the scripts as a Mac
 user would: `spack/create_spack_environment.sh` builds the env with Spack `v1.2.2`
 (the image's version) and Spack's macOS defaults, Apple clang for C/C++ and
-Homebrew's gfortran for Fortran; then `./test_turbo_stack_locally.sh` builds and
+Homebrew's gfortran for Fortran; then `./test_turbo_stack_with_spack_env.sh` builds and
 ctests both backends with `FC=gfortran CC=clang CXX=clang++`. Those have to match
 the env's compilers: AMReX links C++ against Apple clang's libc++, which Homebrew
 g++'s libstdc++ can't mix with, so `TURBO_SPACK_COMPILER` (one compiler for all

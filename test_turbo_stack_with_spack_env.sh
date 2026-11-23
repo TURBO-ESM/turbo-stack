@@ -1,10 +1,10 @@
 #!/bin/bash
-# test_turbo_stack_locally.sh
+# test_turbo_stack_with_spack_env.sh
 #
 # End-to-end test driver (local / spack).  Thin wrapper: it parses the common
 # driver args, then hands off to turbo_run_test_driver (scripts/lib/common.sh),
 # which builds + ctests each selected backend (FMS2, TIM) by running the real
-# single-backend builder scripts/build_local_with_spack_env.sh in its own process
+# single-backend builder scripts/build_with_spack_env.sh in its own process
 # -- a full, independent Stage-1 (env setup) -> Stage-2 (build turbo-stack) run
 # per backend -- and prints a per-backend matrix/verdict.  Its siblings,
 # test_turbo_stack_on_derecho.sh (Lmod modules) and test_turbo_stack_with_system_toolchain.sh
@@ -46,4 +46,4 @@ TURBO_JOBS="$(command -v nproc >/dev/null 2>&1 && nproc || echo 4)"
 turbo_parse_driver_args "$@"
 turbo_resolve_stack_root
 
-turbo_run_test_driver "$TURBO_STACK_ROOT/scripts/build_local_with_spack_env.sh"
+turbo_run_test_driver "$TURBO_STACK_ROOT/scripts/build_with_spack_env.sh"

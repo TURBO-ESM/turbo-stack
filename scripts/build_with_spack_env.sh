@@ -1,8 +1,8 @@
 #!/bin/bash
-# Usage: ./scripts/build_local_with_spack_env.sh [options]
+# Usage: ./scripts/build_with_spack_env.sh [options]
 #
 # One-command build for the Spack flavor: sources
-# scripts/setup_environment/spack_local_environment.sh, builds the selected
+# scripts/setup_environment/spack_env.sh, builds the selected
 # infra backend (FMS for FMS2, TIM for --infra TIM) via the turbo_build_*
 # wrappers, then calls scripts/build_turbo_stack.sh to configure/build/test.  Spack
 # provides only cmake/MPI/NetCDF/pFUnit/AMReX; FMS is intentionally not in
@@ -43,11 +43,11 @@
 #   -h, --help              Print this usage text and exit.
 #
 # Examples:
-#   build_local_with_spack_env.sh                       # TIM backend, build the executable
-#   build_local_with_spack_env.sh --tests               # also build + run the unit tests
-#   build_local_with_spack_env.sh --infra FMS2          # FMS2 backend instead of TIM
-#   build_local_with_spack_env.sh --debug --clean       # clean Debug rebuild (deps + turbo-stack)
-#   build_local_with_spack_env.sh --recreate-spack-env  # recreate the spack env, then build
+#   build_with_spack_env.sh                       # TIM backend, build the executable
+#   build_with_spack_env.sh --tests               # also build + run the unit tests
+#   build_with_spack_env.sh --infra FMS2          # FMS2 backend instead of TIM
+#   build_with_spack_env.sh --debug --clean       # clean Debug rebuild (deps + turbo-stack)
+#   build_with_spack_env.sh --recreate-spack-env  # recreate the spack env, then build
 
 set -eo pipefail
 
@@ -74,7 +74,7 @@ turbo_flavor_setup_toolchain() {
     local env_args=()
     [[ "$_spack_recreate" == true ]] && env_args+=(--recreate)
     # shellcheck source=/dev/null
-    source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_local_environment.sh" "${env_args[@]}"
+    source "$TURBO_STACK_ROOT/scripts/setup_environment/spack_env.sh" "${env_args[@]}"
 }
 
 # Spack supplies Tier 1 + Tier 1.5, so build only Tier 2 (FMS for FMS2, TIM for

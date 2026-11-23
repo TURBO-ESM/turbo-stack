@@ -14,7 +14,7 @@ digraph build_test_orchestration {
           label="scripts/lib/common.sh — shared helpers used by all scripts:\nroot self-location · arg parsing · turbo_build_* wrappers ·\nthe per-backend loop + verdict (turbo_run_test_driver)"];
 
     // ── Test drivers (what each driver script does is in its label) ───────────
-    l_drv [label="test_turbo_stack_locally.sh\nparse args · loop backends · print verdict",
+    l_drv [label="test_turbo_stack_with_spack_env.sh\nparse args · loop backends · print verdict",
            shape=ellipse, fillcolor="#fffacd", style=filled];
     d_drv [label="test_turbo_stack_on_derecho.sh  (qsub / bash)\nparse args · loop backends · print verdict",
            shape=ellipse, fillcolor="#fffacd", style=filled];
@@ -33,12 +33,12 @@ digraph build_test_orchestration {
         c_run [label="enter the turbo-ci image, as you · mount the checkout + any *_ROOT tree\n(its Spack env supplies Tier 1 + Tier 1.5 prebuilt)", fillcolor="#bcd4ec", style=filled];
     }
 
-    // ── Path A builder: the box IS build_local_with_spack_env.sh.  Its steps are
+    // ── Path A builder: the box IS build_with_spack_env.sh.  Its steps are
     //    Stage 1 (environment setup): source the toolchain, then build the deps ──
     subgraph cluster_lbld {
-        label="build_local_with_spack_env.sh  (run once per backend)"; labeljust=l;
+        label="build_with_spack_env.sh  (run once per backend)"; labeljust=l;
         style=filled; color="#e7eff8"; fontname="Helvetica-Bold";
-        l_env  [label="Stage 1 · toolchain: source spack_local_environment.sh\n(builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
+        l_env  [label="Stage 1 · toolchain: source spack_env.sh\n(builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
         l_deps [label="Stage 1 · deps (per --infra): turbo_build_tim ; _protomomxx | turbo_build_fms\n(FMS/TIM/protoMOMxx = Tier 2; spack supplies pFUnit/AMReX = Tier 1.5)", fillcolor="#c8e6c9", style=filled];
         l_env -> l_deps;
     }
@@ -52,11 +52,11 @@ digraph build_test_orchestration {
         d_env -> d_deps;
     }
 
-    // ── Path C builder: build_local_with_system_toolchain.sh ──────────────────
+    // ── Path C builder: build_with_system_toolchain.sh ──────────────────
     subgraph cluster_sbld {
-        label="build_local_with_system_toolchain.sh  (run once per backend)"; labeljust=l;
+        label="build_with_system_toolchain.sh  (run once per backend)"; labeljust=l;
         style=filled; color="#efe9f6"; fontname="Helvetica-Bold";
-        s_env  [label="Stage 1 · toolchain: source local_toolchain_on_path.sh\n(verify only, builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
+        s_env  [label="Stage 1 · toolchain: source system_toolchain.sh\n(verify only, builds nothing → Tier 1)", fillcolor="#bcd4ec", style=filled];
         s_deps [label="Stage 1 · deps: turbo_build_pfunit (only with --tests) ;\nper --infra: _amrex + _tim + _protomomxx | _fms\n(pFUnit/AMReX = Tier 1.5; FMS/TIM/protoMOMxx = Tier 2)", fillcolor="#c8e6c9", style=filled];
         s_env -> s_deps;
     }
@@ -69,7 +69,7 @@ digraph build_test_orchestration {
     // Driver loops its builder (enters at Stage 1); builder execs Stage 2.
     l_drv -> l_env [xlabel="loop: --infra FMS2, then TIM"];
     c_drv -> c_run [xlabel="loop: --infra FMS2, then TIM"];
-    c_run -> l_env [xlabel="runs build_local_with_spack_env.sh\ninside the container"];
+    c_run -> l_env [xlabel="runs build_with_spack_env.sh\ninside the container"];
     s_drv -> s_env [xlabel="loop: --infra FMS2, then TIM"];
     d_drv -> d_env [xlabel="loop: --infra FMS2, then TIM"];
     l_deps -> bld [xlabel="exec"];

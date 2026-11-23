@@ -3,8 +3,8 @@
 #
 # SOURCED shared library for turbo-stack's build/test orchestration.  Holds the
 # machine-INDEPENDENT primitives shared by the end-to-end test drivers
-# (test_turbo_stack_locally.sh, test_turbo_stack_on_derecho.sh) and
-# the thinner entry points (build_turbo_stack.sh, build_local_with_spack_env.sh,
+# (test_turbo_stack_with_spack_env.sh, test_turbo_stack_on_derecho.sh) and
+# the thinner entry points (build_turbo_stack.sh, build_with_spack_env.sh,
 # build_on_derecho.sh).  Each driver supplies only its machine-specific Stage-1
 # toolchain step (spack vs Lmod modules); everything here is common.
 #
@@ -18,13 +18,13 @@
 # the whole point of keeping the toolchain out of "setup" and dep builds explicit).
 #
 # Two patterns compose these functions:
-#   * single-backend builder (build_local_with_spack_env.sh / build_on_derecho.sh):
+#   * single-backend builder (build_with_spack_env.sh / build_on_derecho.sh):
 #       turbo_resolve_stack_root
 #       turbo_require_submodule ...                            # guard the deps it builds
 #       <source the machine's Stage-1 toolchain env script>   # builds nothing
 #       turbo_build_fms "$b" "$p"  (and/or pfunit/amrex/tim/protomomxx)  # Stage 1: build deps (Tier 1.5 + Tier 2)
 #       build_turbo_stack.sh --infra X                         # Stage 2: build turbo-stack (Tier 3; defaults MOM6_ROOT)
-#   * end-to-end test driver (test_turbo_stack_locally.sh / _on_derecho.sh):
+#   * end-to-end test driver (test_turbo_stack_with_spack_env.sh / _on_derecho.sh):
 #       turbo_resolve_stack_root
 #       TURBO_JOBS=<default>; turbo_parse_driver_args "$@"
 #       turbo_run_test_driver <builder>                        # whole driver body (both backends)
@@ -335,8 +335,8 @@ turbo_build_protomomxx() {
 }
 
 # ── Single-backend builder core (Stage 1 + Stage 2; machine-independent) ──────
-# The shared body of every single-backend builder (build_local_with_spack_env.sh,
-# build_local_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
+# The shared body of every single-backend builder (build_with_spack_env.sh,
+# build_with_system_toolchain.sh, build_on_derecho.sh).  Each flavor script
 # supplies only the two machine-specific facts:
 #   1. a turbo_flavor_setup_toolchain function that puts the Tier-1 toolchain on
 #      PATH (sourced; builds nothing), and
@@ -485,7 +485,7 @@ turbo_run_backend_builder() {
 
 # ── Run one labeled command, tee'd, capturing its rc ─────────────────────────
 # Used by the end-to-end test drivers to invoke the real single-backend builder
-# (build_local_with_spack_env.sh / build_on_derecho.sh) once per backend, so each
+# (build_with_spack_env.sh / build_on_derecho.sh) once per backend, so each
 # backend is built + tested from scratch through the same code path a user runs.
 # The exit code is stashed in TURBO_LAST_RC (NOT returned) so the caller's
 # `set -e` can't abort between backends:
@@ -543,7 +543,7 @@ turbo_run_test_driver() {
     # --clean here wipes the whole artifact dir, which holds BOTH the Stage-1 dep
     # builds/installs (under each backend's deps/) and the Stage-2 turbo-stack
     # build.  That is the same thing --clean means in the single-backend
-    # orchestrators (build_on_derecho.sh / build_local_with_spack_env.sh), which
+    # orchestrators (build_on_derecho.sh / build_with_spack_env.sh), which
     # remove their deps dir and pass --clean to build_turbo_stack.sh for the
     # turbo-stack build.  One definition of "clean" across every entry point:
     # Stage-1 deps + Stage-2 build.

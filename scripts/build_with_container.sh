@@ -7,14 +7,14 @@
 # The container member of the single-backend builder family; the siblings differ
 # only in who supplies the toolchain and the upstream deps:
 #
-#   build_local_with_spack_env.sh         a Spack env you own
-#   build_local_with_system_toolchain.sh  whatever is on your PATH
+#   build_with_spack_env.sh         a Spack env you own
+#   build_with_system_toolchain.sh  whatever is on your PATH
 #   build_on_derecho.sh                   Derecho's Lmod modules
 #   build_with_container.sh               the container image  (this file)
 #
 # Here the image does: ghcr.io/turbo-esm/turbo-stack/turbo-ci ships the compiler and
 # the Tier 1 + Tier 1.5 deps (MPI, NetCDF, CMake, pFUnit, AMReX) prebuilt in a Spack
-# env.  It mounts your checkout and runs build_local_with_spack_env.sh inside the
+# env.  It mounts your checkout and runs build_with_spack_env.sh inside the
 # image, which activates that env, builds the Tier-2 backend, then configures, builds
 # and tests turbo-stack.  CI uses the same image and the same command, so a red box in
 # cmake-build.yaml will often reproduce here -- a useful consequence, not a contract
@@ -107,7 +107,7 @@ _default_image="ghcr.io/turbo-esm/turbo-stack/turbo-ci:gcc-openmpi"
 # --- container-only options ----------------------------------------------------
 # Pre-strip them before the common parser sees them (the shared
 # turbo_parse_builder_args rejects unknown flags, by design -- same idiom as
-# --recreate-spack-env in build_local_with_spack_env.sh).
+# --recreate-spack-env in build_with_spack_env.sh).
 _image="${TURBO_CI_IMAGE:-$_default_image}"
 _engine="${TURBO_CONTAINER_ENGINE:-docker}"
 # Refresh the default image by default: `gcc-openmpi` is a mutable tag, so a
@@ -319,7 +319,7 @@ fi
 
 # --- preflight: the submodules the container consumes but cannot fetch ---------
 # Spack supplies Tier 1 + 1.5, so this is the same guard set as
-# build_local_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
+# build_with_spack_env.sh: MOM6 + MARBL, plus the selected backend.  Each
 # guard stands down for a component whose <NAME>_ROOT is set above.
 turbo_guard_builder_submodules 2
 # The pinned submodule needs the same check: the guard above proves only that
@@ -428,14 +428,14 @@ if [[ "$_shell" == true ]]; then
     # Not `bash -l`: a login shell re-reads /etc/profile and would undo the
     # activation we just did.  The hint is the build this run's flags describe
     # (--build_dir included), so following it rebuilds the tree being debugged.
-    _hint=$(printf '%q ' scripts/build_local_with_spack_env.sh "${_build_args[@]}")
+    _hint=$(printf '%q ' scripts/build_with_spack_env.sh "${_build_args[@]}")
     _hint=${_hint% }
     _final="spack env activate turbo_stack
 echo '[ci-container] Spack env turbo_stack is active.  Build with:'
 printf '    %s\n' $(printf '%q' "$_hint")
 exec bash"
 else
-    _final=$(printf '%q ' scripts/build_local_with_spack_env.sh "${_build_args[@]}")
+    _final=$(printf '%q ' scripts/build_with_spack_env.sh "${_build_args[@]}")
     # Then record the image beside what it built (see "artifacts left by a
     # different image").  After the builder, not before: its --clean would remove an
     # earlier record.  Inside the container: a run that never reached the builder
@@ -464,7 +464,7 @@ set -eo pipefail
 mkdir -p "\$HOME"
 
 # Assert the prebaked env, as the workflow's first step does.  Without it,
-# spack_local_environment.sh's default --create-if-missing applies and a wrong or
+# spack_env.sh's default --create-if-missing applies and a wrong or
 # stale image would not error -- it would silently start a ~1 h from-source
 # dependency build.  Fail in seconds instead.
 . "\$SPACK_ROOT/share/spack/setup-env.sh"
