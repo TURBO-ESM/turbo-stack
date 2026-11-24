@@ -34,8 +34,8 @@ else ifeq ($(DEBUG),1)
 	FFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=zero,overflow -fcheck=bounds -ffp-contract=off
 	CFLAGS += -O0 -g -Wall -Og -fbacktrace -ffpe-trap=invalid,zero,overflow -fcheck=bounds -ffp-contract=off
 else # Production build
-	FFLAGS += -O2 -ffp-contract=off
-	CFLAGS += -O2 -ffp-contract=off
+	FFLAGS += -O3 -ffp-contract=off
+	CFLAGS += -O3
 endif
 
 # NetCDF Flags

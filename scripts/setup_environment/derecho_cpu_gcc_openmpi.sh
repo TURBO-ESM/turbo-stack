@@ -11,8 +11,9 @@
 # Usage:  source scripts/setup_environment/derecho_cpu_gcc_openmpi.sh
 
 # --- Toolchain (Stage 1 env setup; Tier 1) -----------------------------
-module purge
-module load gcc cmake openmpi netcdf parallelio #pfunit
+module --force purge
+module load ncarenv/25.10
+module load gcc/14.3.0 ncarcompilers/1.1.0 openmpi/5.0.9 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
 
 # Temporary fix so the correct C++ standard library is picked up for TIM, which
 # is built with gcc 14.3.0 on Derecho while the default compiler is still older.

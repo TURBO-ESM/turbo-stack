@@ -13,7 +13,7 @@ UNIT_TEST_UTIL_DIR=${ROOTDIR}/build-utils/unit-test-utils
 UNIT_TEST_ROOT=${ROOTDIR}/tests-legacy
 
 # Default values for CLI arguments
-COMPILER="intel"
+COMPILER="gnu"
 MACHINE="ncar"
 INFRA="TIM"
 MEMORY_MODE="dynamic_symmetric"
@@ -226,16 +226,17 @@ if [ "$MACHINE" == "ncar" ]; then
   HOST=$(hostname)
   # Load modules if on derecho
   if [ ! "${HOST:0:5}" == "crhtc" ] && [ ! "${HOST:0:6}" == "casper" ]; then
-    module reset
+    module --force purge
+    module load ncarenv/25.10
     case $COMPILER in
       "intel" )
-        module load ncarenv/25.10 intel/2025.2.1 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
+        module load intel/2025.2.1 ncarcompilers/1.1.0 cray-mpich/8.1.32 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "gnu" )
-        module load ncarenv/25.10 gcc/14.3.0 ncarcompilers/1.1.0 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
+        module load gcc/14.3.0 ncarcompilers/1.1.0 openmpi/5.0.9 hdf5/1.14.6 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       "nvhpc" )
-        module load ncarenv/25.10 cuda/12.9.0 hdf5/1.14.6 nvhpc/25.9 ncarcompilers/1.1.0 netcdf/4.9.3 parallelio/2.6.8 cmake
+        module load cuda/12.9.0 hdf5/1.14.6 nvhpc/25.9 ncarcompilers/1.1.0 cray-mpich/8.1.32 netcdf/4.9.3 parallelio/2.6.8 cmake
         ;;
       *)
         echo "Not loading any special modules for ${COMPILER}"
