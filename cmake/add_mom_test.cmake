@@ -55,7 +55,18 @@ function(add_mom_test TEST_FILE)
     # link in both FMS2 and TIM configurations; CMake still appends
     # -lgfortran/-lquadmath because Fortran objects contribute to the
     # target.
-    set_property(TARGET ${TEST_TARGET} PROPERTY LINKER_LANGUAGE CXX)
+    #
+    # Intel Fortran is the exception: an ifx or ifort main program gets `main`
+    # from Intel's for_main.o, which only the Intel Fortran driver links, so a
+    # C++ linker fails with "undefined reference to `main'". The Fortran
+    # compiler links instead, and -cxxlib has it add the C++ runtime that g++
+    # would have.
+    if(CMAKE_Fortran_COMPILER_ID MATCHES "IntelLLVM|Intel")
+        set_property(TARGET ${TEST_TARGET} PROPERTY LINKER_LANGUAGE Fortran)
+        target_link_options(${TEST_TARGET} PRIVATE -cxxlib)
+    else()
+        set_property(TARGET ${TEST_TARGET} PROPERTY LINKER_LANGUAGE CXX)
+    endif()
 endfunction()
 
 # copy_dummy_fms_input_nml()
