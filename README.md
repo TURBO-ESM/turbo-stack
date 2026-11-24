@@ -52,7 +52,7 @@ qcmd -A <project_code> -- ./scripts/build_on_derecho.sh
 
 `qcmd` puts the compile on a compute node — drop it if you are already inside an interactive job. The script runs `module purge` before loading its own modules, so any modules you loaded yourself are not used.
 
-Once the build is complete, the executable is at `build/default/mom6_build/config_src/drivers/solo_driver/MOM6`.
+Once the build is complete, the executable is at `build/gnu-TIM/mom6_build/config_src/drivers/solo_driver/MOM6`. On Derecho each compiler and backend builds in its own directory, `build/<compiler>-<infra>/`: `--compiler intel` builds with Intel instead of the default GCC, and `--infra FMS2` with the FMS2 backend, so `--compiler intel --infra FMS2` lands in `build/intel-FMS2/`.
 
 ### On other machines
 
@@ -85,6 +85,9 @@ Optional environment variables (hot-swap a dep's source; default = submodule):
   MOM6_ROOT / FMS_ROOT / TIM_ROOT / PROTOMOMXX_ROOT   out-of-tree source overrides
 
 Options:
+  --compiler gnu|intel    Compiler toolchain to load (default: gnu):
+                          gnu = GCC + OpenMPI, intel = Intel oneAPI + Cray
+                          MPICH.
   --debug                 Build with CMAKE_BUILD_TYPE=Debug (passed through)
   --clean                 Clean rebuild from scratch.  Removes the Stage-1
                           upstream dep builds/installs AND passes cmake --fresh
@@ -99,8 +102,10 @@ Options:
                           through to build_turbo_stack.sh).  Also controls
                           where from-source dep cmake builds + installs
                           land: $DIR/deps/build/<name>/ and
-                          $DIR/deps/install/.  When --build_dir is omitted,
-                          deps land at $TURBO_STACK_ROOT/deps/default/.
+                          $DIR/deps/install/.  Default:
+                          $TURBO_STACK_ROOT/build/<compiler>-<infra>
+                          (e.g. build/gnu-TIM), so each compiler and backend
+                          keeps its own build.
   --parallel N, -j N      Parallel build jobs.  Exported as
                           CMAKE_BUILD_PARALLEL_LEVEL so every downstream
                           `cmake --build` invocation (deps + turbo-stack)
@@ -113,7 +118,11 @@ Examples:
   build_on_derecho.sh                        # TIM backend, build the executable
   build_on_derecho.sh --tests                # also build + run the unit tests
   build_on_derecho.sh --infra FMS2           # FMS2 backend instead of TIM
+  build_on_derecho.sh --compiler intel       # Intel instead of GCC, in build/intel-TIM
   build_on_derecho.sh --debug --clean        # clean Debug rebuild (deps + turbo-stack)
+
+The MOM6 executable lands at <build dir>/mom6_build/config_src/drivers/solo_driver/MOM6,
+where examples/*/job-derecho.sh look for it.
 ```
 
 If we add, remove, or change options we will try to keep the above list up to date. But each script's own `--help` is authoritative if this copy ever falls behind it.
@@ -129,7 +138,9 @@ in the `scripts/` README for how the choice works.
 
 By default the build lands inside your checkout: turbo-stack's build tree, MOM6
 executable included, in `build/default/`, and the dependencies it built in
-`deps/default/`. `--build_dir DIR` moves both — see
+`deps/default/`. `build_on_derecho.sh` instead keeps one directory per compiler
+and backend, `build/<compiler>-<infra>/`, with its dependencies in that
+directory's `deps/`. `--build_dir DIR` moves both — see
 [Where the build lands](scripts/README.md#where-the-build-lands) in the
 `scripts/` README.
 
@@ -162,7 +173,9 @@ mpirun ../../build/default/mom6_build/config_src/drivers/solo_driver/MOM6
 ```
 
 Example job submission scripts are provided in all of the example directories.
-Make sure to adjust the project code and the path to the executable you built.
+Make sure to adjust the project code. Each `job-derecho.sh` runs the
+`build_on_derecho.sh` build named by the `COMPILER` and `INFRA` set at its top,
+`build/<compiler>-<infra>/`; point it elsewhere for a build of your own.
 
 Once the run is complete, the model output files will be in the example
 directory. To *archive* them:

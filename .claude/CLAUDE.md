@@ -105,7 +105,7 @@ Unit tests are **opt-in**: pass `--tests` to any orchestrator (or `build_turbo_s
 
 ### Where dep builds + installs land
 
-The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{build,install}/`. With no `--build_dir`, deps land at `$TURBO_STACK_ROOT/deps/default/`; the end-to-end test drivers build each backend under `$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir). In the explicit flow you pass the build/install roots straight to the `turbo_build_*` wrappers.
+The orchestrators derive deps location from `--build_dir`: `<build_dir>/deps/{build,install}/`. With no `--build_dir`, deps land at `$TURBO_STACK_ROOT/deps/default/`, except that `build_on_derecho.sh` defaults `--build_dir` to `build/<compiler>-<infra>/` (one build per `--compiler` and backend; the `examples/*/job-derecho.sh` scripts run from there); the end-to-end test drivers build each backend under `$TURBO_BUILD_SYSTEM_TEST_DIR/turbo-stack-with-<backend>/` (deps in its `deps/` subdir). In the explicit flow you pass the build/install roots straight to the `turbo_build_*` wrappers.
 
 ### Parallel build jobs
 

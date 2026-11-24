@@ -447,6 +447,13 @@ turbo_run_backend_builder() {
     # `cmake --build` downstream (deps + turbo-stack) picks it up with no plumbing.
     [[ -n "$TURBO_B_PARALLEL" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$TURBO_B_PARALLEL"
 
+    # A flavor may default the build directory by defining
+    # turbo_flavor_default_build_dir (build_on_derecho.sh keeps one per compiler
+    # and backend).  An explicit --build_dir always wins.
+    if [[ -z "$TURBO_B_BUILD_DIR" ]] && declare -F turbo_flavor_default_build_dir >/dev/null 2>&1; then
+        TURBO_B_BUILD_DIR="$(turbo_flavor_default_build_dir)"
+    fi
+
     # Where the from-source upstream deps build + install: $build_dir/deps when
     # given, else $TURBO_STACK_ROOT/deps/default.
     local deps_build_root

@@ -18,3 +18,7 @@ module load gcc cmake openmpi netcdf parallelio #pfunit
 # is built with gcc 14.3.0 on Derecho while the default compiler is still older.
 # ${LIBRARY_PATH:-} keeps this safe under `set -u`.
 export LIBRARY_PATH=/glade/u/apps/common/25.10/spack/opt/spack/gcc/14.3.0/nw2m/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}
+
+# Name the compilers, so CMake cannot pick up a different one from PATH (with no
+# FC set, CMake's search finds f95 before gfortran, which can be the system's).
+export CC=gcc CXX=g++ FC=gfortran
