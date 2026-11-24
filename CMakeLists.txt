@@ -72,6 +72,17 @@ target_link_libraries(turbo_infra_r8 INTERFACE NetCDF::NetCDF_C)
 add_subdirectory(marbl_build)
 add_subdirectory("${MOM6_SOURCE_DIR}" mom6_build)
 
+# Intel Fortran: link the MOM6 executable with the Fortran driver, as
+# cmake/add_mom_test.cmake does for the unit tests. With the TIM backend the
+# executable pulls in C++ libraries, so CMake would link it with the C++
+# compiler, but an ifx or ifort main program gets `main` from Intel's
+# for_main.o, which only the Intel Fortran driver links. -cxxlib adds the C++
+# runtime that the C++ linker would have.
+if(CMAKE_Fortran_COMPILER_ID MATCHES "IntelLLVM|Intel" AND TARGET MOM6)
+    set_property(TARGET MOM6 PROPERTY LINKER_LANGUAGE Fortran)
+    target_link_options(MOM6 PRIVATE -cxxlib)
+endif()
+
 if(TURBO_BUILD_UNIT_TESTS)
     find_package(PFUNIT REQUIRED)
     enable_testing()
