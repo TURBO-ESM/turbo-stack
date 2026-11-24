@@ -348,6 +348,10 @@ turbo_build_protomomxx() {
 #        on-PATH provides Tier 1 only (user sets it up)                  -> build from Tier 1.5
 # Tier 2 (FMS/TIM) is always built from submodule (no flavor packages it); Tier 3
 # (turbo-stack/MOM6/MARBL) is built in Stage 2 by build_turbo_stack.sh.
+# A flavor may also define turbo_flavor_default_build_dir, which prints the build
+# directory to use when --build_dir is not given (build_on_derecho.sh keeps one
+# per compiler and backend).  Without it, the build lands in build/default/ and
+# the deps in deps/default/.
 
 # Parse the flags common to every single-backend builder into TURBO_B_* globals.
 # --help/errors exit the calling builder (this runs during its execution).
@@ -446,6 +450,13 @@ turbo_run_backend_builder() {
     # Set CMAKE_BUILD_PARALLEL_LEVEL once -- cmake reads it natively, so every
     # `cmake --build` downstream (deps + turbo-stack) picks it up with no plumbing.
     [[ -n "$TURBO_B_PARALLEL" ]] && export CMAKE_BUILD_PARALLEL_LEVEL="$TURBO_B_PARALLEL"
+
+    # A flavor may default the build directory by defining
+    # turbo_flavor_default_build_dir (build_on_derecho.sh keeps one per compiler
+    # and backend).  An explicit --build_dir always wins.
+    if [[ -z "$TURBO_B_BUILD_DIR" ]] && declare -F turbo_flavor_default_build_dir >/dev/null 2>&1; then
+        TURBO_B_BUILD_DIR="$(turbo_flavor_default_build_dir)"
+    fi
 
     # Where the from-source upstream deps build + install: $build_dir/deps when
     # given, else $TURBO_STACK_ROOT/deps/default.

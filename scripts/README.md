@@ -193,7 +193,8 @@ scripts/
   setup_environment/
     spack_local_environment.sh                #   spack environment activation
     local_toolchain_on_path.sh                #   generic — toolchain already on PATH (no spack/modules)
-    derecho_cpu_gcc_openmpi.sh                #   Derecho via Lmod modules
+    derecho_cpu_gcc_openmpi.sh                #   Derecho via Lmod modules: --compiler gnu (default)
+    derecho_cpu_intel_craympich.sh            #   Derecho via Lmod modules: --compiler intel
 
   # STAGE 2 — build turbo-stack: cmake configure + build (+ ctest with --tests)
   build_turbo_stack.sh
@@ -339,14 +340,15 @@ qcmd -A <project_code> -- ./scripts/build_on_derecho.sh --tests
 `qcmd` puts the compile on a compute node — drop it if you are already inside an interactive job. `--tests` is optional, it builds and runs the pFUnit test suite. The default location the MOM6 executable ends up at:
 
 ```
-build/default/mom6_build/config_src/drivers/solo_driver/MOM6
+build/gnu-TIM/mom6_build/config_src/drivers/solo_driver/MOM6
 ```
 
-The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch.
+The `build_on_derecho.sh` script contains a number of useful options; see them all with `-h` or `--help`. Some commonly used ones are `--compiler intel` to build with Intel (defaults to GCC), `--infra FMS2` for the FMS2 backend (defaults to TIM), and `--clean` to rebuild everything from scratch. Each compiler and backend builds in its own directory, `build/<compiler>-<infra>/` (`build/intel-FMS2/` for `--compiler intel --infra FMS2`), so building one doesn't overwrite another. That is the build each example's `job-derecho.sh` runs, picked by the `COMPILER` and `INFRA` set at its top.
 
-Its Stage-1 recipe (`setup_environment/derecho_cpu_gcc_openmpi.sh`) runs
-`module purge` before loading `gcc cmake openmpi netcdf parallelio`, so any
-modules you loaded yourself beforehand are discarded.
+Each compiler has its own Stage-1 recipe: `setup_environment/derecho_cpu_gcc_openmpi.sh`
+(GCC + OpenMPI) and `derecho_cpu_intel_craympich.sh` (Intel oneAPI + Cray MPICH). Each
+purges the loaded modules before loading its own, so any modules you loaded yourself
+beforehand are discarded.
 
 ### Build on a Mac (Apple Silicon)
 
@@ -623,6 +625,10 @@ checkout you ran it from:
 | `build/default/` | turbo-stack's CMake build tree |
 | `build/default/mom6_build/config_src/drivers/solo_driver/MOM6` | the standalone MOM6 executable |
 | `deps/default/build/`, `deps/default/install/` | the dependencies built from `submodules/` |
+
+`build_on_derecho.sh` is the exception: it keeps one build per compiler and
+backend, in `build/<compiler>-<infra>/` (`build/gnu-TIM/` by default), with the
+dependencies in that directory's `deps/{build,install}/`.
 
 Passing `--build_dir DIR` moves both, the same way for all four builders: the
 build tree to `DIR` and the dependencies to `DIR/deps/{build,install}/`. Both
