@@ -1,0 +1,120 @@
+# protoMOMxx CUDA GPU build + smoketest + regression test.
+#
+# Standalone lane: exercises protoMOMxx's own full solo-driver executable
+# built with -DPROTOMOM_CUDA=ON against an AMReX built with
+# -DAMReX_GPU_BACKEND=CUDA, the same combination that was hand-verified on an
+# NCAR Casper A100 node this session (see cuda_build_fixes_summary.md). This
+# does NOT go through turbo-stack's own TIM-backend pipeline
+# (build_turbo_stack.sh / scripts/lib/common.sh's turbo_build_amrex /
+# turbo_build_protomomxx), which build a CPU-only, KERNELS_ONLY protoMOMxx for
+# MOM6's Fortran<->C++ bridge -- that pipeline is untouched by this workflow.
+#
+# All the actual build/run/compare logic lives in
+# scripts/test_protomomxx_gpu.sh, which is also runnable by hand on any
+# machine with a CUDA-aware NVHPC toolchain already on PATH (e.g. after
+# `module load` on Derecho/Casper). This workflow only supplies that
+# toolchain, via the self-hosted gha-runner-gpu-turbo scale set and an
+# NVHPC+CUDA container image.
+#
+# Needs an actual GPU visible to the job container: AMReX's own CMake
+# auto-detects the target CUDA architecture ("Auto") by querying the GPU at
+# configure time, which requires one to be visible to the configuring
+# process, not just present on the host.
+name: protoMOMxx GPU build + smoketest
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "submodules/amrex"
+      - "submodules/protoMOMxx"
+      - "scripts/test_protomomxx_gpu.sh"
+      - "scripts/lib/**"
+      - ".github/workflows/protomomxx-gpu-tests.yaml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "submodules/amrex"
+      - "submodules/protoMOMxx"
+      - "scripts/test_protomomxx_gpu.sh"
+      - "scripts/lib/**"
+      - ".github/workflows/protomomxx-gpu-tests.yaml"
+
+permissions:
+  contents: read
+
+# The GPU scale set is a scarce resource (likely few or one runner); don't let
+# superseded PR commits pile up queued jobs behind it. Not on `main`, where
+# cancelling would leave a merge's status cancelled when two land close
+# together.
+concurrency:
+  group: protomomxx-gpu-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gpu-smoketest:
+    name: AMReX+protoMOMxx CUDA build, double_gyre smoke + regression
+    runs-on: gha-runner-gpu-turbo
+    # Healthy run is a from-scratch AMReX+protoMOMxx CUDA build (~15-20 min on
+    # an A100 from the Casper timing) plus one short double_gyre run. Capped
+    # well above that for a cold cache, not so high that a stuck device link
+    # (see cuda_build_fixes_summary.md for how opaque nvlink failures can hang
+    # rather than error) burns the runner for hours.
+    timeout-minutes: 90
+    defaults:
+      run:
+        # Matches the other gha-runner-turbo lanes (matrix-compiler-smoketest.yaml,
+        # amrex-mini-app-unit-tests.yaml): a login shell so the container's own
+        # /container/config_env.sh (toolchain PATH/LD_LIBRARY_PATH setup) is
+        # sourced automatically, with no separate step needed for it.
+        shell: bash -elo pipefail {0}
+
+    container:
+      # almalinux9-nvhpc-mpich-cuda is the current (post ncarcisl/cisldev
+      # deprecation) NCAR hpcdev image with NVHPC + CUDA Toolkit + MPICH
+      # preinstalled. `-latest` is mutable (refreshed independently of this
+      # repo); pin `-26.11` (or whatever a later dated tag is) here to bisect
+      # an image regression.
+      image: docker.io/ncarcisl/hpcdev-x86_64:almalinux9-nvhpc-mpich-cuda-latest
+
+    steps:
+      # Only the two submodules this lane actually needs, and protoMOMxx's own
+      # nested extern/TIM (protoMOMxx builds its bundled TIM by default; see
+      # cuda_build_fixes_summary.md for why that checkout needed its own CUDA
+      # CMake fix). A full recursive checkout would also pull MOM6/MARBL/FMS2/
+      # pFUnit, which nothing here builds.
+      - name: Checkout (no submodules)
+        uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - name: Allow git operations on the checkout (root container)
+        run: git config --global --add safe.directory '*'
+
+      - name: Initialize amrex + protoMOMxx submodules
+        run: |
+          git submodule update --init --recursive -- submodules/amrex submodules/protoMOMxx
+
+      - name: Runner / GPU / toolchain facts
+        run: |
+          nvidia-smi || echo "::warning::nvidia-smi failed -- GPU may not be visible to this container"
+          echo
+          echo "CC=${CC:-<unset>}  CXX=${CXX:-<unset>}  FC=${FC:-<unset>}"
+          command -v nvcc    && nvcc --version
+          command -v nvc++   && nvc++ --version
+          command -v nvfortran && nvfortran --version
+          command -v mpicc   && mpicc -show
+          echo "nproc: $(nproc)"
+          df -h .
+
+      - name: Build + run protoMOMxx GPU smoketest
+        run: scripts/test_protomomxx_gpu.sh --parallel 4
+
+      - name: Upload double_gyre run output (debugging)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: double-gyre-run-output
+          path: deps/gpu-smoketest/double_gyre_run/
+          if-no-files-found: ignore

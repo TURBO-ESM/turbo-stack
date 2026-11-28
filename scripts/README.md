@@ -847,3 +847,27 @@ For the container scripts (see
 - `TURBO_CI_HOME` — host directory mounted as the container's `HOME`, which keeps
   Spack's package cache between runs (default:
   `${XDG_CACHE_HOME:-~/.cache}/turbo-ci-home`).
+
+## protoMOMxx GPU smoketest (standalone)
+
+`test_protomomxx_gpu.sh` is **not** part of the pipeline above — it does not
+build turbo-stack, and it does not go through `turbo_build_amrex` /
+`turbo_build_protomomxx` (which build a CPU-only, `KERNELS_ONLY` protoMOMxx for
+MOM6's bridge). It builds AMReX with `-DAMReX_GPU_BACKEND=CUDA`, builds
+protoMOMxx's own full solo-driver executable against it with
+`-DPROTOMOM_CUDA=ON`, and runs protoMOMxx's `double_gyre` smoke + regression
+check against the golden fixture committed under
+`submodules/protoMOMxx/tests/double_gyre/`.
+
+```bash
+scripts/test_protomomxx_gpu.sh                 # build + run (deps/gpu-smoketest/)
+scripts/test_protomomxx_gpu.sh --clean         # wipe and rebuild from scratch
+scripts/test_protomomxx_gpu.sh --parallel 4
+```
+
+It assumes a CUDA-aware NVHPC toolchain (`nvcc`, `nvc++`, `nvfortran`, an MPI
+wrapper) is already on `PATH` and a GPU is visible to the process — it loads no
+modules and starts no container itself. On Derecho/Casper, `module load` the
+toolchain first (and run under `qcmd`/an interactive GPU session, not a login
+node); CI runs it inside an NVHPC+CUDA container on the `gha-runner-gpu-turbo`
+self-hosted runner (`.github/workflows/protomomxx-gpu-tests.yaml`).
